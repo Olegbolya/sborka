@@ -1,0 +1,41 @@
+name: CI
+
+# Runs every repository check on each push and pull request.
+# Task P0.2 extends this workflow with PostgreSQL/Redis services, Playwright, Lighthouse CI and gitleaks.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check hook scripts parse
+        run: for f in .claude/hooks/*.mjs scripts/*.mjs scripts/lib/*.mjs; do node --check "$f"; done
+
+      - name: Install dependencies
+        if: hashFiles('package.json') != ''
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: node scripts/verify.mjs
