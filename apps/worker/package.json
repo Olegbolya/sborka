@@ -1,0 +1,28 @@
+{
+  "name": "@blokum/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Фоновые задачи Блокума (BullMQ)",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node ../../scripts/dev-node.mjs dist/main.js",
+    "start": "node --enable-source-maps dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ioredis": "5.11.1"
+  },
+  "devDependencies": {
+    "@blokum/config": "workspace:*",
+    "@types/node": "22.20.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "ioredis-mock": "8.13.1",
+    "@types/ioredis-mock": "8.2.8",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}

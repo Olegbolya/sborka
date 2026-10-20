@@ -1,0 +1,30 @@
+{
+  "name": "@blokum/themes",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Служебные темы, примеры, манифест лицензий ассетов",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": { "@blokum/schema": "workspace:*" },
+  "devDependencies": {
+    "@blokum/config": "workspace:*",
+    "@types/node": "22.20.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}

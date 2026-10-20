@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@swc/core'
+  - esbuild
+  - sharp
+  - '@prisma/engines'
+  - prisma
+  - embedded-postgres

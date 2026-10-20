@@ -1,0 +1,6 @@
+{
+  "extends": "@blokum/config/tsconfig/node-lib.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "dist", "declaration": false, "declarationMap": false },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}
