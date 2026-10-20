@@ -1,21 +1,29 @@
+import { createAlertsFromEnv, createLogger } from '@blokum/observability';
 import { Redis } from 'ioredis';
 import { loadWorkerConfig } from './config.js';
 import { startHeartbeat } from './heartbeat.js';
+import { startDiskWatch } from './monitoring.js';
 
 const config = loadWorkerConfig();
+const logger = createLogger({ service: 'blokum-worker' });
+const alerts = createAlertsFromEnv(process.env, { logger });
 const redis = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
+redis.on('error', (e) => logger.warn({ err: e }, 'Redis недоступен'));
+
 const heartbeat = startHeartbeat(redis, {
   keyPrefix: config.keyPrefix,
   intervalMs: config.heartbeatIntervalMs,
-  onError: (e) => console.error('Не удалось записать heartbeat воркера', e),
+  onError: (e) => logger.error({ err: e }, 'Не удалось записать heartbeat воркера'),
 });
 await heartbeat.beat();
-// Keep the process alive between heartbeats (the timer itself is unref'd so tests can exit).
+const disks = startDiskWatch({ paths: config.diskPaths, alerts, logger, intervalMs: config.diskCheckIntervalMs });
+// Keep the process alive between timers (the timers themselves are unref'd so tests can exit).
 const keepAlive = setInterval(() => undefined, 60_000);
-console.warn('Воркер Блокума запущен');
+logger.info('Воркер Блокума запущен');
 
 const shutdown = async (): Promise<void> => {
   clearInterval(keepAlive);
+  disks.stop();
   await heartbeat.stop();
   await redis.quit();
   process.exit(0);

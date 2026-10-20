@@ -13,10 +13,13 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@blokum/db": "workspace:*",
+    "@blokum/observability": "workspace:*",
     "@blokum/schema": "workspace:*",
     "@nestjs/common": "12.2.0",
     "@nestjs/core": "12.2.0",
     "@nestjs/platform-express": "12.2.0",
+    "ioredis": "5.11.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
@@ -24,6 +27,7 @@
     "@blokum/config": "workspace:*",
     "@nestjs/testing": "12.2.0",
     "@swc/core": "1.16.18",
+    "@types/express": "5.0.6",
     "@types/node": "22.20.5",
     "@types/supertest": "7.2.1",
     "@vitest/coverage-v8": "5.0.5",

@@ -51,7 +51,14 @@ describe('heartbeat воркера', () => {
 
 describe('настройки воркера', () => {
   it('по умолчанию Redis БД 3 на 127.0.0.1 и префикс bk:', () => {
-    expect(loadWorkerConfig({})).toEqual({ redisUrl: 'redis://127.0.0.1:6379/3', keyPrefix: 'bk:', heartbeatIntervalMs: 10_000 });
+    expect(loadWorkerConfig({})).toEqual({
+      redisUrl: 'redis://127.0.0.1:6379/3',
+      keyPrefix: 'bk:',
+      heartbeatIntervalMs: 10_000,
+      diskPaths: ['/'],
+      diskCheckIntervalMs: 600_000,
+    });
+    expect(loadWorkerConfig({ DATA_ROOT: '/srv/blokum' }).diskPaths).toEqual(['/srv/blokum', '/']);
   });
 
   it('отклоняет неверный адрес и слишком частый heartbeat', () => {

@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@blokum/observability": "workspace:*",
     "ioredis": "5.11.1"
   },
   "devDependencies": {
