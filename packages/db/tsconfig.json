@@ -1,5 +1,5 @@
 {
   "extends": "@blokum/config/tsconfig/node-lib.json",
   "compilerOptions": { "rootDir": ".", "noEmit": true },
-  "include": ["src", "test", "vitest.config.ts"]
+  "include": ["src", "test", "vitest.config.ts", "drizzle.config.ts"]
 }

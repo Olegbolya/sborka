@@ -3,28 +3,44 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Prisma: схема, миграции, клиент, seed",
+  "description": "База данных: схема Drizzle, миграции, клиент, seed",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "default": "./dist/schema/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "migrations"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node dist/cli/migrate.js",
+    "db:seed": "node dist/cli/seed.js"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@blokum/schema": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1"
+  },
   "devDependencies": {
     "@blokum/config": "workspace:*",
     "@types/node": "22.20.5",
     "@vitest/coverage-v8": "5.0.5",
     "eslint": "10.13.0",
     "typescript": "6.0.3",
-    "vitest": "5.0.5"
+    "vitest": "5.0.5",
+    "drizzle-kit": "0.31.11",
+    "@types/pg": "8.23.1"
   }
 }

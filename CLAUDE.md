@@ -55,4 +55,4 @@
 - Секреты не печатать и не коммитить; `.env.prod` живёт только на сервере.
 
 ## Команды
-`pnpm dev` · `pnpm verify` (всё: lint, typecheck, тесты, проверки) · `pnpm e2e` · `pnpm db:migrate` · `pnpm db:seed` · `node scripts/check-progress.mjs`
+`pnpm services` (поднять локальные PostgreSQL 16 и Redis — **перед тестами в каждой новой сессии**) · `pnpm dev` · `pnpm verify` (всё: lint, typecheck, тесты, проверки) · `pnpm build && PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm e2e` (в песочнице агента) · `pnpm db:generate` (новая миграция после правки схемы) · `pnpm db:migrate` · `pnpm db:seed` · `node scripts/check-progress.mjs`

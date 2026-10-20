@@ -18,7 +18,11 @@
     "verify": "node scripts/verify.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck:e2e": "tsc -p e2e/tsconfig.json"
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json",
+    "db:migrate": "pnpm --filter @blokum/db build && pnpm --filter @blokum/db db:migrate",
+    "db:seed": "pnpm --filter @blokum/db build && pnpm --filter @blokum/db db:seed",
+    "db:generate": "pnpm --filter @blokum/db db:generate",
+    "services": "bash scripts/dev-services.sh"
   },
   "devDependencies": {
     "@blokum/config": "workspace:*",
