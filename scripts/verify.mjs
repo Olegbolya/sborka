@@ -14,6 +14,7 @@ const pkgPath = join(ROOT, 'package.json');
 const pkg = existsSync(pkgPath) ? JSON.parse(readFileSync(pkgPath, 'utf8')) : null;
 if (pkg && !fast) {
   steps.push(['pnpm', ['-s', 'turbo', 'run', 'lint', 'typecheck', 'test', '--output-logs=errors-only']]);
+  if (pkg.scripts?.['typecheck:e2e']) steps.push(['pnpm', ['-s', 'typecheck:e2e']]);
 }
 steps.push(
   ['node', ['scripts/check-forbidden.mjs']],

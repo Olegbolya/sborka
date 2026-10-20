@@ -54,10 +54,8 @@ jobs:
         run: for f in .claude/hooks/*.mjs scripts/*.mjs scripts/lib/*.mjs; do node --check "$f"; done
       - name: Установка зависимостей
         run: pnpm install --frozen-lockfile
-      - name: pnpm verify
+      - name: pnpm verify (включая типы e2e)
         run: pnpm verify
-      - name: Типы e2e
-        run: pnpm typecheck:e2e
 
   e2e:
     name: E2E (Playwright)
