@@ -1,0 +1,7 @@
+{
+  "meta": { "title": "Новогодний квиз" },
+  "screens": [
+    { "id": "screen0001", "name": "Приветствие" },
+    { "id": "screen0002", "name": "Итог", "kind": "result" }
+  ]
+}

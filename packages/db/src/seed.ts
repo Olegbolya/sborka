@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { type BlockInput, DEFAULT_COLORS, ProjectDocument, ThemeTokens, textOf } from '@blokum/schema';
 import { type Db } from './client.js';
 import { PLANS } from './plans.js';
 import {
@@ -27,11 +28,50 @@ export async function seedPlans(db: Db): Promise<number> {
 }
 
 const sha = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex');
-const devDoc = (title: string, screens: number) => ({
-  schemaVersion: 1,
-  meta: { title },
-  screens: Array.from({ length: screens }, (_, i) => ({ id: `screen${i + 1}`, name: `Экран ${i + 1}` })),
-});
+const DEV_GIFTS = ['Велосипед', 'Книгу', 'Снегоката', 'Котёнка'];
+
+/**
+ * A valid document (checked by the @blokum/schema parser) with fixed ids, so the seed stays idempotent:
+ * screen 1 holds the question «question1» with options «option1…4» (the dev answers refer to them),
+ * the last screen is the result screen.
+ */
+export const devDoc = (title: string, screens: number): ProjectDocument => {
+  const next = (id: string): BlockInput => ({
+    id,
+    type: 'button',
+    name: 'Кнопка',
+    frame: { x: 75, y: 700, w: 240, h: 56 },
+    textLayer: textOf('Дальше'),
+    props: {},
+    rules: [{ id: `${id}rule`, when: { kind: 'tap', source: { kind: 'block', blockId: id } }, do: [{ kind: 'goTo', to: 'next' }] }],
+  });
+  const question: BlockInput = {
+    id: 'question1',
+    type: 'singleChoice',
+    name: 'Какой подарок вы хотите?',
+    frame: { x: 32, y: 160, w: 326, h: 320 },
+    props: { required: true, options: DEV_GIFTS.map((_, i) => ({ id: `option${i + 1}`, blockId: `option${i + 1}blk` })) },
+    children: DEV_GIFTS.map((gift, i) => ({
+      id: `option${i + 1}blk`,
+      type: 'shape',
+      name: gift,
+      frame: { x: 0, y: i * 72, w: 326, h: 56 },
+      textLayer: textOf(gift),
+      props: {},
+    })),
+  };
+  return ProjectDocument.parse({
+    schemaVersion: 1,
+    meta: { title },
+    screens: Array.from({ length: screens }, (_, i) => {
+      const last = i === screens - 1;
+      const blocks: BlockInput[] = [];
+      if (i === 0) blocks.push(question);
+      if (!last) blocks.push(next(`next${i + 1}btn`));
+      return { id: `screen${i + 1}`, name: `Экран ${i + 1}`, kind: last ? 'result' : i === 0 ? 'question' : 'content', blocks };
+    }),
+  });
+};
 
 export const DEV_SEED = {
   creatorId: 'devcreator0001',
@@ -67,7 +107,7 @@ export async function seedDevData(db: Db, env: NodeJS.ProcessEnv = process.env):
       id: themeId,
       ownerId: creatorId,
       name: 'Моя новогодняя',
-      tokens: { colors: { background: '#7a1f1f', accent: '#f2c14e', text: '#fff8ee' }, fonts: {}, blockDefaults: {} },
+      tokens: ThemeTokens.parse({ colors: { ...DEFAULT_COLORS, background: '#7A1F1F', surface: '#8E2A2A', accent: '#F2C14E', text: '#FFF8EE', muted: '#E8D8C4' } }),
     })
     .onConflictDoNothing();
 
@@ -125,7 +165,7 @@ export async function seedDevData(db: Db, env: NodeJS.ProcessEnv = process.env):
   });
   await db.insert(participantSessions).values(sessionRows).onConflictDoNothing();
 
-  const gifts = ['Велосипед', 'Книгу', 'Снегоката', 'Котёнка'];
+  const gifts = DEV_GIFTS;
   await db
     .insert(answers)
     .values(

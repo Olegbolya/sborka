@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs';
 import { count, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PLANS } from '../src/plans.js';
-import { DEV_SEED, seedDevData, seedPlans } from '../src/seed.js';
-import { libraryItems, participantSessions, plans, projects, templates, themes, users } from '../src/schema/index.js';
+import { ProjectDocument, ThemeTokens, validateDocument } from '@blokum/schema';
+import { DEV_SEED, devDoc, seedDevData, seedPlans } from '../src/seed.js';
+import { libraryItems, participantSessions, plans, projectVersions, projects, templates, themes, users } from '../src/schema/index.js';
 import { createTestDb, type TestDb } from './helpers.js';
 
 const ORDER = ['FREE', 'PASS', 'PLUS', 'PRO', 'BUSINESS'] as const;
@@ -95,6 +96,18 @@ describe('seed', () => {
     expect(await t.db.select().from(themes).where(eq(themes.isSystem, true))).toHaveLength(0);
     expect(await t.db.select().from(templates).where(eq(templates.isSystem, true))).toHaveLength(0);
     expect(await t.db.select().from(libraryItems)).toHaveLength(0);
+  });
+
+  it('документы тестовых сборок проходят схему и проверку логики без ошибок', async () => {
+    const rows = await t.db.select({ document: projectVersions.document }).from(projectVersions);
+    expect(rows).toHaveLength(3);
+    for (const { document } of rows) {
+      const doc = ProjectDocument.parse(document);
+      expect(validateDocument(doc).filter((i) => i.severity === 'error')).toEqual([]);
+    }
+    expect(devDoc('Проверка', 3)).toEqual(devDoc('Проверка', 3)); // фиксированные id → идемпотентность
+    const [theme] = await t.db.select({ tokens: themes.tokens }).from(themes).where(eq(themes.id, DEV_SEED.themeId));
+    expect(ThemeTokens.safeParse(theme?.tokens).success).toBe(true);
   });
 
   it('в рабочей среде тестовые данные не загружаются', async () => {
