@@ -31,7 +31,7 @@ const tail = (s, n = 2500) => (s.length > n ? '…' + s.slice(-n) : s);
 try {
   const input = readInput();
   const sid = String(input.session_id || 'default').replace(/[^\w-]/g, '');
-  const stateFile = join(tmpdir(), `sborka-stop-${sid}.json`);
+  const stateFile = join(tmpdir(), `blokum-stop-${sid}.json`);
   const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : { blocks: 0 };
   const save = () => writeFileSync(stateFile, JSON.stringify(state));
 
@@ -78,7 +78,7 @@ try {
   }
 
   // 4. Report template after real work
-  const startFile = join(tmpdir(), `sborka-start-${sid}.txt`);
+  const startFile = join(tmpdir(), `blokum-start-${sid}.txt`);
   const startHead = existsSync(startFile) ? readFileSync(startFile, 'utf8').trim() : '';
   const head = git(['rev-parse', 'HEAD']);
   const msg = String(input.last_assistant_message || '');

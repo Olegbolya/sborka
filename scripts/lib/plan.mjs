@@ -8,8 +8,8 @@ export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const read = (rel) => readFileSync(join(ROOT, rel), 'utf8');
 export const exists = (rel) => existsSync(join(ROOT, rel));
 
-// Requirement IDs look like B-11, PL-06, TS-10, TPL-03. Longer prefixes first.
-const PREFIX = '(?:TPL|TH|PL|AD|TS|SR|[EBSGLTPQDAN])';
+// Requirement IDs look like B-11, PL-06, TS-10, TPL-03, SC-02. Multi-letter prefixes before single letters.
+const PREFIX = '(?:TPL|TH|PL|AD|TS|SR|SC|TR|CN|AC|BH|VR|RN|RG|ME|LB|GS|[EBSLTPQDAN])';
 const ID_RE = new RegExp(`\\b(${PREFIX})-(\\d{2})\\b`, 'g');
 const RANGE_RE = new RegExp(`\\b(${PREFIX})-(\\d{2})\\s*(?:…|\\.\\.\\.)\\s*(${PREFIX})-(\\d{2})\\b`, 'g');
 
@@ -89,8 +89,8 @@ export function definedRequirementIds() {
   for (const f of files) {
     for (const line of read(f).split('\n')) {
       const isV2 = /`v2`|\bv2\b/.test(line);
-      // A definition is a backticked ID at the start of a bullet or table cell.
-      for (const m of line.matchAll(new RegExp(`(?:^\\s*[-|]\\s*|\\|\\s*|·\\s*|^)\`(${PREFIX}-\\d{2})\``, 'g'))) {
+      // A definition is a backticked ID at the start of a bullet, numbered item, heading or table cell, or after «·».
+      for (const m of line.matchAll(new RegExp(`(?:^\\s*(?:[-*]|\\d+\\.|#+)\\s*|\\|\\s*|·\\s*|^)\`(${PREFIX}-\\d{2})\``, 'g'))) {
         if (!defined.has(m[1])) defined.set(m[1], { file: f, v2: isV2 });
       }
     }

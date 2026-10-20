@@ -15,7 +15,7 @@ const REQUIRED = [
 const RUNTIME = /\{\{(?:СОЗДАТЕЛЬ|СБОРКА|УЧАСТНИК)_[A-ZА-Я_]+\}\}/g;
 
 const problems = [];
-const found = existsSync(LEGAL) ? readdirSync(LEGAL).filter((f) => f.endsWith('.md')) : [];
+const found = existsSync(LEGAL) ? readdirSync(LEGAL).filter((f) => f.endsWith('.md') && f !== 'README.md') : [];
 if (strict) for (const r of REQUIRED) if (!found.includes(r)) problems.push(`нет документа legal/${r}`);
 
 let total = 0;

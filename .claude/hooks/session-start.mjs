@@ -17,7 +17,7 @@ try {
 const sid = String(input.session_id || 'default').replace(/[^\w-]/g, '');
 try {
   const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
-  writeFileSync(join(tmpdir(), `sborka-start-${sid}.txt`), head);
+  writeFileSync(join(tmpdir(), `blokum-start-${sid}.txt`), head);
 } catch {
   /* no commits yet */
 }
@@ -25,7 +25,7 @@ try {
 const summary = spawnSync('node', ['scripts/check-progress.mjs', '--summary'], { cwd: root, encoding: 'utf8' }).stdout?.trim() || 'Сводка недоступна — прочитай docs/PROGRESS.md.';
 process.stdout.write(
   [
-    '«Сборка»: состояние работы',
+    '«Блокум»: состояние работы',
     summary,
     '',
     'Порядок: прочитай docs/PROGRESS.md → задачу в docs/03-PLAN.md → требования из «Покрывает» → делай без согласования плана.',

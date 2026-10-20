@@ -2,7 +2,7 @@
 // Every bundled asset (fonts, stickers, reactions, sounds, backgrounds) must have a license record.
 // See docs/05-LEGAL.md §2.10. Manifest: packages/themes/assets/LICENSES.json
 //   { "files": { "<path relative to assets/>": { "license": "own|OFL-1.1|CC0-1.0|MIT|Apache-2.0|CC-BY-4.0",
-//                                               "author": "...", "source": "url or 'создано для Сборки'", "attribution"?: "..." } } }
+//                                               "author": "...", "source": "url or 'создано для Блокума'", "attribution"?: "..." } } }
 import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { ROOT } from './lib/plan.mjs';
