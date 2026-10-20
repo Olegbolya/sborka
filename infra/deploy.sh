@@ -35,27 +35,6 @@ echo "════════════════════════�
 echo " Деплой Блокума $(date '+%Y-%m-%d %H:%M:%S')"
 echo "════════════════════════════════════════"
 
-# ── Node 22 (у BST по умолчанию Node 20 — его не меняем) ──────────────────────
-export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-if [ -s "$NVM_DIR/nvm.sh" ]; then
-  # shellcheck disable=SC1091 # nvm lives only on the server
-  . "$NVM_DIR/nvm.sh" >/dev/null
-  NODE_BIN="$(nvm which 22 2>/dev/null || true)"
-  [ -n "$NODE_BIN" ] || fail "На сервере нет Node 22: запустите sudo bash $APP_ROOT/setup/infra/server-setup.sh" 3
-else
-  NODE_BIN="$(command -v node || true)"
-fi
-[ -n "$NODE_BIN" ] || fail "Node.js не найден" 3
-NODE_MAJOR="$("$NODE_BIN" -p 'process.versions.node.split(".")[0]')"
-[ "$NODE_MAJOR" -ge 22 ] || fail "Нужен Node 22+, найден $("$NODE_BIN" --version)" 3
-NODE_DIR="$(dirname "$NODE_BIN")"
-export PATH="$NODE_DIR:$PATH"
-export BLOKUM_NODE="$NODE_BIN" BLOKUM_ROOT="$APP_ROOT"
-PNPM=(pnpm)
-command -v pnpm >/dev/null 2>&1 || PNPM=(corepack pnpm)
-command -v pm2 >/dev/null 2>&1 || fail "PM2 не найден (на сервере он общий с BST)" 3
-ok "Node $("$NODE_BIN" --version), pnpm $("${PNPM[@]}" --version)"
-
 # ── Код ───────────────────────────────────────────────────────────────────────
 mkdir -p "$RELEASES" "$APP_ROOT/shared"
 [ -d "$REPO_DIR" ] || git init -q --bare "$REPO_DIR"
@@ -78,6 +57,27 @@ git --git-dir="$REPO_DIR" archive "$SHA" infra | tar -x -C "$APP_ROOT/setup"
 ok "Скрипты подготовки сервера: $APP_ROOT/setup/infra"
 
 [ -f "$ENV_FILE" ] || fail "Сервер ещё не подготовлен (нет $ENV_FILE). Владельцу: ssh на сервер и sudo bash $APP_ROOT/setup/infra/server-setup.sh" 3
+
+# ── Node 22 (у BST по умолчанию Node 20 — его не меняем) ──────────────────────
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  # shellcheck disable=SC1091 # nvm lives only on the server
+  . "$NVM_DIR/nvm.sh" >/dev/null
+  NODE_BIN="$(nvm which 22 2>/dev/null || true)"
+  [ -n "$NODE_BIN" ] || fail "На сервере нет Node 22. Владельцу: sudo bash $APP_ROOT/setup/infra/server-setup.sh" 3
+else
+  NODE_BIN="$(command -v node || true)"
+fi
+[ -n "$NODE_BIN" ] || fail "Node.js не найден" 3
+NODE_MAJOR="$("$NODE_BIN" -p 'process.versions.node.split(".")[0]')"
+[ "$NODE_MAJOR" -ge 22 ] || fail "Нужен Node 22+, найден $("$NODE_BIN" --version)" 3
+NODE_DIR="$(dirname "$NODE_BIN")"
+export PATH="$NODE_DIR:$PATH"
+export BLOKUM_NODE="$NODE_BIN" BLOKUM_ROOT="$APP_ROOT"
+PNPM=(pnpm)
+command -v pnpm >/dev/null 2>&1 || PNPM=(corepack pnpm)
+command -v pm2 >/dev/null 2>&1 || fail "PM2 не найден (на сервере он общий с BST)" 3
+ok "Node $("$NODE_BIN" --version), pnpm $("${PNPM[@]}" --version)"
 
 PREV="$(readlink "$CURRENT" 2>/dev/null || true)"
 if [ -n "$PREV" ] && [ -f "$PREV/REVISION" ] && [ "$(cat "$PREV/REVISION")" = "$SHA" ] && [ "${SIMULATE_BROKEN_API:-0}" != 1 ]; then

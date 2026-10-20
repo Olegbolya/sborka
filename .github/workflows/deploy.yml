@@ -51,10 +51,20 @@ jobs:
           SIMULATE: ${{ inputs.simulate_broken_api && '1' || '0' }}
         run: |
           # Переменные передаются через stdin, чтобы токен не попадал в список процессов на сервере.
+          set +e
           {
             printf 'export GH_TOKEN=%q REPO=%q DEPLOY_SHA=%q SIMULATE_BROKEN_API=%q\n' "$GH_TOKEN" "$GITHUB_REPOSITORY" "$DEPLOY_SHA" "$SIMULATE"
             cat infra/deploy.sh
-          } | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$SERVER" 'bash -s'
+          } | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$SERVER" 'bash -s' 2>&1 | tee deploy.log
+          status=${PIPESTATUS[1]}
+          {
+            echo "### Деплой ${DEPLOY_SHA:0:12}: $([ "$status" = 0 ] && echo 'успешно' || echo "ошибка (код $status)")"
+            printf '```\n%s\n```\n' "$(grep -vE 'x-access-token' deploy.log | tail -n 60)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Итог — в аннотации, чтобы его было видно без скачивания журнала.
+          TXT="$(grep -E '^(✓|✗|→|  !|BST)' deploy.log | tail -n 25 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+          if [ "$status" = 0 ]; then echo "::notice title=Деплой::$TXT"; else echo "::error title=Деплой (код $status)::$TXT"; fi
+          exit "$status"
       - name: Итог
         if: always()
         run: rm -f ~/.ssh/deploy_key

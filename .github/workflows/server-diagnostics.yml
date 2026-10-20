@@ -26,3 +26,6 @@ jobs:
           echo "$OUT"
           echo "### Диагностика сервера" >> "$GITHUB_STEP_SUMMARY"
           printf '```\n%s\n```\n' "$OUT" >> "$GITHUB_STEP_SUMMARY"
+          # Аннотация: итог читается через API без скачивания журнала.
+          TXT="$(printf '%s' "$OUT" | head -c 3500 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+          echo "::notice title=Диагностика сервера::$TXT"
