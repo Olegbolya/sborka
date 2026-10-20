@@ -182,6 +182,25 @@ for d in "${OLD[@]}"; do
   [ "$d" = "$ACTIVE" ] || [ "$d" = "$PREV" ] || rm -rf "$d"
 done
 
+# ── Проверка снаружи: nginx, сертификат, закрытый доступ до запуска ──────────
+# Не влияет на исход деплоя (приложение уже проверено выше), но показывает владельцу, открывается ли сайт.
+(
+  set +eu
+  # shellcheck source=/dev/null
+  . "$CURRENT/infra/server.env"
+  code() { curl -s -o /dev/null -w '%{http_code}' --max-time 5 --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN$1"; }
+  want_root=200
+  [ "${PRELAUNCH:-1}" = "1" ] && want_root=401
+  for check in "/healthz:200" "/api/v1/health:200" "/:$want_root"; do
+    path="${check%%:*}"; want="${check##*:}"; got="$(code "$path")"
+    if [ "$got" = "$want" ]; then ok "https://$DOMAIN$path → $got"; else echo "⚠ https://$DOMAIN$path → ${got:-нет ответа} (ожидалось $want)"; fi
+  done
+  until="$(echo | openssl s_client -connect 127.0.0.1:443 -servername "$DOMAIN" 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)"
+  if [ -n "$until" ]; then ok "Сертификат $DOMAIN действует до $until"; else echo "⚠ Сертификат $DOMAIN не найден"; fi
+  public_ip="$(getent ahostsv4 "$DOMAIN" | awk 'NR==1{print $1}')"
+  if [ "$public_ip" = "$SERVER_IP" ]; then ok "DNS: $DOMAIN → $public_ip"; else echo "⚠ DNS: $DOMAIN → ${public_ip:-не найден} (нужно $SERVER_IP)"; fi
+)
+
 BST_CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:3000/api/health || true)"
 echo "BST (mybst.ru) /api/health: ${BST_CODE:-нет ответа}"
 echo "════════════════════════════════════════"
