@@ -1,6 +1,7 @@
 import { z } from './locale.js';
 import { Easing, Id, MediaRef, Point, Rect, VariableName, int, num } from './primitives.js';
-import { ANIMATABLE } from './style.js';
+import { MAX_PATH_LENGTH, isValidPath } from './path.js';
+import { ANIMATABLE, PATH_DATA } from './style.js';
 import { MediaOverlay, Transition } from './transitions.js';
 
 // Scenarios: rules «Когда → Если → Сделать», behaviors and variables (01-PRODUCT-SPEC.md §7).
@@ -261,7 +262,7 @@ export const Behavior = z.discriminatedUnion('kind', [
     spread: num(0, 180).default(0),
     gravity: num(-2000, 2000).default(0),
     edge: z.enum(['bounce', 'destroy', 'wrap', 'stop']).default('destroy'),
-    path: z.string().max(20000).optional(),
+    path: z.string().min(1).max(MAX_PATH_LENGTH).regex(PATH_DATA, 'Контур движения содержит недопустимые символы').refine(isValidPath, 'Контур движения не разбирается').optional(),
   }), // BH-04
   z.strictObject({
     kind: z.literal('spawner'),

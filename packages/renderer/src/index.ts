@@ -5,6 +5,8 @@ export * from './theme/fonts.js';
 export * from './theme/dev-themes.js';
 export * from './style/style-to-css.js';
 export * from './style/apply-view.js';
+export * from './shape/outline.js';
+export * from './shape/decor.js';
 export * from './components/Artboard.js';
 export * from './components/ScreenView.js';
 export * from './components/BlockView.js';

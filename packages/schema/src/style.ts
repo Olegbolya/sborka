@@ -1,4 +1,5 @@
 import { z } from './locale.js';
+import { MAX_PATH_LENGTH, isValidPath } from './path.js';
 import { Color, Easing, MediaRef, UnitPoint, int, num } from './primitives.js';
 
 // ── S-04 Fill ─────────────────────────────────────────────────────────────────
@@ -65,7 +66,13 @@ export const Shape = z.discriminatedUnion('kind', [
   }),
   z.strictObject({
     kind: z.literal('path'),
-    d: z.string().min(1).max(20000).regex(PATH_DATA, 'Контур фигуры содержит недопустимые символы'),
+    /** Normalised contour (0…100, see `normalizePath`); any valid contour is accepted and parsed. */
+    d: z
+      .string()
+      .min(1)
+      .max(MAX_PATH_LENGTH)
+      .regex(PATH_DATA, 'Контур фигуры содержит недопустимые символы')
+      .refine(isValidPath, 'Контур фигуры не разбирается: проверьте команды и числа'),
     closed: z.boolean().default(true),
   }),
 ]);
@@ -294,7 +301,7 @@ export const LoopAnimation = z.strictObject({
   speed: num(0.1, 10).default(1),
   amplitude: num(0, 10).default(1),
   pauseMs: int(0, 30000).default(0),
-  path: z.string().min(1).max(20000).regex(PATH_DATA, 'Контур движения содержит недопустимые символы').optional(),
+  path: z.string().min(1).max(MAX_PATH_LENGTH).regex(PATH_DATA, 'Контур движения содержит недопустимые символы').refine(isValidPath, 'Контур движения не разбирается').optional(),
   keyframes: keyframes.optional(),
 })
   .refine((a) => a.kind !== 'keyframes' || a.keyframes, { message: 'Для своей анимации нужны ключевые кадры', path: ['keyframes'] })

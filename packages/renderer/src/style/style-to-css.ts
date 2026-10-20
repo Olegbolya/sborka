@@ -1,5 +1,7 @@
 import { type BlockStyle, type Fill, type MediaRef, type ThemeTokens } from '@blokum/schema';
 import { type CSSProperties } from 'react';
+import { blockMask, innerShadowLayer, outerShadowLayer, shapeMask, strokeLayer } from '../shape/decor.js';
+import { cssShapeRadius, isCssShape, shapeOutline } from '../shape/outline.js';
 import { cssColor } from '../theme/color.js';
 import { cssFontFamily } from '../theme/fonts.js';
 import { u } from '../units.js';
@@ -28,9 +30,17 @@ export interface BlockCss {
   /** 3D part of the transform (S-18), composed by BlockView with rotation and flips (S-01). */
   transform3d: string;
   transformOrigin: string;
-  /** Background plate: rounding, shadows, glow, backdrop blur (S-03, S-06, S-07). */
+  /** Background plate: shape (mask or rounding), shadows, glow, backdrop blur (S-02, S-03, S-06, S-07). */
   surface: CSSProperties;
   layers: FillLayer[];
+  /** Shadows along the contour of non-rectangular shapes, under the plate (S-06). */
+  shadowLayers: CSSProperties[];
+  /** Inner shadows along the contour of non-rectangular shapes, over the fills (S-06). */
+  innerLayers: CSSProperties[];
+  /** Stroke along the contour (S-05), over the plate. */
+  stroke: CSSProperties | null;
+  /** The contour in block units — for hit areas and debugging. */
+  outline: string;
   /** Content box: padding, text alignment or auto-layout of nested blocks, clipping (S-09, S-19, S-20). */
   content: CSSProperties;
   /** Typography of the text layer (S-10). */
@@ -131,15 +141,14 @@ const JUSTIFY: Record<BlockStyle['layout']['justify'], string> = { start: 'flex-
 const ALIGN: Record<BlockStyle['layout']['align'], string> = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch' };
 const VERTICAL: Record<BlockStyle['text']['verticalAlign'], string> = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
 
-function contentCss(style: BlockStyle): CSSProperties {
+function contentCss(style: BlockStyle, clip: CSSProperties): CSSProperties {
   const { padding: p, layout } = style;
   const css: CSSProperties = {
     position: 'absolute',
     inset: 0,
     boxSizing: 'border-box',
     padding: [p.t, p.r, p.b, p.l].map(u).join(' '),
-    overflow: style.mask.clipToShape ? 'hidden' : 'visible',
-    borderRadius: cssRadius(style.radius),
+    ...(style.mask.clipToShape ? { overflow: 'hidden', ...clip } : { overflow: 'visible' }),
   };
   if (layout.mode === 'free') return { ...css, display: 'flex', flexDirection: 'column', justifyContent: VERTICAL[style.text.verticalAlign] };
   const scroll: CSSProperties = layout.scroll ? { overflow: 'auto' } : {};
@@ -187,37 +196,60 @@ export function textCss(text: BlockStyle['text'], ctx: StyleContext): CSSPropert
   return css;
 }
 
+/** Size of the block in units; the contour of a shape depends on it. */
+export interface BlockSize {
+  w: number;
+  h: number;
+}
+
 /**
  * The ONLY place where a block style becomes CSS (P1.4): the editor, the player and thumbnails all go
  * through it. `style` is already resolved (theme defaults, own groups, state — `resolveBlockStyle`).
- * Shapes, contour strokes and masks by image are added by the shape module (P1.6).
+ * Rectangles, capsules and ellipses are drawn by CSS rounding; every other shape (P1.6) by a contour mask,
+ * with shadows and inner shadows along the contour. The stroke always follows the contour.
  */
-export function styleToCss(style: BlockStyle, ctx: StyleContext): BlockCss {
+export function styleToCss(style: BlockStyle, ctx: StyleContext, size: BlockSize = { w: 100, h: 100 }): BlockCss {
+  const { w, h } = size;
   const t = style.transform3d;
-  const has3d = t.rotateX !== 0 || t.rotateY !== 0;
+  const has3d = t.rotateX !== 0 || t.rotateY !== 0 || t.tiltFollow;
   const filter = cssFilter(style);
+  const maskImage = style.mask.image ? (ctx.media(style.mask.image)?.url ?? null) : null;
   const root: CSSProperties = {
     opacity: style.effects.opacity,
     ...(filter ? { filter } : {}),
     ...(style.effects.blendMode !== 'normal' ? { mixBlendMode: style.effects.blendMode } : {}),
+    ...blockMask(style.mask, maskImage),
   };
-  const shadow = cssShadows(style, ctx);
+  const outline = shapeOutline(style.shape, style.radius, w, h);
+  const css = isCssShape(style.shape);
+  const clip: CSSProperties = css ? { borderRadius: cssShapeRadius(style.shape, w, h, u, cssRadius(style.radius)) } : shapeMask(outline, w, h);
+  const shadowSpecs = [
+    ...style.shadows.map((s) => ({ ...s, color: cssColor(s.color, ctx.tokens) })),
+    ...(style.glow && style.glow.size > 0 ? [{ x: 0, y: 0, blur: style.glow.size, spread: style.glow.size / 4, color: cssColor(style.glow.color, ctx.tokens), inset: false }] : []),
+  ];
+  const shadow = css ? cssShadows(style, ctx) : undefined;
   const surface: CSSProperties = {
     position: 'absolute',
     inset: 0,
-    borderRadius: cssRadius(style.radius),
     overflow: 'hidden',
+    ...clip,
     ...(shadow ? { boxShadow: shadow } : {}),
     ...(style.effects.backdropBlur > 0 ? { backdropFilter: `blur(${u(style.effects.backdropBlur)})`, WebkitBackdropFilter: `blur(${u(style.effects.backdropBlur)})` } : {}),
   };
+  const strokePaint = style.stroke.width > 0 ? paintImage(style.stroke.paint, ctx) : '';
   const m = style.media;
+  const tilt = (axis: 'x' | 'y', base: number) => (t.tiltFollow ? `calc((${base} + var(--bk-tilt-${axis}, 0)) * 1deg)` : `${base}deg`);
   return {
     root,
-    transform3d: has3d ? `perspective(${u(t.perspective)}) rotateX(${t.rotateX}deg) rotateY(${t.rotateY}deg)` : '',
+    transform3d: has3d ? `perspective(${u(t.perspective)}) rotateX(${tilt('x', t.rotateX)}) rotateY(${tilt('y', t.rotateY)})` : '',
     transformOrigin: `${pct(t.origin.x)} ${pct(t.origin.y)}`,
     surface,
     layers: fillLayers(style.fills, ctx),
-    content: contentCss(style),
+    shadowLayers: css ? [] : shadowSpecs.filter((s) => !s.inset).map((s) => outerShadowLayer(s, outline, w, h)),
+    innerLayers: css ? [] : shadowSpecs.filter((s) => s.inset).map((s) => innerShadowLayer(s, outline, w, h)),
+    stroke: strokeLayer(style.stroke, outline, w, h, strokePaint),
+    outline,
+    content: contentCss(style, clip),
     text: textCss(style.text, ctx),
     media: {
       width: '100%',

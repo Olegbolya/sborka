@@ -13,3 +13,4 @@ export * from './public.js';
 export * from './migrations.js';
 export * from './validate.js';
 export * from './resolve.js';
+export * from './path.js';

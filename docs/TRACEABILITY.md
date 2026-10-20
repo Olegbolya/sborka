@@ -196,3 +196,8 @@
 | E-03 | P1.4 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/components.test.tsx` |
 | TH-01 | P1.4 | `packages/schema/src/resolve.ts`, `packages/renderer/src/theme/color.ts`, `packages/renderer/src/theme/fonts.ts`, `packages/renderer/src/theme/dev-themes.ts` | `packages/renderer/test/style-to-css.test.ts`, `packages/renderer/test/components.test.tsx`, `packages/schema/test/resolve.test.ts` |
 | TH-06 | P1.4 | `packages/schema/src/resolve.ts`, `packages/schema/src/style.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/components.test.tsx`, `packages/schema/test/resolve.test.ts` |
+| S-02 | P1.6 | `packages/schema/src/path.ts`, `packages/renderer/src/shape/outline.ts`, `packages/renderer/src/shape/decor.ts` | `packages/renderer/test/shapes.test.tsx`, `packages/schema/test/path.test.ts`, `e2e/shapes.spec.ts` |
+| S-03 | P1.6 | `packages/renderer/src/shape/outline.ts`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/shapes.test.tsx`, `e2e/shapes.spec.ts` |
+| S-05 | P1.6 | `packages/renderer/src/shape/decor.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/shapes.test.tsx`, `e2e/shapes.spec.ts` |
+| S-18 | P1.6 | `packages/renderer/src/style/style-to-css.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/shapes.test.tsx`, `e2e/shapes.spec.ts` |
+| S-19 | P1.6 | `packages/renderer/src/shape/decor.ts`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/shapes.test.tsx`, `e2e/shapes.spec.ts` |

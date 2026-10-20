@@ -1,12 +1,30 @@
 'use client';
 
 import { type Block, type BLOCK_STATES, resolveBlockStyle } from '@blokum/schema';
-import { type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { useRenderContext } from '../context.js';
 import { applyRuntimeView } from '../style/apply-view.js';
 import { type FillLayer, styleToCss } from '../style/style-to-css.js';
 import { u } from '../units.js';
 import { PathTextView, RichTextView } from './RichTextView.js';
+
+/**
+ * S-18 «наклон за пальцем/курсором»: the block turns towards the pointer by up to `strength` degrees.
+ * Written straight into CSS variables of the element — no React re-render on every pointer move.
+ */
+function tiltTowards(e: PointerEvent<HTMLDivElement>, strength: number): void {
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const nx = r.width ? (e.clientX - r.left) / r.width - 0.5 : 0;
+  const ny = r.height ? (e.clientY - r.top) / r.height - 0.5 : 0;
+  el.style.setProperty('--bk-tilt-y', String(Math.round(nx * 2 * strength * 100) / 100));
+  el.style.setProperty('--bk-tilt-x', String(Math.round(-ny * 2 * strength * 100) / 100));
+}
+
+function resetTilt(el: HTMLElement): void {
+  el.style.setProperty('--bk-tilt-x', '0');
+  el.style.setProperty('--bk-tilt-y', '0');
+}
 
 /** Id of the instance of a nested block: children of a copy «x~3» are «child~3» (engine P1.3). */
 export function childInstanceId(parentInstanceId: string, child: Block): string {
@@ -41,12 +59,11 @@ export function BlockView({ block, instanceId = block.id, state }: BlockViewProp
 
   const activeState = state ?? (view?.selected ? 'selected' : view?.dragging ? 'dragging' : view?.zoneId ? 'overZone' : undefined);
   const style = applyRuntimeView(resolveBlockStyle(block, ctx.tokens, activeState), view);
-  const css = styleToCss(style, { tokens: ctx.tokens, media: ctx.media });
-
   const x = view?.x ?? block.frame.x;
   const y = view?.y ?? block.frame.y;
   const w = view?.w ?? block.frame.w;
   const h = view?.h ?? block.frame.h;
+  const css = styleToCss(style, { tokens: ctx.tokens, media: ctx.media }, { w, h });
   const rotation = view?.rotation ?? block.frame.rotation;
   const flipX = (view?.overrides['frame.flipX'] as boolean | undefined) ?? block.frame.flipX;
   const flipY = (view?.overrides['frame.flipY'] as boolean | undefined) ?? block.frame.flipY;
@@ -73,17 +90,30 @@ export function BlockView({ block, instanceId = block.id, state }: BlockViewProp
     ...(ctx.mode === 'thumbnail' ? { pointerEvents: 'none' } : {}),
     ...(view && !view.interactive ? { pointerEvents: 'none' } : {}),
   };
+  const tilt = ctx.mode === 'player' && style.transform3d.tiltFollow ? style.transform3d.tiltStrength : 0;
+  // A finger over a «наклон за пальцем» block tilts it instead of scrolling the page (S-18).
+  if (tilt) root.touchAction = 'none';
 
   const textLayer = (view?.overrides.textLayer as Block['textLayer']) ?? block.textLayer;
   const interactive = ctx.mode === 'player' && ctx.dispatch;
-  const handlers = interactive
-    ? {
-        onClick: () => ctx.dispatch!({ type: 'tap', blockId: instanceId }),
-        onDoubleClick: () => ctx.dispatch!({ type: 'doubleTap', blockId: instanceId }),
-        onPointerEnter: (e: { pointerType: string }) => e.pointerType === 'mouse' && ctx.dispatch!({ type: 'hover', blockId: instanceId, phase: 'enter' }),
-        onPointerLeave: (e: { pointerType: string }) => e.pointerType === 'mouse' && ctx.dispatch!({ type: 'hover', blockId: instanceId, phase: 'leave' }),
-      }
-    : {};
+  const handlers = {
+    ...(interactive
+      ? {
+          onClick: () => ctx.dispatch!({ type: 'tap', blockId: instanceId }),
+          onDoubleClick: () => ctx.dispatch!({ type: 'doubleTap', blockId: instanceId }),
+        }
+      : {}),
+    ...(interactive || tilt
+      ? {
+          onPointerMove: tilt ? (e: PointerEvent<HTMLDivElement>) => tiltTowards(e, tilt) : undefined,
+          onPointerEnter: (e: PointerEvent<HTMLDivElement>) => interactive && e.pointerType === 'mouse' && ctx.dispatch!({ type: 'hover', blockId: instanceId, phase: 'enter' }),
+          onPointerLeave: (e: PointerEvent<HTMLDivElement>) => {
+            if (tilt) resetTilt(e.currentTarget);
+            if (interactive && e.pointerType === 'mouse') ctx.dispatch!({ type: 'hover', blockId: instanceId, phase: 'leave' });
+          },
+        }
+      : {}),
+  };
 
   return (
     <div
@@ -96,11 +126,18 @@ export function BlockView({ block, instanceId = block.id, state }: BlockViewProp
       style={root}
       {...handlers}
     >
+      {css.shadowLayers.map((layer, i) => (
+        <div key={`shadow-${i}`} className="bk-shadow" aria-hidden style={layer} />
+      ))}
       <div className="bk-surface" style={css.surface}>
         {css.layers.map((layer, i) => (
           <Layer key={i} layer={layer} />
         ))}
+        {css.innerLayers.map((layer, i) => (
+          <div key={`inner-${i}`} className="bk-inner-shadow" aria-hidden style={layer} />
+        ))}
       </div>
+      {css.stroke && <div className="bk-stroke" aria-hidden style={css.stroke} />}
       <div className="bk-content" style={css.content}>
         {ctx.renderContent?.(block, css, instanceId)}
         {textLayer &&
