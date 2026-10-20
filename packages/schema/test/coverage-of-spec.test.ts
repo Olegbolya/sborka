@@ -181,8 +181,14 @@ describe('схема покрывает каждое требование P1.1',
     expect(Settings.parse({}).tieBreak).toBe('first');
   });
 
-  it('L-05: подстановка переменных в текст', () => {
+  it('L-05: подстановка переменных и ответов в текст', () => {
     expect(TextRun.parse({ v: 'variable01' })).toEqual({ v: 'variable01' });
+    expect(TextRun.parse({ answer: 'question01' })).toEqual({ answer: 'question01' });
+  });
+
+  it('L-04: подстановки «баллы», «максимум», «результат» и системные переменные', () => {
+    for (const sys of ['баллы', 'максимум', 'результат', ...SYSTEM_VARIABLES]) expect(TextRun.safeParse({ sys }).success).toBe(true);
+    expect(TextRun.safeParse({ sys: 'пароль' }).success).toBe(false);
   });
 
   it('L-06: таймер экрана', () => {

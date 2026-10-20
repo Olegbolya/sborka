@@ -25,6 +25,7 @@ export type BranchTarget = z.infer<typeof BranchTarget>;
 
 /** L-02: «если … → экран Y»; the first matching branch wins, otherwise the next screen. */
 export const BranchRule = z.strictObject({ id: Id, if: Condition, to: BranchTarget, transition: Transition.optional() });
+export type BranchRule = z.infer<typeof BranchRule>;
 
 export const Screen = z.strictObject({
   id: Id,

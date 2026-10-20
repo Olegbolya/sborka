@@ -199,3 +199,25 @@ describe('SC-07: проверка сценариев перед публикац
     expect(gesture[0]?.message).toContain('только по действию участника');
   });
 });
+
+describe('L-02 · L-05: ссылки на ответы и переменные', () => {
+  it('L-02: ветка по ответу на вопрос с прошлого экрана — не ошибка', () => {
+    const q = createBlock('singleChoice');
+    const opt = q.type === 'singleChoice' ? q.props.options[0]!.id : '';
+    const s1 = createScreen('Вопрос', { blocks: [q] });
+    const s2 = createScreen('Развилка', {
+      branches: [{ id: 'branch0001', if: { kind: 'answer', questionBlockId: q.id, op: 'selected', optionId: opt }, to: { kind: 'finish' } }],
+    });
+    const doc = docWith([s1, s2, createScreen('Финал')]);
+    expect(codes(doc)).toEqual([]);
+  });
+
+  it('L-05: текст подставляет удалённую переменную или ответ на удалённый вопрос — ошибка', () => {
+    const t = createBlock('text', { name: 'Итог', textLayer: { paragraphs: [{ runs: [{ t: 'Вы набрали ' }, { sys: 'баллы' }, { v: 'deletedvar' }, { answer: 'deletedq01' }] }] } });
+    const doc = docWith([createScreen('Э', { blocks: [t] }), createScreen('Ф')]);
+    const issues = validateDocument(doc);
+    expect(issues.map((i) => i.code)).toEqual(['MISSING_VARIABLE', 'MISSING_BLOCK']);
+    expect(issues[1]?.message).toBe('Текст блока «Итог» подставляет ответ на удалённый вопрос');
+  });
+});
+

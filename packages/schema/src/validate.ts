@@ -82,16 +82,21 @@ function triggerBlocks(t: Trigger): string[] {
   return ids.filter((x): x is string => Boolean(x));
 }
 
-function conditionRefs(c: Condition): { blocks: string[]; variables: string[]; options: string[] } {
+/**
+ * Ids a condition refers to. `blocks` are live blocks (must be on the same screen as the rule);
+ * `questions` are answers, which stay available after their screen (L-02 branches on earlier answers).
+ */
+function conditionRefs(c: Condition): { blocks: string[]; questions: string[]; variables: string[]; options: string[] } {
+  const none = { blocks: [], questions: [], variables: [], options: [] };
   switch (c.kind) {
     case 'variable':
-      return { blocks: [], variables: [c.variableId], options: [] };
+      return { ...none, variables: [c.variableId] };
     case 'answer':
-      return { blocks: [c.questionBlockId], variables: [], options: c.optionId ? [c.optionId] : [] };
+      return { ...none, questions: [c.questionBlockId], options: c.optionId ? [c.optionId] : [] };
     case 'blockState':
-      return { blocks: [c.blockId, ...(c.zoneId ? [c.zoneId] : [])], variables: [], options: [] };
+      return { ...none, blocks: [c.blockId, ...(c.zoneId ? [c.zoneId] : [])] };
     default:
-      return { blocks: [], variables: [], options: [] };
+      return none;
   }
 }
 
@@ -263,6 +268,7 @@ export function validateDocument(doc: ProjectDocument): ValidationIssue[] {
     for (const cond of walkConditions(c)) {
       const refs = conditionRefs(cond);
       refs.blocks.forEach((id) => checkBlock(id, path, screen));
+      refs.questions.forEach((id) => checkBlock(id, path));
       refs.variables.forEach((id) => checkVariable(id, path));
       refs.options.forEach((id) => {
         if (!optionIds.has(id)) err('MISSING_OPTION', path, `Ссылка на удалённый вариант ответа (${id})`);
@@ -312,6 +318,11 @@ export function validateDocument(doc: ProjectDocument): ValidationIssue[] {
     for (const b of walkBlocks(s.blocks)) {
       const bp: Path = ['screens', si, 'block', b.id];
       checkCondition(b.visibleIf, [...bp, 'visibleIf'], s);
+      for (const run of b.textLayer?.paragraphs.flatMap((p) => p.runs) ?? []) {
+        if ('v' in run) checkVariable(run.v, [...bp, 'textLayer']);
+        if ('answer' in run && !blocks.has(run.answer))
+          err('MISSING_BLOCK', [...bp, 'textLayer'], `Текст блока «${b.name}» подставляет ответ на удалённый вопрос`);
+      }
       if (b.type === 'singleChoice' || b.type === 'multiChoice') {
         const childIds = new Set(b.children.map((c) => c.id));
         b.props.options.forEach((o, oi) => {

@@ -56,3 +56,12 @@ export function createRng(seed: number): Rng {
     },
   };
 }
+
+/**
+ * Source of randomness that affects the result (CN-05 with «влияет на результат», ties between results,
+ * wheel draws RN-01). On the server it is backed by crypto; in the participant's browser the runtime
+ * asks the server (P5.4). Returns a float in [0, 1).
+ */
+export interface RandomSource {
+  next(): number;
+}
