@@ -88,6 +88,29 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  infra:
+    name: Серверные скрипты (shellcheck, dry-run, nginx -t)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: shellcheck -x infra/*.sh infra/test/*.sh scripts/*.sh
+      - name: Пробный прогон server-setup.sh в чистой Ubuntu 24.04
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" ubuntu:24.04 bash /repo/infra/server-setup.sh --dry-run | tee dry-run.txt
+          if grep -nE '/home/deploy/bst|bst_db|sites-available/mybst|bst-api|bst-renderer' dry-run.txt; then
+            echo "::error::server-setup.sh затрагивает BST"; exit 1
+          fi
+      - name: nginx -t для шаблона
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq nginx >/dev/null
+          sudo CI=true bash infra/test/check-nginx.sh
+      - name: deploy.sh трогает только процессы Блокума
+        run: |
+          if grep -nE 'pm2 (restart|delete|stop|kill|reload) (all|bst)' infra/deploy.sh; then echo "::error::deploy.sh не должен трогать чужие процессы PM2"; exit 1; fi
+          grep -q -- '--only "\$1"' infra/deploy.sh
+
   secrets:
     name: Поиск секретов (gitleaks)
     runs-on: ubuntu-latest

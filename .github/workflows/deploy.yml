@@ -1,0 +1,60 @@
+name: Деплой
+
+# Выкладка на домашний сервер (docs/02-ARCHITECTURE.md §3.3) — только после зелёного CI на main.
+# Ручной запуск: Actions → «Деплой» → Run workflow; флаг «проверка отката» намеренно ломает API.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      simulate_broken_api:
+        description: 'Проверка отката: новая сборка API намеренно не запустится'
+        type: boolean
+        default: false
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Выкладка на сервер
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SERVER: deploy@95.105.7.135
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Ключ доступа к серверу
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error title=Нет секрета DEPLOY_SSH_KEY::Добавьте секрет в Settings → Secrets and variables → Actions (инструкция — docs/00-OWNER-DECISIONS.md §2)"
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+      - name: Деплой
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          SIMULATE: ${{ inputs.simulate_broken_api && '1' || '0' }}
+        run: |
+          # Переменные передаются через stdin, чтобы токен не попадал в список процессов на сервере.
+          {
+            printf 'export GH_TOKEN=%q REPO=%q DEPLOY_SHA=%q SIMULATE_BROKEN_API=%q\n' "$GH_TOKEN" "$GITHUB_REPOSITORY" "$DEPLOY_SHA" "$SIMULATE"
+            cat infra/deploy.sh
+          } | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$SERVER" 'bash -s'
+      - name: Итог
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

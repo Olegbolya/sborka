@@ -94,8 +94,8 @@ sborka/                        # репозиторий (рабочее имя);
 
 | Что | Значение для «Блокума» |
 |---|---|
-| Каталог кода | `/home/deploy/blokum` |
-| Данные (медиа, экспорт, временные) | `/home/deploy/blokum-data/{media,exports,tmp,quarantine}` |
+| Каталог кода | `/home/deploy/blokum`: `repo.git` (голый репозиторий без учётных данных), `releases/<время>-<коммит>` (3 последних сборки), `current` → активный релиз, `shared/.env.prod`, `setup/infra` (скрипты для владельца) |
+| Данные (медиа, экспорт, временные) | `/srv/blokum/{media,exports,tmp,quarantine}` (вне `/home`, чтобы nginx читал медиа, не открывая домашнюю папку) |
 | Логи | `/home/deploy/logs/blokum-*.log` |
 | Node | **Node 22 LTS** через nvm (`nvm install 22`); путь к интерпретатору явно в `ecosystem.config.cjs`. Node 20 у BST не трогаем |
 | PM2 процессы | `blokum-api` (порт **3100**), `blokum-web` (порт **3110**), `blokum-worker` (без порта) |
@@ -103,7 +103,7 @@ sborka/                        # репозиторий (рабочее имя);
 | Redis | номер БД **3**, префикс ключей `bk:`, префикс очередей BullMQ `bk` |
 | nginx | отдельный файл `/etc/nginx/sites-available/blokum.conf` только со своими `server_name`; перед перезагрузкой всегда `nginx -t` |
 | Домены | `blokum.ru` — сайт, кабинет, плеер, `/api/*` → api; `{МЕДИА-ДОМЕН}` — пользовательские файлы (**отдельный регистрируемый домен**, чтобы cookie основного сайта туда не уходили, решение 5 в `00-OWNER-DECISIONS.md`; на время разработки допустим поддомен `media.blokum.ru`) |
-| Секреты | `/home/deploy/blokum/.env.prod` (права 600), в git — только `.env.prod.example` |
+| Секреты | `/home/deploy/blokum/shared/.env.prod` (права 600), подключается через `node --env-file`; в git — только `infra/env.prod.example` |
 
 **Запрещено на сервере:** `pm2 restart all`, `pm2 delete all`, `pm2 kill`, правка файлов BST, `nginx`-конфигов BST, базы `bst_db`, Redis БД BST, перезапуск PostgreSQL/Redis без согласования с владельцем.
 
