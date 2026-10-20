@@ -195,8 +195,11 @@ done
     path="${check%%:*}"; want="${check##*:}"; got="$(code "$path")"
     if [ "$got" = "$want" ]; then ok "https://$DOMAIN$path → $got"; else echo "⚠ https://$DOMAIN$path → ${got:-нет ответа} (ожидалось $want)"; fi
   done
-  until="$(echo | openssl s_client -connect 127.0.0.1:443 -servername "$DOMAIN" 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)"
-  if [ -n "$until" ]; then ok "Сертификат $DOMAIN действует до $until"; else echo "⚠ Сертификат $DOMAIN не найден"; fi
+  cert="$(echo | openssl s_client -connect 127.0.0.1:443 -servername "$DOMAIN" 2>/dev/null | openssl x509 -noout -enddate -ext subjectAltName 2>/dev/null)"
+  until="$(printf '%s\n' "$cert" | sed -n 's/^notAfter=//p')"
+  names="$(printf '%s\n' "$cert" | grep -o 'DNS:[^,]*' | sed 's/DNS://' | paste -sd' ' -)"
+  if printf ' %s ' "$names" | grep -q " $DOMAIN "; then ok "Сертификат $DOMAIN действует до $until"
+  else echo "⚠ На $DOMAIN отдаётся чужой сертификат (${names:-нет}), действует до ${until:-?}"; fi
   public_ip="$(getent ahostsv4 "$DOMAIN" | awk 'NR==1{print $1}')"
   if [ "$public_ip" = "$SERVER_IP" ]; then ok "DNS: $DOMAIN → $public_ip"; else echo "⚠ DNS: $DOMAIN → ${public_ip:-не найден} (нужно $SERVER_IP)"; fi
 )
