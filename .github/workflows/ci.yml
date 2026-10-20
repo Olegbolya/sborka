@@ -1,10 +1,10 @@
 name: CI
 
-# Runs every repository check on each push and pull request.
-# Task P0.2 extends this workflow with PostgreSQL/Redis services, Playwright, Lighthouse CI and gitleaks.
+# Every repository check on each push and pull request (docs/03-PLAN.md, P0.2).
+# Deploy (deploy.yml) runs only after this workflow succeeds on main.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
   workflow_dispatch:
 
@@ -15,27 +15,89 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+  DATABASE_URL: postgresql://blokum:blokum@127.0.0.1:5432/blokum_test
+  REDIS_URL: redis://127.0.0.1:6379/3
+
 jobs:
   verify:
+    name: Проверки (lint, typecheck, test, правила репозитория)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: blokum
+          POSTGRES_PASSWORD: blokum
+          POSTGRES_DB: blokum_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U blokum" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Check hook scripts parse
+          cache: pnpm
+      - name: Скрипты репозитория разбираются
         run: for f in .claude/hooks/*.mjs scripts/*.mjs scripts/lib/*.mjs; do node --check "$f"; done
+      - name: Установка зависимостей
+        run: pnpm install --frozen-lockfile
+      - name: pnpm verify
+        run: pnpm verify
+      - name: Типы e2e
+        run: pnpm typecheck:e2e
 
-      - name: Install dependencies
-        if: hashFiles('package.json') != ''
-        run: |
-          corepack enable
-          pnpm install --frozen-lockfile
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Установка зависимостей
+        run: pnpm install --frozen-lockfile
+      - name: Браузеры Playwright
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Сборка
+        run: pnpm build
+      - name: E2E
+        run: pnpm e2e
+      - name: Отчёт и скриншоты
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+            e2e/__screenshots__/
+          retention-days: 14
+          if-no-files-found: ignore
 
-      - name: Verify
-        run: node scripts/verify.mjs
+  secrets:
+    name: Поиск секретов (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

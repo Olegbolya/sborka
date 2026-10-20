@@ -1,0 +1,5 @@
+{
+  "extends": "@blokum/config/tsconfig/node-lib.json",
+  "compilerOptions": { "noEmit": true, "module": "ESNext", "moduleResolution": "Bundler" },
+  "include": ["**/*.ts", "../playwright.config.ts"]
+}

@@ -17,3 +17,4 @@ test-results/
 !.env.*.example
 *.tsbuildinfo
 .claude/settings.local.json
+e2e/__screenshots__/
