@@ -63,7 +63,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           # Итог — в аннотации, чтобы его было видно без скачивания журнала.
           TXT="$(grep -E '^(✓|✗|→|  !|BST)' deploy.log | tail -n 25 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
-          if [ "$status" = 0 ]; then echo "::notice title=Деплой::$TXT"; else echo "::error title=Деплой (код $status)::$TXT"; fi
+          if [ "$status" = 0 ]; then echo "::notice title=Деплой::$TXT"; exit 0; fi
+          if [ "$status" = 3 ]; then
+            # Сервер ещё не подготовлен владельцем — это ожидание, а не поломка: не шлём письмо «Run failed».
+            echo "::warning title=Деплой ждёт подготовки сервера::$TXT"
+            exit 0
+          fi
+          echo "::error title=Деплой (код $status)::$TXT"
           exit "$status"
       - name: Итог
         if: always()
