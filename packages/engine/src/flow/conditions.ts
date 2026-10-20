@@ -7,7 +7,8 @@ export type VariableValue = number | string | boolean | Array<number | string>;
 
 /** What a condition can look at. Live block state and rule counters come from the runtime (P1.3). */
 export interface ConditionContext {
-  doc: ProjectDocument;
+  /** Only screens are read (answers are looked up there), so the public projection fits too. */
+  doc: Pick<ProjectDocument, 'screens'>;
   answers: Readonly<Record<string, AnswerValue>>;
   variables: Readonly<Record<string, VariableValue>>;
   /** Cosmetic randomness (seeded). */
@@ -43,7 +44,7 @@ export function compare(left: unknown, op: Op, right: unknown): boolean {
   return op === 'gt' ? l > r : op === 'lt' ? l < r : op === 'gte' ? l >= r : l <= r;
 }
 
-const findBlock = (doc: ProjectDocument, id: string): Block | undefined => {
+const findBlock = (doc: Pick<ProjectDocument, 'screens'>, id: string): Block | undefined => {
   for (const s of doc.screens) for (const b of walkBlocks(s.blocks)) if (b.id === id) return b;
   return undefined;
 };

@@ -141,3 +141,53 @@
 | L-06 | P1.2 | `packages/engine/src/flow/navigation.ts` | `packages/engine/test/flow.scenarios.test.ts`, `packages/engine/test/flow.units.test.ts` |
 | L-07 | P1.2 | `packages/engine/src/flow/answers.ts`, `packages/engine/src/flow/navigation.ts` | `packages/engine/test/flow.scenarios.test.ts`, `packages/engine/test/flow.units.test.ts` |
 | PL-15 | P1.2 | `packages/engine/src/flow/answers.ts`, `packages/engine/src/flow/scoring.ts` | `packages/engine/test/flow.scenarios.test.ts`, `packages/engine/test/flow.units.test.ts` |
+| TR-01 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-02 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-03 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-04 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-05 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| TR-06 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| TR-07 | P1.3 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/grid.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| TR-08 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-09 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| TR-10 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-11 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-12 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-13 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-14 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-15 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| TR-16 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| CN-01 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| CN-02 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| CN-03 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| CN-04 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| CN-05 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| CN-06 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-01 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-02 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| AC-03 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-04 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| AC-05 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-06 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-07 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-08 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-09 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| AC-10 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-11 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-12 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-13 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| AC-14 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-15 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-16 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-17 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-18 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| AC-19 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts`, `packages/engine/test/runtime.units.test.ts` |
+| AC-20 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| VR-01 | P1.3 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/types.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| VR-02 | P1.3 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/types.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| VR-03 | P1.3 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/types.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| VR-04 | P1.3 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/types.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| SC-01 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| SC-04 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.properties.test.ts`, `packages/engine/test/runtime.scenarios.test.ts` |
+| SC-05 | P1.3 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/grid.ts` | `packages/engine/test/runtime.bench.test.ts` |
+| TS-07 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
