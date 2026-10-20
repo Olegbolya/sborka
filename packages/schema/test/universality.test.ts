@@ -80,3 +80,15 @@ describe('ограничения стиля', () => {
     expect(r.error?.issues.map((i) => i.message).join(' ')).toMatch(/#RRGGBB|ожидал/);
   });
 });
+
+describe('свойства типа блока', () => {
+  it('B-01: если у всех свойств типа есть значения по умолчанию, props можно не указывать', () => {
+    expect(Block.parse({ id: 'tekst00001', type: 'text', name: 'Текст', frame: { x: 0, y: 0, w: 10, h: 10 } }).props).toEqual({});
+    expect(Block.parse({ id: 'taimer0001', type: 'timer', name: 'Таймер', frame: { x: 0, y: 0, w: 10, h: 10 } }).props).toMatchObject({ seconds: 60, autoStart: true });
+  });
+
+  it('B-11: у вопроса варианты обязательны — без props понятная ошибка', () => {
+    const r = Block.safeParse({ id: 'vopros0001', type: 'singleChoice', name: 'Вопрос', frame: { x: 0, y: 0, w: 10, h: 10 } });
+    expect(r.error?.issues.map((i) => i.message)).toEqual(['Поле не заполнено']);
+  });
+});

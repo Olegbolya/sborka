@@ -189,5 +189,10 @@
 | VR-04 | P1.3 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/types.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
 | SC-01 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
 | SC-04 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.properties.test.ts`, `packages/engine/test/runtime.scenarios.test.ts` |
-| SC-05 | P1.3 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/grid.ts` | `packages/engine/test/runtime.bench.test.ts` |
+| SC-05 | P1.3 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/grid.ts` | `packages/engine/test/runtime.bench.ts` |
 | TS-07 | P1.3 | `packages/engine/src/runtime/runtime.ts` | `packages/engine/test/runtime.scenarios.test.ts` |
+| E-01 | P1.4 | `packages/renderer/src/components/ScreenView.tsx`, `packages/renderer/src/units.ts` | `packages/renderer/test/components.test.tsx`, `e2e/artboard.spec.ts` |
+| E-02 | P1.4 | `packages/renderer/src/components/Artboard.tsx`, `packages/renderer/src/units.ts` | `packages/renderer/test/components.test.tsx`, `e2e/artboard.spec.ts` |
+| E-03 | P1.4 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/components.test.tsx` |
+| TH-01 | P1.4 | `packages/schema/src/resolve.ts`, `packages/renderer/src/theme/color.ts`, `packages/renderer/src/theme/fonts.ts`, `packages/renderer/src/theme/dev-themes.ts` | `packages/renderer/test/style-to-css.test.ts`, `packages/renderer/test/components.test.tsx`, `packages/schema/test/resolve.test.ts` |
+| TH-06 | P1.4 | `packages/schema/src/resolve.ts`, `packages/schema/src/style.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/components.test.tsx`, `packages/schema/test/resolve.test.ts` |

@@ -15,6 +15,7 @@ import {
   type Target,
   type Trigger,
   type Variable,
+  resolveBlockStyle,
   walkBlocks,
 } from '@blokum/schema';
 import { type AnswerValue, isQuestion } from '../flow/answers.js';
@@ -25,7 +26,7 @@ import { type Box, SpatialGrid } from './grid.js';
 import { type Animatable, type BlockView, type RuntimeEvent, type SettableProperty, type StepResult } from './types.js';
 
 /** What the runtime needs from a document: the public projection (PL-15) is enough. */
-export type RuntimeDocument = Pick<ProjectDocument, 'screens' | 'rules' | 'variables'>;
+export type RuntimeDocument = Pick<ProjectDocument, 'screens' | 'rules' | 'variables'> & { theme?: Pick<ProjectDocument['theme'], 'tokens'> };
 
 export interface RuntimeOptions {
   /** Seed of cosmetic randomness (spawn positions, shuffles, cosmetic chance). Same seed → same run. */
@@ -44,6 +45,8 @@ interface Instance {
   protoId: string;
   copy: boolean;
   block: Block;
+  /** Effective style with the theme's defaults (TH-06) — the starting point of animations. */
+  base: BlockStyle;
   parentId: string | null;
   children: string[];
   x: number;
@@ -151,7 +154,7 @@ function numberOf(inst: Instance, prop: Animatable): number {
   if (frame) return inst[frame];
   const animated = inst.anim[prop];
   if (animated !== undefined) return animated;
-  const style = inst.block.style;
+  const style = inst.base;
   const effects = (inst.overrides['style.effects'] as typeof style.effects | undefined) ?? style.effects;
   const t3d = (inst.overrides['style.transform3d'] as typeof style.transform3d | undefined) ?? style.transform3d;
   const filters = (inst.overrides['style.filters'] as typeof style.filters | undefined) ?? style.filters;
@@ -500,6 +503,7 @@ export class Runtime {
       protoId: b.id,
       copy,
       block: b,
+      base: resolveBlockStyle(b, this.doc.theme?.tokens),
       parentId,
       children: [],
       x: at?.x ?? b.frame.x,

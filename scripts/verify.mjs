@@ -15,10 +15,13 @@ const pkg = existsSync(pkgPath) ? JSON.parse(readFileSync(pkgPath, 'utf8')) : nu
 if (pkg && !fast) {
   steps.push(['pnpm', ['-s', 'turbo', 'run', 'lint', 'typecheck', 'test', '--output-logs=errors-only']]);
   if (pkg.scripts?.['typecheck:e2e']) steps.push(['pnpm', ['-s', 'typecheck:e2e']]);
+  // SC-05: the engine benchmark runs alone, after the parallel test run (ADR-021).
+  steps.push(['pnpm', ['-s', '--filter', '@blokum/engine', 'bench']]);
 }
 steps.push(
   ['node', ['scripts/check-forbidden.mjs']],
   ['node', ['scripts/check-foreign-services.mjs']],
+  ['node', ['scripts/check-render-boundary.mjs']],
   ['node', ['scripts/check-licenses.mjs']],
   ['node', ['scripts/check-legal.mjs']],
   ['node', ['scripts/check-progress.mjs']],

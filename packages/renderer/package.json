@@ -21,7 +21,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@blokum/schema": "workspace:*"
+    "@blokum/schema": "workspace:*",
+    "@blokum/engine": "workspace:*"
   },
   "devDependencies": {
     "@blokum/config": "workspace:*",

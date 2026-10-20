@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@blokum/engine": "workspace:*",
     "@blokum/observability": "workspace:*",
     "@blokum/renderer": "workspace:*",
     "@blokum/schema": "workspace:*",

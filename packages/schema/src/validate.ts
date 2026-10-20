@@ -394,7 +394,7 @@ export function validateDocument(doc: ProjectDocument): ValidationIssue[] {
 /** A block that shows nothing: no text, no media fill or media props, no children. */
 export function isEmptyBlock(b: Block): boolean {
   const hasText = b.textLayer ? plainText(b.textLayer).trim().length > 0 : false;
-  const hasFill = b.style.fills.some((f) => f.kind === 'media');
+  const hasFill = (b.style.fills ?? []).some((f) => f.kind === 'media');
   const hasMedia = 'media' in b.props && (b.props as { media?: unknown }).media !== null && (b.props as { media?: unknown }).media !== undefined;
   return !hasText && !hasFill && !hasMedia && b.children.length === 0;
 }

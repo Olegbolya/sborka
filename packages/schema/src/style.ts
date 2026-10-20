@@ -227,8 +227,20 @@ export type BlockStyle = z.infer<typeof BlockStyle>;
 export type BlockStyleInput = z.input<typeof BlockStyle>;
 
 /** Partial style used by states (S-15) and theme defaults per block type (TH-01). */
-export const StyleOverride = BlockStyle.partial();
-export type StyleOverride = z.infer<typeof StyleOverride>;
+/**
+ * Part of a style: only the groups that are set (TH-06 own style, theme defaults per block type, states).
+ * Unlike `BlockStyle.partial()`, missing groups stay missing — no defaults are filled in — so «своё»
+ * can be told apart from «из темы»; a group that is present is parsed with its inner defaults.
+ */
+export type StyleOverride = Partial<BlockStyle>;
+const optionalGroups = Object.fromEntries(
+  Object.entries(BlockStyle.shape).map(([key, schema]) => {
+    const def = (schema as z.ZodType).def as { type: string; innerType?: z.ZodType };
+    const inner = def.type === 'default' || def.type === 'prefault' ? def.innerType! : (schema as z.ZodType);
+    return [key, inner.optional()];
+  }),
+);
+export const StyleOverride = z.strictObject(optionalGroups) as unknown as z.ZodType<StyleOverride, Partial<z.input<typeof BlockStyle>>>;
 
 // ── S-01 Frame ────────────────────────────────────────────────────────────────
 export const Frame = z.strictObject({

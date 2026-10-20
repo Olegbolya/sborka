@@ -28,6 +28,7 @@ export default defineConfig({
     url: `http://127.0.0.1:${port}/healthz`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { NEXT_TELEMETRY_DISABLED: '1' },
+    // Service galleries /dev/* (P1.4–P1.9) are tested on the production build.
+    env: { NEXT_TELEMETRY_DISABLED: '1', BLOKUM_DEV_PAGES: '1' },
   },
 });

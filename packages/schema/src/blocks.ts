@@ -1,7 +1,7 @@
 import { z } from './locale.js';
 import { Id, MediaRef, int, num } from './primitives.js';
 import { Behavior, Condition, Rule } from './scenario.js';
-import { BlockAnimation, BlockStates, BlockStyle, Frame } from './style.js';
+import { BlockAnimation, BlockStates, Frame, StyleOverride } from './style.js';
 import { RichText } from './text.js';
 
 // Catalogue of universal blocks (01-PRODUCT-SPEC.md §6). Every block has the same style (S-00),
@@ -143,7 +143,11 @@ const commonFields = {
   locked: z.boolean().default(false),
   hiddenInEditor: z.boolean().default(false),
   groupId: Id.optional(),
-  style: BlockStyle.prefault({}),
+  /**
+   * Own style of the block (TH-06): only the style groups the creator changed by hand. Everything else
+   * comes from the theme's default for this block type — see `resolveBlockStyle`.
+   */
+  style: StyleOverride.default({}),
   textLayer: RichText.optional(),
   animation: BlockAnimation.optional(),
   states: BlockStates.optional(),
@@ -161,14 +165,15 @@ type PropsInputOf<T extends BlockType> = z.input<(typeof BLOCK_PROPS)[T]>;
 
 export type BlockOf<T extends BlockType> = Common & { type: T; props: PropsOf<T>; children: Block[] };
 export type Block = { [T in BlockType]: BlockOf<T> }[BlockType];
-export type BlockInputOf<T extends BlockType> = CommonInput & { type: T; props: PropsInputOf<T>; children?: BlockInput[] };
+/** `props` may be omitted when every property of the type has a default (text, shape, button…). */
+export type BlockInputOf<T extends BlockType> = CommonInput & { type: T; props?: PropsInputOf<T>; children?: BlockInput[] };
 export type BlockInput = { [T in BlockType]: BlockInputOf<T> }[BlockType];
 
 const member = <T extends BlockType>(type: T) =>
   z.strictObject({
     ...commonFields,
     type: z.literal(type),
-    props: BLOCK_PROPS[type],
+    props: (BLOCK_PROPS[type] as unknown as z.ZodType<PropsOf<T>, PropsInputOf<T>>).prefault({} as PropsInputOf<T>),
     children: z.array(z.lazy(() => Block)).max(100).default([]),
   });
 

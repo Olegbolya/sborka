@@ -111,6 +111,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@blokum/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@blokum/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -309,6 +312,9 @@ importers:
 
   packages/renderer:
     dependencies:
+      '@blokum/engine':
+        specifier: workspace:*
+        version: link:../engine
       '@blokum/schema':
         specifier: workspace:*
         version: link:../schema
