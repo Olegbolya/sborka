@@ -1,5 +1,6 @@
 'use client';
 
+import { behaviorOf } from '@blokum/engine';
 import { type Block, type BLOCK_STATES, type BlockStyle, resolveBlockStyle } from '@blokum/schema';
 import { type CSSProperties, type PointerEvent, type ReactNode, useRef, useState } from 'react';
 import { TINT_STYLE, animatedLayerStyle, useBlockAnimation, usesTint } from '../animation/useBlockAnimation.js';
@@ -11,6 +12,9 @@ import { type FillLayer, styleToCss } from '../style/style-to-css.js';
 import { u } from '../units.js';
 import { PathTextView, RichTextView } from './RichTextView.js';
 import { blockContent } from '../blocks/content.js';
+import { mergeHandlers } from '../behaviors/pointer.js';
+import { useDrag } from '../behaviors/useDrag.js';
+import { useScratch } from '../behaviors/useScratch.js';
 
 /**
  * S-18 «наклон за пальцем/курсором»: the block turns towards the pointer by up to `strength` degrees.
@@ -75,13 +79,16 @@ export interface BlockViewProps {
   option?: { questionId: string; optionId: string; multi: boolean };
   /** The parent lays its nested blocks out (S-20 «в строку / в столбец / сетка»): the block is in the flow. */
   inFlow?: boolean;
+  /** BH-07: the block is a side of a flip card; only the side facing the participant is shown. */
+  face?: { side: 'front' | 'back'; shown: boolean };
 }
 
 const TAP_TRIGGERS = new Set(['tap', 'doubleTap', 'longPress']);
 const MEDIA_TYPES = new Set(['image', 'gif', 'video', 'animation', 'audio']);
 
 /** A block the participant presses: a button, or any block with its own «нажатие» rule (PL-21). */
-export const isPressable = (block: Block): boolean => block.type === 'button' || block.rules.some((r) => TAP_TRIGGERS.has(r.when.kind));
+export const isPressable = (block: Block): boolean =>
+  block.type === 'button' || block.rules.some((r) => TAP_TRIGGERS.has(r.when.kind)) || block.behaviors.some((b) => b.kind === 'wheel' || (b.kind === 'flip' && b.on === 'tap'));
 
 /**
  * One block of any type (E-03, S-00): absolute position in units, rotation and flips, the style through
@@ -126,7 +133,7 @@ function semantics(block: Block, o: { option: BlockViewProps['option']; chosen: 
 /** S-15: what changes smoothly when a block changes its state. */
 export const STATE_TRANSITION = ['opacity', 'filter', 'background-color', 'border-radius', 'box-shadow', 'color'].map((p) => `${p} 160ms ease`).join(', ');
 
-function BlockBody({ block, instanceId, state, option, inFlow, appear, leaving, onExited }: BlockViewProps & { instanceId: string; appear: boolean; leaving: boolean; onExited: () => void }): ReactNode {
+function BlockBody({ block, instanceId, state, option, inFlow, face, appear, leaving, onExited }: BlockViewProps & { instanceId: string; appear: boolean; leaving: boolean; onExited: () => void }): ReactNode {
   const ctx = useRenderContext();
   const view = ctx.views?.get(instanceId);
   const animLayer = useRef<HTMLDivElement>(null);
@@ -164,11 +171,18 @@ function BlockBody({ block, instanceId, state, option, inFlow, appear, leaving, 
   const w = view?.w ?? block.frame.w;
   const h = view?.h ?? block.frame.h;
   const css = styleToCss(style, { tokens: ctx.tokens, media: ctx.media }, { w, h });
+  // BH-01, BH-03: dragging and scratching by the finger or the mouse (Pointer Events with capture).
+  const live = ctx.mode === 'player' && view?.interactive !== false;
+  const drag = live ? behaviorOf(block, 'drag') : undefined;
+  const scratch = live ? behaviorOf(block, 'scratch') : undefined;
+  const dragHandlers = useDrag({ enabled: drag !== undefined, instanceId, x, y, dispatch: ctx.dispatch });
+  const scratching = useScratch({ enabled: scratch !== undefined, instanceId, w, h, brush: scratch?.brush ?? 40, threshold: scratch?.threshold ?? 60, dispatch: ctx.dispatch });
   const rotation = view?.rotation ?? block.frame.rotation;
   const flipX = (view?.overrides['frame.flipX'] as boolean | undefined) ?? block.frame.flipX;
   const flipY = (view?.overrides['frame.flipY'] as boolean | undefined) ?? block.frame.flipY;
   const scale = view?.anim.scale ?? 1;
   const transform = [
+    face?.side === 'back' ? 'scaleX(-1)' : '',
     rotation !== 0 ? `rotate(${rotation}deg)` : '',
     flipX || flipY ? `scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` : '',
     scale !== 1 ? `scale(${scale})` : '',
@@ -189,6 +203,10 @@ function BlockBody({ block, instanceId, state, option, inFlow, appear, leaving, 
     ...(view && !view.interactive ? { pointerEvents: 'none' } : {}),
     // S-15: switching between states is smooth (transforms stay instant — the runtime drives them by frames).
     ...(states && !reducedMotion ? { transition: STATE_TRANSITION } : {}),
+    ...(drag ? { touchAction: 'none', cursor: view?.dragging ? 'grabbing' : 'grab' } : {}),
+    ...scratching.style,
+    // BH-07: the side turned away from the participant is not drawn and not announced.
+    ...(face && !face.shown ? { visibility: 'hidden' } : {}),
   };
   const surface: CSSProperties = states && !reducedMotion ? { ...css.surface, transition: STATE_TRANSITION } : css.surface;
   const tilt = ctx.mode === 'player' && style.transform3d.tiltFollow ? style.transform3d.tiltStrength : 0;
@@ -270,6 +288,10 @@ function BlockBody({ block, instanceId, state, option, inFlow, appear, leaving, 
 
   const tint = animated && block.animation && usesTint(block.animation);
   const choiceOptions = block.type === 'singleChoice' || block.type === 'multiChoice' ? new Map(block.props.options.map((o) => [o.blockId, o.id])) : null;
+  // BH-07: past the edge (90°…270°) the card shows its back side.
+  const flip = behaviorOf(block, 'flip');
+  const turn = ((((view?.anim.rotateY ?? (view?.flipped ? 180 : 0)) % 360) + 360) % 360);
+  const backShown = turn > 90 && turn < 270;
   const poster = style.media.poster ? ctx.media(style.media.poster)?.url : undefined;
   const body = (
     <>
@@ -295,6 +317,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, appear, leaving, 
           ))}
         {block.children.map((child) => {
           const opt = choiceOptions?.get(child.id);
+          const side = flip ? (child.id === flip.frontId ? 'front' : child.id === flip.backId ? 'back' : null) : null;
           return (
             <BlockView
               key={child.id}
@@ -302,6 +325,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, appear, leaving, 
               instanceId={childInstanceId(instanceId, child)}
               {...(opt ? { option: { questionId: instanceId, optionId: opt, multi: block.type === 'multiChoice' } } : {})}
               {...(style.layout.mode !== 'free' ? { inFlow: true } : {})}
+              {...(side ? { face: { side, shown: side === 'back' ? backShown : !backShown } } : {})}
             />
           );
         })}
@@ -320,7 +344,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, appear, leaving, 
       data-leaving={leaving ? '' : undefined}
       {...semantics(block, { option, chosen, pressable, waiting, player: ctx.mode === 'player' })}
       style={root}
-      {...handlers}
+      {...mergeHandlers<Record<string, unknown>>(dragHandlers, scratching.handlers, handlers)}
     >
       {animated || appear || leaving ? (
         <div ref={animLayer} className="bk-anim" style={{ ...(block.animation ? animatedLayerStyle(block.animation, cssColor({ token: 'accent', alpha: 0.8 }, ctx.tokens)) : { position: 'absolute', inset: 0 }), ...(style.autoHeight ? { position: 'relative', inset: 'auto' } : {}) }}>

@@ -2,7 +2,7 @@
 
 import { type AnswerValue, type QuestionBlock, hasPersonalData, isQuestion, requiredProblem } from '@blokum/engine';
 import { type MediaOverlay, type Screen, walkBlocks } from '@blokum/schema';
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { type PointerEvent, type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { MediaOverlayView } from '../components/MediaOverlayView.js';
 import { ScreenView } from '../components/ScreenView.js';
 import { RenderContext, useRenderContext } from '../context.js';
@@ -26,6 +26,9 @@ export function requiredMissing(screen: Screen, answers: Readonly<Record<string,
   const personal = questions.some((q) => hasPersonalData(q, answers[q.id]));
   return questions.some((q) => requiredProblem(q, answers[q.id], personal) !== null);
 }
+
+/** The screen has blocks that react to the pointer itself (BH-02 flee, BH-08 follow). */
+export const usesPointer = (screen: Screen): boolean => [...walkBlocks(screen.blocks)].some((b) => b.behaviors.some((x) => x.kind === 'flee' || x.kind === 'follow'));
 
 export function PlayerScreen({ screen, store, progress }: { screen: Screen; store: RuntimeStore; progress?: { index: number; total: number } }): ReactNode {
   const ctx = useRenderContext();
@@ -76,6 +79,12 @@ export function PlayerScreen({ screen, store, progress }: { screen: Screen; stor
     store.dispatch(event);
   };
   const answers = store.runtime.currentAnswers;
+  const watchPointer = usesPointer(screen);
+  const sendPointer = (e: PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const unit = r.width / ARTBOARD_WIDTH || 1;
+    store.dispatch({ type: 'pointer', x: (e.clientX - r.left) / unit, y: (e.clientY - r.top) / unit });
+  };
   const particles = screen.particles ?? ctx.tokens.particles ?? null;
   const colors = ['primary', 'accent', 'success'].map((token) => cssColor({ token, alpha: 1 }, ctx.tokens));
   return (
@@ -95,7 +104,18 @@ export function PlayerScreen({ screen, store, progress }: { screen: Screen; stor
         ...(progress ? { progress } : {}),
       }}
     >
-      <div ref={shakeTarget} className="bk-player-screen" style={{ position: 'relative' }}>
+      <div
+        ref={shakeTarget}
+        className="bk-player-screen"
+        style={{ position: 'relative' }}
+        {...(watchPointer
+          ? {
+              // BH-02, BH-08: where the finger or cursor is on the screen, in units (also on touch-down).
+              onPointerMove: (e: PointerEvent<HTMLDivElement>) => sendPointer(e),
+              onPointerDown: (e: PointerEvent<HTMLDivElement>) => sendPointer(e),
+            }
+          : {})}
+      >
         <ScreenView screen={screen} />
         {particles && <ParticleLayer key={screen.id} config={particles} width={ARTBOARD_WIDTH} height={screen.height} seed={screen.id.length} />}
         <EffectsLayer width={ARTBOARD_WIDTH} height={screen.height} shakeTarget={shakeTarget} colors={colors} ref={effects} />

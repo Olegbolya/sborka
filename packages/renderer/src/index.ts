@@ -25,3 +25,6 @@ export * from './blocks/content.js';
 export * from './blocks/media.js';
 export * from './blocks/questions.js';
 export * from './blocks/display.js';
+export * from './behaviors/pointer.js';
+export * from './behaviors/useDrag.js';
+export * from './behaviors/useScratch.js';
