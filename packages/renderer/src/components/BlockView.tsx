@@ -1,6 +1,6 @@
 'use client';
 
-import { type Block, type BLOCK_STATES, resolveBlockStyle } from '@blokum/schema';
+import { type Block, type BLOCK_STATES, type BlockStyle, resolveBlockStyle } from '@blokum/schema';
 import { type CSSProperties, type PointerEvent, type ReactNode, useRef, useState } from 'react';
 import { TINT_STYLE, animatedLayerStyle, useBlockAnimation, usesTint } from '../animation/useBlockAnimation.js';
 import { prefersReducedMotion } from '../particles/ParticleLayer.js';
@@ -35,9 +35,32 @@ export function childInstanceId(parentInstanceId: string, child: Block): string 
   return tilde === -1 ? child.id : `${child.id}${parentInstanceId.slice(tilde)}`;
 }
 
-function Layer({ layer }: { layer: FillLayer }): ReactNode {
+/**
+ * One fill layer. A video fill plays by the block's media settings (S-11): for a block without media of its
+ * own its video fill is its media, so autoplay, sound, loop, controls, cover and speed work on every type.
+ */
+function Layer({ layer, media, poster }: { layer: FillLayer; media: BlockStyle['media']; poster?: string }): ReactNode {
   const base: CSSProperties = { position: 'absolute', inset: 0 };
-  if (layer.kind === 'video') return <video className="bk-fill" src={layer.src} autoPlay muted loop playsInline style={{ ...base, width: '100%', height: '100%', ...layer.style }} />;
+  if (layer.kind === 'video') {
+    const rate = (el: HTMLVideoElement | null) => {
+      if (el) el.playbackRate = media.speed;
+    };
+    return (
+      <video
+        ref={rate}
+        className="bk-fill"
+        src={layer.src}
+        autoPlay={media.autoplay}
+        muted={media.muted}
+        loop={media.loop}
+        controls={media.controls}
+        {...(poster ? { poster } : {})}
+        data-speed={media.speed}
+        playsInline
+        style={{ ...base, width: '100%', height: '100%', ...layer.style }}
+      />
+    );
+  }
   return <div className="bk-fill" style={{ ...base, ...layer.style }} />;
 }
 
@@ -189,6 +212,7 @@ function BlockBody({ block, instanceId, state, appear, leaving, onExited }: Bloc
   };
 
   const tint = animated && block.animation && usesTint(block.animation);
+  const poster = style.media.poster ? ctx.media(style.media.poster)?.url : undefined;
   const body = (
     <>
       {css.shadowLayers.map((layer, i) => (
@@ -196,7 +220,7 @@ function BlockBody({ block, instanceId, state, appear, leaving, onExited }: Bloc
       ))}
       <div className="bk-surface" style={surface}>
         {css.layers.map((layer, i) => (
-          <Layer key={i} layer={layer} />
+          <Layer key={i} layer={layer} media={style.media} {...(poster ? { poster } : {})} />
         ))}
         {tint && <div className="bk-tint" aria-hidden style={TINT_STYLE} />}
         {css.innerLayers.map((layer, i) => (
