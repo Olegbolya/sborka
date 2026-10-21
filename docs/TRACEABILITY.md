@@ -226,3 +226,24 @@
 | T-30 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
 | T-31 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
 | T-32 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `e2e/animations.spec.ts` |
+| S-00 | P1.5 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx`, `e2e/matrix.spec.ts` |
+| S-01 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-02 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-03 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-04 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-05 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-06 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-07 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-08 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-09 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-10 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-11 | P1.5 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-12 | P1.5 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-13 | P1.5 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-14 | P1.5 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-15 | P1.5 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-16 | P1.5 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-17 | P1.5 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-18 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-19 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| S-20 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
