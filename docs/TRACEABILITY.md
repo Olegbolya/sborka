@@ -201,3 +201,28 @@
 | S-05 | P1.6 | `packages/renderer/src/shape/decor.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/shapes.test.tsx`, `e2e/shapes.spec.ts` |
 | S-18 | P1.6 | `packages/renderer/src/style/style-to-css.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/shapes.test.tsx`, `e2e/shapes.spec.ts` |
 | S-19 | P1.6 | `packages/renderer/src/shape/decor.ts`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/shapes.test.tsx`, `e2e/shapes.spec.ts` |
+| T-01 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `e2e/animations.spec.ts` |
+| T-02 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts` |
+| T-03 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts` |
+| T-04 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts` |
+| T-05 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts` |
+| T-06 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts` |
+| T-07 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/particles-sound.test.ts`, `packages/renderer/test/player-layers.test.tsx` |
+| T-08 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts` |
+| P-01 | P1.7 | `packages/renderer/src/particles/engine.ts`, `packages/renderer/src/particles/ParticleLayer.tsx` | `packages/renderer/test/particles-sound.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
+| P-02 | P1.7 | `packages/renderer/src/particles/engine.ts`, `packages/renderer/src/particles/ParticleLayer.tsx` | `packages/renderer/test/particles-sound.test.ts` |
+| P-03 | P1.7 | `packages/renderer/src/particles/engine.ts`, `packages/renderer/src/particles/ParticleLayer.tsx` | `packages/renderer/test/particles-sound.test.ts` |
+| P-04 | P1.7 | `packages/renderer/src/particles/engine.ts`, `packages/renderer/src/particles/ParticleLayer.tsx` | `packages/renderer/test/particles-sound.test.ts` |
+| P-05 | P1.7 | `packages/renderer/src/particles/engine.ts`, `packages/renderer/src/particles/ParticleLayer.tsx` | `packages/renderer/test/particles-sound.test.ts` |
+| P-06 | P1.7 | `packages/renderer/src/particles/engine.ts`, `packages/renderer/src/particles/ParticleLayer.tsx` | `packages/renderer/test/particles-sound.test.ts` |
+| P-07 | P1.7 | `packages/renderer/src/particles/engine.ts`, `packages/renderer/src/particles/ParticleLayer.tsx` | `packages/renderer/test/particles-sound.test.ts` |
+| P-08 | P1.7 | `packages/renderer/src/particles/engine.ts`, `packages/renderer/src/particles/ParticleLayer.tsx` | `packages/renderer/test/particles-sound.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
+| S-12 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/useBlockAnimation.ts` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
+| S-13 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/useBlockAnimation.ts` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
+| S-14 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/useBlockAnimation.ts` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
+| S-15 | P1.7 | `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/states.test.tsx` |
+| T-20 | P1.7 | `packages/renderer/src/components/MediaOverlayView.tsx`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
+| T-21 | P1.7 | `packages/renderer/src/components/MediaOverlayView.tsx`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
+| T-30 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
+| T-31 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `packages/renderer/test/player-layers.test.tsx`, `e2e/animations.spec.ts` |
+| T-32 | P1.7 | `packages/renderer/src/animation/plan.ts`, `packages/renderer/src/animation/ScreenStage.tsx` | `packages/renderer/test/animation-plan.test.ts`, `e2e/animations.spec.ts` |
