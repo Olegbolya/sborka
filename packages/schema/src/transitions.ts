@@ -60,6 +60,7 @@ export const MediaByAnswer = z.strictObject({
     .min(1)
     .max(30),
 });
+export type MediaByAnswer = z.infer<typeof MediaByAnswer>;
 
 /** T-32: own transition saved as a preset in a theme or in «Мои элементы». */
 export const TransitionPreset = z.strictObject({ id: Id, name: z.string().min(1).max(60), transition: BasicTransition });

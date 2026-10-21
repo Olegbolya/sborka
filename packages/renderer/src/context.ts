@@ -4,6 +4,7 @@ import { type Block, type RichText, type ThemeTokens } from '@blokum/schema';
 import { type BlockView as RuntimeView, type RuntimeEvent } from '@blokum/engine';
 import { type ReactNode, createContext, useContext } from 'react';
 import { type BlockCss, type MediaResolver } from './style/style-to-css.js';
+import { type SoundManager } from './sound/sound-manager.js';
 import { DEV_THEMES } from './theme/dev-themes.js';
 
 /** Where blocks are drawn: the editor canvas, the participant's player or a static thumbnail. */
@@ -22,6 +23,8 @@ export interface RenderContextValue {
   /** Live state from the scenario runtime (player and preview). */
   views?: ReadonlyMap<string, RuntimeView>;
   dispatch?: (event: RuntimeEvent) => void;
+  /** Sounds of the player (unlocked by the first gesture). */
+  sound?: SoundManager;
   /** Type-specific content of a block (media, questions…), drawn under its text layer. */
   renderContent?: (block: Block, css: BlockCss, instanceId: string) => ReactNode;
 }

@@ -284,6 +284,8 @@ export const ANIMATABLE = [
 export const Keyframe = z.strictObject({
   at: num(0, 1),
   props: z.partialRecord(z.enum(ANIMATABLE), z.number().min(-10000).max(10000)),
+  /** S-12: own keyframes may change the fill colour too (it is laid over the block's fills, S-04). */
+  fill: Color.optional(),
 });
 const keyframes = z.array(Keyframe).min(2).max(20);
 

@@ -21,6 +21,7 @@ export class RuntimeStore {
   private viewMap = new Map<string, RuntimeView>();
   private version = 0;
   private readonly listeners = new Set<() => void>();
+  private readonly effectListeners = new Set<(effects: RuntimeEffect[]) => void>();
   private handle: number | null = null;
   private last: number | null = null;
   private readonly scheduler: FrameScheduler;
@@ -43,6 +44,12 @@ export class RuntimeStore {
   };
 
   getSnapshot = (): number => this.version;
+
+  /** Effects for the player itself (particles, sounds, media inserts); the host gets all of them too. */
+  subscribeEffects = (listener: (effects: RuntimeEffect[]) => void): (() => void) => {
+    this.effectListeners.add(listener);
+    return () => this.effectListeners.delete(listener);
+  };
 
   /** Shows a screen and rebuilds every view. */
   enter(screenId: string): void {
@@ -91,6 +98,9 @@ export class RuntimeStore {
       this.version += 1;
       for (const l of this.listeners) l();
     }
-    if (result.effects.length) this.onEffects(result.effects);
+    if (result.effects.length) {
+      this.onEffects(result.effects);
+      for (const l of this.effectListeners) l(result.effects);
+    }
   }
 }

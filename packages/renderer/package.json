@@ -21,21 +21,22 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@blokum/engine": "workspace:*",
     "@blokum/schema": "workspace:*",
-    "@blokum/engine": "workspace:*"
+    "motion": "14.2.0"
   },
   "devDependencies": {
     "@blokum/config": "workspace:*",
     "@types/node": "22.20.5",
-    "@vitest/coverage-v8": "5.0.5",
-    "eslint": "10.13.0",
-    "typescript": "6.0.3",
-    "vitest": "5.0.5",
-    "react": "19.3.1",
-    "react-dom": "19.3.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "jsdom": "30.1.3"
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "jsdom": "30.1.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
   },
   "peerDependencies": {
     "react": "^19.0.0",
