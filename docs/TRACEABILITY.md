@@ -247,3 +247,27 @@
 | S-18 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
 | S-19 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
 | S-20 | P1.5 | `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/style-matrix.test.tsx` |
+| B-01 | P1.8 | `packages/renderer/src/components/RichTextView.tsx` | `packages/renderer/test/style-matrix.test.tsx`, `e2e/render-gallery.spec.ts` |
+| B-02 | P1.8 | `packages/renderer/src/blocks/media.tsx` | `packages/renderer/test/blocks.test.tsx` |
+| B-03 | P1.8 | `packages/renderer/src/blocks/media.tsx` | `packages/renderer/test/blocks.test.tsx` |
+| B-04 | P1.8 | `packages/renderer/src/blocks/media.tsx`, `packages/engine/src/runtime/runtime.ts` | `packages/renderer/test/blocks.test.tsx`, `packages/engine/test/runtime.units.test.ts`, `e2e/render-gallery.spec.ts` |
+| B-05 | P1.8 | `packages/renderer/src/blocks/media.tsx` | `packages/renderer/test/blocks.test.tsx`, `e2e/render-gallery.spec.ts` |
+| B-06 | P1.8 | `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/blocks.test.tsx` |
+| B-07 | P1.8 | `packages/renderer/src/blocks/media.tsx`, `packages/renderer/src/media/lottie.ts` | `packages/renderer/test/blocks.test.tsx`, `e2e/render-gallery.spec.ts` |
+| B-08 | P1.8 | `packages/renderer/src/blocks/display.tsx` | `packages/renderer/test/blocks.test.tsx`, `packages/engine/test/runtime.units.test.ts` |
+| B-09 | P1.8 | `packages/renderer/src/blocks/display.tsx` | `packages/renderer/test/blocks.test.tsx` |
+| B-11 | P1.8 | `packages/renderer/src/components/BlockView.tsx`, `packages/engine/src/runtime/runtime.ts` | `packages/renderer/test/blocks.test.tsx`, `packages/engine/test/runtime.units.test.ts`, `e2e/render-gallery.spec.ts` |
+| B-12 | P1.8 | `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/blocks.test.tsx`, `packages/engine/test/runtime.units.test.ts`, `e2e/render-gallery.spec.ts` |
+| B-13 | P1.8 | `packages/renderer/src/blocks/questions.tsx` | `packages/renderer/test/blocks.test.tsx`, `e2e/render-gallery.spec.ts` |
+| B-14 | P1.8 | `packages/renderer/src/blocks/questions.tsx` | `packages/renderer/test/blocks.test.tsx` |
+| B-15 | P1.8 | `packages/renderer/src/blocks/questions.tsx` | `packages/renderer/test/blocks.test.tsx` |
+| B-16 | P1.8 | `packages/renderer/src/blocks/questions.tsx` | `packages/renderer/test/blocks.test.tsx` |
+| B-17 | P1.8 | `packages/renderer/src/blocks/questions.tsx` | `packages/renderer/test/blocks.test.tsx`, `e2e/render-gallery.spec.ts` |
+| B-18 | P1.8 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/player/PlayerScreen.tsx` | `packages/renderer/test/blocks.test.tsx`, `e2e/render-gallery.spec.ts` |
+| B-19 | P1.8 | `packages/renderer/src/blocks/questions.tsx` | `packages/renderer/test/blocks.test.tsx`, `e2e/render-gallery.spec.ts` |
+| B-20 | P1.8 | `packages/renderer/src/blocks/questions.tsx` | `packages/renderer/test/blocks.test.tsx`, `e2e/render-gallery.spec.ts` |
+| B-21 | P1.8 | `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/blocks.test.tsx` |
+| B-22 | P1.8 | `packages/renderer/src/blocks/display.tsx` | `packages/renderer/test/blocks.test.tsx` |
+| B-23 | P1.8 | `packages/renderer/src/blocks/display.tsx` | `packages/renderer/test/blocks.test.tsx`, `packages/renderer/test/style-matrix.test.tsx`, `e2e/render-gallery.spec.ts` |
+| S-20 | P1.8 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/style/style-to-css.ts` | `packages/renderer/test/blocks.test.tsx`, `packages/renderer/test/style-matrix.test.tsx` |
+| PL-21 | P1.8 | `packages/renderer/src/components/BlockView.tsx`, `packages/renderer/src/components/Artboard.tsx` | `packages/renderer/test/blocks.test.tsx`, `packages/renderer/test/style-matrix.test.tsx`, `e2e/render-gallery.spec.ts` |

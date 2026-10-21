@@ -101,6 +101,14 @@ describe('B-02…B-05, B-07: медиаблоки', () => {
     expect(styleOf(stroke)).toContain('pointer-events:none');
   });
 
+  it('B-06: фигура — любая форма S-02, в том числе свой контур пером, без своего содержимого', () => {
+    for (const shape of [{ kind: 'heart' }, { kind: 'path', d: 'M0 0L100 0L50 100Z' }, { kind: 'blob', seed: 3 }] as const) {
+      const host = render(<BlockView block={make('shape', { style: { shape, fills: [{ kind: 'solid', color: { hex: '#123456' } }] } })} />);
+      expect(styleOf(host.querySelector('.bk-surface'))).toContain('mask-image:url("data:image/svg+xml');
+      expect(host.querySelector('.bk-content')?.children).toHaveLength(0);
+    }
+  });
+
   it('B-02: без файла в редакторе — подсказка, у участника — ничего', () => {
     expect(render(<BlockView block={make('image')} />).querySelector('.bk-no-file')?.textContent).toBe('Добавьте изображение');
     expect(render(<BlockView block={make('image')} />, { mode: 'player' }).querySelector('.bk-no-file')).toBeNull();
