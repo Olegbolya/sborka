@@ -20,7 +20,9 @@ export type RuntimeEvent =
   | { type: 'mediaEnd'; blockId: string }
   | { type: 'scratched'; blockId: string; percent: number }
   | { type: 'deviceMotion'; motion: 'shake' | 'tiltLeft' | 'tiltRight' | 'tiltForward' | 'tiltBack' }
-  | { type: 'key'; key: string };
+  | { type: 'key'; key: string }
+  /** Position of the finger or cursor on the screen (absolute units): fleeing BH-02 and following BH-08. */
+  | { type: 'pointer'; x: number; y: number };
 
 /** What the host must do after a step (the runtime itself never touches the DOM, network or storage). */
 export type RuntimeEffect =
@@ -34,6 +36,8 @@ export type RuntimeEffect =
   | { type: 'openLink'; url: string }
   | { type: 'copyText'; text: string }
   | { type: 'answer'; questionBlockId: string; answer: AnswerValue | null }
+  /** BH-06: the wheel stopped on a sector (the player records it; the draw itself comes from the server, RN-01). */
+  | { type: 'wheel'; blockId: string; sectorBlockId: string }
   | { type: 'warning'; ruleId: string; message: string };
 
 export interface StepResult {
@@ -71,4 +75,6 @@ export interface BlockView {
   /** Animated numeric values (scale, opacity, filters…) on top of the style. */
   anim: Readonly<Partial<Record<Animatable, number>>>;
   media: 'playing' | 'paused' | 'stopped' | null;
+  /** BH-07: the card shows its back side. */
+  flipped: boolean;
 }

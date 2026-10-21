@@ -35,6 +35,7 @@ const view = (patch: Partial<RuntimeView>): RuntimeView => ({
   overrides: {},
   anim: {},
   media: null,
+  flipped: false,
   ...patch,
 });
 

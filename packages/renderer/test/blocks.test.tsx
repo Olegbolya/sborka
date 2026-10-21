@@ -129,7 +129,7 @@ describe('B-02…B-05, B-07: медиаблоки', () => {
     const vb = make('video', { props: { media: { source: 'media', id: 'video-film' } }, style: { media: { autoplay: false, loop: false, controls: true, speed: 1.5, poster: { source: 'media', id: 'oblozhka01' } } } });
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
     const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
-    const view = { id: vb.id, protoId: vb.id, copy: false, parentId: null, visible: true, animateVisibility: false, interactive: true, dragging: false, zoneId: null, selected: false, x: 0, y: 0, w: 50, h: 50, rotation: 0, z: 0, overrides: {}, anim: {}, media: null as 'playing' | 'paused' | 'stopped' | null };
+    const view = { id: vb.id, protoId: vb.id, copy: false, parentId: null, visible: true, animateVisibility: false, interactive: true, dragging: false, zoneId: null, selected: false, x: 0, y: 0, w: 50, h: 50, rotation: 0, z: 0, overrides: {}, anim: {}, media: null as 'playing' | 'paused' | 'stopped' | null, flipped: false };
     const v = live([vb], { views: new Map([[vb.id, view]]) });
     const video = v.host.querySelector('video')!;
     expect([video.autoplay, video.loop, video.controls, video.playbackRate, video.getAttribute('poster')]).toEqual([false, false, true, 1.5, 'https://media.blokum.ru/oblozhka01.webp']);

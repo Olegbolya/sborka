@@ -21,8 +21,12 @@ import {
 import { type AnswerValue, isQuestion } from '../flow/answers.js';
 import { type ConditionContext, type VariableValue, compare, evaluateCondition } from '../flow/conditions.js';
 import { type RandomSource, type Rng, createRng } from '../random.js';
+import { type BehaviorOf, applyEdge, behaviorOf, constrainDrag, fleeTarget, followShare, type PathTrack, pathTrack, pointAt, spinWheel, startVelocity } from './behaviors.js';
 import { easingFunction } from './easing.js';
 import { type Box, SpatialGrid } from './grid.js';
+
+/** Width of the artboard in units (E-01): the screen area of moving and fleeing blocks. */
+const ARTBOARD_WIDTH = 390;
 import { type Animatable, type BlockView, type RuntimeEvent, type SettableProperty, type StepResult } from './types.js';
 
 /** What the runtime needs from a document: the public projection (PL-15) is enough. */
@@ -67,6 +71,19 @@ interface Instance {
   vx: number;
   vy: number;
   ay: number;
+  /** BH-01: where the drag started (for the axis and «вернуть на место»). */
+  dragFrom: { x: number; y: number } | null;
+  /** BH-02: how many times it has already run away. */
+  fled: number;
+  /** BH-04 «по своему контуру»: the sampled contour, its start and the distance covered. */
+  track: { path: PathTrack; origin: { x: number; y: number }; distance: number; speed: number } | null;
+  /** BH-08: the point the block follows (its own coordinates). */
+  followTo: { x: number; y: number } | null;
+  /** BH-07: the back side is shown. */
+  flipped: boolean;
+  /** BH-06: the wheel is spinning; the sector it stopped on. */
+  spinning: boolean;
+  winner: string | null;
 }
 
 interface RuleEntry {
@@ -268,6 +285,8 @@ export class Runtime {
   private timers = new Map<string, TimerState>();
   private collisions = new Map<string, Set<string>>();
   private scratched = new Set<string>();
+  /** BH-05: copy spawners of the screen — running or not and when the next copy appears. */
+  private spawners = new Map<string, { active: boolean; next: number }>();
   /** No more events or actions on this screen (navigation requested or the screen is being left). */
   private halted = false;
   /** «Уход с экрана» already fired. */
@@ -326,6 +345,11 @@ export class Runtime {
     this.zOrder = 0;
     for (const b of screen.blocks) this.build(b, null, b.id, false);
     this.shuffleOptions();
+    this.spawners = new Map();
+    for (const inst of this.instances.values()) {
+      const sp = behaviorOf(inst.block, 'spawner');
+      if (sp && !inst.copy) this.spawners.set(inst.id, { active: sp.autoStart, next: this.time + sp.everyMs });
+    }
     this.collectRules(screen);
     for (const inst of this.instances.values()) {
       if (inst.block.type === 'timer' && !inst.copy) this.timers.set(inst.id, this.newTimer(inst.block));
@@ -408,7 +432,15 @@ export class Runtime {
     switch (event.type) {
       case 'tap':
       case 'doubleTap':
-        this.gesture(event.blockId, (inst) => this.fireMatching(event.type, (t) => this.matches(inst, (t as { source: Source }).source), inst.id, true));
+        this.gesture(event.blockId, (inst) => {
+          if (event.type === 'tap') {
+            const wheel = behaviorOf(inst.block, 'wheel');
+            if (wheel) this.spin(inst, wheel);
+            const flip = behaviorOf(inst.block, 'flip');
+            if (flip?.on === 'tap') this.flip(inst, flip);
+          }
+          this.fireMatching(event.type, (t) => this.matches(inst, (t as { source: Source }).source), inst.id, true);
+        });
         break;
       case 'longPress':
         this.gesture(event.blockId, (inst) =>
@@ -424,6 +456,9 @@ export class Runtime {
         this.gesture(event.blockId, (inst) => {
           inst.dragging = true;
           inst.zoneId = null;
+          inst.dragFrom = { x: inst.x, y: inst.y };
+          this.cancelTween(inst, 'x');
+          this.cancelTween(inst, 'y');
           this.touch(inst);
           this.fireDrag(inst, 'start');
         });
@@ -431,8 +466,10 @@ export class Runtime {
       case 'dragMove':
         this.gesture(event.blockId, (inst) => {
           if (!inst.dragging) return;
-          inst.x = event.x;
-          inst.y = event.y;
+          const drag = behaviorOf(inst.block, 'drag');
+          const to = drag ? constrainDrag(drag, inst.dragFrom ?? inst, event, inst) : event;
+          inst.x = to.x;
+          inst.y = to.y;
           this.touch(inst);
         });
         break;
@@ -479,6 +516,9 @@ export class Runtime {
       case 'key':
         this.fireMatching('key', (t) => (t as Extract<Trigger, { kind: 'key' }>).key.toLowerCase() === event.key.toLowerCase(), undefined, true);
         break;
+      case 'pointer':
+        this.pointer(event.x, event.y);
+        break;
     }
     return this.end();
   }
@@ -504,8 +544,10 @@ export class Runtime {
     this.time = target;
     if (this.halted) return this.end();
     this.advanceTimers(dt);
+    this.advanceSpawners();
     this.advanceTweens();
     this.advanceMotion(dt);
+    this.advanceFollow(dt);
     this.detectCollisions();
     return this.end();
   }
@@ -539,7 +581,20 @@ export class Runtime {
       vx: 0,
       vy: 0,
       ay: 0,
+      dragFrom: null,
+      fled: 0,
+      track: null,
+      followTo: null,
+      flipped: false,
+      spinning: false,
+      winner: null,
     };
+    // BH-04: a moving block starts with its velocity (copies get their own random spread).
+    const move = behaviorOf(b, 'move');
+    if (move) {
+      if (move.path) inst.track = { path: pathTrack(move.path), origin: { x: inst.x, y: inst.y }, distance: 0, speed: move.speed };
+      else Object.assign(inst, startVelocity(move, this.rng), { ay: move.gravity });
+    }
     this.instances.set(id, inst);
     for (const child of b.children) {
       const childId = copy ? `${child.id}~${this.copySeq}` : child.id;
@@ -740,6 +795,8 @@ export class Runtime {
   /** An option block is selected when its option is in the answer (B-11, B-12). */
   private isSelected(inst: Instance): boolean {
     const parent = inst.parentId ? this.instances.get(inst.parentId) : undefined;
+    // BH-06: the sector the wheel stopped on is «выбран» (CN-03), so rules and states can use it.
+    if (parent?.winner && parent.winner === inst.protoId) return true;
     if (!parent || (parent.block.type !== 'singleChoice' && parent.block.type !== 'multiChoice')) return false;
     const option = parent.block.props.options.find((o) => o.blockId === inst.protoId);
     const answer = this.answers[parent.protoId];
@@ -869,6 +926,17 @@ export class Runtime {
         return false;
       case 'media':
         for (const inst of this.targets(a.target, job)) {
+          // «Проиграть / пауза» also drive behaviors: start or stop a spawner, flip a card, spin a wheel.
+          const spawner = this.spawners.get(inst.id);
+          const sp = behaviorOf(inst.block, 'spawner');
+          if (spawner && sp) {
+            spawner.active = a.command === 'play' || a.command === 'restart';
+            if (a.command === 'restart' || a.command === 'play') spawner.next = this.time + sp.everyMs;
+          }
+          const flip = behaviorOf(inst.block, 'flip');
+          if (flip && (a.command === 'play' || a.command === 'restart')) this.flip(inst, flip);
+          const wheel = behaviorOf(inst.block, 'wheel');
+          if (wheel && (a.command === 'play' || a.command === 'restart')) this.spin(inst, wheel);
           inst.media = a.command === 'pause' ? 'paused' : a.command === 'stop' ? 'stopped' : 'playing';
           this.touch(inst);
           this.out.effects.push({ type: 'media', blockId: inst.id, command: a.command });
@@ -1057,10 +1125,15 @@ export class Runtime {
       return;
     }
     if (roots.filter((i) => i.protoId === a.prototypeId).length >= a.max) return;
-    this.copySeq += 1;
     const box = this.absBox(proto);
     const probe = { ...proto, parentId: null, x: box.x, y: box.y } as Instance;
     const at = this.destination(probe, a.at, probe) ?? { x: box.x, y: box.y };
+    this.makeCopy(proto, at);
+  }
+
+  /** A copy of a block at a place of the screen (AC-09, BH-05): it keeps the prototype's changes and behaviors. */
+  private makeCopy(proto: Instance, at: { x: number; y: number }): void {
+    this.copySeq += 1;
     const inst = this.build(proto.block, null, `${proto.id}~${this.copySeq}`, true, at);
     inst.w = proto.w;
     inst.h = proto.h;
@@ -1118,8 +1191,24 @@ export class Runtime {
         return cx >= b.x && cx <= b.x + b.w && cy >= b.y && cy <= b.y + b.h;
       })
       .sort((a, b) => b.z - a.z);
-    const zone = under.find((o) => o.block.type === 'zone');
+    const drag = behaviorOf(inst.block, 'drag');
+    // BH-01: only the listed zones attract the block; «одна копия на зоне» — a taken zone does not count.
+    const zone = under.find(
+      (o) =>
+        o.block.type === 'zone' &&
+        (!drag || drag.snapToZones.length === 0 || drag.snapToZones.includes(o.protoId)) &&
+        !(drag?.onePerZone && [...this.instances.values()].some((other) => other !== inst && !other.destroyed && other.zoneId === o.id)),
+    );
     inst.zoneId = zone ? zone.id : null;
+    if (drag && zone && drag.snapToZones.length > 0) {
+      const zb = this.absBox(zone);
+      const parent = inst.parentId ? this.absBox(this.instances.get(inst.parentId)!) : { x: 0, y: 0 };
+      this.tween(inst, 'x', zb.x + zb.w / 2 - inst.w / 2 - parent.x, 180, { kind: 'preset', name: 'easeOut' });
+      this.tween(inst, 'y', zb.y + zb.h / 2 - inst.h / 2 - parent.y, 180, { kind: 'preset', name: 'easeOut' });
+    } else if (drag && !zone && drag.returnIfMissed && inst.dragFrom) {
+      this.tween(inst, 'x', inst.dragFrom.x, 250, { kind: 'preset', name: 'easeOut' });
+      this.tween(inst, 'y', inst.dragFrom.y, 250, { kind: 'preset', name: 'easeOut' });
+    }
     this.fireDrag(inst, 'end');
     for (const target of under) {
       this.fireMatching(
@@ -1186,16 +1275,128 @@ export class Runtime {
     this.tweens = keep;
   }
 
+  /** Area a block moves in, in its own coordinates: the screen, or the parent block for a nested one. */
+  private moveArea(inst: Instance): Box {
+    const parent = inst.parentId ? this.instances.get(inst.parentId) : undefined;
+    return parent ? { x: 0, y: 0, w: parent.w, h: parent.h } : { x: 0, y: 0, w: ARTBOARD_WIDTH, h: this.screen?.height ?? 844 };
+  }
+
   private advanceMotion(dtMs: number): void {
     if (dtMs <= 0) return;
     const s = dtMs / 1000;
-    for (const inst of this.instances.values()) {
-      if (inst.destroyed || inst.dragging || (inst.vx === 0 && inst.vy === 0 && inst.ay === 0)) continue;
+    for (const inst of [...this.instances.values()]) {
+      if (inst.destroyed || inst.dragging || !this.isShown(inst)) continue;
+      if (inst.track) {
+        // BH-04 «по своему контуру»: a constant speed along the contour, round and round.
+        inst.track.distance += inst.track.speed * s;
+        const p = pointAt(inst.track.path, inst.track.distance);
+        inst.x = inst.track.origin.x + p.x;
+        inst.y = inst.track.origin.y + p.y;
+        this.touch(inst);
+        continue;
+      }
+      if (inst.vx === 0 && inst.vy === 0 && inst.ay === 0) continue;
       inst.vy += inst.ay * s;
       inst.x += inst.vx * s;
       inst.y += inst.vy * s;
+      const move = behaviorOf(inst.block, 'move');
+      if (move) {
+        const edge = applyEdge(move.edge, inst, inst, this.moveArea(inst));
+        if (edge === 'destroy') {
+          this.destroy(inst);
+          continue;
+        }
+        Object.assign(inst, edge);
+      }
       this.touch(inst);
     }
+  }
+
+  /** BH-05: copies appear on schedule while the spawner runs and is visible; the limit counts living copies. */
+  private advanceSpawners(): void {
+    for (const [id, sp] of this.spawners) {
+      const inst = this.instances.get(id);
+      const b = inst ? behaviorOf(inst.block, 'spawner') : undefined;
+      if (!inst || !b || !sp.active || !this.isShown(inst)) continue;
+      let guard = 0;
+      while (sp.next <= this.time && guard++ < 50) {
+        sp.next += b.everyMs;
+        const proto = this.instances.get(b.prototypeId);
+        if (!proto || proto.copy) break;
+        const roots = [...this.instances.values()].filter((i) => i.copy && !i.destroyed && !this.isCopyChild(i));
+        if (roots.length >= SCENARIO_LIMITS.maxCopies || roots.filter((i) => i.protoId === proto.id).length >= b.max) continue;
+        const at = { x: b.area.x + this.rng.next() * Math.max(0, b.area.w - proto.w), y: b.area.y + this.rng.next() * Math.max(0, b.area.h - proto.h) };
+        this.makeCopy(proto, at);
+      }
+    }
+  }
+
+  /** BH-02 and BH-08: the finger or cursor moved. */
+  private pointer(x: number, y: number): void {
+    for (const inst of [...this.instances.values()]) {
+      if (inst.destroyed || !this.isShown(inst) || inst.dragging) continue;
+      const parent = inst.parentId ? this.absBox(this.instances.get(inst.parentId)!) : { x: 0, y: 0 };
+      const follow = behaviorOf(inst.block, 'follow');
+      if (follow) {
+        const area = follow.bounds ?? { x: 0, y: 0, w: ARTBOARD_WIDTH, h: this.screen?.height ?? 844 };
+        const ax = Math.min(Math.max(x - inst.w / 2, area.x), area.x + area.w - inst.w);
+        const ay = Math.min(Math.max(y - inst.h / 2, area.y), area.y + area.h - inst.h);
+        inst.followTo = { x: ax - parent.x, y: ay - parent.y };
+      }
+      const flee = behaviorOf(inst.block, 'flee');
+      if (!flee || inst.fled >= flee.times || this.tweens.some((t) => t.inst === inst && (t.prop === 'x' || t.prop === 'y'))) continue;
+      const box = this.absBox(inst);
+      if (Math.hypot(box.x + box.w / 2 - x, box.y + box.h / 2 - y) >= flee.distance) continue;
+      const area = flee.area ?? { x: 0, y: 0, w: ARTBOARD_WIDTH, h: this.screen?.height ?? 844 };
+      const to = fleeTarget(box, { x, y }, flee.distance, area, this.rng);
+      inst.fled += 1;
+      const ms = Math.round(260 / flee.speed);
+      this.tween(inst, 'x', to.x - parent.x, ms, { kind: 'preset', name: 'easeOut' });
+      this.tween(inst, 'y', to.y - parent.y, ms, { kind: 'preset', name: 'easeOut' });
+    }
+  }
+
+  private advanceFollow(dtMs: number): void {
+    if (dtMs <= 0) return;
+    for (const inst of this.instances.values()) {
+      if (!inst.followTo || inst.destroyed || inst.dragging) continue;
+      const follow = behaviorOf(inst.block, 'follow');
+      if (!follow) continue;
+      const k = followShare(follow.lagMs, dtMs);
+      const nx = inst.x + (inst.followTo.x - inst.x) * k;
+      const ny = inst.y + (inst.followTo.y - inst.y) * k;
+      if (Math.abs(nx - inst.x) < 0.01 && Math.abs(ny - inst.y) < 0.01) continue;
+      inst.x = Math.abs(inst.followTo.x - nx) < 0.05 ? inst.followTo.x : nx;
+      inst.y = Math.abs(inst.followTo.y - ny) < 0.05 ? inst.followTo.y : ny;
+      this.touch(inst);
+    }
+  }
+
+  /** BH-06: the server draws the sector (RandomSource), the wheel turns to it and «анимация закончилась» fires. */
+  private spin(inst: Instance, wheel: BehaviorOf<'wheel'>): void {
+    if (inst.spinning) return;
+    const { index, rotation } = spinWheel(wheel, inst.rotation, this.random);
+    inst.spinning = true;
+    inst.winner = null;
+    for (const c of inst.children) this.changed.add(c);
+    this.tween(inst, 'rotation', rotation, wheel.spinMs, { kind: 'bezier', x1: 0.12, y1: 0.6, x2: 0.2, y2: 1 });
+    const sector = wheel.sectors[index]!.blockId;
+    this.schedule(this.time + wheel.spinMs, () => {
+      if (inst.destroyed) return;
+      inst.spinning = false;
+      inst.winner = sector;
+      this.touch(inst);
+      for (const c of inst.children) this.changed.add(c);
+      this.out.effects.push({ type: 'wheel', blockId: inst.id, sectorBlockId: sector });
+      this.fireMatching('mediaEnd', (t) => this.matches(inst, (t as Extract<Trigger, { kind: 'mediaEnd' }>).source), inst.id, false);
+    });
+  }
+
+  /** BH-07: the card turns over (rotateY 0° ↔ 180°); its front and back are nested blocks. */
+  private flip(inst: Instance, flip: BehaviorOf<'flip'>): void {
+    inst.flipped = !inst.flipped;
+    this.tween(inst, 'rotateY', inst.flipped ? 180 : 0, flip.durationMs, { kind: 'preset', name: 'easeInOut' });
+    this.touch(inst);
   }
 
   private advanceTimers(dtMs: number): void {
@@ -1269,6 +1470,7 @@ export class Runtime {
       overrides: i.overrides,
       anim: i.anim,
       media: i.media,
+      flipped: i.flipped,
     };
   }
 }
