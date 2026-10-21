@@ -31,7 +31,7 @@ export function extractIds(text) {
 /** Parses docs/03-PLAN.md into tasks: { id, title, opus, covers, hasAcceptance }. */
 export function parsePlan(text = read('docs/03-PLAN.md')) {
   const tasks = [];
-  const lines = text.split('\n');
+  const lines = text.split(/\r?\n/);
   let current = null;
   let phaseOpus = false;
   for (const line of lines) {
