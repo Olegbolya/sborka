@@ -2,7 +2,7 @@
 
 import { behaviorOf } from '@blokum/engine';
 import { type Block, type BLOCK_STATES, type BlockStyle, resolveBlockStyle } from '@blokum/schema';
-import { type CSSProperties, type PointerEvent, type ReactNode, useRef, useState } from 'react';
+import { type CSSProperties, type PointerEvent, type ReactNode, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TINT_STYLE, animatedLayerStyle, useBlockAnimation, usesTint } from '../animation/useBlockAnimation.js';
 import { prefersReducedMotion } from '../particles/ParticleLayer.js';
 import { cssColor } from '../theme/color.js';
@@ -85,6 +85,8 @@ export interface BlockViewProps {
 
 const TAP_TRIGGERS = new Set(['tap', 'doubleTap', 'longPress']);
 const MEDIA_TYPES = new Set(['image', 'gif', 'video', 'animation', 'audio']);
+/** Behaviors that move a block every frame: such blocks get their own compositor layer. */
+const MOVING = new Set(['drag', 'flee', 'move', 'follow']);
 
 /** A block the participant presses: a button, or any block with its own «нажатие» rule (PL-21). */
 export const isPressable = (block: Block): boolean =>
@@ -137,6 +139,18 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const ctx = useRenderContext();
   const view = ctx.views?.get(instanceId);
   const animLayer = useRef<HTMLDivElement>(null);
+  const rootEl = useRef<HTMLDivElement>(null);
+  // SC-05: when the runtime only moves the block, the store shifts this element directly, without React.
+  const register = ctx.registerPosition;
+  const fx = block.frame.x;
+  const fy = block.frame.y;
+  useLayoutEffect(() => {
+    if (!register || inFlow) return;
+    return register(instanceId, (nx, ny) => {
+      const el = rootEl.current;
+      if (el) el.style.translate = nx !== fx || ny !== fy ? `${u(nx - fx)} ${u(ny - fy)}` : '';
+    });
+  }, [register, instanceId, inFlow, fx, fy]);
   const [reducedMotion] = useState(prefersReducedMotion);
   const animated = ctx.mode === 'player' && block.animation !== undefined;
   const { onPressStart, onPressEnd } = useBlockAnimation(animLayer, { animation: animated ? block.animation : undefined, tokens: ctx.tokens, reducedMotion, appear: ctx.mode === 'player' && appear, leaving, onExited });
@@ -165,12 +179,17 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
               : pointer.hover && trackHover
                 ? 'hover'
                 : undefined);
-  const style = applyRuntimeView(resolveBlockStyle(block, ctx.tokens, activeState), view);
+  // Cached by reference: the runtime replaces `overrides` and `anim` only when they change, so a block that only
+  // moves keeps its style and CSS (50 moving blocks at ≥ 50 fps on a slow phone, SC-05).
+  const resolved = useMemo(() => resolveBlockStyle(block, ctx.tokens, activeState), [block, ctx.tokens, activeState]);
+  const overrides = view?.overrides;
+  const anim = view?.anim;
+  const style = useMemo(() => applyRuntimeView(resolved, overrides && anim ? { overrides, anim } : undefined), [resolved, overrides, anim]);
   const x = view?.x ?? block.frame.x;
   const y = view?.y ?? block.frame.y;
   const w = view?.w ?? block.frame.w;
   const h = view?.h ?? block.frame.h;
-  const css = styleToCss(style, { tokens: ctx.tokens, media: ctx.media }, { w, h });
+  const css = useMemo(() => styleToCss(style, { tokens: ctx.tokens, media: ctx.media }, { w, h }), [style, ctx.tokens, ctx.media, w, h]);
   // BH-01, BH-03: dragging and scratching by the finger or the mouse (Pointer Events with capture).
   const live = ctx.mode === 'player' && view?.interactive !== false;
   const drag = live ? behaviorOf(block, 'drag') : undefined;
@@ -192,7 +211,11 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
     .join(' ');
 
   const root: CSSProperties = {
-    ...(inFlow ? { position: 'relative', flex: 'none' } : { position: 'absolute', left: u(x), top: u(y) }),
+    // The place from the document stays in left/top; movement by scenarios and behaviors is a `translate`, which
+    // the browser composes without layout and repaint (SC-05: 50 moving blocks at ≥ 50 fps on a slow phone).
+    ...(inFlow ? { position: 'relative', flex: 'none' } : { position: 'absolute', left: u(block.frame.x), top: u(block.frame.y) }),
+    ...(x !== block.frame.x || y !== block.frame.y ? { translate: `${u(x - block.frame.x)} ${u(y - block.frame.y)}` } : {}),
+    ...(view && (view.copy || block.behaviors.some((b) => MOVING.has(b.kind))) ? { willChange: 'translate' } : {}),
     width: u(w),
     ...(style.autoHeight ? { minHeight: u(h) } : { height: u(h) }),
     zIndex: block.z,
@@ -337,6 +360,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
 
   return (
     <div
+      ref={rootEl}
       className="bk-block"
       data-block-id={instanceId}
       data-type={block.type}

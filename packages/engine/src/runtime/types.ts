@@ -70,9 +70,9 @@ export interface BlockView {
   h: number;
   rotation: number;
   z: number;
-  /** AC-02 overrides by property path, already validated against the style schema. */
+  /** AC-02 overrides by property path, already validated against the style schema. A new object on every change. */
   overrides: Readonly<Partial<Record<SettableProperty, unknown>>>;
-  /** Animated numeric values (scale, opacity, filters…) on top of the style. */
+  /** Animated numeric values (scale, opacity, filters…) on top of the style. A new object on every change. */
   anim: Readonly<Partial<Record<Animatable, number>>>;
   media: 'playing' | 'paused' | 'stopped' | null;
   /** BH-07: the card shows its back side. */

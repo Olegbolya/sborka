@@ -93,6 +93,7 @@ export function PlayerScreen({ screen, store, progress }: { screen: Screen; stor
         ...ctx,
         views: store.views,
         dispatch,
+        registerPosition: store.registerPosition,
         answers,
         variables: store.runtime.variables,
         // The runtime counts in milliseconds, the timer block shows seconds.

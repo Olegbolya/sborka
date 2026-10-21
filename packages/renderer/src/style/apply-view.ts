@@ -5,8 +5,9 @@ import { type BlockView as RuntimeView } from '@blokum/engine';
  * Style after scenario changes (AC-02): overridden style groups replace the resolved ones, animated
  * numbers (opacity, blur, filters, 3D) patch them. Scale and frame values are applied by BlockView.
  */
-export function applyRuntimeView(style: BlockStyle, view: RuntimeView | undefined): BlockStyle {
-  if (!view) return style;
+export function applyRuntimeView(style: BlockStyle, view: Pick<RuntimeView, 'overrides' | 'anim'> | undefined): BlockStyle {
+  // Nothing changed by scenarios — the same object, so the block's CSS stays cached (SC-05 frame budget).
+  if (!view || (Object.keys(view.overrides).length === 0 && Object.keys(view.anim).length === 0)) return style;
   const next: BlockStyle = { ...style };
   for (const [path, value] of Object.entries(view.overrides)) {
     if (path.startsWith('style.')) (next as Record<string, unknown>)[path.slice('style.'.length)] = value;

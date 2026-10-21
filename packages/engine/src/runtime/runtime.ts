@@ -888,10 +888,15 @@ export class Runtime {
             this.cancelTween(inst, frameKey);
             inst[frameKey] = parsed.value as number;
           } else {
-            inst.overrides[a.property] = parsed.value;
-            if (a.property === 'style.effects') ['opacity', 'blur', 'backdropBlur'].forEach((p) => delete inst.anim[p as Animatable]);
-            if (a.property === 'style.filters') ['brightness', 'contrast', 'saturate', 'grayscale', 'hueRotate'].forEach((p) => delete inst.anim[p as Animatable]);
-            if (a.property === 'style.transform3d') ['rotateX', 'rotateY'].forEach((p) => delete inst.anim[p as Animatable]);
+            // New objects instead of changes in place: the renderer recomputes a style only when they change.
+            inst.overrides = { ...inst.overrides, [a.property]: parsed.value };
+            const reset: Partial<Record<string, readonly Animatable[]>> = {
+              'style.effects': ['opacity', 'blur', 'backdropBlur'],
+              'style.filters': ['brightness', 'contrast', 'saturate', 'grayscale', 'hueRotate'],
+              'style.transform3d': ['rotateX', 'rotateY'],
+            };
+            const drop = reset[a.property];
+            if (drop?.some((p) => p in inst.anim)) inst.anim = Object.fromEntries(Object.entries(inst.anim).filter(([k]) => !drop.includes(k as Animatable)));
           }
           this.touch(inst);
         }
@@ -1260,7 +1265,7 @@ export class Runtime {
   private setNumber(inst: Instance, prop: Animatable, value: number): void {
     const frame = FRAME_PROPS[prop];
     if (frame) inst[frame] = value;
-    else inst.anim[prop] = value;
+    else if (inst.anim[prop] !== value) inst.anim = { ...inst.anim, [prop]: value };
     this.touch(inst);
   }
 
