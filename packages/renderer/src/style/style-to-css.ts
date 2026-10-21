@@ -9,7 +9,10 @@ import { u } from '../units.js';
 /** A resolved media file: where to load it from and how to show it. */
 export interface MediaSource {
   url: string;
-  kind: 'image' | 'video';
+  /** Pictures (JPG, PNG, WebP, AVIF, animated WebP/APNG), video (MP4/WebM, GIF stored as video), sound, Lottie. */
+  kind: 'image' | 'video' | 'audio' | 'lottie';
+  /** Cover picture of a video (GIF and video are stored with a poster, B-03). */
+  poster?: string;
 }
 
 /** Turns a media reference into a URL (the player and the editor know the media domain; tests pass a stub). */
@@ -47,6 +50,8 @@ export interface BlockCss {
   text: CSSProperties;
   /** How media of the block is fitted (S-11). */
   media: CSSProperties;
+  /** Media settings of the block (S-11) for its own media element: playback, crop, cover. */
+  mediaSettings: BlockStyle['media'];
 }
 
 type CssVars = CSSProperties & Record<`--${string}`, string>;
@@ -88,7 +93,8 @@ export function fillLayers(fills: readonly Fill[], ctx: StyleContext): FillLayer
       continue;
     }
     const src = ctx.media(fill.media);
-    if (!src) continue;
+    // Only pictures and video can fill a block; sounds and Lottie are block content (B-05, B-07).
+    if (!src || src.kind === 'audio' || src.kind === 'lottie') continue;
     const position = `${pct(fill.focal.x)} ${pct(fill.focal.y)}`;
     const zoom: CSSProperties = fill.scale === 1 ? {} : { transform: `scale(${fill.scale})`, transformOrigin: position };
     if (src.kind === 'video') {
@@ -251,12 +257,25 @@ export function styleToCss(style: BlockStyle, ctx: StyleContext, size: BlockSize
     outline,
     content: contentCss(style, clip),
     text: textCss(style.text, ctx),
-    media: {
-      width: '100%',
-      height: '100%',
-      display: 'block',
-      objectFit: m.fit,
-      objectPosition: `${pct(m.focal.x)} ${pct(m.focal.y)}`,
-    },
+    media: m.crop
+      ? // S-11 crop: the chosen part of the picture is stretched over the block.
+        {
+          position: 'absolute',
+          display: 'block',
+          width: pct(1 / m.crop.w),
+          height: pct(1 / m.crop.h),
+          left: pct(-m.crop.x / m.crop.w),
+          top: pct(-m.crop.y / m.crop.h),
+          maxWidth: 'none',
+          objectFit: 'fill',
+        }
+      : {
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          objectFit: m.fit,
+          objectPosition: `${pct(m.focal.x)} ${pct(m.focal.y)}`,
+        },
+    mediaSettings: m,
   };
 }

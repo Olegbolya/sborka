@@ -20,3 +20,8 @@ export * from './particles/engine.js';
 export * from './particles/ParticleLayer.js';
 export * from './sound/sound-manager.js';
 export * from './components/MediaOverlayView.js';
+export * from './media/lottie.js';
+export * from './blocks/content.js';
+export * from './blocks/media.js';
+export * from './blocks/questions.js';
+export * from './blocks/display.js';

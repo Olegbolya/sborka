@@ -205,7 +205,11 @@ const SPECS: PropertySpec[] = [
       const s = styleOf(c.root);
       expect(s).toContain('z-index:7');
       expect(c.root?.getAttribute('aria-label')).toBe('Снежок');
-      expect(c.root?.getAttribute('role')).toBe('img');
+      // PL-21: the alt text goes to the media element of media blocks (the labelled block is a named group);
+      // a choice question is a group of options; other blocks with alt text are pictures.
+      const type = c.root?.getAttribute('data-type') ?? '';
+      const role = { singleChoice: 'radiogroup', multiChoice: 'group' }[type] ?? (['image', 'gif', 'video', 'animation', 'audio'].includes(type) ? 'group' : 'img');
+      expect(c.root?.getAttribute('role')).toBe(role);
     },
   },
   {

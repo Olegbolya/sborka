@@ -10,6 +10,7 @@ import { applyRuntimeView } from '../style/apply-view.js';
 import { type FillLayer, styleToCss } from '../style/style-to-css.js';
 import { u } from '../units.js';
 import { PathTextView, RichTextView } from './RichTextView.js';
+import { blockContent } from '../blocks/content.js';
 
 /**
  * S-18 «наклон за пальцем/курсором»: the block turns towards the pointer by up to `strength` degrees.
@@ -70,7 +71,17 @@ export interface BlockViewProps {
   instanceId?: string;
   /** Visual state (S-15); in the player it follows the runtime («выбран») when not given. */
   state?: (typeof BLOCK_STATES)[number];
+  /** The block is an answer option of a choice question (B-11, B-12): a radio button or a checkbox. */
+  option?: { questionId: string; optionId: string; multi: boolean };
+  /** The parent lays its nested blocks out (S-20 «в строку / в столбец / сетка»): the block is in the flow. */
+  inFlow?: boolean;
 }
+
+const TAP_TRIGGERS = new Set(['tap', 'doubleTap', 'longPress']);
+const MEDIA_TYPES = new Set(['image', 'gif', 'video', 'animation', 'audio']);
+
+/** A block the participant presses: a button, or any block with its own «нажатие» rule (PL-21). */
+export const isPressable = (block: Block): boolean => block.type === 'button' || block.rules.some((r) => TAP_TRIGGERS.has(r.when.kind));
 
 /**
  * One block of any type (E-03, S-00): absolute position in units, rotation and flips, the style through
@@ -98,10 +109,24 @@ export function BlockView(props: BlockViewProps): ReactNode {
   return <BlockBody {...props} instanceId={instanceId} appear={appear} leaving={leaving} onExited={() => setPresent(false)} />;
 }
 
+/**
+ * Roles for screen readers and the keyboard (PL-21): options are radio buttons or checkboxes inside their
+ * question's group, pressable blocks are buttons, a picture-like block with alt text is an image.
+ */
+function semantics(block: Block, o: { option: BlockViewProps['option']; chosen: boolean; pressable: boolean; waiting: boolean; player: boolean }): Record<string, string | number | boolean | undefined> {
+  const label = block.a11y.label;
+  if (o.option) return { role: o.option.multi ? 'checkbox' : 'radio', 'aria-checked': o.chosen, tabIndex: o.player ? 0 : -1, 'aria-label': label };
+  if (block.type === 'singleChoice' || block.type === 'multiChoice') return { role: block.type === 'singleChoice' ? 'radiogroup' : 'group', 'aria-label': label ?? block.name, 'aria-required': block.props.required || undefined };
+  if (o.pressable) return { role: 'button', tabIndex: 0, 'aria-label': label, 'aria-disabled': o.waiting || undefined };
+  if (block.a11y.alt && !MEDIA_TYPES.has(block.type) && block.children.length === 0) return { role: 'img', 'aria-label': label ?? block.a11y.alt };
+  // ARIA forbids a name on an element without a role: a labelled block becomes a named group.
+  return label ? { role: 'group', 'aria-label': label } : {};
+}
+
 /** S-15: what changes smoothly when a block changes its state. */
 export const STATE_TRANSITION = ['opacity', 'filter', 'background-color', 'border-radius', 'box-shadow', 'color'].map((p) => `${p} 160ms ease`).join(', ');
 
-function BlockBody({ block, instanceId, state, appear, leaving, onExited }: BlockViewProps & { instanceId: string; appear: boolean; leaving: boolean; onExited: () => void }): ReactNode {
+function BlockBody({ block, instanceId, state, option, inFlow, appear, leaving, onExited }: BlockViewProps & { instanceId: string; appear: boolean; leaving: boolean; onExited: () => void }): ReactNode {
   const ctx = useRenderContext();
   const view = ctx.views?.get(instanceId);
   const animLayer = useRef<HTMLDivElement>(null);
@@ -114,15 +139,19 @@ function BlockBody({ block, instanceId, state, appear, leaving, onExited }: Bloc
   const [pointer, setPointer] = useState({ hover: false, pressed: false });
   const trackHover = states?.hover !== undefined;
   const trackPress = states?.pressed !== undefined;
+  // An option is chosen when the runtime says so; without a runtime (gallery, preview of answers) — by the answers.
+  const answer = option ? ctx.answers?.[option.questionId] : undefined;
+  const chosen = view?.selected ?? (answer?.kind === 'choice' && option !== undefined && answer.optionIds.includes(option.optionId));
+  const waiting = block.type === 'button' && block.props.requiresAnswers && ctx.requiredMissing === true;
   const activeState =
     state ??
-    (view && !view.interactive && states?.disabled
+    (((view && !view.interactive) || waiting) && states?.disabled
       ? 'disabled'
       : pointer.pressed && trackPress
         ? 'pressed'
         : view?.dragging
           ? 'dragging'
-          : view?.selected
+          : chosen
             ? 'selected'
             : view?.zoneId
               ? 'overZone'
@@ -149,9 +178,7 @@ function BlockBody({ block, instanceId, state, appear, leaving, onExited }: Bloc
     .join(' ');
 
   const root: CSSProperties = {
-    position: 'absolute',
-    left: u(x),
-    top: u(y),
+    ...(inFlow ? { position: 'relative', flex: 'none' } : { position: 'absolute', left: u(x), top: u(y) }),
     width: u(w),
     ...(style.autoHeight ? { minHeight: u(h) } : { height: u(h) }),
     zIndex: block.z,
@@ -183,11 +210,41 @@ function BlockBody({ block, instanceId, state, appear, leaving, onExited }: Bloc
     if (press) onPressEnd();
     setPressed(false);
   };
+  // B-11/B-12: choosing an option sends the new answer of its question; a single choice keeps one option.
+  const toggleOption = () => {
+    if (!option || !ctx.dispatch) return;
+    const ids = answer?.kind === 'choice' ? answer.optionIds : [];
+    const next = option.multi ? (ids.includes(option.optionId) ? ids.filter((id) => id !== option.optionId) : [...ids, option.optionId]) : [option.optionId];
+    ctx.dispatch({ type: 'answer', questionBlockId: option.questionId, answer: next.length ? { kind: 'choice', optionIds: next } : null });
+  };
+  const pressable = ctx.mode === 'player' && !option && isPressable(block);
+  const tap = () => {
+    if (waiting) return;
+    ctx.dispatch?.({ type: 'tap', blockId: instanceId });
+  };
   const handlers = {
     ...(interactive
       ? {
-          onClick: () => ctx.dispatch!({ type: 'tap', blockId: instanceId }),
+          onClick: (e: { stopPropagation: () => void }) => {
+            if (option) {
+              e.stopPropagation();
+              toggleOption();
+            }
+            tap();
+          },
           onDoubleClick: () => ctx.dispatch!({ type: 'doubleTap', blockId: instanceId }),
+          // Keyboard (PL-21): Enter and Space press buttons and choose options.
+          ...(option || pressable
+            ? {
+                onKeyDown: (e: { key: string; target: unknown; currentTarget: unknown; preventDefault: () => void; stopPropagation: () => void }) => {
+                  if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (option) toggleOption();
+                  tap();
+                },
+              }
+            : {}),
         }
       : {}),
     ...(press || trackPress ? { onPointerDown: pressStart, onPointerUp: pressEnd, onPointerCancel: pressEnd } : {}),
@@ -212,6 +269,7 @@ function BlockBody({ block, instanceId, state, appear, leaving, onExited }: Bloc
   };
 
   const tint = animated && block.animation && usesTint(block.animation);
+  const choiceOptions = block.type === 'singleChoice' || block.type === 'multiChoice' ? new Map(block.props.options.map((o) => [o.blockId, o.id])) : null;
   const poster = style.media.poster ? ctx.media(style.media.poster)?.url : undefined;
   const body = (
     <>
@@ -227,19 +285,29 @@ function BlockBody({ block, instanceId, state, appear, leaving, onExited }: Bloc
           <div key={`inner-${i}`} className="bk-inner-shadow" aria-hidden style={layer} />
         ))}
       </div>
-      {css.stroke && <div className="bk-stroke" aria-hidden style={css.stroke} />}
       <div className="bk-content" style={content}>
-        {ctx.renderContent?.(block, css, instanceId)}
+        {(ctx.renderContent ?? blockContent)(block, css, instanceId)}
         {textLayer &&
           (style.text.path.kind === 'none' ? (
             <RichTextView text={textLayer} style={css.text} />
           ) : (
             <PathTextView text={textLayer} typography={style.text} style={css.text} w={w} h={h} />
           ))}
-        {block.children.map((child) => (
-          <BlockView key={child.id} block={child} instanceId={childInstanceId(instanceId, child)} />
-        ))}
+        {block.children.map((child) => {
+          const opt = choiceOptions?.get(child.id);
+          return (
+            <BlockView
+              key={child.id}
+              block={child}
+              instanceId={childInstanceId(instanceId, child)}
+              {...(opt ? { option: { questionId: instanceId, optionId: opt, multi: block.type === 'multiChoice' } } : {})}
+              {...(style.layout.mode !== 'free' ? { inFlow: true } : {})}
+            />
+          );
+        })}
       </div>
+      {/* The stroke is a frame: it lies over the content, so photos and video do not hide it (S-05, S-15). */}
+      {css.stroke && <div className="bk-stroke" aria-hidden style={{ ...css.stroke, pointerEvents: 'none' }} />}
     </>
   );
 
@@ -250,8 +318,7 @@ function BlockBody({ block, instanceId, state, appear, leaving, onExited }: Bloc
       data-type={block.type}
       data-state={activeState}
       data-leaving={leaving ? '' : undefined}
-      aria-label={block.a11y.label ?? undefined}
-      role={block.a11y.alt ? 'img' : undefined}
+      {...semantics(block, { option, chosen, pressable, waiting, player: ctx.mode === 'player' })}
       style={root}
       {...handlers}
     >

@@ -23,6 +23,8 @@
   "dependencies": {
     "@blokum/engine": "workspace:*",
     "@blokum/schema": "workspace:*",
+    "@blokum/ui": "workspace:*",
+    "@lottiefiles/dotlottie-web": "0.81.0",
     "motion": "14.2.0"
   },
   "devDependencies": {

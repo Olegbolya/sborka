@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Generates the service pictures of the /dev galleries (P1.6–P1.9): a «photo», an animated GIF and a
-mask. They are drawn by this script — no images from the internet (CLAUDE.md) — and are not part of the
+"""Generates the service media of the /dev galleries (P1.6–P1.9): a «photo», an animated GIF, a mask, a short
+video with its poster, a sound and a Lottie animation. They are drawn by this script — no images from the internet (CLAUDE.md) — and are not part of the
 media library. Run: python3 scripts/dev/generate-dev-media.py"""
+import json
 import math
 import random
+import struct
+import subprocess
+import tempfile
+import wave
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter
@@ -74,7 +79,74 @@ def star_mask(w=400, h=400):
     img.save(OUT / 'maska-zvezda.png')
 
 
+def snow_video(w=320, h=240, frames=48):
+    """Two seconds of falling snow over a night sky (B-04 video, B-03 «GIF stored as video») and its poster."""
+    flakes = [(rnd.uniform(0, w), rnd.uniform(0, h), rnd.uniform(1, 3), rnd.uniform(40, 90)) for _ in range(90)]
+    with tempfile.TemporaryDirectory() as tmp:
+        for f in range(frames):
+            img = Image.new('RGB', (w, h), (18, 28, 64))
+            d = ImageDraw.Draw(img)
+            d.ellipse((230, 30, 280, 80), fill=(250, 244, 214))
+            d.polygon([(0, h), (0, 190), (110, 170), (220, 195), (w, 175), (w, h)], fill=(226, 234, 246))
+            for x, y, r, v in flakes:
+                yy = (y + v * f / 24) % h
+                xx = (x + 6 * math.sin((yy + x) / 30)) % w
+                d.ellipse((xx - r, yy - r, xx + r, yy + r), fill=(255, 255, 255))
+            img.save(f'{tmp}/{f:03d}.png')
+            if f == 0:
+                img.save(OUT / 'snegopad-video.jpg', quality=85)
+        subprocess.run(
+            ['ffmpeg', '-y', '-loglevel', 'error', '-framerate', '24', '-i', f'{tmp}/%03d.png', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', str(OUT / 'snegopad.mp4')],
+            check=True,
+        )
+
+
+def bells_sound(seconds=1.6, rate=22050):
+    """A short jingle of bells (B-05): a few decaying chords, mono WAV."""
+    notes = [(0.0, [1318.5, 1567.98]), (0.4, [1174.66, 1479.98]), (0.8, [1318.5, 1975.53])]
+    with wave.open(str(OUT / 'bubency.wav'), 'wb') as out:
+        out.setnchannels(1)
+        out.setsampwidth(2)
+        out.setframerate(rate)
+        frames = bytearray()
+        for i in range(int(seconds * rate)):
+            t = i / rate
+            v = 0.0
+            for start, freqs in notes:
+                if t >= start:
+                    k = t - start
+                    v += sum(math.sin(2 * math.pi * fr * k) for fr in freqs) * math.exp(-5 * k) * 0.22
+            frames += struct.pack('<h', int(max(-1, min(1, v)) * 32000))
+        out.writeframes(bytes(frames))
+
+
+def snowball_lottie():
+    """A bouncing snowball as Lottie JSON (B-07): one shape layer, position and scale keyframes."""
+    ease = {'o': {'x': [0.33], 'y': [0]}, 'i': {'x': [0.67], 'y': [1]}}
+    anim = {
+        'v': '5.7.4', 'fr': 30, 'ip': 0, 'op': 60, 'w': 200, 'h': 200, 'nm': 'Снежок', 'ddd': 0, 'assets': [],
+        'layers': [{
+            'ddd': 0, 'ind': 1, 'ty': 4, 'nm': 'Снежок', 'sr': 1, 'ip': 0, 'op': 60, 'st': 0, 'bm': 0,
+            'ks': {
+                'o': {'a': 0, 'k': 100}, 'r': {'a': 0, 'k': 0}, 'a': {'a': 0, 'k': [0, 0, 0]},
+                'p': {'a': 1, 'k': [{'t': 0, 's': [100, 40, 0], **ease}, {'t': 30, 's': [100, 150, 0], **ease}, {'t': 60, 's': [100, 40, 0]}]},
+                's': {'a': 1, 'k': [{'t': 0, 's': [100, 100, 100], **ease}, {'t': 30, 's': [120, 80, 100], **ease}, {'t': 60, 's': [100, 100, 100]}]},
+            },
+            'shapes': [{'ty': 'gr', 'nm': 'Шар', 'it': [
+                {'ty': 'el', 'nm': 'Круг', 'p': {'a': 0, 'k': [0, 0]}, 's': {'a': 0, 'k': [60, 60]}},
+                {'ty': 'fl', 'nm': 'Заливка', 'c': {'a': 0, 'k': [0.92, 0.96, 1, 1]}, 'o': {'a': 0, 'k': 100}, 'r': 1},
+                {'ty': 'st', 'nm': 'Обводка', 'c': {'a': 0, 'k': [0.35, 0.55, 0.85, 1]}, 'o': {'a': 0, 'k': 100}, 'w': {'a': 0, 'k': 4}, 'lc': 2, 'lj': 2},
+                {'ty': 'tr', 'p': {'a': 0, 'k': [0, 0]}, 'a': {'a': 0, 'k': [0, 0]}, 's': {'a': 0, 'k': [100, 100]}, 'r': {'a': 0, 'k': 0}, 'o': {'a': 0, 'k': 100}},
+            ]}],
+        }],
+    }
+    (OUT / 'snezhok.json').write_text(json.dumps(anim, ensure_ascii=False))
+
+
 winter_photo()
 snow_gif()
 star_mask()
+snow_video()
+bells_sound()
+snowball_lottie()
 print('Готово:', ', '.join(p.name for p in sorted(OUT.iterdir())))

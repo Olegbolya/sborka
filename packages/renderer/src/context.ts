@@ -1,7 +1,7 @@
 'use client';
 
 import { type Block, type RichText, type ThemeTokens } from '@blokum/schema';
-import { type BlockView as RuntimeView, type RuntimeEvent } from '@blokum/engine';
+import { type AnswerValue, type BlockView as RuntimeView, type RuntimeEvent, type VariableValue } from '@blokum/engine';
 import { type ReactNode, createContext, useContext } from 'react';
 import { type BlockCss, type MediaResolver } from './style/style-to-css.js';
 import { type SoundManager } from './sound/sound-manager.js';
@@ -25,6 +25,18 @@ export interface RenderContextValue {
   dispatch?: (event: RuntimeEvent) => void;
   /** Sounds of the player (unlocked by the first gesture). */
   sound?: SoundManager;
+  /** Answers of the passage (from the runtime): chosen options, typed text, scale values (B-11…B-20). */
+  answers?: Readonly<Record<string, AnswerValue>>;
+  /** Variables of the passage (B-09 «значение переменной», B-23). */
+  variables?: Readonly<Record<string, VariableValue>>;
+  /** Place of the screen in the passage for «экран N из M» (B-09). */
+  progress?: { index: number; total: number };
+  /** Seconds left on a timer block (B-08), from the runtime. */
+  timerRemaining?: (blockId: string) => number | undefined;
+  /** Text of the consent to personal data processing (B-20), generated from the creator's details (PL-23). */
+  consentUrl?: string;
+  /** Questions on the screen still blocking «дальше» (L-07) — a button with «требует ответов» waits for them. */
+  requiredMissing?: boolean;
   /** Type-specific content of a block (media, questions…), drawn under its text layer. */
   renderContent?: (block: Block, css: BlockCss, instanceId: string) => ReactNode;
 }

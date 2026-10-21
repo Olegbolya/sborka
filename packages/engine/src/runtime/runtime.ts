@@ -325,6 +325,7 @@ export class Runtime {
     this.copyLimitWarned = false;
     this.zOrder = 0;
     for (const b of screen.blocks) this.build(b, null, b.id, false);
+    this.shuffleOptions();
     this.collectRules(screen);
     for (const inst of this.instances.values()) {
       if (inst.block.type === 'timer' && !inst.copy) this.timers.set(inst.id, this.newTimer(inst.block));
@@ -360,6 +361,11 @@ export class Runtime {
     return this.end();
   }
 
+  /** Answers of the passage so far (the player draws them: chosen options, typed text, scale value). */
+  get currentAnswers(): Readonly<Record<string, AnswerValue>> {
+    return this.answers;
+  }
+
   /** Answers already given in the passage (restored after a reload); they do not fire TR-12. */
   setAnswers(answers: Readonly<Record<string, AnswerValue>>): void {
     this.answers = { ...answers };
@@ -380,6 +386,7 @@ export class Runtime {
   }
 
   /** Remaining time of a B-08 timer, ms. */
+  /** Milliseconds left on a timer block (B-08); undefined when the screen has no such timer. */
   timerRemaining(blockId: string): number | undefined {
     const t = this.timers.get(blockId);
     return t ? Math.max(0, t.duration - t.elapsed) : undefined;
@@ -435,15 +442,23 @@ export class Runtime {
       case 'swipe':
         this.swipe(event.direction, event.blockId);
         break;
-      case 'answer':
+      case 'answer': {
         this.setAnswer(event.questionBlockId, event.answer, 0, true);
+        // B-11 «перейти сразу после выбора»: the participant's choice moves on by the screen's branches.
+        const q = this.live(event.questionBlockId);
+        if (q?.block.type === 'singleChoice' && q.block.props.autoAdvance && event.answer?.kind === 'choice' && event.answer.optionIds.length > 0) {
+          this.out.effects.push({ type: 'navigate', to: 'branch' });
+        }
         break;
+      }
       case 'mediaEnd': {
         const inst = this.live(event.blockId);
         if (!inst) break;
         inst.media = 'stopped';
         this.touch(inst);
         this.fireMatching('mediaEnd', (t) => this.matches(inst, (t as Extract<Trigger, { kind: 'mediaEnd' }>).source), inst.id, false);
+        // B-04 «дальше после окончания»: the end of the video moves on by the screen's branches.
+        if (inst.block.type === 'video' && inst.block.props.nextOnEnd && !inst.copy) this.out.effects.push({ type: 'navigate', to: 'branch' });
         break;
       }
       case 'scratched': {
@@ -703,6 +718,23 @@ export class Runtime {
 
   private isCopyChild(inst: Instance): boolean {
     return inst.parentId !== null && (this.instances.get(inst.parentId)?.copy ?? false);
+  }
+
+  /**
+   * B-11/B-12 «перемешивать»: options keep their own design, only their places on the canvas are swapped
+   * (cosmetic randomness from the seed — the same participant sees the same order after a reload).
+   */
+  private shuffleOptions(): void {
+    for (const q of this.instances.values()) {
+      if ((q.block.type !== 'singleChoice' && q.block.type !== 'multiChoice') || !q.block.props.shuffle || q.copy) continue;
+      const optionBlocks = new Set(q.block.props.options.map((o) => o.blockId));
+      const items = q.children.map((id) => this.instances.get(id)).filter((i): i is Instance => i !== undefined && optionBlocks.has(i.protoId));
+      const places = this.rng.shuffle(items.map((i) => ({ x: i.x, y: i.y })));
+      items.forEach((inst, k) => {
+        inst.x = places[k]!.x;
+        inst.y = places[k]!.y;
+      });
+    }
   }
 
   /** An option block is selected when its option is in the answer (B-11, B-12). */

@@ -18,3 +18,4 @@ test-results/
 *.tsbuildinfo
 .claude/settings.local.json
 e2e/__screenshots__/
+apps/web/public/vendor/

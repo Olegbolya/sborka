@@ -97,10 +97,13 @@ describe('E-03: свободное позиционирование блоков
     expect(render(<BlockView block={block('shape', { hiddenInEditor: true })} />, { mode: 'player' }).querySelector('.bk-block')).not.toBeNull();
   });
 
-  it('S-17: подпись для доступности', () => {
-    const el = render(<BlockView block={block('image', { a11y: { alt: 'Ёлка', label: 'Ёлка во дворе' } })} />).querySelector('.bk-block');
-    expect(el?.getAttribute('aria-label')).toBe('Ёлка во дворе');
-    expect(el?.getAttribute('role')).toBe('img');
+  it('S-17 · PL-21: подпись для доступности — у фигуры на блоке, у фото — у самой картинки', () => {
+    const shape = render(<BlockView block={block('shape', { a11y: { alt: 'Ёлка', label: 'Ёлка во дворе' } })} />).querySelector('.bk-block');
+    expect(shape?.getAttribute('aria-label')).toBe('Ёлка во дворе');
+    expect(shape?.getAttribute('role')).toBe('img');
+    const photo = render(<BlockView block={block('image', { a11y: { alt: 'Ёлка' }, props: { media: { source: 'media', id: 'elka000001' } } })} />);
+    expect(photo.querySelector('.bk-block')?.getAttribute('role')).toBeNull();
+    expect(photo.querySelector('img')?.getAttribute('alt')).toBe('Ёлка');
   });
 
   it('S-15: состояние блока меняет вычисленный стиль', () => {

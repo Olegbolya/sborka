@@ -1,6 +1,7 @@
 'use client';
 
 import { type CSSProperties, type ReactNode } from 'react';
+import { cssColor } from '../theme/color.js';
 import { RenderContext, type RenderContextValue, defaultRenderContext } from '../context.js';
 import { fillLayers } from '../style/style-to-css.js';
 import { ARTBOARD_WIDTH, MAX_PLAYER_WIDTH, UNIT_VAR, u } from '../units.js';
@@ -12,6 +13,14 @@ export interface ArtboardProps extends Partial<RenderContextValue> {
    */
   unit?: number;
   children: ReactNode;
+}
+
+/**
+ * Keyboard focus is always visible in the player (PL-21): pressable blocks, options and fields get a ring in
+ * the theme's main colour. The rule is scoped to the artboard and does not touch the rest of the site.
+ */
+export function focusCss(color: string): string {
+  return `.bk-artboard [tabindex="0"]:focus-visible, .bk-artboard button:focus-visible, .bk-artboard .bk-field:focus-visible, .bk-artboard a:focus-visible { outline: 3px solid ${color}; outline-offset: 2px; }`;
 }
 
 /** Fluid unit of the player: min(100vw, 480px) / 390. */
@@ -55,6 +64,7 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
           ),
         )}
         <main className="bk-artboard" data-mode="player" style={board}>
+          <style>{focusCss(cssColor({ token: 'primary', alpha: 1 }, value.tokens))}</style>
           {children}
         </main>
       </div>

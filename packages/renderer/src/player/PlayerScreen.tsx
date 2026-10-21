@@ -1,6 +1,7 @@
 'use client';
 
-import { type MediaOverlay, type Screen } from '@blokum/schema';
+import { type AnswerValue, type QuestionBlock, hasPersonalData, isQuestion, requiredProblem } from '@blokum/engine';
+import { type MediaOverlay, type Screen, walkBlocks } from '@blokum/schema';
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { MediaOverlayView } from '../components/MediaOverlayView.js';
 import { ScreenView } from '../components/ScreenView.js';
@@ -16,7 +17,17 @@ import { type RuntimeStore } from './runtime-store.js';
  * of the screen or theme (P-01…P-08), confetti, bursts, shaking, flashes and vibration (AC-07), media
  * inserts (AC-08) and sounds (AC-06) — sounds only after the first action of the participant.
  */
-export function PlayerScreen({ screen, store }: { screen: Screen; store: RuntimeStore }): ReactNode {
+/**
+ * L-07 in the player: does any visible question of the screen still block «дальше»? A button with «требует
+ * ответов» (B-18) waits for it. The server checks the same rules again when the answers are sent (P5).
+ */
+export function requiredMissing(screen: Screen, answers: Readonly<Record<string, AnswerValue>>, isVisible: (id: string) => boolean): boolean {
+  const questions = [...walkBlocks(screen.blocks)].filter((b): b is QuestionBlock => isQuestion(b) && isVisible(b.id));
+  const personal = questions.some((q) => hasPersonalData(q, answers[q.id]));
+  return questions.some((q) => requiredProblem(q, answers[q.id], personal) !== null);
+}
+
+export function PlayerScreen({ screen, store, progress }: { screen: Screen; store: RuntimeStore; progress?: { index: number; total: number } }): ReactNode {
   const ctx = useRenderContext();
   const shakeTarget = useRef<HTMLDivElement>(null);
   const effects = useRef<EffectsHandle>(null);
@@ -64,10 +75,26 @@ export function PlayerScreen({ screen, store }: { screen: Screen; store: Runtime
     if (event.type === 'tap') sound.current?.play(tapSound, 0.6);
     store.dispatch(event);
   };
+  const answers = store.runtime.currentAnswers;
   const particles = screen.particles ?? ctx.tokens.particles ?? null;
   const colors = ['primary', 'accent', 'success'].map((token) => cssColor({ token, alpha: 1 }, ctx.tokens));
   return (
-    <RenderContext.Provider value={{ ...ctx, views: store.views, dispatch }}>
+    <RenderContext.Provider
+      value={{
+        ...ctx,
+        views: store.views,
+        dispatch,
+        answers,
+        variables: store.runtime.variables,
+        // The runtime counts in milliseconds, the timer block shows seconds.
+        timerRemaining: (id) => {
+          const ms = store.runtime.timerRemaining(id);
+          return ms === undefined ? undefined : ms / 1000;
+        },
+        requiredMissing: requiredMissing(screen, answers, (id) => store.views.get(id)?.visible ?? true),
+        ...(progress ? { progress } : {}),
+      }}
+    >
       <div ref={shakeTarget} className="bk-player-screen" style={{ position: 'relative' }}>
         <ScreenView screen={screen} />
         {particles && <ParticleLayer key={screen.id} config={particles} width={ARTBOARD_WIDTH} height={screen.height} seed={screen.id.length} />}

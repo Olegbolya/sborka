@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SpatialGrid, createRuntime, easingFunction } from '../src/index.js';
-import { act, b, bool, buildDoc, ev, list, num, on, play, rule, tick, txt } from './runtime-helpers.js';
+import { type BlockInput, textOf } from '@blokum/schema';
+import { act, b, bool, buildDoc, ev, list, num, on, play, question, rule, tick, txt } from './runtime-helpers.js';
 
 describe('S-12…S-14 · AC-02: кривые плавности', () => {
   it('AC-02: линейная кривая и границы', () => {
@@ -240,5 +241,45 @@ describe('устойчивость к неверным вызовам', () => {
       [ev.tap('knopka')],
     );
     expect(o.v('schet01')).toBe(0);
+  });
+});
+
+describe('B-04 · B-11 · B-12: поведение блоков в движке', () => {
+  const autoQuestion = (autoAdvance: boolean, multi = false) => {
+    const q = question('vopros', multi);
+    return { ...q, props: { ...(q.props as object), ...(multi ? {} : { autoAdvance }) } } as BlockInput;
+  };
+
+  it('B-11: «перейти сразу после выбора» — переход по ветвлению после выбора участника', () => {
+    const o = play({ blocks: [autoQuestion(true)] }, [ev.answer(1)]);
+    expect(o.of('navigate')).toEqual([{ type: 'navigate', to: 'branch' }]);
+    expect(o.rt.currentAnswers).toEqual({ vopros: { kind: 'choice', optionIds: ['vopros_otvet1'] } });
+  });
+
+  it('B-11: без флажка, при сбросе ответа и у вопроса с несколькими ответами переход не начинается', () => {
+    expect(play({ blocks: [autoQuestion(false)] }, [ev.answer(1)]).of('navigate')).toEqual([]);
+    expect(play({ blocks: [autoQuestion(true)] }, [ev.answer(null)]).of('navigate')).toEqual([]);
+    expect(play({ blocks: [autoQuestion(true, true)] }, [{ type: 'answer', questionBlockId: 'vopros', answer: { kind: 'choice', optionIds: ['vopros_otvet1'] } }]).of('navigate')).toEqual([]);
+  });
+
+  it('B-04: «дальше после окончания» — конец видео ведёт по ветвлению; без флажка — нет', () => {
+    const video = (nextOnEnd: boolean) => b('video', 'video1', { props: { media: { source: 'media', id: 'roliki0001' }, nextOnEnd } });
+    expect(play({ blocks: [video(true)] }, [ev.mediaEnd('video1')]).of('navigate')).toEqual([{ type: 'navigate', to: 'branch' }]);
+    expect(play({ blocks: [video(false)] }, [ev.mediaEnd('video1')]).of('navigate')).toEqual([]);
+  });
+
+  it('B-11: «перемешивать» меняет местами варианты (по зерну), не трогая другие блоки', () => {
+    const q = question('vopros');
+    const many = {
+      ...q,
+      props: { shuffle: true, options: [1, 2, 3, 4, 5].map((n) => ({ id: `vopros_otvet${n}`, blockId: `vopros_variant${n}` })) },
+      children: [...[1, 2, 3, 4, 5].map((n) => b('shape', `vopros_variant${n}`, { frame: { x: 0, y: n * 60, w: 300, h: 50 }, textLayer: textOf(`В${n}`) })), b('text', 'vopros_podpis', { frame: { x: 0, y: 0, w: 300, h: 40 } })],
+    } as BlockInput;
+    const ys = (seed: number) => [1, 2, 3, 4, 5].map((n) => play({ blocks: [many], seed }).view(`vopros_variant${n}`)!.y);
+    expect([...ys(3)].sort((a, c) => a - c)).toEqual([60, 120, 180, 240, 300]);
+    expect(ys(3)).toEqual(ys(3));
+    expect([1, 2, 3, 4, 5, 6, 7].some((seed) => ys(seed).join() !== '60,120,180,240,300')).toBe(true);
+    expect(play({ blocks: [many], seed: 3 }).view('vopros_podpis')!.y).toBe(0);
+    expect(play({ blocks: [question('vopros')], seed: 3 }).view('vopros_variant1')!.y).toBe(60);
   });
 });

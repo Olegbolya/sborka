@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Сайт, кабинет, редактор, плеер и админка Блокума (Next.js)",
   "scripts": {
-    "build": "next build",
-    "dev": "next dev --port 3110",
+    "build": "node scripts/copy-vendor.mjs && next build",
+    "dev": "node scripts/copy-vendor.mjs && next dev --port 3110",
     "start": "next start --port 3110",
     "typecheck": "next typegen && tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
