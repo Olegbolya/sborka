@@ -11,6 +11,11 @@ export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
   outputDir: './test-results',
+  // P1.10: reference images of the visual tests, one per gallery, theme and width (ADR-029).
+  snapshotPathTemplate: '{testDir}/__visual__/{arg}-{projectName}{ext}',
+  // They are made on CI's runner and browser; another machine draws fonts a little differently, so outside CI
+  // the comparison is skipped unless VISUAL=1 (then a local run checks against local references).
+  ignoreSnapshots: !process.env.CI && !process.env.VISUAL,
   fullyParallel: true,
   forbidOnly: true,
   retries: process.env.CI ? 1 : 0,

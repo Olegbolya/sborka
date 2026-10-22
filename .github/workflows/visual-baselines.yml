@@ -1,0 +1,57 @@
+name: Эталоны визуальных тестов
+
+# P1.10 (ADR-029): reference images of e2e/visual.spec.ts are made on the same runner and browser as the E2E job
+# of ci.yml — a picture from another machine differs in font smoothing and would fail every comparison.
+# Push a branch «visual-baselines/<что меняется>»: this workflow takes the shots and commits e2e/__visual__ back
+# to that branch; review the images in the commit and merge it.
+on:
+  push:
+    branches: ['visual-baselines/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: visual-baselines-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  baselines:
+    name: Снять эталоны
+    # The bot's own commit below must not start the workflow again.
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Установка зависимостей
+        run: pnpm install --frozen-lockfile
+      - name: Браузеры Playwright
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Сборка
+        run: pnpm build
+      - name: Снимки
+        run: pnpm e2e e2e/visual.spec.ts --project=mobile-390 --project=desktop-1440 --update-snapshots=all
+      - name: Проверка повторным прогоном
+        run: pnpm e2e e2e/visual.spec.ts --project=mobile-390 --project=desktop-1440
+      - name: Коммит эталонов
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add e2e/__visual__
+          if git diff --cached --quiet; then
+            echo 'Эталоны не изменились'
+          else
+            git commit -m "test(P1.10): эталоны визуальных тестов с CI"
+            git push
+          fi
