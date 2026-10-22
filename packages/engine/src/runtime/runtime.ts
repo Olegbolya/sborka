@@ -21,7 +21,7 @@ import {
 import { type AnswerValue, isQuestion } from '../flow/answers.js';
 import { type ConditionContext, type VariableValue, compare, evaluateCondition } from '../flow/conditions.js';
 import { type RandomSource, type Rng, createRng } from '../random.js';
-import { type BehaviorOf, applyEdge, behaviorOf, constrainDrag, fleeTarget, followShare, type PathTrack, pathTrack, pointAt, spinWheel, startVelocity } from './behaviors.js';
+import { type BehaviorOf, behaviorOf, constrainDrag, fleeTarget, followShare, type PathTrack, pathTrack, pointAt, spinWheel, startVelocity } from './behaviors.js';
 import { easingFunction } from './easing.js';
 import { type Box, SpatialGrid } from './grid.js';
 
@@ -299,6 +299,10 @@ export class Runtime {
   private readonly changed = new Set<string>();
   private readonly movedOnlySet = new Set<string>();
   private readonly _posBuffer = { x: 0, y: 0 };
+  // Reused buffers so advanceMotion and end() do not allocate on every frame (SC-05).
+  private readonly _moveAreaBuf = { x: 0, y: 0, w: 0, h: 0 };
+  private readonly _movedOnlyArr: string[] = [];
+  private readonly _changedArr: string[] = [];
 
   constructor(
     private readonly doc: RuntimeDocument,
@@ -630,14 +634,20 @@ export class Runtime {
   // ── Step bookkeeping ──────────────────────────────────────────────────────
 
   private begin(): void {
-    this.out = { effects: [], changed: [], spawned: [], destroyed: [], variables: {} };
+    this.out = { effects: [], changed: this._changedArr, spawned: [], destroyed: [], variables: {} };
+    this._changedArr.length = 0;
     this.changed.clear();
     this.movedOnlySet.clear();
   }
 
   private end(): StepResult {
-    this.out.changed = [...this.changed];
-    if (this.movedOnlySet.size > 0) this.out.movedOnly = [...this.movedOnlySet];
+    // Reuse _changedArr: fill it from the changed Set (already assigned to this.out.changed in begin).
+    for (const id of this.changed) this._changedArr.push(id);
+    if (this.movedOnlySet.size > 0) {
+      this._movedOnlyArr.length = 0;
+      for (const id of this.movedOnlySet) this._movedOnlyArr.push(id);
+      this.out.movedOnly = this._movedOnlyArr;
+    }
     return this.out;
   }
 
@@ -1327,12 +1337,38 @@ export class Runtime {
       inst.y += inst.vy * s;
       const move = behaviorOf(inst.block, 'move');
       if (move) {
-        const edge = applyEdge(move.edge, inst, inst, this.moveArea(inst));
-        if (edge === 'destroy') {
-          this.destroy(inst);
-          continue;
+        // SC-05: inline edge check with mutation to avoid object allocation in the hot path.
+        const parent = inst.parentId ? this.instances.get(inst.parentId) : undefined;
+        const a = this._moveAreaBuf;
+        a.x = 0; a.y = 0;
+        a.w = parent ? parent.w : ARTBOARD_WIDTH;
+        a.h = parent ? parent.h : (this.screen?.height ?? 844);
+        const right = a.w - inst.w;
+        const bottom = a.h - inst.h;
+        switch (move.edge) {
+          case 'bounce':
+            if (inst.x < 0) { inst.x = 0; inst.vx = Math.abs(inst.vx); }
+            else if (inst.x > right) { inst.x = right; inst.vx = -Math.abs(inst.vx); }
+            if (inst.y < 0) { inst.y = 0; inst.vy = Math.abs(inst.vy); }
+            else if (inst.y > bottom) { inst.y = bottom; inst.vy = -Math.abs(inst.vy); }
+            break;
+          case 'stop':
+            if (inst.x < 0 || inst.x > right || inst.y < 0 || inst.y > bottom) {
+              inst.x = Math.max(0, Math.min(right, inst.x));
+              inst.y = Math.max(0, Math.min(bottom, inst.y));
+              inst.vx = 0; inst.vy = 0; inst.ay = 0;
+            }
+            break;
+          case 'wrap':
+            if (inst.x > a.w) inst.x = -inst.w;
+            else if (inst.x + inst.w < 0) inst.x = a.w;
+            if (inst.y > a.h) inst.y = -inst.h;
+            else if (inst.y + inst.h < 0) inst.y = a.h;
+            break;
+          case 'destroy':
+            if (inst.x > a.w || inst.x + inst.w < 0 || inst.y > a.h || inst.y + inst.h < 0) { this.destroy(inst); continue; }
+            break;
         }
-        Object.assign(inst, edge);
       }
       this.touchPos(inst);
     }
