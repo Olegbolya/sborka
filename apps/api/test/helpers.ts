@@ -7,6 +7,8 @@ import pg from 'pg';
 import { createId } from '@blokum/schema';
 import { type AppDeps } from '../src/app.module.js';
 import { createApp } from '../src/app.js';
+import type { CaptchaVerifier } from '../src/auth/captcha.js';
+import type { OtpSender } from '../src/auth/otp-sender.js';
 import { type ApiConfig } from '../src/config.js';
 import { type HealthProbes } from '../src/health/health.controller.js';
 
@@ -20,6 +22,7 @@ export const testConfig: ApiConfig = {
   redisUrl: 'redis://127.0.0.1:6379/3',
   dataRoot: '/',
   allowedOrigins: ['http://localhost:3110'],
+  smsDailyBudget: 1000,
 };
 
 export const okProbes: HealthProbes = {
@@ -76,9 +79,10 @@ export async function startTestApp(overrides: Partial<AppDeps> = {}): Promise<Te
   const sent: Alert[] = [];
   const logger = createLogger({ service: 'blokum-api', version: 'test-1', level: 'debug' }, stream);
   const alerts = new Alerts({ channels: [{ name: 'test', send: (a) => (sent.push(a), Promise.resolve()) }] });
-  // If no db provided, use a stub that satisfies the type (health tests don't need real DB).
   const stubDb = {} as Db;
-  const app = await createApp(testConfig, { logger, alerts, probes: okProbes, db: stubDb, ...overrides });
+  const stubOtpSender: OtpSender = { sendCode: () => Promise.resolve() };
+  const stubCaptcha: CaptchaVerifier = { verify: () => Promise.resolve(true) };
+  const app = await createApp(testConfig, { logger, alerts, probes: okProbes, db: stubDb, otpSender: stubOtpSender, captchaVerifier: stubCaptcha, ...overrides });
   await app.init();
   return { app, http: () => app.getHttpServer() as Server, logs, alerts: sent };
 }

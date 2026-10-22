@@ -5,19 +5,25 @@ import { type Db } from '@blokum/db';
 import { type ApiConfig } from './config.js';
 import { HealthController, type HealthProbes } from './health/health.controller.js';
 import { AllExceptionsFilter } from './observability/exception.filter.js';
-import { ALERTS, API_CONFIG, HEALTH_PROBES, LOGGER } from './tokens.js';
+import { ALERTS, API_CONFIG, CAPTCHA_VERIFIER, HEALTH_PROBES, LOGGER, OTP_SENDER } from './tokens.js';
 import { DatabaseModule } from './database.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AuthGuard } from './auth/auth.guard.js';
 import { CsrfGuard } from './auth/csrf.guard.js';
 import { RolesGuard } from './auth/roles.guard.js';
 import { SessionService } from './auth/session.service.js';
+import { OtpService } from './auth/otp.service.js';
+import { OtpController } from './auth/otp.controller.js';
+import type { CaptchaVerifier } from './auth/captcha.js';
+import type { OtpSender } from './auth/otp-sender.js';
 
 export interface AppDeps {
   logger: Logger;
   alerts: Alerts;
   probes: HealthProbes;
   db: Db;
+  otpSender: OtpSender;
+  captchaVerifier: CaptchaVerifier;
   /** Extra controllers (used by tests to exercise error handling). */
   extraControllers?: DynamicModule['controllers'];
   extraProviders?: Provider[];
@@ -29,12 +35,15 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [DatabaseModule.forRoot(deps.db), AuthModule],
-      controllers: [HealthController, ...(deps.extraControllers ?? [])],
+      controllers: [HealthController, OtpController, ...(deps.extraControllers ?? [])],
       providers: [
+        OtpService,
         { provide: API_CONFIG, useValue: config },
         { provide: LOGGER, useValue: deps.logger },
         { provide: ALERTS, useValue: deps.alerts },
         { provide: HEALTH_PROBES, useValue: deps.probes },
+        { provide: OTP_SENDER, useValue: deps.otpSender },
+        { provide: CAPTCHA_VERIFIER, useValue: deps.captchaVerifier },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         // Global guards: CSRF → Auth → Roles (order matters).
         { provide: APP_GUARD, useFactory: (cfg: ApiConfig) => new CsrfGuard(cfg), inject: [API_CONFIG] },

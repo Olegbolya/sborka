@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { SessionService } from './session.service.js';
 import { AuthController } from './auth.controller.js';
+import { SessionService } from './session.service.js';
 
 @Module({
   providers: [SessionService],

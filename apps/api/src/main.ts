@@ -2,6 +2,8 @@ import { checkDatabase, createDb } from '@blokum/db';
 import { createAlertsFromEnv, createLogger, diskUsagePercent } from '@blokum/observability';
 import { Redis } from 'ioredis';
 import { createApp } from './app.js';
+import { DevCaptchaVerifier } from './auth/captcha.js';
+import { DevOtpSender } from './auth/otp-sender.js';
 import { loadApiConfig } from './config.js';
 
 const config = loadApiConfig();
@@ -16,6 +18,8 @@ const app = await createApp(config, {
   logger,
   alerts,
   db: db.db,
+  otpSender: new DevOtpSender(),
+  captchaVerifier: new DevCaptchaVerifier(),
   probes: {
     database: () => checkDatabase(db.db),
     redis: async () => (await redis.ping()) === 'PONG',

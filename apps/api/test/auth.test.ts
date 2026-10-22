@@ -28,25 +28,24 @@ describe('A-04 · сеансы и CSRF', () => {
 
   // ── CSRF protection ──────────────────────────────────────────────────────
 
-  it('A-04 · CSRF: POST без Origin и без X-Blokum-CSRF → 403', async () => {
-    await request(t.http()).post(`/${API_PREFIX}/auth/sessions`).send({}).expect(403);
+  it('A-04 · CSRF: DELETE без Origin и без X-Blokum-CSRF → 403', async () => {
+    await request(t.http()).delete(`/${API_PREFIX}/auth/sessions`).expect(403);
   });
 
-  it('A-04 · CSRF: POST с X-Blokum-CSRF: 1 проходит фильтр', async () => {
+  it('A-04 · CSRF: DELETE с X-Blokum-CSRF: 1 проходит фильтр', async () => {
     // No valid session → 401 (means CSRF guard passed, auth guard blocked)
-    await request(t.http()).post(`/${API_PREFIX}/auth/sessions`).set('X-Blokum-CSRF', '1').send({}).expect(401);
+    await request(t.http()).delete(`/${API_PREFIX}/auth/sessions`).set('X-Blokum-CSRF', '1').expect(401);
   });
 
-  it('A-04 · CSRF: POST с разрешённым Origin проходит фильтр', async () => {
+  it('A-04 · CSRF: DELETE с разрешённым Origin проходит фильтр', async () => {
     await request(t.http())
-      .post(`/${API_PREFIX}/auth/sessions`)
+      .delete(`/${API_PREFIX}/auth/sessions`)
       .set('Origin', 'http://localhost:3110')
-      .send({})
       .expect(401);
   });
 
-  it('A-04 · CSRF: POST с чужим Origin → 403', async () => {
-    await request(t.http()).post(`/${API_PREFIX}/auth/sessions`).set('Origin', 'https://evil.example.com').send({}).expect(403);
+  it('A-04 · CSRF: DELETE с чужим Origin → 403', async () => {
+    await request(t.http()).delete(`/${API_PREFIX}/auth/sessions`).set('Origin', 'https://evil.example.com').expect(403);
   });
 
   it('A-04 · CSRF: GET-запросы не требуют Origin', async () => {
