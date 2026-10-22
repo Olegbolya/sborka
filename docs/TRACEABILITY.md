@@ -279,3 +279,4 @@
 | BH-06 | P1.9 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/behaviors.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/engine/test/behaviors.test.ts`, `packages/renderer/test/behaviors.test.tsx`, `e2e/behaviors.spec.ts` |
 | BH-07 | P1.9 | `packages/engine/src/runtime/runtime.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/engine/test/behaviors.test.ts`, `packages/renderer/test/behaviors.test.tsx`, `e2e/behaviors.spec.ts` |
 | BH-08 | P1.9 | `packages/engine/src/runtime/runtime.ts`, `packages/engine/src/runtime/behaviors.ts`, `packages/renderer/src/player/PlayerScreen.tsx` | `packages/engine/test/behaviors.test.ts`, `packages/renderer/test/behaviors.test.tsx`, `e2e/behaviors.spec.ts` |
+| SC-05 | P1.9 | `packages/renderer/src/player/runtime-store.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/behaviors.test.tsx`, `e2e/perf/behaviors-perf.spec.ts` |

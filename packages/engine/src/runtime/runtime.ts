@@ -297,8 +297,6 @@ export class Runtime {
   readonly stats = { steps: 0, peakStepsPerSecond: 0 };
   private out: StepResult = { effects: [], changed: [], spawned: [], destroyed: [], variables: {} };
   private readonly changed = new Set<string>();
-  private readonly movedOnlySet = new Set<string>();
-  private readonly _posBuffer = { x: 0, y: 0 };
 
   constructor(
     private readonly doc: RuntimeDocument,
@@ -632,32 +630,15 @@ export class Runtime {
   private begin(): void {
     this.out = { effects: [], changed: [], spawned: [], destroyed: [], variables: {} };
     this.changed.clear();
-    this.movedOnlySet.clear();
   }
 
   private end(): StepResult {
     this.out.changed = [...this.changed];
-    if (this.movedOnlySet.size > 0) this.out.movedOnly = [...this.movedOnlySet];
     return this.out;
   }
 
   private touch(inst: Instance): void {
-    this.movedOnlySet.delete(inst.id);
     this.changed.add(inst.id);
-  }
-
-  /** SC-05: marks an instance as position-only changed (skips view() rebuild in the store). */
-  private touchPos(inst: Instance): void {
-    if (!this.changed.has(inst.id)) this.movedOnlySet.add(inst.id);
-  }
-
-  /** SC-05: returns the current x/y of an instance via a reusable buffer (no allocation). */
-  posOf(id: string): Readonly<{ x: number; y: number }> | undefined {
-    const inst = this.instances.get(id);
-    if (!inst || inst.destroyed) return undefined;
-    this._posBuffer.x = inst.x;
-    this._posBuffer.y = inst.y;
-    return this._posBuffer;
   }
 
   private warn(ruleId: string, message: string): void {
@@ -1318,7 +1299,7 @@ export class Runtime {
         const p = pointAt(inst.track.path, inst.track.distance);
         inst.x = inst.track.origin.x + p.x;
         inst.y = inst.track.origin.y + p.y;
-        this.touchPos(inst);
+        this.touch(inst);
         continue;
       }
       if (inst.vx === 0 && inst.vy === 0 && inst.ay === 0) continue;
@@ -1334,7 +1315,7 @@ export class Runtime {
         }
         Object.assign(inst, edge);
       }
-      this.touchPos(inst);
+      this.touch(inst);
     }
   }
 
@@ -1359,7 +1340,7 @@ export class Runtime {
 
   /** BH-02 and BH-08: the finger or cursor moved. */
   private pointer(x: number, y: number): void {
-    for (const inst of this.instances.values()) {
+    for (const inst of [...this.instances.values()]) {
       if (inst.destroyed || !this.isShown(inst) || inst.dragging) continue;
       const parent = inst.parentId ? this.absBox(this.instances.get(inst.parentId)!) : { x: 0, y: 0 };
       const follow = behaviorOf(inst.block, 'follow');
@@ -1394,7 +1375,7 @@ export class Runtime {
       if (Math.abs(nx - inst.x) < 0.01 && Math.abs(ny - inst.y) < 0.01) continue;
       inst.x = Math.abs(inst.followTo.x - nx) < 0.05 ? inst.followTo.x : nx;
       inst.y = Math.abs(inst.followTo.y - ny) < 0.05 ? inst.followTo.y : ny;
-      this.touchPos(inst);
+      this.touch(inst);
     }
   }
 

@@ -15,8 +15,11 @@ export type PositionSink = (x: number, y: number) => void;
 
 const SAME_EXCEPT_PLACE: ReadonlyArray<keyof RuntimeView> = ['id', 'protoId', 'copy', 'parentId', 'visible', 'animateVisibility', 'interactive', 'dragging', 'zoneId', 'selected', 'w', 'h', 'rotation', 'z', 'overrides', 'anim', 'media', 'flipped'];
 
-/** The view changed only its place (overrides and anim are new objects only when they change). */
-export const onlyMoved = (a: RuntimeView, b: RuntimeView): boolean => SAME_EXCEPT_PLACE.every((k) => a[k] === b[k]);
+/**
+ * The view changed only its place (overrides and anim are new objects only when they change). A block that is
+ * reported changed but stands still changed something else — an answer, a variable — and needs a render.
+ */
+export const onlyMoved = (a: RuntimeView, b: RuntimeView): boolean => (a.x !== b.x || a.y !== b.y) && SAME_EXCEPT_PLACE.every((k) => a[k] === b[k]);
 
 /** Longest step of time per frame: after a background tab the game does not jump far ahead. */
 export const MAX_FRAME_MS = 100;
@@ -108,18 +111,6 @@ export class RuntimeStore {
 
   private publish(result: StepResult, force: boolean): void {
     let structural = false;
-    // SC-05 fast path: position-only moves skip view() allocation and Map copy entirely.
-    if (result.movedOnly && result.movedOnly.length > 0) {
-      for (const id of result.movedOnly) {
-        const sink = this.sinks.get(id);
-        if (!sink) continue;
-        const pos = this.runtime.posOf(id);
-        if (!pos) continue;
-        sink(pos.x, pos.y);
-        const v = this.viewMap.get(id);
-        if (v) { (v as { x: number; y: number }).x = pos.x; (v as { x: number; y: number }).y = pos.y; }
-      }
-    }
     if (result.changed.length > 0) {
       const next = new Map(this.viewMap);
       const moves: Array<[PositionSink, RuntimeView]> = [];

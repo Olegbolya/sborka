@@ -7,14 +7,14 @@ import { type PointerHandlers } from './pointer.js';
 /** How often the mask of the layer is redrawn while scratching, ms. */
 const MASK_EVERY_MS = 50;
 
-/** Share of scratched pixels, checking every `step`-th pixel in both directions (alpha < 128 — scratched, counts antialiased edges). */
+/** Share of scratched pixels, checking every `step`-th pixel in both directions (alpha 0 — scratched). */
 export function scratchedPercent(data: Uint8ClampedArray, width: number, height: number, step = 3): number {
   let total = 0;
   let clear = 0;
   for (let y = 0; y < height; y += step) {
     for (let x = 0; x < width; x += step) {
       total += 1;
-      if ((data[(y * width + x) * 4 + 3] ?? 255) < 128) clear += 1;
+      if (data[(y * width + x) * 4 + 3] === 0) clear += 1;
     }
   }
   return total ? Math.round((clear / total) * 100) : 0;
@@ -30,8 +30,6 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
   const last = useRef<{ id: number; x: number; y: number } | null>(null);
   const reported = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Cleanup for any active native listeners; called on component unmount.
-  const nativeCleanup = useRef<(() => void) | null>(null);
   const [mask, setMask] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const { enabled, w, h } = o;
@@ -48,7 +46,6 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
     canvas.current = c;
     return () => {
       if (timer.current) clearTimeout(timer.current);
-      nativeCleanup.current?.();
       canvas.current = null;
     };
   }, [enabled, w, h]);
@@ -70,6 +67,10 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
     }, MASK_EVERY_MS);
   };
 
+  const local = (e: { clientX: number; clientY: number; currentTarget: Element }) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return { x: r.width ? ((e.clientX - r.left) / r.width) * w : 0, y: r.height ? ((e.clientY - r.top) / r.height) * h : 0 };
+  };
   const erase = (from: { x: number; y: number }, to: { x: number; y: number }) => {
     const g = canvas.current?.getContext('2d');
     if (!g) return;
@@ -89,39 +90,23 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
     handlers: {
       onPointerDown: (e) => {
         if (done) return;
-        const el = e.currentTarget as HTMLElement;
-        const r = el.getBoundingClientRect();
-        const p = {
-          x: r.width ? ((e.clientX - r.left) / r.width) * w : 0,
-          y: r.height ? ((e.clientY - r.top) / r.height) * h : 0,
-        };
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        const p = local(e);
         last.current = { id: e.pointerId, ...p };
         erase(p, p);
-
-        // BH-03: use native window listeners instead of React handlers — React event delegation
-        // does not fire onPointerMove after setPointerCapture in some environments (Playwright/Chromium).
-        const onMove = (ev: PointerEvent) => {
-          const l = last.current;
-          if (!l || l.id !== ev.pointerId) return;
-          const rect = el.getBoundingClientRect();
-          const np = {
-            x: rect.width ? ((ev.clientX - rect.left) / rect.width) * w : 0,
-            y: rect.height ? ((ev.clientY - rect.top) / rect.height) * h : 0,
-          };
-          erase(l, np);
-          last.current = { id: ev.pointerId, ...np };
-        };
-        const onUp = () => {
-          last.current = null;
-          nativeCleanup.current = null;
-          window.removeEventListener('pointermove', onMove);
-          window.removeEventListener('pointerup', onUp);
-          window.removeEventListener('pointercancel', onUp);
-        };
-        nativeCleanup.current = onUp;
-        window.addEventListener('pointermove', onMove);
-        window.addEventListener('pointerup', onUp);
-        window.addEventListener('pointercancel', onUp);
+      },
+      onPointerMove: (e) => {
+        const l = last.current;
+        if (!l || l.id !== e.pointerId) return;
+        const p = local(e);
+        erase(l, p);
+        last.current = { id: e.pointerId, ...p };
+      },
+      onPointerUp: () => {
+        last.current = null;
+      },
+      onPointerCancel: () => {
+        last.current = null;
       },
     },
     style: {

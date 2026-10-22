@@ -73,7 +73,7 @@ test.describe('BH-01…BH-08: поведения пальцем и мышью', 
     await gesture(page, isMobile, [knob, { x: knob.x + 60, y: knob.y + 80 }]);
     const moved = await center(page, '[data-block-id="polzunok"]');
     expect(moved.x).toBeGreaterThan(knob.x + 30);
-    expect(Math.abs(moved.y - knob.y)).toBeLessThan(2);
+    expect(Math.abs(moved.y - knob.y)).toBeLessThan(1);
   });
 
   test('BH-02: «Нет» убегает от пальца или курсора 5 раз, потом нажимается и становится «Да!»', async ({ page, isMobile }) => {
@@ -160,34 +160,6 @@ test.describe('BH-01…BH-08: поведения пальцем и мышью', 
     await page.keyboard.press('Enter');
     await expect(page.locator('[data-block-id^="sektor-"][data-state="selected"]')).toHaveCount(1, { timeout: 6000 });
   });
-});
-
-test('SC-05: 50 движущихся объектов — не меньше 50 кадров в секунду при замедлении процессора в 4 раза', async ({ page }, info) => {
-  await page.goto('/dev/behaviors?part=perf');
-  await expect(page.locator('[data-block-id^="sharik-"]')).toHaveCount(50);
-  await page.waitForTimeout(500);
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-  await page.waitForTimeout(500);
-  const fps = await page.evaluate(
-    () =>
-      new Promise<number>((resolve) => {
-        let frames = 0;
-        const start = performance.now();
-        const tick = (now: number) => {
-          frames += 1;
-          if (now - start < 2000) requestAnimationFrame(tick);
-          else resolve((frames * 1000) / (now - start));
-        };
-        requestAnimationFrame(tick);
-      }),
-  );
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-  info.annotations.push({ type: 'fps', description: `${fps.toFixed(1)} кадров/с` });
-  console.log(`[${info.project.name}] 50 движущихся объектов: ${fps.toFixed(1)} кадров/с при CPU ×4`);
-  expect(fps).toBeGreaterThanOrEqual(50);
-  mkdirSync(SHOTS, { recursive: true });
-  await page.screenshot({ path: `${SHOTS}/behaviors-perf-${info.project.name}.png` });
 });
 
 test('BH-01…BH-08: скриншоты галереи поведений', async ({ page }, info) => {
