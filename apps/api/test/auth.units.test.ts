@@ -304,7 +304,7 @@ describe('A-04 · AuthController', () => {
 
   it('listSessions возвращает список сессий', async () => {
     const items = [{ id: 's1', createdAt: new Date(), lastSeenAt: new Date(), expiresAt: new Date(), uaFamily: 'Chrome', isCurrent: true }];
-    const sessions = { list: vi.fn().mockResolvedValue(items) } as never;
+    const sessions = { list: vi.fn().mockResolvedValue(items) } as unknown as SessionService;
     const ctrl = new AuthController(sessions);
     const result = await ctrl.listSessions(mockUser, 's1');
     expect(result).toEqual({ sessions: items });
@@ -312,7 +312,7 @@ describe('A-04 · AuthController', () => {
   });
 
   it('logoutEverywhere отзывает все сессии и сбрасывает cookie', async () => {
-    const sessions = { revokeAll: vi.fn().mockResolvedValue(undefined) } as never;
+    const sessions = { revokeAll: vi.fn().mockResolvedValue(undefined) } as unknown as SessionService;
     const ctrl = new AuthController(sessions);
     const result = await ctrl.logoutEverywhere(mockUser, mockRes);
     expect(result).toEqual({ ok: true });
@@ -321,7 +321,7 @@ describe('A-04 · AuthController', () => {
   });
 
   it('revokeSession отзывает конкретную сессию', async () => {
-    const sessions = { revoke: vi.fn().mockResolvedValue(undefined) } as never;
+    const sessions = { revoke: vi.fn().mockResolvedValue(undefined) } as unknown as SessionService;
     const ctrl = new AuthController(sessions);
     const res = { setHeader: vi.fn() } as unknown as Response;
     const result = await ctrl.revokeSession('s2', mockUser, 's1', res);
@@ -331,7 +331,7 @@ describe('A-04 · AuthController', () => {
   });
 
   it('revokeSession сбрасывает cookie при отзыве текущей сессии', async () => {
-    const sessions = { revoke: vi.fn().mockResolvedValue(undefined) } as never;
+    const sessions = { revoke: vi.fn().mockResolvedValue(undefined) } as unknown as SessionService;
     const ctrl = new AuthController(sessions);
     const res = { setHeader: vi.fn() } as unknown as Response;
     const result = await ctrl.revokeSession('s1', mockUser, 's1', res);
