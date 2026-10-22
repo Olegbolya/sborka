@@ -228,7 +228,7 @@ export function styleToCss(style: BlockStyle, ctx: StyleContext, size: BlockSize
   };
   const outline = shapeOutline(style.shape, style.radius, w, h);
   const css = isCssShape(style.shape);
-  const clip: CSSProperties = css ? { borderRadius: cssShapeRadius(style.shape, w, h, u, cssRadius(style.radius)) } : shapeMask(outline, w, h);
+  const clip: CSSProperties = css ? { borderRadius: cssShapeRadius(style.shape, w, h, u, cssRadius({ ...style.radius, tl: 0 })) } : shapeMask(outline, w, h);
   const shadowSpecs = [
     ...style.shadows.map((s) => ({ ...s, color: cssColor(s.color, ctx.tokens) })),
     ...(style.glow && style.glow.size > 0 ? [{ x: 0, y: 0, blur: style.glow.size, spread: style.glow.size / 4, color: cssColor(style.glow.color, ctx.tokens), inset: false }] : []),
