@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { schema } from '@blokum/db';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
@@ -35,10 +36,12 @@ describe('A-01, TS-30 · OTP вход по телефону', () => {
     await db?.drop();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sentCodes.length = 0;
     captchaResult.value = true;
     vi.clearAllMocks();
+    // Clear OTP requests so IP/phone rate limits don't bleed across tests.
+    if (db) await db.db.delete(schema.otpRequests);
   });
 
   function skipIfNoDb() {
