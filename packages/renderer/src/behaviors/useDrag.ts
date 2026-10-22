@@ -30,6 +30,7 @@ export function useDrag(o: { enabled: boolean; instanceId: string; x: number; y:
     dispatch(cancelled ? { type: 'dragEnd', blockId: o.instanceId } : { type: 'dragEnd', blockId: o.instanceId, ...end });
   };
   return {
+    onDragStart: (e) => e.preventDefault(),
     onPointerDown: (e) => {
       if (active.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
       e.stopPropagation();

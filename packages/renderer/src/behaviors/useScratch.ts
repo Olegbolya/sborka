@@ -7,14 +7,14 @@ import { type PointerHandlers } from './pointer.js';
 /** How often the mask of the layer is redrawn while scratching, ms. */
 const MASK_EVERY_MS = 50;
 
-/** Share of scratched pixels, checking every `step`-th pixel in both directions (alpha < 128 — scratched, counts antialiased edges). */
+/** Share of scratched pixels, checking every `step`-th pixel in both directions (alpha 0 — scratched). */
 export function scratchedPercent(data: Uint8ClampedArray, width: number, height: number, step = 3): number {
   let total = 0;
   let clear = 0;
   for (let y = 0; y < height; y += step) {
     for (let x = 0; x < width; x += step) {
       total += 1;
-      if ((data[(y * width + x) * 4 + 3] ?? 255) < 128) clear += 1;
+      if (data[(y * width + x) * 4 + 3] === 0) clear += 1;
     }
   }
   return total ? Math.round((clear / total) * 100) : 0;
@@ -25,13 +25,11 @@ export function scratchedPercent(data: Uint8ClampedArray, width: number, height:
  * is its mask: the finger erases a line of the brush width, the block becomes transparent there and shows what
  * lies under it. The scratched share goes to the runtime (TR-14); past the threshold the layer fades away.
  */
-export function useScratch(o: { enabled: boolean; instanceId: string; w: number; h: number; brush: number; threshold: number; dispatch: ((e: RuntimeEvent) => void) | undefined }): { handlers: PointerHandlers; style: CSSProperties } {
+export function useScratch(o: { enabled: boolean; instanceId: string; w: number; h: number; brush: number; threshold: number; dispatch: ((e: RuntimeEvent) => void) | undefined }): { handlers: PointerHandlers; style: CSSProperties; mask: CSSProperties } {
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const last = useRef<{ id: number; x: number; y: number } | null>(null);
   const reported = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Cleanup for any active native listeners; called on component unmount.
-  const nativeCleanup = useRef<(() => void) | null>(null);
   const [mask, setMask] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const { enabled, w, h } = o;
@@ -48,7 +46,6 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
     canvas.current = c;
     return () => {
       if (timer.current) clearTimeout(timer.current);
-      nativeCleanup.current?.();
       canvas.current = null;
     };
   }, [enabled, w, h]);
@@ -70,6 +67,10 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
     }, MASK_EVERY_MS);
   };
 
+  const local = (e: { clientX: number; clientY: number; currentTarget: Element }) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return { x: r.width ? ((e.clientX - r.left) / r.width) * w : 0, y: r.height ? ((e.clientY - r.top) / r.height) * h : 0 };
+  };
   const erase = (from: { x: number; y: number }, to: { x: number; y: number }) => {
     const g = canvas.current?.getContext('2d');
     if (!g) return;
@@ -84,50 +85,41 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
     refresh();
   };
 
-  if (!enabled || !o.dispatch) return { handlers: {}, style: {} };
+  if (!enabled || !o.dispatch) return { handlers: {}, style: {}, mask: {} };
   return {
     handlers: {
+      onDragStart: (e) => e.preventDefault(),
       onPointerDown: (e) => {
         if (done) return;
-        const el = e.currentTarget as HTMLElement;
-        const r = el.getBoundingClientRect();
-        const p = {
-          x: r.width ? ((e.clientX - r.left) / r.width) * w : 0,
-          y: r.height ? ((e.clientY - r.top) / r.height) * h : 0,
-        };
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        const p = local(e);
         last.current = { id: e.pointerId, ...p };
         erase(p, p);
-
-        // BH-03: use native window listeners instead of React handlers — React event delegation
-        // does not fire onPointerMove after setPointerCapture in some environments (Playwright/Chromium).
-        const onMove = (ev: PointerEvent) => {
-          const l = last.current;
-          if (!l || l.id !== ev.pointerId) return;
-          const rect = el.getBoundingClientRect();
-          const np = {
-            x: rect.width ? ((ev.clientX - rect.left) / rect.width) * w : 0,
-            y: rect.height ? ((ev.clientY - rect.top) / rect.height) * h : 0,
-          };
-          erase(l, np);
-          last.current = { id: ev.pointerId, ...np };
-        };
-        const onUp = () => {
-          last.current = null;
-          nativeCleanup.current = null;
-          window.removeEventListener('pointermove', onMove);
-          window.removeEventListener('pointerup', onUp);
-          window.removeEventListener('pointercancel', onUp);
-        };
-        nativeCleanup.current = onUp;
-        window.addEventListener('pointermove', onMove);
-        window.addEventListener('pointerup', onUp);
-        window.addEventListener('pointercancel', onUp);
+      },
+      onPointerMove: (e) => {
+        const l = last.current;
+        if (!l || l.id !== e.pointerId) return;
+        const p = local(e);
+        erase(l, p);
+        last.current = { id: e.pointerId, ...p };
+      },
+      onPointerUp: () => {
+        last.current = null;
+      },
+      onPointerCancel: () => {
+        last.current = null;
       },
     },
+    // A mouse stroke must not select the label of the layer: the next stroke would drag the selection
+    // instead, and the browser cancels the pointer (BH-03).
     style: {
       touchAction: 'none',
-      ...(mask ? { maskImage: `url(${mask})`, WebkitMaskImage: `url(${mask})`, maskSize: '100% 100%', WebkitMaskSize: '100% 100%', maskRepeat: 'no-repeat' } : {}),
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
       ...(done ? { opacity: 0, transition: 'opacity 400ms ease', pointerEvents: 'none' } : {}),
     },
+    // The mask goes on the drawing inside the block, not on the block: a browser may not hit-test the
+    // transparent part of a masked element, and a new stroke started on a scratched spot would fall through.
+    mask: mask ? { maskImage: `url(${mask})`, WebkitMaskImage: `url(${mask})`, maskSize: '100% 100%', WebkitMaskSize: '100% 100%', maskRepeat: 'no-repeat' } : {},
   };
 }

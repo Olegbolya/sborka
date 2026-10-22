@@ -35,10 +35,15 @@ export function PlayerScreen({ screen, store, progress }: { screen: Screen; stor
   const shakeTarget = useRef<HTMLDivElement>(null);
   const effects = useRef<EffectsHandle>(null);
   const [overlays, setOverlays] = useState<MediaOverlay[]>([]);
+  // The server sends the markup of the screen; it is alive (handlers attached, runtime ticking) only after this
+  // effect. `data-live` marks that moment for automated checks and for styles.
+  const [live, setLive] = useState(false);
   useEffect(() => {
     store.enter(screen.id);
     store.start();
+    setLive(true);
     return () => {
+      setLive(false);
       store.leave();
       store.stop();
     };
@@ -108,6 +113,7 @@ export function PlayerScreen({ screen, store, progress }: { screen: Screen; stor
       <div
         ref={shakeTarget}
         className="bk-player-screen"
+        data-live={live ? 'true' : undefined}
         style={{ position: 'relative' }}
         {...(watchPointer
           ? {

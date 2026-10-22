@@ -142,22 +142,15 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const rootEl = useRef<HTMLDivElement>(null);
   // SC-05: when the runtime only moves the block, the store shifts this element directly, without React.
   const register = ctx.registerPosition;
-  const getPxPerUnit = ctx.getPxPerUnit;
   const fx = block.frame.x;
   const fy = block.frame.y;
   useLayoutEffect(() => {
     if (!register || inFlow) return;
     return register(instanceId, (nx, ny) => {
       const el = rootEl.current;
-      if (!el) return;
-      if (nx !== fx || ny !== fy) {
-        const px = getPxPerUnit?.() ?? 1;
-        el.style.translate = `${Math.round((nx - fx) * px)}px ${Math.round((ny - fy) * px)}px`;
-      } else {
-        el.style.translate = '';
-      }
+      if (el) el.style.translate = nx !== fx || ny !== fy ? `${u(nx - fx)} ${u(ny - fy)}` : '';
     });
-  }, [register, instanceId, inFlow, fx, fy, getPxPerUnit]);
+  }, [register, instanceId, inFlow, fx, fy]);
   const [reducedMotion] = useState(prefersReducedMotion);
   const animated = ctx.mode === 'player' && block.animation !== undefined;
   const { onPressStart, onPressEnd } = useBlockAnimation(animLayer, { animation: animated ? block.animation : undefined, tokens: ctx.tokens, reducedMotion, appear: ctx.mode === 'player' && appear, leaving, onExited });
@@ -216,6 +209,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   ]
     .filter(Boolean)
     .join(' ');
+
   const root: CSSProperties = {
     // The place from the document stays in left/top; movement by scenarios and behaviors is a `translate`, which
     // the browser composes without layout and repaint (SC-05: 50 moving blocks at ≥ 50 fps on a slow phone).
@@ -232,7 +226,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
     ...(view && !view.interactive ? { pointerEvents: 'none' } : {}),
     // S-15: switching between states is smooth (transforms stay instant — the runtime drives them by frames).
     ...(states && !reducedMotion ? { transition: STATE_TRANSITION } : {}),
-    ...(drag ? { touchAction: 'none', cursor: view?.dragging ? 'grabbing' : 'grab' } : {}),
+    ...(drag ? { touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none', cursor: view?.dragging ? 'grabbing' : 'grab' } : {}),
     ...scratching.style,
     // BH-07: the side turned away from the participant is not drawn and not announced.
     ...(face && !face.shown ? { visibility: 'hidden' } : {}),
@@ -364,6 +358,14 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
     </>
   );
 
+  const inner =
+    animated || appear || leaving ? (
+      <div ref={animLayer} className="bk-anim" style={{ ...(block.animation ? animatedLayerStyle(block.animation, cssColor({ token: 'accent', alpha: 0.8 }, ctx.tokens)) : { position: 'absolute', inset: 0 }), ...(style.autoHeight ? { position: 'relative', inset: 'auto' } : {}) }}>
+        {body}
+      </div>
+    ) : (
+      body
+    );
   return (
     <div
       ref={rootEl}
@@ -376,12 +378,12 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
       style={root}
       {...mergeHandlers<Record<string, unknown>>(dragHandlers, scratching.handlers, handlers)}
     >
-      {animated || appear || leaving ? (
-        <div ref={animLayer} className="bk-anim" style={{ ...(block.animation ? animatedLayerStyle(block.animation, cssColor({ token: 'accent', alpha: 0.8 }, ctx.tokens)) : { position: 'absolute', inset: 0 }), ...(style.autoHeight ? { position: 'relative', inset: 'auto' } : {}) }}>
-          {body}
+      {scratch ? (
+        <div className="bk-scratch" style={{ position: style.autoHeight ? 'relative' : 'absolute', inset: style.autoHeight ? 'auto' : 0, ...scratching.mask }}>
+          {inner}
         </div>
       ) : (
-        body
+        inner
       )}
     </div>
   );

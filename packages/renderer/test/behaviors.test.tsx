@@ -3,7 +3,7 @@ import { type BlockInput, ProjectDocument } from '@blokum/schema';
 import { act, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Artboard, BlockView, DEV_THEMES, DRAG_SLOP, PlayerScreen, RuntimeStore, isPressable, mergeHandlers, pxPerUnit, scratchedPercent, usesPointer } from '../src/index.js';
+import { Artboard, BlockView, DEV_THEMES, DRAG_SLOP, PlayerScreen, RuntimeStore, isPressable, mergeHandlers, onlyMoved, pxPerUnit, scratchedPercent, usesPointer } from '../src/index.js';
 import { block, media } from './helpers.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -198,7 +198,10 @@ describe('BH-03: стираемый слой', () => {
     act(() => {
       vi.advanceTimersByTime(60);
     });
-    expect(el.style.maskImage).toContain('MASKA');
+    // The mask is on the drawing inside; the block itself keeps catching the finger over its whole box.
+    expect(el.querySelector<HTMLElement>('.bk-scratch')!.style.maskImage).toContain('MASKA');
+    expect(el.style.maskImage).toBe('');
+    expect(el.style.userSelect).toBe('none');
     expect(m.events).toEqual([{ type: 'scratched', blockId: 'sloi0001', percent: 70 }]);
     expect(el.style.opacity).toBe('0');
     expect(el.style.pointerEvents).toBe('none');
@@ -253,6 +256,7 @@ describe('BH-02 · BH-08: указатель на экране', () => {
       cb?.(1016);
     });
     expect(store.views.get('zvezda01')).toMatchObject({ x: 190, y: 290 });
+    expect(screen.getAttribute('data-live')).toBe('true');
     m.unmount();
   });
 
@@ -268,3 +272,16 @@ describe('BH-02 · BH-08: указатель на экране', () => {
   });
 });
 
+
+describe('SC-05: сдвиг без перерисовки экрана', () => {
+  const doc = ProjectDocument.parse({ schemaVersion: 1, screens: [{ id: 'ekran1', name: 'Э', blocks: [{ id: 'sharik01', type: 'shape', name: 'Шарик', frame: { x: 10, y: 20, w: 20, h: 20 } }] }] });
+
+  it('SC-05: только смена места — прямой сдвиг; «изменился», но стоит на месте (ответ, переменная) — перерисовка', () => {
+    const store = new RuntimeStore(createRuntime(doc, { seed: 1 }), () => undefined, { request: () => 1, cancel: () => undefined });
+    store.enter('ekran1');
+    const view = store.views.get('sharik01')!;
+    expect(onlyMoved(view, { ...view, x: 15 })).toBe(true);
+    expect(onlyMoved(view, { ...view })).toBe(false);
+    expect(onlyMoved(view, { ...view, x: 15, selected: !view.selected })).toBe(false);
+  });
+});
