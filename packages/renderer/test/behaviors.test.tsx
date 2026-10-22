@@ -201,6 +201,7 @@ describe('BH-03: стираемый слой', () => {
     // The mask is on the drawing inside; the block itself keeps catching the finger over its whole box.
     expect(el.querySelector<HTMLElement>('.bk-scratch')!.style.maskImage).toContain('MASKA');
     expect(el.style.maskImage).toBe('');
+    expect(el.style.userSelect).toBe('none');
     expect(m.events).toEqual([{ type: 'scratched', blockId: 'sloi0001', percent: 70 }]);
     expect(el.style.opacity).toBe('0');
     expect(el.style.pointerEvents).toBe('none');

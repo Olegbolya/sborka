@@ -226,7 +226,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
     ...(view && !view.interactive ? { pointerEvents: 'none' } : {}),
     // S-15: switching between states is smooth (transforms stay instant — the runtime drives them by frames).
     ...(states && !reducedMotion ? { transition: STATE_TRANSITION } : {}),
-    ...(drag ? { touchAction: 'none', cursor: view?.dragging ? 'grabbing' : 'grab' } : {}),
+    ...(drag ? { touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none', cursor: view?.dragging ? 'grabbing' : 'grab' } : {}),
     ...scratching.style,
     // BH-07: the side turned away from the participant is not drawn and not announced.
     ...(face && !face.shown ? { visibility: 'hidden' } : {}),

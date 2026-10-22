@@ -88,6 +88,7 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
   if (!enabled || !o.dispatch) return { handlers: {}, style: {}, mask: {} };
   return {
     handlers: {
+      onDragStart: (e) => e.preventDefault(),
       onPointerDown: (e) => {
         if (done) return;
         e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -109,8 +110,12 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
         last.current = null;
       },
     },
+    // A mouse stroke must not select the label of the layer: the next stroke would drag the selection
+    // instead, and the browser cancels the pointer (BH-03).
     style: {
       touchAction: 'none',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
       ...(done ? { opacity: 0, transition: 'opacity 400ms ease', pointerEvents: 'none' } : {}),
     },
     // The mask goes on the drawing inside the block, not on the block: a browser may not hit-test the

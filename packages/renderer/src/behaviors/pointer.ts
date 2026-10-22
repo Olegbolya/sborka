@@ -15,6 +15,8 @@ export type PointerHandlers = Partial<{
   onPointerUp: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onClickCapture: (e: SyntheticEvent) => void;
+  /** The browser's own drag of a picture or selected text would cancel the pointer mid-gesture. */
+  onDragStart: (e: SyntheticEvent) => void;
 }>;
 
 /** Joins handler sets: for the same event every handler runs, in order. */
