@@ -23,6 +23,10 @@ export const testConfig: ApiConfig = {
   dataRoot: '/',
   allowedOrigins: ['http://localhost:3110'],
   smsDailyBudget: 1000,
+  vkClientId: 'dev-vk',
+  yandexClientId: 'dev-yandex',
+  oauthBaseUrl: 'http://127.0.0.1:0/api/v1',
+  webUrl: 'http://localhost:3110',
 };
 
 export const okProbes: HealthProbes = {

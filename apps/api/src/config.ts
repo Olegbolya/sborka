@@ -9,6 +9,14 @@ export interface ApiConfig {
   allowedOrigins: string[];
   /** TS-30: daily OTP SMS budget for the service; when reached, only OAuth login is available. */
   smsDailyBudget: number;
+  /** A-01: VK ID OAuth client id (default for dev emulator). */
+  vkClientId: string;
+  /** A-01: Яндекс ID OAuth client id (default for dev emulator). */
+  yandexClientId: string;
+  /** Base URL for OAuth provider endpoints; defaults to self for dev emulator. */
+  oauthBaseUrl: string;
+  /** Frontend URL for post-login redirect. */
+  webUrl: string;
 }
 
 const DEV_DATABASE_URL = 'postgresql://blokum:blokum@127.0.0.1:5432/blokum_dev';
@@ -31,6 +39,8 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   if (!Number.isInteger(smsDailyBudget) || smsDailyBudget < 0) {
     throw new Error(`Неверный суточный бюджет СМС: «${env.SMS_DAILY_BUDGET}»`);
   }
+  const apiPort = env.API_PORT ?? env.PORT ?? '3100';
+  const selfBaseUrl = `http://${env.API_HOST ?? '127.0.0.1'}:${apiPort}`;
   return {
     port: parsed,
     host: env.API_HOST ?? '127.0.0.1',
@@ -40,5 +50,9 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     dataRoot: env.DATA_ROOT ?? '/',
     allowedOrigins: rawOrigins.split(',').map((s) => s.trim()).filter(Boolean),
     smsDailyBudget,
+    vkClientId: env.VK_CLIENT_ID ?? 'dev-vk',
+    yandexClientId: env.YANDEX_CLIENT_ID ?? 'dev-yandex',
+    oauthBaseUrl: env.OAUTH_BASE_URL ?? `${selfBaseUrl}/api/v1`,
+    webUrl: env.WEB_URL ?? 'http://localhost:3110',
   };
 }

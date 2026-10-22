@@ -52,7 +52,7 @@
 |---|---|---|---|---|
 | P2.1 | Пользователи и сеансы · Opus | ✅ | bf4ef18 | Модуль `auth`: `SessionService` (скользящие сеансы 60 дней, SHA-256 хэш в БД, `HttpOnly Secure SameSite=Lax`), `CsrfGuard` (Origin/X-Blokum-CSRF), `AuthGuard`, `RolesGuard`, `AuthController` (list/revoke/revokeAll). Unit-покрытие: 95,5 % statements, 96 % branches. `pnpm --filter @blokum/api lint` — 0 ошибок; CI queued bf4ef18 |
 | P2.2 | Вход по телефону | ✅ | aa9fb41 | `OtpService`: нормализация +7, лимиты TS-30 (3/час, 10/сутки по номеру; 5/час по IP; бюджет), код 5 мин, 5 попыток, `findOrCreateUser`. `DevOtpSender`/`DevCaptchaVerifier` — throw в production. Unit: 89 тестов, 88,7 % statements, 86,7 % branches; CI aa9fb41 — ожидается |
-| P2.3 | VK ID и Яндекс ID | ⬜ | | |
+| P2.3 | VK ID и Яндекс ID | 🟨 | | Реализовано: `OAuthService` (PKCE, state, token exchange, profile, findOrCreateUser), `OAuthController` (init/callback), `DevOAuthController` (HTML-форма эмулятора), `InMemoryOAuthStateStore`. Тесты: 22 unit + интеграция (oauth.test.ts). E2e-браузерный тест заблокирован: нужна страница входа (P2.4) и PostgreSQL в CI e2e — добавить вместе с P2.4. Приёмка `check-foreign-services` — ✅ |
 | P2.4 | Первый вход и согласия | ⬜ | | |
 | P2.5 | Аккаунт | ⬜ | | |
 | P2.6 | Роли и админ · Opus | ⬜ | | |

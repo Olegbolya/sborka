@@ -5,7 +5,7 @@ import { type Db } from '@blokum/db';
 import { type ApiConfig } from './config.js';
 import { HealthController, type HealthProbes } from './health/health.controller.js';
 import { AllExceptionsFilter } from './observability/exception.filter.js';
-import { ALERTS, API_CONFIG, CAPTCHA_VERIFIER, HEALTH_PROBES, LOGGER, OTP_SENDER } from './tokens.js';
+import { ALERTS, API_CONFIG, CAPTCHA_VERIFIER, HEALTH_PROBES, LOGGER, OAUTH_STATE_STORE, OTP_SENDER } from './tokens.js';
 import { DatabaseModule } from './database.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AuthGuard } from './auth/auth.guard.js';
@@ -14,6 +14,10 @@ import { RolesGuard } from './auth/roles.guard.js';
 import { SessionService } from './auth/session.service.js';
 import { OtpService } from './auth/otp.service.js';
 import { OtpController } from './auth/otp.controller.js';
+import { OAuthService } from './auth/oauth.service.js';
+import { OAuthController } from './auth/oauth.controller.js';
+import { DevOAuthController } from './auth/dev-oauth.controller.js';
+import { InMemoryOAuthStateStore } from './auth/oauth-state.js';
 import type { CaptchaVerifier } from './auth/captcha.js';
 import type { OtpSender } from './auth/otp-sender.js';
 
@@ -32,18 +36,27 @@ export interface AppDeps {
 @Module({})
 export class AppModule {
   static register(config: ApiConfig, deps: AppDeps): DynamicModule {
+    const production = process.env.NODE_ENV === 'production';
     return {
       module: AppModule,
       imports: [DatabaseModule.forRoot(deps.db), AuthModule],
-      controllers: [HealthController, OtpController, ...(deps.extraControllers ?? [])],
+      controllers: [
+        HealthController,
+        OtpController,
+        OAuthController,
+        ...(production ? [] : [DevOAuthController]),
+        ...(deps.extraControllers ?? []),
+      ],
       providers: [
         OtpService,
+        OAuthService,
         { provide: API_CONFIG, useValue: config },
         { provide: LOGGER, useValue: deps.logger },
         { provide: ALERTS, useValue: deps.alerts },
         { provide: HEALTH_PROBES, useValue: deps.probes },
         { provide: OTP_SENDER, useValue: deps.otpSender },
         { provide: CAPTCHA_VERIFIER, useValue: deps.captchaVerifier },
+        { provide: OAUTH_STATE_STORE, useValue: new InMemoryOAuthStateStore() },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         // Global guards: CSRF → Auth → Roles (order matters).
         { provide: APP_GUARD, useFactory: (cfg: ApiConfig) => new CsrfGuard(cfg), inject: [API_CONFIG] },
