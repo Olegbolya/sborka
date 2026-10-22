@@ -52,6 +52,8 @@ test.describe('BH-01…BH-08: поведения пальцем и мышью', 
     page.on('pageerror', (e) => errors.push(e.message));
     expect((await page.goto('/dev/behaviors'))?.status()).toBe(200);
     await expect(page.locator('.dev-behavior')).toHaveCount(8);
+    // The markup comes from the server; gestures count only once every screen is alive (handlers attached).
+    await expect(page.locator('.bk-player-screen[data-live="true"]')).toHaveCount(8);
     expect(errors).toEqual([]);
   });
 

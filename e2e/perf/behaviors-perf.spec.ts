@@ -10,6 +10,7 @@ const SHOTS = 'e2e/__screenshots__';
 test('SC-05: 50 движущихся объектов — не меньше 50 кадров в секунду при замедлении процессора в 4 раза', async ({ page }, info) => {
   await page.goto('/dev/behaviors?part=perf');
   await expect(page.locator('[data-block-id^="sharik-"]')).toHaveCount(50);
+  await expect(page.locator('.bk-player-screen[data-live="true"]')).toHaveCount(1);
   await page.waitForTimeout(1000);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });

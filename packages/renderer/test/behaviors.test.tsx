@@ -253,6 +253,7 @@ describe('BH-02 · BH-08: указатель на экране', () => {
       cb?.(1016);
     });
     expect(store.views.get('zvezda01')).toMatchObject({ x: 190, y: 290 });
+    expect(screen.getAttribute('data-live')).toBe('true');
     m.unmount();
   });
 
