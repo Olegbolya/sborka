@@ -25,7 +25,7 @@ export function scratchedPercent(data: Uint8ClampedArray, width: number, height:
  * is its mask: the finger erases a line of the brush width, the block becomes transparent there and shows what
  * lies under it. The scratched share goes to the runtime (TR-14); past the threshold the layer fades away.
  */
-export function useScratch(o: { enabled: boolean; instanceId: string; w: number; h: number; brush: number; threshold: number; dispatch: ((e: RuntimeEvent) => void) | undefined }): { handlers: PointerHandlers; style: CSSProperties } {
+export function useScratch(o: { enabled: boolean; instanceId: string; w: number; h: number; brush: number; threshold: number; dispatch: ((e: RuntimeEvent) => void) | undefined }): { handlers: PointerHandlers; style: CSSProperties; mask: CSSProperties } {
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const last = useRef<{ id: number; x: number; y: number } | null>(null);
   const reported = useRef(0);
@@ -85,7 +85,7 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
     refresh();
   };
 
-  if (!enabled || !o.dispatch) return { handlers: {}, style: {} };
+  if (!enabled || !o.dispatch) return { handlers: {}, style: {}, mask: {} };
   return {
     handlers: {
       onPointerDown: (e) => {
@@ -111,8 +111,10 @@ export function useScratch(o: { enabled: boolean; instanceId: string; w: number;
     },
     style: {
       touchAction: 'none',
-      ...(mask ? { maskImage: `url(${mask})`, WebkitMaskImage: `url(${mask})`, maskSize: '100% 100%', WebkitMaskSize: '100% 100%', maskRepeat: 'no-repeat' } : {}),
       ...(done ? { opacity: 0, transition: 'opacity 400ms ease', pointerEvents: 'none' } : {}),
     },
+    // The mask goes on the drawing inside the block, not on the block: a browser may not hit-test the
+    // transparent part of a masked element, and a new stroke started on a scratched spot would fall through.
+    mask: mask ? { maskImage: `url(${mask})`, WebkitMaskImage: `url(${mask})`, maskSize: '100% 100%', WebkitMaskSize: '100% 100%', maskRepeat: 'no-repeat' } : {},
   };
 }

@@ -358,6 +358,14 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
     </>
   );
 
+  const inner =
+    animated || appear || leaving ? (
+      <div ref={animLayer} className="bk-anim" style={{ ...(block.animation ? animatedLayerStyle(block.animation, cssColor({ token: 'accent', alpha: 0.8 }, ctx.tokens)) : { position: 'absolute', inset: 0 }), ...(style.autoHeight ? { position: 'relative', inset: 'auto' } : {}) }}>
+        {body}
+      </div>
+    ) : (
+      body
+    );
   return (
     <div
       ref={rootEl}
@@ -370,12 +378,12 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
       style={root}
       {...mergeHandlers<Record<string, unknown>>(dragHandlers, scratching.handlers, handlers)}
     >
-      {animated || appear || leaving ? (
-        <div ref={animLayer} className="bk-anim" style={{ ...(block.animation ? animatedLayerStyle(block.animation, cssColor({ token: 'accent', alpha: 0.8 }, ctx.tokens)) : { position: 'absolute', inset: 0 }), ...(style.autoHeight ? { position: 'relative', inset: 'auto' } : {}) }}>
-          {body}
+      {scratch ? (
+        <div className="bk-scratch" style={{ position: style.autoHeight ? 'relative' : 'absolute', inset: style.autoHeight ? 'auto' : 0, ...scratching.mask }}>
+          {inner}
         </div>
       ) : (
-        body
+        inner
       )}
     </div>
   );
