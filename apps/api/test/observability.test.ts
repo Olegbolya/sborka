@@ -2,8 +2,10 @@ import { BadRequestException, Controller, Get, HttpException } from '@nestjs/com
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { API_PREFIX } from '../src/app.js';
+import { Public } from '../src/auth/decorators.js';
 import { startTestApp, type TestApp } from './helpers.js';
 
+@Public()
 @Controller('test-errors')
 class ErrorsController {
   @Get('boom')

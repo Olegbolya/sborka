@@ -1,6 +1,7 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { API_CONFIG, HEALTH_PROBES } from '../tokens.js';
 import type { ApiConfig } from '../config.js';
+import { Public } from '../auth/decorators.js';
 
 /** A dependency check; never throws — returns false (or a percentage for disk) on failure. */
 export interface HealthProbes {
@@ -29,6 +30,7 @@ export class HealthController {
     @Inject(HEALTH_PROBES) private readonly probes: HealthProbes,
   ) {}
 
+  @Public()
   @Get()
   async check(): Promise<HealthResponse> {
     const [db, redis, disk] = await Promise.all([

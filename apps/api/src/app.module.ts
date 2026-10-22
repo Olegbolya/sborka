@@ -1,15 +1,23 @@
 import { type DynamicModule, Module, type Provider } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, Reflector } from '@nestjs/core';
 import { type Alerts, type Logger } from '@blokum/observability';
+import { type Db } from '@blokum/db';
 import { type ApiConfig } from './config.js';
 import { HealthController, type HealthProbes } from './health/health.controller.js';
 import { AllExceptionsFilter } from './observability/exception.filter.js';
 import { ALERTS, API_CONFIG, HEALTH_PROBES, LOGGER } from './tokens.js';
+import { DatabaseModule } from './database.module.js';
+import { AuthModule } from './auth/auth.module.js';
+import { AuthGuard } from './auth/auth.guard.js';
+import { CsrfGuard } from './auth/csrf.guard.js';
+import { RolesGuard } from './auth/roles.guard.js';
+import { SessionService } from './auth/session.service.js';
 
 export interface AppDeps {
   logger: Logger;
   alerts: Alerts;
   probes: HealthProbes;
+  db: Db;
   /** Extra controllers (used by tests to exercise error handling). */
   extraControllers?: DynamicModule['controllers'];
   extraProviders?: Provider[];
@@ -20,6 +28,7 @@ export class AppModule {
   static register(config: ApiConfig, deps: AppDeps): DynamicModule {
     return {
       module: AppModule,
+      imports: [DatabaseModule.forRoot(deps.db), AuthModule],
       controllers: [HealthController, ...(deps.extraControllers ?? [])],
       providers: [
         { provide: API_CONFIG, useValue: config },
@@ -27,6 +36,10 @@ export class AppModule {
         { provide: ALERTS, useValue: deps.alerts },
         { provide: HEALTH_PROBES, useValue: deps.probes },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
+        // Global guards: CSRF → Auth → Roles (order matters).
+        { provide: APP_GUARD, useFactory: (cfg: ApiConfig) => new CsrfGuard(cfg), inject: [API_CONFIG] },
+        { provide: APP_GUARD, useFactory: (svc: SessionService, ref: Reflector) => new AuthGuard(svc, ref), inject: [SessionService, Reflector] },
+        { provide: APP_GUARD, useFactory: (ref: Reflector) => new RolesGuard(ref), inject: [Reflector] },
         ...(deps.extraProviders ?? []),
       ],
     };

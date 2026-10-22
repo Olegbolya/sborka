@@ -5,6 +5,8 @@ export interface ApiConfig {
   databaseUrl: string;
   redisUrl: string;
   dataRoot: string;
+  /** A-04: origins allowed to make mutating requests (CSRF check). */
+  allowedOrigins: string[];
 }
 
 const DEV_DATABASE_URL = 'postgresql://blokum:blokum@127.0.0.1:5432/blokum_dev';
@@ -22,6 +24,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const redisUrl = env.REDIS_URL ?? (production ? undefined : DEV_REDIS_URL);
   if (!databaseUrl) throw new Error('Не задан DATABASE_URL (в рабочей среде он обязателен)');
   if (!redisUrl) throw new Error('Не задан REDIS_URL (в рабочей среде он обязателен)');
+  const rawOrigins = env.ALLOWED_ORIGINS ?? `http://localhost:3110`;
   return {
     port: parsed,
     host: env.API_HOST ?? '127.0.0.1',
@@ -29,5 +32,6 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     databaseUrl,
     redisUrl,
     dataRoot: env.DATA_ROOT ?? '/',
+    allowedOrigins: rawOrigins.split(',').map((s) => s.trim()).filter(Boolean),
   };
 }

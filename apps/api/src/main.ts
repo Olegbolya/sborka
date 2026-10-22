@@ -15,6 +15,7 @@ await redis.connect().catch((e: unknown) => logger.error({ err: e }, 'Не уд�
 const app = await createApp(config, {
   logger,
   alerts,
+  db: db.db,
   probes: {
     database: () => checkDatabase(db.db),
     redis: async () => (await redis.ping()) === 'PONG',
