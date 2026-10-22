@@ -27,10 +27,14 @@ test.describe('S-02 · S-03 · S-05 · S-18 · S-19: галерея форм', (
     const block = page.locator('[data-block-id="var-18"]');
     await block.scrollIntoViewIfNeeded();
     const box = (await block.boundingBox())!;
-    await page.mouse.move(box.x + box.width - 2, box.y + 2);
-    const tilt = await block.evaluate((el) => [el.style.getPropertyValue('--bk-tilt-x'), el.style.getPropertyValue('--bk-tilt-y')].map(Number));
-    expect(tilt[0]).toBeGreaterThan(15);
-    expect(tilt[1]).toBeGreaterThan(15);
+    const tiltAt = async (x: number, y: number) => {
+      await page.mouse.move(x, y);
+      return block.evaluate((el) => [el.style.getPropertyValue('--bk-tilt-x'), el.style.getPropertyValue('--bk-tilt-y')].map(Number));
+    };
+    // The markup comes from the server; the block follows the cursor once the page has come alive, so the
+    // cursor is moved into the corner again until it does (alternating points — the same point fires no event).
+    let k = 0;
+    await expect.poll(async () => Math.min(...(await tiltAt(box.x + box.width - 2 - (k++ % 2), box.y + 2))), { timeout: 5000 }).toBeGreaterThan(15);
     await page.mouse.move(5, 5);
     expect(await block.evaluate((el) => el.style.getPropertyValue('--bk-tilt-x'))).toBe('0');
   });
