@@ -95,14 +95,34 @@ test.describe('BH-01…BH-08: поведения пальцем и мышью', 
     await page.locator(scene('scratch')).scrollIntoViewIfNeeded();
     await page.waitForTimeout(200);
     const box = (await page.locator('[data-block-id="serebro"]').boundingBox())!;
+    // What reached the layer — printed if the layer does not fade, so a failure in CI explains itself.
+    await page.evaluate(() => {
+      const w = window as unknown as { bkScratchLog: Record<string, number> };
+      w.bkScratchLog = {};
+      for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) {
+        window.addEventListener(type, (e) => {
+          const onLayer = (e.target as Element | null)?.closest?.('[data-block-id="serebro"]') ? 'layer' : 'other';
+          const key = `${type}:${onLayer}`;
+          w.bkScratchLog[key] = (w.bkScratchLog[key] ?? 0) + 1;
+        }, true);
+      }
+    });
+    const starts: string[] = [];
     for (let row = 0; row < 6; row++) {
       const y = box.y + (box.height * (row + 0.5)) / 6;
+      starts.push(await page.evaluate(([x, yy]) => document.elementFromPoint(x!, yy!)?.closest('[data-block-id]')?.getAttribute('data-block-id') ?? 'none', [box.x + 4, y]));
       await gesture(page, isMobile, [
         { x: box.x + 4, y },
         { x: box.x + box.width - 4, y },
       ]);
     }
-    await expect.poll(() => page.locator('[data-block-id="serebro"]').evaluate((el) => getComputedStyle(el).opacity), { timeout: 3000 }).toBe('0');
+    const layer = page.locator('[data-block-id="serebro"]');
+    await expect
+      .poll(() => layer.evaluate((el) => getComputedStyle(el).opacity), {
+        timeout: 3000,
+        message: `слой не исчез: ${JSON.stringify({ starts, box, log: await page.evaluate(() => (window as unknown as { bkScratchLog: unknown }).bkScratchLog), mask: await layer.evaluate((el) => el.querySelector<HTMLElement>('.bk-scratch')?.style.maskImage.length ?? -1) })}`,
+      })
+      .toBe('0');
     await expect(page.locator('[data-block-id="priz-podarok"]')).toBeVisible();
   });
 
