@@ -142,15 +142,22 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const rootEl = useRef<HTMLDivElement>(null);
   // SC-05: when the runtime only moves the block, the store shifts this element directly, without React.
   const register = ctx.registerPosition;
+  const getPxPerUnit = ctx.getPxPerUnit;
   const fx = block.frame.x;
   const fy = block.frame.y;
   useLayoutEffect(() => {
     if (!register || inFlow) return;
     return register(instanceId, (nx, ny) => {
       const el = rootEl.current;
-      if (el) el.style.translate = nx !== fx || ny !== fy ? `${u(nx - fx)} ${u(ny - fy)}` : '';
+      if (!el) return;
+      if (nx !== fx || ny !== fy) {
+        const px = getPxPerUnit?.() ?? 1;
+        el.style.translate = `${Math.round((nx - fx) * px)}px ${Math.round((ny - fy) * px)}px`;
+      } else {
+        el.style.translate = '';
+      }
     });
-  }, [register, instanceId, inFlow, fx, fy]);
+  }, [register, instanceId, inFlow, fx, fy, getPxPerUnit]);
   const [reducedMotion] = useState(prefersReducedMotion);
   const animated = ctx.mode === 'player' && block.animation !== undefined;
   const { onPressStart, onPressEnd } = useBlockAnimation(animLayer, { animation: animated ? block.animation : undefined, tokens: ctx.tokens, reducedMotion, appear: ctx.mode === 'player' && appear, leaving, onExited });
@@ -209,7 +216,6 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   ]
     .filter(Boolean)
     .join(' ');
-
   const root: CSSProperties = {
     // The place from the document stays in left/top; movement by scenarios and behaviors is a `translate`, which
     // the browser composes without layout and repaint (SC-05: 50 moving blocks at ≥ 50 fps on a slow phone).

@@ -25,6 +25,8 @@ export interface RenderContextValue {
   dispatch?: (event: RuntimeEvent) => void;
   /** Lets a block move its element itself when only its place changes (see `RuntimeStore.registerPosition`). */
   registerPosition?: (instanceId: string, sink: (x: number, y: number) => void) => () => void;
+  /** Returns px-per-unit scale in player; set by Artboard ResizeObserver (SC-05). */
+  getPxPerUnit?: () => number;
   /** Sounds of the player (unlocked by the first gesture). */
   sound?: SoundManager;
   /** Answers of the passage (from the runtime): chosen options, typed text, scale values (B-11…B-20). */

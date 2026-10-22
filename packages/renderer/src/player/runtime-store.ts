@@ -108,6 +108,18 @@ export class RuntimeStore {
 
   private publish(result: StepResult, force: boolean): void {
     let structural = false;
+    // SC-05 fast path: position-only moves skip view() allocation and Map copy entirely.
+    if (result.movedOnly && result.movedOnly.length > 0) {
+      for (const id of result.movedOnly) {
+        const sink = this.sinks.get(id);
+        if (!sink) continue;
+        const pos = this.runtime.posOf(id);
+        if (!pos) continue;
+        sink(pos.x, pos.y);
+        const v = this.viewMap.get(id);
+        if (v) { (v as { x: number; y: number }).x = pos.x; (v as { x: number; y: number }).y = pos.y; }
+      }
+    }
     if (result.changed.length > 0) {
       const next = new Map(this.viewMap);
       const moves: Array<[PositionSink, RuntimeView]> = [];

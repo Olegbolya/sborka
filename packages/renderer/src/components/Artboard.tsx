@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef } from 'react';
 import { cssColor } from '../theme/color.js';
 import { RenderContext, type RenderContextValue, defaultRenderContext } from '../context.js';
 import { fillLayers } from '../style/style-to-css.js';
@@ -34,6 +34,20 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
   const value: RenderContextValue = { ...defaultRenderContext, ...context };
   const unitValue = unit === undefined ? PLAYER_UNIT : `${unit}px`;
   const board: CSSProperties & Record<string, string> = { [UNIT_VAR]: unitValue, position: 'relative', width: u(ARTBOARD_WIDTH), flex: 'none' };
+  // SC-05: track artboard width in px so position sinks can use direct px instead of CSS calc.
+  const boardRef = useRef<HTMLElement>(null);
+  const pxRef = useRef<number>(1);
+  useEffect(() => {
+    const el = boardRef.current;
+    if (!el) return;
+    const update = () => { pxRef.current = el.offsetWidth / ARTBOARD_WIDTH; };
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const getPxPerUnit = useCallback(() => pxRef.current, []);
   if (value.mode !== 'player') {
     return (
       <RenderContext.Provider value={value}>
@@ -54,7 +68,7 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
     backgroundColor: value.tokens.colors.background ?? '#FFFFFF',
   };
   return (
-    <RenderContext.Provider value={value}>
+    <RenderContext.Provider value={{ ...value, getPxPerUnit }}>
       <div className="bk-stage" style={stage}>
         {layers.map((layer, i) =>
           layer.kind === 'paint' ? (
@@ -63,7 +77,7 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
             <video key={i} aria-hidden src={layer.src} autoPlay muted loop playsInline style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', ...layer.style }} />
           ),
         )}
-        <main className="bk-artboard" data-mode="player" style={board}>
+        <main ref={boardRef} className="bk-artboard" data-mode="player" style={board}>
           <style>{focusCss(cssColor({ token: 'primary', alpha: 1 }, value.tokens))}</style>
           {children}
         </main>

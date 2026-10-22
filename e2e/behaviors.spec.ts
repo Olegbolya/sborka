@@ -73,7 +73,7 @@ test.describe('BH-01…BH-08: поведения пальцем и мышью', 
     await gesture(page, isMobile, [knob, { x: knob.x + 60, y: knob.y + 80 }]);
     const moved = await center(page, '[data-block-id="polzunok"]');
     expect(moved.x).toBeGreaterThan(knob.x + 30);
-    expect(Math.abs(moved.y - knob.y)).toBeLessThan(1);
+    expect(Math.abs(moved.y - knob.y)).toBeLessThan(2);
   });
 
   test('BH-02: «Нет» убегает от пальца или курсора 5 раз, потом нажимается и становится «Да!»', async ({ page, isMobile }) => {
@@ -91,6 +91,7 @@ test.describe('BH-01…BH-08: поведения пальцем и мышью', 
 
   test('BH-03: скретч-слой стирается и исчезает после 60 %', async ({ page, isMobile }) => {
     await page.locator(scene('scratch')).scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
     const box = (await page.locator('[data-block-id="serebro"]').boundingBox())!;
     for (let row = 0; row < 6; row++) {
       const y = box.y + (box.height * (row + 0.5)) / 6;

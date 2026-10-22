@@ -48,6 +48,11 @@ export interface StepResult {
   destroyed: string[];
   /** Variables changed during the step, with new values. */
   variables: Record<string, VariableValue>;
+  /**
+   * SC-05: instances that only moved their x/y position this step (no structural view change).
+   * The store bypasses view() and Map copy for these, calling the position sink directly.
+   */
+  movedOnly?: string[];
 }
 
 /** What the renderer draws for one block or copy. */
