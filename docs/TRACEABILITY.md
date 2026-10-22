@@ -282,3 +282,5 @@
 | SC-05 | P1.9 | `packages/renderer/src/player/runtime-store.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/renderer/test/behaviors.test.tsx`, `e2e/perf/behaviors-perf.spec.ts` |
 | A-04 | P2.1 | `apps/api/src/auth/session.service.ts`, `apps/api/src/auth/auth.guard.ts`, `apps/api/src/auth/csrf.guard.ts`, `apps/api/src/auth/auth.controller.ts` | `apps/api/test/auth.test.ts`, `apps/api/test/auth.units.test.ts` |
 | §8.1 | P2.1 | `apps/api/src/auth/session.service.ts` | `apps/api/test/auth.units.test.ts` |
+| A-01 | P2.2 | `apps/api/src/auth/otp.service.ts`, `apps/api/src/auth/otp.controller.ts` | `apps/api/test/otp.test.ts`, `apps/api/test/otp.units.test.ts` |
+| TS-30 | P2.2 | `apps/api/src/auth/otp.service.ts`, `apps/api/src/auth/otp-sender.ts`, `apps/api/src/auth/captcha.ts` | `apps/api/test/otp.test.ts`, `apps/api/test/otp.units.test.ts` |

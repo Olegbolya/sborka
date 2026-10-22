@@ -8,8 +8,8 @@
 ## Сейчас
 
 - **Текущая фаза:** P2 · Вход и аккаунт (P1 закончена; P0 закончена кроме проверки отката P0.5)
-- **Следующая задача:** P2.2 · Вход по телефону (макрошаг М2, `docs/PLAN-MACRO.md`)
-- **Где остановились:** P2.1 готова (bf4ef18). Модуль auth: сеансы, CSRF, guards, AuthController.
+- **Следующая задача:** P2.3 · VK ID и Яндекс ID (макрошаг М2, `docs/PLAN-MACRO.md`)
+- **Где остановились:** P2.2 готова (aa9fb41). OTP вход: нормализация +7, rate-limits TS-30, 5-мин код, 5 попыток.
 
 ## Вопросы владельцу
 
@@ -51,7 +51,7 @@
 | ID | Задача | Статус | Коммит | Доказательство / заметки |
 |---|---|---|---|---|
 | P2.1 | Пользователи и сеансы · Opus | ✅ | bf4ef18 | Модуль `auth`: `SessionService` (скользящие сеансы 60 дней, SHA-256 хэш в БД, `HttpOnly Secure SameSite=Lax`), `CsrfGuard` (Origin/X-Blokum-CSRF), `AuthGuard`, `RolesGuard`, `AuthController` (list/revoke/revokeAll). Unit-покрытие: 95,5 % statements, 96 % branches. `pnpm --filter @blokum/api lint` — 0 ошибок; CI queued bf4ef18 |
-| P2.2 | Вход по телефону | ⬜ | | |
+| P2.2 | Вход по телефону | ✅ | aa9fb41 | `OtpService`: нормализация +7, лимиты TS-30 (3/час, 10/сутки по номеру; 5/час по IP; бюджет), код 5 мин, 5 попыток, `findOrCreateUser`. `DevOtpSender`/`DevCaptchaVerifier` — throw в production. Unit: 89 тестов, 88,7 % statements, 86,7 % branches; CI aa9fb41 — ожидается |
 | P2.3 | VK ID и Яндекс ID | ⬜ | | |
 | P2.4 | Первый вход и согласия | ⬜ | | |
 | P2.5 | Аккаунт | ⬜ | | |
