@@ -3,8 +3,10 @@ import { createAlertsFromEnv, createLogger, diskUsagePercent } from '@blokum/obs
 import { Redis } from 'ioredis';
 import { createApp } from './app.js';
 import { DevCaptchaVerifier } from './auth/captcha.js';
+import { DevEmailSender } from './auth/email-sender.js';
 import { DevOtpSender } from './auth/otp-sender.js';
 import type { CaptchaVerifier } from './auth/captcha.js';
+import type { EmailSender } from './auth/email-sender.js';
 import type { OtpSender } from './auth/otp-sender.js';
 import { loadApiConfig } from './config.js';
 
@@ -26,12 +28,18 @@ if (config.phoneLogin && production) {
 const otpSender: OtpSender | undefined = config.phoneLogin ? new DevOtpSender() : undefined;
 const captchaVerifier: CaptchaVerifier | undefined = config.phoneLogin ? new DevCaptchaVerifier() : undefined;
 
+// Until a real email provider is configured, log to server log. Email verification won't work in production.
+const emailSender: EmailSender = production
+  ? { sendVerification: (to) => { logger.warn({ to }, 'Email-провайдер не настроен — письмо не отправлено'); return Promise.resolve(); } }
+  : new DevEmailSender();
+
 const app = await createApp(config, {
   logger,
   alerts,
   db: db.db,
   ...(otpSender ? { otpSender } : {}),
   ...(captchaVerifier ? { captchaVerifier } : {}),
+  emailSender,
   probes: {
     database: () => checkDatabase(db.db),
     redis: async () => (await redis.ping()) === 'PONG',
