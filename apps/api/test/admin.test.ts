@@ -63,9 +63,11 @@ describe('AD-01, AD-08 · Роли и админ', () => {
     await db?.drop();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sentCodes.length = 0;
     vi.clearAllMocks();
+    // Clear OTP requests so IP/phone rate limits don't bleed across tests.
+    if (db) await db.db.delete(schema.otpRequests);
   });
 
   function skip() {
