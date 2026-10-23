@@ -55,7 +55,7 @@ export class AppModule {
     const production = process.env.NODE_ENV === 'production';
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AuthModule, MediaModule.register(deps.mediaQueue)],
+      imports: [DatabaseModule.forRoot(deps.db), AuthModule, MediaModule.register(config, deps.mediaQueue)],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),

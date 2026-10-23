@@ -1,7 +1,7 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import type { RedisOptions } from 'bullmq';
-import { API_CONFIG, MEDIA_QUEUE } from '../tokens.js';
+import { MEDIA_QUEUE } from '../tokens.js';
 import { type ApiConfig } from '../config.js';
 import { LocalStorageService } from './storage.js';
 import { MediaService } from './media.service.js';
@@ -10,22 +10,18 @@ import { MEDIA_QUEUE_NAME, type IMediaQueue } from './media-jobs.js';
 
 @Module({})
 export class MediaModule {
-  static register(queueOverride?: IMediaQueue): DynamicModule {
+  static register(config: ApiConfig, queueOverride?: IMediaQueue): DynamicModule {
     return {
       module: MediaModule,
       controllers: [MediaController],
       providers: [
         MediaService,
-        {
-          provide: LocalStorageService,
-          useFactory: (config: ApiConfig) => new LocalStorageService(config.mediaDir),
-          inject: [API_CONFIG],
-        },
+        { provide: LocalStorageService, useValue: new LocalStorageService(config.mediaDir) },
         queueOverride
           ? { provide: MEDIA_QUEUE, useValue: queueOverride }
           : {
               provide: MEDIA_QUEUE,
-              useFactory: (config: ApiConfig): IMediaQueue => {
+              useFactory: (): IMediaQueue => {
                 const url = new URL(config.redisUrl);
                 const connection: RedisOptions = {
                   host: url.hostname,
@@ -37,7 +33,6 @@ export class MediaModule {
                   add: (name, data) => q.add(name, data).then(() => undefined),
                 };
               },
-              inject: [API_CONFIG],
             },
       ],
     };
