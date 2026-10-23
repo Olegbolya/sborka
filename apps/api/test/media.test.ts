@@ -44,11 +44,39 @@ const VALID_LOTTIE = Buffer.from(
   JSON.stringify({ v: '5.9.0', ip: 0, op: 60, fr: 25, w: 100, h: 100, layers: [], assets: [] }),
 );
 
+/**
+ * Minimal MP4 ftyp box (20 bytes) — enough for file-type to detect video/mp4.
+ * Structure: size(4) + 'ftyp'(4) + major_brand 'isom'(4) + minor_ver(4) + compat 'isom'(4)
+ */
+const MP4_MINIMAL = Buffer.from('000000146674797069736f6d0000020069736f6d', 'hex');
+
+/**
+ * Minimal RIFF/WAVE file (44 bytes) — enough for file-type to detect audio/wav.
+ * PCM, 1 channel, 8000 Hz, 16-bit, 0 data bytes.
+ */
+const WAV_MINIMAL = Buffer.from(
+  '52494646' + // RIFF
+  '24000000' + // size 36
+  '57415645' + // WAVE
+  '666d7420' + // fmt_
+  '10000000' + // chunk size 16
+  '01000100' + // PCM, 1 channel
+  '401f0000' + // 8000 Hz
+  '803e0000' + // 16000 byte/s
+  '02001000' + // block align 2, 16-bit
+  '64617461' + // data
+  '00000000',  // data size 0
+  'hex',
+);
+
 /** HTML disguised as a JPEG upload. */
 const HTML_CONTENT = Buffer.from('<!DOCTYPE html><html><body>xss</body></html>');
 
 /** PDF header. */
 const PDF_CONTENT = Buffer.from('%PDF-1.4 fake pdf content here');
+
+/** Windows EXE (MZ header) disguised as a JPEG upload. */
+const EXE_CONTENT = Buffer.concat([Buffer.from([0x4d, 0x5a, 0x90, 0x00]), Buffer.alloc(60)]);
 
 describe('P4.1, P4.4, B-02–B-07, D-08, TS-01 · Медиатека', () => {
   let t: TestApp;
@@ -173,6 +201,32 @@ describe('P4.1, P4.4, B-02–B-07, D-08, TS-01 · Медиатека', () => {
     expect(res.body.error?.code).toBe('FORBIDDEN_TYPE');
   });
 
+  it('B-04 · POST /media — MP4-видео загружается, kind=VIDEO', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991250014');
+    const res = await request(t.http())
+      .post(`/${API_PREFIX}/media`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .attach('file', MP4_MINIMAL, { filename: 'clip.mp4', contentType: 'video/mp4' })
+      .expect(201);
+    expect(res.body.kind).toBe('VIDEO');
+    expect(res.body.status).toBe('UPLOADED');
+  });
+
+  it('B-05 · POST /media — WAV-аудио загружается, kind=AUDIO', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991250015');
+    const res = await request(t.http())
+      .post(`/${API_PREFIX}/media`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .attach('file', WAV_MINIMAL, { filename: 'sound.wav', contentType: 'audio/wav' })
+      .expect(201);
+    expect(res.body.kind).toBe('AUDIO');
+    expect(res.body.status).toBe('UPLOADED');
+  });
+
   it('TS-01 · POST /media — SVG с подменённым расширением (.jpg) отклоняется', async () => {
     if (skip()) return;
     const cookie = await loginViaOtp('+79991250006');
@@ -182,6 +236,18 @@ describe('P4.1, P4.4, B-02–B-07, D-08, TS-01 · Медиатека', () => {
       .set('Cookie', cookie)
       .set('X-Blokum-CSRF', '1')
       .attach('file', svgContent, { filename: 'image.jpg', contentType: 'image/jpeg' })
+      .expect(400);
+    expect(res.body.error?.code).toMatch(/FORBIDDEN_TYPE|UNKNOWN_TYPE/);
+  });
+
+  it('TS-01 · POST /media — EXE с подменённым расширением (.jpg) отклоняется', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991250016');
+    const res = await request(t.http())
+      .post(`/${API_PREFIX}/media`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .attach('file', EXE_CONTENT, { filename: 'malware.jpg', contentType: 'image/jpeg' })
       .expect(400);
     expect(res.body.error?.code).toMatch(/FORBIDDEN_TYPE|UNKNOWN_TYPE/);
   });
