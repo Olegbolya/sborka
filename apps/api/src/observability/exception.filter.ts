@@ -31,12 +31,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const res = host.switchToHttp().getResponse<Response>();
     const requestId = getRequestId();
+    const ownError = (e: HttpException) => {
+      const body = e.getResponse();
+      const err = typeof body === 'object' && body !== null ? (body as { error?: unknown }).error : undefined;
+      return typeof err === 'object' && err !== null && 'code' in err && 'message' in err ? err : undefined;
+    };
+    // A deliberate «service unavailable» with our own code and Russian text (СМС budget, mail not connected) is an
+    // expected answer, not a failure of the server: it goes to the client as is, without the 5xx alert.
+    if (exception instanceof HttpException && exception.getStatus() === HttpStatus.SERVICE_UNAVAILABLE && ownError(exception)) {
+      this.logger.warn({ status: 503, code: (ownError(exception) as { code: unknown }).code }, 'сервис недоступен');
+      res.status(503).json({ error: ownError(exception) });
+      return;
+    }
     if (exception instanceof HttpException && exception.getStatus() < 500) {
       const status = exception.getStatus();
-      const body = exception.getResponse();
       // Our own errors carry `{ error: { code, message } }`; NestJS built-ins carry English text — replaced.
-      const err = typeof body === 'object' && body !== null ? (body as { error?: unknown }).error : undefined;
-      const custom = typeof err === 'object' && err !== null && 'code' in err && 'message' in err ? err : undefined;
+      const custom = ownError(exception);
       const [code, message] = CODES[status] ?? ['ERROR', 'Ошибка запроса'];
       res.status(status).json({ error: custom ?? { code, message } });
       return;

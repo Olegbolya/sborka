@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { and, desc, eq, gt, isNull, or } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { DB, EMAIL_SENDER } from '../tokens.js';
@@ -22,6 +22,8 @@ function generateToken(): string {
 
 export interface UserProfile {
   id: string;
+  /** A-03: whether an address can be confirmed now (a mail service is connected). */
+  emailAvailable: boolean;
   displayName: string;
   phoneE164: string | null;
   email: string | null;
@@ -64,7 +66,7 @@ export class AccountService {
   constructor(
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
-    @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
+    @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender | null,
     private readonly totpSvc: TotpService,
     private readonly auditLog: AuditLogService,
   ) {}
@@ -76,6 +78,7 @@ export class AccountService {
     if (!user) throw new NotFoundException();
     return {
       id: user.id,
+      emailAvailable: this.emailSender !== null,
       displayName: user.displayName,
       phoneE164: user.phoneE164 ?? null,
       email: user.email ?? null,
@@ -98,6 +101,10 @@ export class AccountService {
 
   /** A-03: request email change — sends verification link. */
   async requestEmailVerification(userId: string, email: string): Promise<void> {
+    // A-03: without a mail service (owner decision pending, 00-OWNER-DECISIONS §8) the address can't be confirmed.
+    if (!this.emailSender) {
+      throw new ServiceUnavailableException({ error: { code: 'EMAIL_UNAVAILABLE', message: 'Почта для уведомлений появится после подключения почтового сервиса' } });
+    }
     const emailNorm = email.trim().toLowerCase();
     if (!emailNorm || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
       throw new BadRequestException({ error: { code: 'INVALID_EMAIL', message: 'Некорректный email' } });

@@ -38,7 +38,8 @@ export interface AppDeps {
   /** Needed only when phone login is on (`config.phoneLogin`). */
   otpSender?: OtpSender;
   captchaVerifier?: CaptchaVerifier;
-  emailSender?: EmailSender;
+  /** null — no mail service connected (A-03 answers «почта не подключена»). */
+  emailSender?: EmailSender | null;
   /** Extra controllers (used by tests to exercise error handling). */
   extraControllers?: DynamicModule['controllers'];
   extraProviders?: Provider[];
@@ -74,7 +75,9 @@ export class AppModule {
         { provide: ALERTS, useValue: deps.alerts },
         { provide: HEALTH_PROBES, useValue: deps.probes },
         ...(config.phoneLogin ? [{ provide: OTP_SENDER, useValue: deps.otpSender }, { provide: CAPTCHA_VERIFIER, useValue: deps.captchaVerifier }] : []),
-        { provide: EMAIL_SENDER, useValue: deps.emailSender ?? new DevEmailSender() },
+        // A-03: in production a real mail service is required; until the owner picks one (00-OWNER-DECISIONS §8) there is
+        // none, and confirming an address answers «почта не подключена» instead of crashing the API at start.
+        { provide: EMAIL_SENDER, useValue: deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender() },
         { provide: OAUTH_STATE_STORE, useValue: new InMemoryOAuthStateStore() },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         // Global guards: CSRF → Auth → Roles (order matters).

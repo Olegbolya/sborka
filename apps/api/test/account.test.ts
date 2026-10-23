@@ -332,3 +332,27 @@ describe('A-03, A-05, D-10 · Аккаунт', () => {
     expect(res.body.error?.code).toBe('NOT_DELETED');
   });
 });
+
+describe('A-03 · почтовый сервис не подключён', () => {
+  it('A-03: без почтового сервиса API запускается, профиль сообщает emailAvailable=false, подтверждение адреса — 503 с понятной причиной', async () => {
+    const db = await createTestDb();
+    const codes: string[] = [];
+    const t = await startTestApp({
+      db: db.db,
+      otpSender: { sendCode: (_p: string, code: string) => (codes.push(code), Promise.resolve()) },
+      captchaVerifier: { verify: () => Promise.resolve(true) },
+      emailSender: null,
+    });
+    const phone = '+79991249901';
+    await request(t.http()).post(`/${API_PREFIX}/auth/otp/request`).set('X-Blokum-CSRF', '1').send({ phone, captchaToken: 'ok' }).expect(200);
+    const res = await request(t.http()).post(`/${API_PREFIX}/auth/otp/verify`).set('X-Blokum-CSRF', '1').send({ phone, code: codes[0] }).expect(200);
+    const cookie = (res.headers['set-cookie'] as unknown as string[]).find((c) => c.startsWith('session='))!.split(';')[0]!;
+    const profile = await request(t.http()).get(`/${API_PREFIX}/auth/account`).set('Cookie', cookie).expect(200);
+    expect(profile.body.emailAvailable).toBe(false);
+    const email = await request(t.http()).post(`/${API_PREFIX}/auth/account/email`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ email: 'u@example.ru' });
+    expect(email.status).toBe(503);
+    expect(email.body.error.code).toBe('EMAIL_UNAVAILABLE');
+    await t.app.close();
+    await db.drop();
+  });
+});
