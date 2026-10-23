@@ -291,3 +291,8 @@
 | D1 | P2.4 | `legal/terms.md`, `apps/api/src/auth/legal-document.service.ts`, `apps/api/src/auth/consent.controller.ts` (LegalController) | `apps/api/test/consent.test.ts` |
 | D4 | P2.4 | `legal/pd-consent.md`, `apps/api/src/auth/legal-document.service.ts`, `apps/web/app/legal/pd-consent/page.tsx` | `apps/api/test/consent.test.ts` |
 | D9 | P2.4 | `legal/marketing.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/consent.test.ts` |
+| A-03 | P2.5 | `apps/api/src/auth/account.service.ts`; `apps/api/src/auth/email-sender.ts`; `packages/db/src/schema/users.ts` | `apps/api/test/account.test.ts` |
+| A-05 | P2.5 | `apps/api/src/auth/account.service.ts`; `apps/api/src/auth/session.service.ts` | `apps/api/test/account.test.ts`; `e2e/account.spec.ts` |
+| D-10 | P2.5 | `apps/api/src/auth/account.service.ts`; `apps/api/src/auth/account.controller.ts`; `apps/web/app/account/page.tsx` | `apps/api/test/account.test.ts`; `e2e/account.spec.ts` |
+| AD-01 | P2.6 | `apps/api/src/auth/totp.service.ts`; `apps/api/src/auth/otp.service.ts`; `apps/api/src/auth/otp.controller.ts`; `apps/api/src/auth/account.service.ts`; `apps/api/src/config.ts` | `apps/api/test/admin.test.ts` |
+| AD-08 | P2.6 | `apps/api/src/auth/audit-log.service.ts`; `packages/db/src/schema/moderation.ts` | `apps/api/test/admin.test.ts` |

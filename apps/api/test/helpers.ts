@@ -27,6 +27,8 @@ export const testConfig: ApiConfig = {
   yandexClientId: 'dev-yandex',
   oauthBaseUrl: 'http://127.0.0.1:0/api/v1',
   webUrl: 'http://localhost:3110',
+  adminPhone: '+79990000001',
+  totpSecretKey: 'a'.repeat(64),
 };
 
 export const okProbes: HealthProbes = {

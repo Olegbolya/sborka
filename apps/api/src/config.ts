@@ -17,6 +17,10 @@ export interface ApiConfig {
   oauthBaseUrl: string;
   /** Frontend URL for post-login redirect. */
   webUrl: string;
+  /** AD-01: phone that is automatically promoted to ADMIN role on first login. */
+  adminPhone: string;
+  /** AD-01: AES-256-GCM key (64 hex chars = 32 bytes) for encrypting TOTP secrets. */
+  totpSecretKey: string;
 }
 
 const DEV_DATABASE_URL = 'postgresql://blokum:blokum@127.0.0.1:5432/blokum_dev';
@@ -54,5 +58,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     yandexClientId: env.YANDEX_CLIENT_ID ?? 'dev-yandex',
     oauthBaseUrl: env.OAUTH_BASE_URL ?? `${selfBaseUrl}/api/v1`,
     webUrl: env.WEB_URL ?? 'http://localhost:3110',
+    adminPhone: env.ADMIN_PHONE ?? '',
+    totpSecretKey: env.TOTP_SECRET_KEY ?? 'a'.repeat(64),
   };
 }

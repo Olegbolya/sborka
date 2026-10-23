@@ -71,6 +71,21 @@ export const emailVerificationTokens = pgTable(
   (t) => [uniqueIndex('email_verif_token_uq').on(t.tokenHash), index('email_verif_user_idx').on(t.userId)],
 );
 
+/** AD-01: backup codes for TOTP 2FA (one-time use, stored as SHA-256 hashes). */
+export const totpBackupCodes = pgTable(
+  'totp_backup_codes',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    usedAt: ts('used_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('totp_backup_user_idx').on(t.userId)],
+);
+
 export const otpRequests = pgTable(
   'otp_requests',
   {

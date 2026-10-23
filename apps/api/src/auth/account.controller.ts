@@ -123,4 +123,27 @@ export class AccountController {
     await this.account.restoreAccount(user.id);
     return { ok: true };
   }
+
+  /** AD-01: begin TOTP setup — returns QR URI. */
+  @Post('totp/setup')
+  @HttpCode(200)
+  async setupTotp(@CurrentUser() user: RequestUser): Promise<{ totpUri: string }> {
+    return this.account.setupTotp(user.id);
+  }
+
+  /** AD-01: confirm TOTP with first valid code; returns one-time backup codes. */
+  @Post('totp/confirm')
+  @HttpCode(200)
+  async confirmTotp(@Body() body: { code: string }, @CurrentUser() user: RequestUser): Promise<{ backupCodes: string[] }> {
+    return this.account.confirmTotp(user.id, body.code ?? '');
+  }
+
+  /** AD-01: disable TOTP (removes secret and backup codes). */
+  @Delete('totp')
+  @HttpCode(200)
+  async disableTotp(@CurrentUser() user: RequestUser, @Req() req: Request): Promise<{ ok: true }> {
+    const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.socket?.remoteAddress;
+    await this.account.disableTotp(user.id, ip);
+    return { ok: true };
+  }
 }

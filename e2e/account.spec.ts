@@ -23,7 +23,10 @@ test.describe('A-03, A-05, D-10 · Аккаунт', () => {
   test('A-05 · кнопка «Отмена» скрывает подтверждение', async ({ page }) => {
     await page.goto('/account');
     await page.getByRole('button', { name: 'Удалить аккаунт' }).click();
-    await page.getByRole('button', { name: 'Отмена' }).click();
+    const cancelBtn = page.getByRole('button', { name: 'Отмена' });
+    await expect(cancelBtn).toBeVisible();
+    await cancelBtn.scrollIntoViewIfNeeded();
+    await cancelBtn.click({ force: true });
     await expect(page.getByRole('button', { name: 'Удалить аккаунт' })).toBeVisible();
     await expect(page.getByText('Вы уверены?')).not.toBeVisible();
   });

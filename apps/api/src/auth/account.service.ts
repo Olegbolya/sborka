@@ -6,6 +6,8 @@ import { DB, EMAIL_SENDER } from '../tokens.js';
 import { type ApiConfig } from '../config.js';
 import { API_CONFIG } from '../tokens.js';
 import type { EmailSender } from './email-sender.js';
+import { TotpService } from './totp.service.js';
+import { AuditLogService } from './audit-log.service.js';
 
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const DELETE_GRACE_DAYS = 30;
@@ -63,6 +65,8 @@ export class AccountService {
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
+    private readonly totpSvc: TotpService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   /** A-03, D-10: return full user profile. */
@@ -287,5 +291,47 @@ export class AccountService {
         .set({ status: 'DRAFT', deletedAt: null })
         .where(and(eq(schema.projects.ownerId, userId), eq(schema.projects.status, 'CLOSED')));
     });
+  }
+
+  /** AD-01: initiate TOTP setup — generates and encrypts secret, returns QR URI. */
+  async setupTotp(userId: string): Promise<{ totpUri: string }> {
+    const rows = await this.db.select({ phoneE164: schema.users.phoneE164, totpSecretEnc: schema.users.totpSecretEnc }).from(schema.users).where(eq(schema.users.id, userId)).limit(1);
+    const user = rows[0];
+    if (!user) throw new NotFoundException();
+    if (user.totpSecretEnc) {
+      throw new ConflictException({ error: { code: 'TOTP_ALREADY_ENABLED', message: 'TOTP уже настроен' } });
+    }
+    const secret = this.totpSvc.generateSecret();
+    const encrypted = this.totpSvc.encryptSecret(secret);
+    await this.db.update(schema.users).set({ totpSecretEnc: encrypted }).where(eq(schema.users.id, userId));
+    const uri = this.totpSvc.totpUri(encrypted, user.phoneE164 ?? userId);
+    await this.auditLog.log({ actorId: userId, action: 'TOTP_SETUP_INITIATED', targetType: 'user', targetId: userId });
+    return { totpUri: uri };
+  }
+
+  /** AD-01: confirm TOTP with first code — activates 2FA and returns one-time backup codes. */
+  async confirmTotp(userId: string, code: string): Promise<{ backupCodes: string[] }> {
+    const rows = await this.db.select({ totpSecretEnc: schema.users.totpSecretEnc }).from(schema.users).where(eq(schema.users.id, userId)).limit(1);
+    const user = rows[0];
+    if (!user || !user.totpSecretEnc) {
+      throw new BadRequestException({ error: { code: 'TOTP_NOT_SETUP', message: 'Сначала выполните настройку TOTP' } });
+    }
+    if (!this.totpSvc.verifyTotpCode(user.totpSecretEnc, code)) {
+      throw new BadRequestException({ error: { code: 'INVALID_TOTP', message: 'Неверный код TOTP' } });
+    }
+    const pairs = this.totpSvc.generateBackupCodes();
+    await this.totpSvc.storeBackupCodes(userId, pairs.map((p) => p.hash));
+    await this.auditLog.log({ actorId: userId, action: 'TOTP_CONFIRMED', targetType: 'user', targetId: userId });
+    return { backupCodes: pairs.map((p) => p.code) };
+  }
+
+  /** AD-01: disable TOTP for the user (removes secret and backup codes). */
+  async disableTotp(userId: string, ip?: string): Promise<void> {
+    const rows = await this.db.select({ totpSecretEnc: schema.users.totpSecretEnc }).from(schema.users).where(eq(schema.users.id, userId)).limit(1);
+    if (!rows[0]?.totpSecretEnc) {
+      throw new BadRequestException({ error: { code: 'TOTP_NOT_ENABLED', message: 'TOTP не настроен' } });
+    }
+    await this.totpSvc.revokeTotp(userId);
+    await this.auditLog.log({ actorId: userId, action: 'TOTP_DISABLED', targetType: 'user', targetId: userId, ip });
   }
 }

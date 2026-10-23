@@ -124,7 +124,7 @@ describe('A-01 · OtpService.requestCode', () => {
     const captcha: CaptchaVerifier = { verify: vi.fn().mockResolvedValue(false) };
     const db = makeOtpMocks();
     const sessions = { create: vi.fn() };
-    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never);
+    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never, {} as never, {} as never);
     await expect(svc.requestCode('+79991234567', 'bad', '1.2.3.4')).rejects.toThrow(BadRequestException);
     expect(sender.sendCode).not.toHaveBeenCalled();
   });
@@ -134,7 +134,7 @@ describe('A-01 · OtpService.requestCode', () => {
     const captcha: CaptchaVerifier = { verify: vi.fn().mockResolvedValue(true) };
     const db = makeOtpMocks({ countReturns: [3, 0, 0, 0] });
     const sessions = { create: vi.fn() };
-    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never);
+    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never, {} as never, {} as never);
     await expect(svc.requestCode('+79991234567', 'ok', '1.2.3.4')).rejects.toBeInstanceOf(HttpException);
     expect(sender.sendCode).not.toHaveBeenCalled();
   });
@@ -144,7 +144,7 @@ describe('A-01 · OtpService.requestCode', () => {
     const captcha: CaptchaVerifier = { verify: vi.fn().mockResolvedValue(true) };
     const db = makeOtpMocks({ countReturns: [0, 10, 0, 0] });
     const sessions = { create: vi.fn() };
-    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never);
+    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never, {} as never, {} as never);
     await expect(svc.requestCode('+79991234567', 'ok', '1.2.3.4')).rejects.toBeInstanceOf(HttpException);
     expect(sender.sendCode).not.toHaveBeenCalled();
   });
@@ -154,7 +154,7 @@ describe('A-01 · OtpService.requestCode', () => {
     const captcha: CaptchaVerifier = { verify: vi.fn().mockResolvedValue(true) };
     const db = makeOtpMocks({ countReturns: [0, 0, 5, 0] });
     const sessions = { create: vi.fn() };
-    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never);
+    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never, {} as never, {} as never);
     await expect(svc.requestCode('+79991234567', 'ok', '1.2.3.4')).rejects.toBeInstanceOf(HttpException);
     expect(sender.sendCode).not.toHaveBeenCalled();
   });
@@ -164,7 +164,7 @@ describe('A-01 · OtpService.requestCode', () => {
     const captcha: CaptchaVerifier = { verify: vi.fn().mockResolvedValue(true) };
     const db = makeOtpMocks({ countReturns: [0, 0, 0, 1000] });
     const sessions = { create: vi.fn() };
-    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never);
+    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never, {} as never, {} as never);
     await expect(svc.requestCode('+79991234567', 'ok', '1.2.3.4')).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(sender.sendCode).not.toHaveBeenCalled();
   });
@@ -174,7 +174,7 @@ describe('A-01 · OtpService.requestCode', () => {
     const captcha: CaptchaVerifier = { verify: vi.fn().mockResolvedValue(true) };
     const db = makeOtpMocks({ countReturns: [0, 0, 0, 0] });
     const sessions = { create: vi.fn() };
-    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never);
+    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never, {} as never, {} as never);
     await svc.requestCode('+79991234567', 'ok', '1.2.3.4');
     expect(sender.sendCode).toHaveBeenCalledWith('+79991234567', expect.stringMatching(/^\d{6}$/));
   });
@@ -188,7 +188,7 @@ describe('A-01 · OtpService.verifyCode', () => {
     const captcha: CaptchaVerifier = { verify: vi.fn().mockResolvedValue(true) };
     const db = { select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ orderBy: vi.fn(() => ({ limit: vi.fn().mockResolvedValue([]) })) })) })) })), insert: vi.fn(), update: vi.fn() };
     const sessions = { create: vi.fn() };
-    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never);
+    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never, {} as never, {} as never);
     await expect(svc.verifyCode('+79991234567', '123456', '1.2.3.4', '')).rejects.toThrow(BadRequestException);
   });
 
@@ -198,7 +198,7 @@ describe('A-01 · OtpService.verifyCode', () => {
     const sender: OtpSender = { sendCode: vi.fn() };
     const captcha: CaptchaVerifier = { verify: vi.fn() };
     const sessions = { create: vi.fn() };
-    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never);
+    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never, {} as never, {} as never);
     await expect(svc.verifyCode('+79991234567', '000000', '1.2.3.4', '')).rejects.toThrow(BadRequestException);
   });
 
@@ -210,7 +210,7 @@ describe('A-01 · OtpService.verifyCode', () => {
     const sender: OtpSender = { sendCode: vi.fn() };
     const captcha: CaptchaVerifier = { verify: vi.fn() };
     const sessions = { create: vi.fn() };
-    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never);
+    const svc = new OtpService(db as never, testConfig, sender, captcha, sessions as never, {} as never, {} as never);
     await expect(svc.verifyCode('+79991234567', '000000', '1.2.3.4', '')).rejects.toThrow(BadRequestException);
     expect(updateSet).toHaveBeenCalledWith({ attempts: 1 });
   });

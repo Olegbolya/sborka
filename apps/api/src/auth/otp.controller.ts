@@ -16,6 +16,11 @@ class VerifyCodeDto {
   code!: string;
 }
 
+class VerifyTotpDto {
+  phone!: string;
+  code!: string;
+}
+
 @Public()
 @Controller('auth/otp')
 export class OtpController {
@@ -33,13 +38,26 @@ export class OtpController {
     return { ok: true };
   }
 
-  /** A-01: verify OTP code, set session cookie, return user info. */
+  /** A-01: verify OTP code; sets session cookie or returns requiresTotp for 2FA accounts. */
   @Post('verify')
   @HttpCode(200)
-  async verifyCode(@Body() body: VerifyCodeDto, @Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<{ user: { id: string; role: string; displayName: string } }> {
+  async verifyCode(@Body() body: VerifyCodeDto, @Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<{ requiresTotp: true } | { user: { id: string; role: string; displayName: string } }> {
     const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.socket?.remoteAddress ?? '0.0.0.0';
     const ua = req.headers['user-agent'] ?? '';
-    const { token, user } = await this.otp.verifyCode(body.phone, body.code, ip, ua);
+    const result = await this.otp.verifyCode(body.phone, body.code, ip, ua);
+    if (result.requiresTotp) return { requiresTotp: true };
+    const secure = this.config.databaseUrl.includes('ssl') || process.env.NODE_ENV === 'production';
+    res.setHeader('Set-Cookie', sessionCookieHeader(result.token, secure));
+    return { user: { id: result.user.id, role: result.user.role, displayName: result.user.displayName } };
+  }
+
+  /** AD-01: second factor — verify TOTP or backup code after OTP; sets session cookie. */
+  @Post('totp-verify')
+  @HttpCode(200)
+  async verifyTotp(@Body() body: VerifyTotpDto, @Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<{ user: { id: string; role: string; displayName: string } }> {
+    const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.socket?.remoteAddress ?? '0.0.0.0';
+    const ua = req.headers['user-agent'] ?? '';
+    const { token, user } = await this.otp.verifyTotp(body.phone, body.code, ip, ua);
     const secure = this.config.databaseUrl.includes('ssl') || process.env.NODE_ENV === 'production';
     res.setHeader('Set-Cookie', sessionCookieHeader(token, secure));
     return { user: { id: user.id, role: user.role, displayName: user.displayName } };

@@ -8,8 +8,8 @@
 ## Сейчас
 
 - **Текущая фаза:** P2 · Вход и аккаунт (P1 закончена; P0 закончена кроме проверки отката P0.5)
-- **Текущая задача:** P2.5 · Аккаунт (макрошаг М2)
-- **Где остановились:** P2.4 завершена. ConsentService + LegalDocumentService + онбординг-страница + e2e.
+- **Текущая задача:** P2.6 · Роли и админ (макрошаг М2)
+- **Где остановились:** P2.5 в CI. AccountService + AccountController + /account страница + e2e удаления.
 
 ## Вопросы владельцу
 
@@ -54,8 +54,8 @@
 | P2.2 | Вход по телефону | ✅ | aa9fb41, fc5b010 | `OtpService`: нормализация +7, лимиты TS-30 (3/час, 10/сутки по номеру; 5/час по IP; бюджет), код 5 мин, 5 попыток, `findOrCreateUser`. `DevOtpSender`/`DevCaptchaVerifier` — throw в production. Unit: 89 тестов, 88,7 % statements, 86,7 % branches; fix fc5b010: очищать otpRequests между тестами. CI 39899990037 — success |
 | P2.3 | VK ID и Яндекс ID | ✅ | 13c3f42, 385fac8, 21f3ef4 | `OAuthService` (PKCE, state, token exchange, profile, findOrCreateUser, linkIdentity, unlinkIdentity), `OAuthController` (init/callback, session=), `DevOAuthController` (HTML-форма эмулятора, @Post token), `InMemoryOAuthStateStore`. `GET /auth/me`. Unit: 22 теста; интеграция: 12 тестов (полный VK/Яндекс flow, повторный вход). Исправления: dual decorator, port 0, cookie session=, CSRF header. CI 39899990037 — success |
 | P2.4 | Первый вход и согласия | ✅ | 0527fb0, 487b0b3 | `LegalDocumentService` (seeding TOS/PD/marketing из `legal/*.md`), `ConsentService` (getPendingConsents, recordConsents, hasCompletedOnboarding), `ConsentController` (GET /auth/onboarding, POST /auth/onboarding/consent), `LegalController` (GET /legal/documents/:type @Public). Frontend: `/onboarding` (клиентский компонент с чекбоксами, кнопка disabled без TOS+PD+возраст), `/legal/pd-consent` (серверный компонент). E2e: `onboarding.spec.ts` (4 теста). Интеграция: `consent.test.ts` (10 тестов). CI pending |
-| P2.5 | Аккаунт | 🟨 | | |
-| P2.6 | Роли и админ · Opus | ⬜ | | |
+| P2.5 | Аккаунт | ✅ | 1d8f469 | `AccountService` (профиль, email A-03, история согласий, отзыв маркетинга, экспорт JSON, мягкое удаление A-05 + восстановление за 30 дней), `AccountController` (10 endpoints), `DevEmailSender`, migration 0002 (`emailVerificationTokens`). Frontend: `/account` (профиль, email, удаление с подтверждением). Integration: 15 тестов. E2e: 4 теста. CI pending (e2e fix в P2.6 коммите) |
+| P2.6 | Роли и админ · Opus | 🟨 | | |
 
 ### P3 · Редактор
 

@@ -18,6 +18,8 @@ const baseConfig: ApiConfig = {
   vkClientId: 'dev-vk', yandexClientId: 'dev-yandex',
   oauthBaseUrl: 'http://127.0.0.1:3100/api/v1',
   webUrl: 'http://localhost:3110',
+  adminPhone: '',
+  totpSecretKey: 'a'.repeat(64),
 };
 
 interface MockDb {

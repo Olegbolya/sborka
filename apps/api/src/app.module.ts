@@ -23,6 +23,8 @@ import { ConsentService } from './auth/consent.service.js';
 import { ConsentController, LegalController } from './auth/consent.controller.js';
 import { AccountService } from './auth/account.service.js';
 import { AccountController } from './auth/account.controller.js';
+import { TotpService } from './auth/totp.service.js';
+import { AuditLogService } from './auth/audit-log.service.js';
 import type { CaptchaVerifier } from './auth/captcha.js';
 import type { OtpSender } from './auth/otp-sender.js';
 import type { EmailSender } from './auth/email-sender.js';
@@ -64,6 +66,8 @@ export class AppModule {
         LegalDocumentService,
         ConsentService,
         AccountService,
+        TotpService,
+        AuditLogService,
         { provide: API_CONFIG, useValue: config },
         { provide: LOGGER, useValue: deps.logger },
         { provide: ALERTS, useValue: deps.alerts },
