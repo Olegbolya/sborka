@@ -31,6 +31,7 @@ import type { EmailSender } from './auth/email-sender.js';
 import { DevEmailSender } from './auth/email-sender.js';
 import { MediaModule } from './media/media.module.js';
 import type { IMediaQueue } from './media/media-jobs.js';
+import { ProjectsModule } from './projects/projects.module.js';
 
 export interface AppDeps {
   logger: Logger;
@@ -55,7 +56,7 @@ export class AppModule {
     const production = process.env.NODE_ENV === 'production';
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AuthModule, MediaModule.register(config, deps.mediaQueue)],
+      imports: [DatabaseModule.forRoot(deps.db), AuthModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl)],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),

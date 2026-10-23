@@ -1,0 +1,1 @@
+ALTER TABLE "participant_sessions" ADD COLUMN "viewed_at" timestamp with time zone;

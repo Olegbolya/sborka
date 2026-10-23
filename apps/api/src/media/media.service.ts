@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { appendFile, mkdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, isNull, sql, sum } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createId } from '@blokum/schema';
@@ -212,11 +212,11 @@ export class MediaService {
   }
 }
 
-function makeError(code: string, message: string): Error & { statusCode: number; response: unknown } {
-  const err = new Error(message) as Error & { statusCode: number; response: unknown };
-  err.statusCode = code === 'NOT_FOUND' ? 404 : code === 'QUOTA_EXCEEDED' ? 402 : 400;
-  err.response = { error: { code, message } };
-  return err;
+function makeError(code: string, message: string): HttpException {
+  const body = { error: { code, message } };
+  if (code === 'NOT_FOUND') return new NotFoundException(body);
+  if (code === 'QUOTA_EXCEEDED') return new HttpException(body, 402);
+  return new BadRequestException(body);
 }
 
 function rowToDto(row: typeof schema.media.$inferSelect): UploadedMediaDto {

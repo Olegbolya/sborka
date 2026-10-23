@@ -27,6 +27,7 @@ export const participantSessions = pgTable(
     durationMs: integer('duration_ms'),
     runtimeState: jsonb('runtime_state').$type<Record<string, unknown>>(),
     isPreview: boolean('is_preview').notNull().default(false),
+    viewedAt: ts('viewed_at'),
   },
   (t) => [
     index('psessions_project_started_idx').on(t.projectId, t.startedAt),
