@@ -5,7 +5,7 @@ import { type Db } from '@blokum/db';
 import { type ApiConfig } from './config.js';
 import { HealthController, type HealthProbes } from './health/health.controller.js';
 import { AllExceptionsFilter } from './observability/exception.filter.js';
-import { ALERTS, API_CONFIG, CAPTCHA_VERIFIER, HEALTH_PROBES, LOGGER, OAUTH_STATE_STORE, OTP_SENDER } from './tokens.js';
+import { ALERTS, API_CONFIG, CAPTCHA_VERIFIER, EMAIL_SENDER, HEALTH_PROBES, LOGGER, OAUTH_STATE_STORE, OTP_SENDER } from './tokens.js';
 import { DatabaseModule } from './database.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AuthGuard } from './auth/auth.guard.js';
@@ -21,8 +21,12 @@ import { InMemoryOAuthStateStore } from './auth/oauth-state.js';
 import { LegalDocumentService } from './auth/legal-document.service.js';
 import { ConsentService } from './auth/consent.service.js';
 import { ConsentController, LegalController } from './auth/consent.controller.js';
+import { AccountService } from './auth/account.service.js';
+import { AccountController } from './auth/account.controller.js';
 import type { CaptchaVerifier } from './auth/captcha.js';
 import type { OtpSender } from './auth/otp-sender.js';
+import type { EmailSender } from './auth/email-sender.js';
+import { DevEmailSender } from './auth/email-sender.js';
 
 export interface AppDeps {
   logger: Logger;
@@ -31,6 +35,7 @@ export interface AppDeps {
   db: Db;
   otpSender: OtpSender;
   captchaVerifier: CaptchaVerifier;
+  emailSender?: EmailSender;
   /** Extra controllers (used by tests to exercise error handling). */
   extraControllers?: DynamicModule['controllers'];
   extraProviders?: Provider[];
@@ -49,6 +54,7 @@ export class AppModule {
         OAuthController,
         ConsentController,
         LegalController,
+        AccountController,
         ...(production ? [] : [DevOAuthController]),
         ...(deps.extraControllers ?? []),
       ],
@@ -57,12 +63,14 @@ export class AppModule {
         OAuthService,
         LegalDocumentService,
         ConsentService,
+        AccountService,
         { provide: API_CONFIG, useValue: config },
         { provide: LOGGER, useValue: deps.logger },
         { provide: ALERTS, useValue: deps.alerts },
         { provide: HEALTH_PROBES, useValue: deps.probes },
         { provide: OTP_SENDER, useValue: deps.otpSender },
         { provide: CAPTCHA_VERIFIER, useValue: deps.captchaVerifier },
+        { provide: EMAIL_SENDER, useValue: deps.emailSender ?? new DevEmailSender() },
         { provide: OAUTH_STATE_STORE, useValue: new InMemoryOAuthStateStore() },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         // Global guards: CSRF → Auth → Roles (order matters).

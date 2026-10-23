@@ -96,7 +96,7 @@ export class SessionService {
           eq(schema.sessions.tokenHash, tokenHash),
           isNull(schema.sessions.revokedAt),
           gt(schema.sessions.expiresAt, now),
-          eq(schema.users.status, 'ACTIVE'),
+          ne(schema.users.status, 'BLOCKED'),
         ),
       )
       .limit(1);

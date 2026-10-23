@@ -7,3 +7,4 @@ export const DB = Symbol('DB');
 export const OTP_SENDER = Symbol('OTP_SENDER');
 export const CAPTCHA_VERIFIER = Symbol('CAPTCHA_VERIFIER');
 export const OAUTH_STATE_STORE = Symbol('OAUTH_STATE_STORE');
+export const EMAIL_SENDER = Symbol('EMAIL_SENDER');

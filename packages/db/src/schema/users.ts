@@ -54,6 +54,23 @@ export const sessions = pgTable(
   (t) => [uniqueIndex('sessions_token_uq').on(t.tokenHash), index('sessions_user_idx').on(t.userId)],
 );
 
+/** A-03: email verification tokens (one-time-use, 24 h TTL). */
+export const emailVerificationTokens = pgTable(
+  'email_verification_tokens',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: ts('expires_at').notNull(),
+    usedAt: ts('used_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('email_verif_token_uq').on(t.tokenHash), index('email_verif_user_idx').on(t.userId)],
+);
+
 export const otpRequests = pgTable(
   'otp_requests',
   {
