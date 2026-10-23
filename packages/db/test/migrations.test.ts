@@ -24,7 +24,7 @@ describe('миграции', () => {
     const expected = Object.values(schema)
       .filter((v) => isTable(v))
       .map((tbl) => getTableName(tbl));
-    expect(expected.length).toBe(34);
+    expect(expected.length).toBe(36);
     for (const name of expected) expect(actual, `нет таблицы ${name}`).toContain(name);
   });
 
@@ -32,7 +32,7 @@ describe('миграции', () => {
     await runMigrations(t.db);
     await runMigrations(t.db);
     const applied = await t.db.execute<{ n: string }>(sql`select count(*)::text as n from drizzle.__drizzle_migrations`);
-    expect(Number(applied.rows[0]?.n)).toBe(2);
+    expect(Number(applied.rows[0]?.n)).toBe(4);
   });
 
   it('checkDatabase отвечает true для живой базы и false для недоступной', async () => {
