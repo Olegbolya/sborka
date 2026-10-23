@@ -6,7 +6,7 @@ import { createDb, runMigrations, type Db } from '@blokum/db';
 import pg from 'pg';
 import { createId } from '@blokum/schema';
 import { type AppDeps } from '../src/app.module.js';
-import { createApp } from '../src/app.js';
+import { API_PREFIX, createApp } from '../src/app.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import { type ApiConfig } from '../src/config.js';
@@ -86,7 +86,14 @@ export async function startTestApp(overrides: Partial<AppDeps> = {}): Promise<Te
   const stubDb = {} as Db;
   const stubOtpSender: OtpSender = { sendCode: () => Promise.resolve() };
   const stubCaptcha: CaptchaVerifier = { verify: () => Promise.resolve(true) };
-  const app = await createApp(testConfig, { logger, alerts, probes: okProbes, db: stubDb, otpSender: stubOtpSender, captchaVerifier: stubCaptcha, ...overrides });
+  // Use a mutable config copy so we can patch oauthBaseUrl after the server binds to a port.
+  const dynamicConfig = { ...testConfig };
+  const app = await createApp(dynamicConfig, { logger, alerts, probes: okProbes, db: stubDb, otpSender: stubOtpSender, captchaVerifier: stubCaptcha, ...overrides });
   await app.init();
+  // Bind to an OS-assigned port so that OAuthService can call back to the dev emulator via HTTP.
+  await app.listen(0);
+  const addr = (app.getHttpServer() as Server).address();
+  const port = typeof addr === 'object' && addr !== null ? addr.port : 0;
+  dynamicConfig.oauthBaseUrl = `http://127.0.0.1:${port}/${API_PREFIX}`;
   return { app, http: () => app.getHttpServer() as Server, logs, alerts: sent };
 }

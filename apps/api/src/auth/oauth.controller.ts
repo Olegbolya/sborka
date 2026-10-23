@@ -4,6 +4,7 @@ import type { ApiConfig } from '../config.js';
 import { API_CONFIG } from '../tokens.js';
 import { Public } from './decorators.js';
 import { type OAuthProvider, OAuthService } from './oauth.service.js';
+import { sessionCookieHeader } from './session.service.js';
 
 @Public()
 @Controller('auth/oauth')
@@ -36,7 +37,8 @@ export class OAuthController {
     const ip = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim() ?? req.socket.remoteAddress ?? '';
     const ua = req.headers['user-agent'] ?? '';
     const { token } = await this.oauth.processCallback(p, code, state, ip, ua);
-    res.cookie('sid', token, { httpOnly: true, sameSite: 'lax', maxAge: 60 * 24 * 60 * 60 * 1000 });
+    const secure = this.config.databaseUrl.includes('ssl') || process.env.NODE_ENV === 'production';
+    res.setHeader('Set-Cookie', sessionCookieHeader(token, secure));
     res.redirect(302, this.config.webUrl);
   }
 

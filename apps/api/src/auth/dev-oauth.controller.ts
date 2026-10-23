@@ -40,7 +40,6 @@ export class DevOAuthController {
   }
 
   /** Issues a fake access_token embedding the user info from the form. */
-  @Get(':provider/token')
   @Post(':provider/token')
   token(
     @Param('provider') provider: string,

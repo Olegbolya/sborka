@@ -16,22 +16,24 @@ export interface OAuthStateStore {
 export class InMemoryOAuthStateStore implements OAuthStateStore {
   private readonly states = new Map<string, { data: OAuthStateData; expiresAt: number }>();
 
-  async save(state: string, data: OAuthStateData): Promise<void> {
+  save(state: string, data: OAuthStateData): Promise<void> {
     this.states.set(state, { data, expiresAt: Date.now() + STATE_TTL_MS });
     this.evictExpired();
+    return Promise.resolve();
   }
 
-  async get(state: string): Promise<OAuthStateData | null> {
+  get(state: string): Promise<OAuthStateData | null> {
     const entry = this.states.get(state);
     if (!entry || entry.expiresAt < Date.now()) {
       this.states.delete(state);
-      return null;
+      return Promise.resolve(null);
     }
-    return entry.data;
+    return Promise.resolve(entry.data);
   }
 
-  async delete(state: string): Promise<void> {
+  delete(state: string): Promise<void> {
     this.states.delete(state);
+    return Promise.resolve();
   }
 
   private evictExpired(): void {

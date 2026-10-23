@@ -72,6 +72,7 @@ describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
     if (skip()) return;
     const res = await request(t.http())
       .post(`/${API_PREFIX}/dev/oauth/vk/token?code=dev-code-vk`)
+      .set('X-Blokum-CSRF', '1')
       .expect(200);
     expect(res.body.access_token).toBeTruthy();
   });
@@ -121,7 +122,7 @@ describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
     const cookies = Array.isArray(cbRes.headers['set-cookie'])
       ? (cbRes.headers['set-cookie'] as string[])
       : [cbRes.headers['set-cookie'] as string];
-    expect(cookies.some((c: string) => c.startsWith('sid='))).toBe(true);
+    expect(cookies.some((c: string) => c.startsWith('session='))).toBe(true);
     expect(cbRes.headers['location']).toBe('http://localhost:3110');
   });
 
@@ -143,7 +144,7 @@ describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
     const cookies = Array.isArray(cbRes.headers['set-cookie'])
       ? (cbRes.headers['set-cookie'] as string[])
       : [cbRes.headers['set-cookie'] as string];
-    expect(cookies.some((c: string) => c.startsWith('sid='))).toBe(true);
+    expect(cookies.some((c: string) => c.startsWith('session='))).toBe(true);
   });
 
   it('A-01 · повторный вход создаёт ту же учётную запись', async () => {
@@ -160,7 +161,7 @@ describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
       const cookies = Array.isArray(cbRes.headers['set-cookie'])
         ? (cbRes.headers['set-cookie'] as string[])
         : [cbRes.headers['set-cookie'] as string];
-      return cookies.find((c: string) => c.startsWith('sid='))?.split(';')[0]?.replace('sid=', '') ?? '';
+      return cookies.find((c: string) => c.startsWith('session='))?.split(';')[0]?.replace('session=', '') ?? '';
     }
 
     const tok1 = await loginVk();
@@ -171,11 +172,11 @@ describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
     // Both sessions should map to the same user — verify by fetching /auth/me with each token.
     const me1 = await request(t.http())
       .get(`/${API_PREFIX}/auth/me`)
-      .set('Cookie', `sid=${tok1}`)
+      .set('Cookie', `session=${tok1}`)
       .expect(200);
     const me2 = await request(t.http())
       .get(`/${API_PREFIX}/auth/me`)
-      .set('Cookie', `sid=${tok2}`)
+      .set('Cookie', `session=${tok2}`)
       .expect(200);
     expect(me1.body.id).toBe(me2.body.id);
   });

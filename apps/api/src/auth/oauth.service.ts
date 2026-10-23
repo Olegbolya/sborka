@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import type { ApiConfig } from '../config.js';
 import { API_CONFIG, DB, OAUTH_STATE_STORE } from '../tokens.js';
@@ -88,7 +88,7 @@ export class OAuthService {
 
     const tokenRes = await fetch(cfg.tokenUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Blokum-CSRF': '1' },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: cfg.clientId,
@@ -140,9 +140,10 @@ export class OAuthService {
     if (all.length <= 1) {
       throw new BadRequestException({ error: { code: 'CANNOT_UNLINK_LAST_IDENTITY', message: 'Нельзя отвязать последний способ входа' } });
     }
+    const providerEnum = provider.toUpperCase() as 'VK' | 'YANDEX';
     await this.db
       .delete(schema.authIdentities)
-      .where(eq(schema.authIdentities.userId, userId));
+      .where(and(eq(schema.authIdentities.userId, userId), eq(schema.authIdentities.provider, providerEnum)));
   }
 
   private callbackUri(provider: OAuthProvider): string {
