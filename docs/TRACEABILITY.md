@@ -284,3 +284,5 @@
 | §8.1 | P2.1 | `apps/api/src/auth/session.service.ts` | `apps/api/test/auth.units.test.ts` |
 | A-01 | P2.2 | `apps/api/src/auth/otp.service.ts`, `apps/api/src/auth/otp.controller.ts` | `apps/api/test/otp.test.ts`, `apps/api/test/otp.units.test.ts` |
 | TS-30 | P2.2 | `apps/api/src/auth/otp.service.ts`, `apps/api/src/auth/otp-sender.ts`, `apps/api/src/auth/captcha.ts` | `apps/api/test/otp.test.ts`, `apps/api/test/otp.units.test.ts` |
+| A-01 | P2.3 | `apps/api/src/auth/oauth.service.ts`, `apps/api/src/auth/oauth.controller.ts`, `apps/api/src/auth/dev-oauth.controller.ts`, `apps/api/src/auth/oauth-state.ts` | `apps/api/test/oauth.test.ts`, `apps/api/test/oauth.units.test.ts` |
+| 05-LEGAL §2.5 | P2.3 | `apps/api/src/auth/oauth.service.ts` (unlinkIdentity) | `apps/api/test/oauth.units.test.ts` |
