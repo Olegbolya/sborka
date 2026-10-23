@@ -38,7 +38,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     };
     // A deliberate «service unavailable» with our own code and Russian text (СМС budget, mail not connected) is an
     // expected answer, not a failure of the server: it goes to the client as is, without the 5xx alert.
-    if (exception instanceof HttpException && exception.getStatus() === HttpStatus.SERVICE_UNAVAILABLE && ownError(exception)) {
+    if (exception instanceof HttpException && exception.getStatus() === 503 && ownError(exception)) {
       this.logger.warn({ status: 503, code: (ownError(exception) as { code: unknown }).code }, 'сервис недоступен');
       res.status(503).json({ error: ownError(exception) });
       return;
