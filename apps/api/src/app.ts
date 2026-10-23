@@ -10,7 +10,7 @@ import { requestContext } from './observability/request-id.js';
 export const API_PREFIX = 'api/v1';
 
 export async function createApp(config: ApiConfig, deps: AppDeps): Promise<INestApplication> {
-  const app = await NestFactory.create(AppModule.register(config, deps), { logger: new NestPinoLogger(deps.logger) });
+  const app = await NestFactory.create(AppModule.register(config, deps), { logger: new NestPinoLogger(deps.logger), abortOnError: false });
   app.use(requestContext(deps.logger));
   app.setGlobalPrefix(API_PREFIX);
   app.enableShutdownHooks();
