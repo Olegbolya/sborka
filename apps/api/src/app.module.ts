@@ -29,6 +29,8 @@ import type { CaptchaVerifier } from './auth/captcha.js';
 import type { OtpSender } from './auth/otp-sender.js';
 import type { EmailSender } from './auth/email-sender.js';
 import { DevEmailSender } from './auth/email-sender.js';
+import { MediaModule } from './media/media.module.js';
+import type { IMediaQueue } from './media/media-jobs.js';
 
 export interface AppDeps {
   logger: Logger;
@@ -40,6 +42,8 @@ export interface AppDeps {
   captchaVerifier?: CaptchaVerifier;
   /** null — no mail service connected (A-03 answers «почта не подключена»). */
   emailSender?: EmailSender | null;
+  /** P4.1: override the BullMQ queue (no-op stub in tests). */
+  mediaQueue?: IMediaQueue;
   /** Extra controllers (used by tests to exercise error handling). */
   extraControllers?: DynamicModule['controllers'];
   extraProviders?: Provider[];
@@ -51,7 +55,7 @@ export class AppModule {
     const production = process.env.NODE_ENV === 'production';
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AuthModule],
+      imports: [DatabaseModule.forRoot(deps.db), AuthModule, MediaModule.register(deps.mediaQueue)],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),

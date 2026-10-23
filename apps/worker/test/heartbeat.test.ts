@@ -57,6 +57,9 @@ describe('настройки воркера', () => {
       heartbeatIntervalMs: 10_000,
       diskPaths: ['/'],
       diskCheckIntervalMs: 600_000,
+      databaseUrl: 'postgresql://blokum:blokum@127.0.0.1:5432/blokum_dev',
+      mediaDir: '/tmp/blokum-media',
+      quarantineDir: '/tmp/blokum-quarantine',
     });
     expect(loadWorkerConfig({ DATA_ROOT: '/srv/blokum' }).diskPaths).toEqual(['/srv/blokum', '/']);
   });

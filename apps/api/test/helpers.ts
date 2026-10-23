@@ -1,5 +1,6 @@
 import { Writable } from 'node:stream';
 import { type Server } from 'node:http';
+import os from 'node:os';
 import { type INestApplication } from '@nestjs/common';
 import { type Alert, Alerts, createLogger } from '@blokum/observability';
 import { createDb, runMigrations, type Db } from '@blokum/db';
@@ -30,6 +31,8 @@ export const testConfig: ApiConfig = {
   phoneLogin: true,
   adminPhone: '+79990000001',
   totpSecretKey: 'a'.repeat(64),
+  mediaDir: os.tmpdir(),
+  mediaBaseUrl: 'http://127.0.0.1:0/api/v1/media',
 };
 
 export const okProbes: HealthProbes = {

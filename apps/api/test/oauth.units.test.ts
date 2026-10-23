@@ -21,6 +21,8 @@ const baseConfig: ApiConfig = {
   phoneLogin: false,
   adminPhone: '',
   totpSecretKey: 'a'.repeat(64),
+  mediaDir: '/tmp',
+  mediaBaseUrl: 'http://127.0.0.1:3100/api/v1/media',
 };
 
 interface MockDb {

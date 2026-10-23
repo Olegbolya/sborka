@@ -13,8 +13,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@blokum/db": "workspace:*",
     "@blokum/observability": "workspace:*",
-    "ioredis": "5.11.1"
+    "@blokum/schema": "workspace:*",
+    "bullmq": "^6.4.0",
+    "drizzle-orm": "0.45.4",
+    "file-type": "^22.2.0",
+    "ioredis": "5.11.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@blokum/config": "workspace:*",
