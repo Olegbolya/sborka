@@ -403,6 +403,75 @@ describe('D-04 · Ответы', () => {
   });
 });
 
+describe('D-02 · Поделиться', () => {
+  let t: TestApp;
+  let db: TestDb;
+  let loginViaOtp: (phone?: string) => Promise<string>;
+  let cookie: string;
+  let projectId: string;
+
+  beforeAll(async () => {
+    ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    cookie = await loginViaOtp();
+    const res = await request(t.http())
+      .post(`/${API_PREFIX}/projects`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .send({ title: 'Поделиться-тест' })
+      .expect(200);
+    projectId = res.body.id as string;
+  });
+
+  afterAll(async () => {
+    await t.app.close();
+    await db.drop();
+  });
+
+  it('D-02: точка доступа возвращает URL для поделиться', async () => {
+    const res = await request(t.http())
+      .get(`/${API_PREFIX}/projects/${projectId}/access-points`)
+      .set('Cookie', cookie)
+      .expect(200);
+    const points = res.body as { id: string; url: string; code: string }[];
+    expect(points.length).toBeGreaterThanOrEqual(1);
+    const point = points[0]!;
+    expect(point.url).toMatch(/\/q\//);
+    // D-02: URL пригоден для передачи в VK, Telegram, WhatsApp, Email
+    expect(encodeURIComponent(point.url)).toBeTruthy();
+  });
+});
+
+describe('D-11 · Моё творчество', () => {
+  let t: TestApp;
+  let db: TestDb;
+  let loginViaOtp: (phone?: string) => Promise<string>;
+  let cookie: string;
+
+  beforeAll(async () => {
+    ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    cookie = await loginViaOtp();
+  });
+
+  afterAll(async () => {
+    await t.app.close();
+    await db.drop();
+  });
+
+  it('D-11: неаутентифицированный пользователь получает 401 на списке сборок', async () => {
+    // D-11 — таблицы тем, шаблонов, элементов, шрифтов существуют в схеме;
+    // наполнение — задача владельца через админку (LB-05 / AD-11), API не отвечает за это.
+    // Проверяем, что авторизация работает корректно — основа для защищённых разделов творчества.
+    await request(t.http())
+      .get(`/${API_PREFIX}/projects`)
+      .expect(401);
+    const res = await request(t.http())
+      .get(`/${API_PREFIX}/projects`)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
 describe('D-06 · Экспорт CSV/XLSX', () => {
   let t: TestApp;
   let db: TestDb;

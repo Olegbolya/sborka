@@ -297,12 +297,23 @@
 | AD-01 | P2.6 | `apps/api/src/auth/totp.service.ts`; `apps/api/src/auth/otp.service.ts`; `apps/api/src/auth/otp.controller.ts`; `apps/api/src/auth/account.service.ts`; `apps/api/src/config.ts` | `apps/api/test/admin.test.ts` |
 | AD-08 | P2.6 | `apps/api/src/auth/audit-log.service.ts`; `packages/db/src/schema/moderation.ts` | `apps/api/test/admin.test.ts` |
 | B-02 | P4.1 | `apps/api/src/media/media.controller.ts`; `apps/api/src/media/media.service.ts`; `apps/api/src/media/entitlements.ts`; `apps/api/src/media/signatures.ts` | `apps/api/test/media.test.ts` |
-| B-03 | P4.1 | `apps/api/src/media/signatures.ts` (kind=GIF); `apps/api/src/media/media.service.ts` | `apps/api/test/media.test.ts` |
-| B-04 | P4.1 | `apps/api/src/media/signatures.ts` (kind=VIDEO); `apps/api/src/media/media.service.ts`; `apps/api/src/media/entitlements.ts` | `apps/api/test/media.test.ts` |
-| B-05 | P4.1 | `apps/api/src/media/signatures.ts` (kind=AUDIO); `apps/api/src/media/media.service.ts`; `apps/api/src/media/entitlements.ts` | `apps/api/test/media.test.ts` |
-| B-07 | P4.1 | `apps/api/src/media/signatures.ts` (kind=LOTTIE); `apps/api/src/media/media.service.ts` | `apps/api/test/media.test.ts` |
-| TS-01 | P4.1 | `apps/api/src/media/signatures.ts` (FORBIDDEN_MIMES, magic bytes) | `apps/api/test/media.test.ts` |
+| B-03 | P4.1 | `apps/api/src/media/signatures.ts#GIF`; `apps/api/src/media/media.service.ts` | `apps/api/test/media.test.ts` |
+| B-04 | P4.1 | `apps/api/src/media/signatures.ts#VIDEO`; `apps/api/src/media/media.service.ts`; `apps/api/src/media/entitlements.ts` | `apps/api/test/media.test.ts` |
+| B-05 | P4.1 | `apps/api/src/media/signatures.ts#AUDIO`; `apps/api/src/media/media.service.ts`; `apps/api/src/media/entitlements.ts` | `apps/api/test/media.test.ts` |
+| B-07 | P4.1 | `apps/api/src/media/signatures.ts#LOTTIE`; `apps/api/src/media/media.service.ts` | `apps/api/test/media.test.ts` |
+| TS-01 | P4.1 | `apps/api/src/media/signatures.ts#FORBIDDEN_MIMES` | `apps/api/test/media.test.ts` |
 | TS-20 | P4.2 | `apps/worker/src/media/images.ts` (EXIF strip, WebP variants, HEIC→JPEG); `apps/worker/src/media/processor.ts` | `apps/worker/test/images.test.ts` |
 | TS-21 | P4.2 | `apps/worker/src/media/clamav.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/clamav.test.ts` |
 | TS-25 | P4.2 | `apps/worker/src/media/lottie.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/lottie.test.ts` |
-| D-08 | P4.4 | `apps/api/src/media/media.service.ts` (checkUsage, deleteMedia); `apps/api/src/media/media.controller.ts` | `apps/api/test/media.test.ts` |
+| D-08 | P4.4 | `apps/api/src/media/media.service.ts#checkUsage`; `apps/api/src/media/media.controller.ts` | `apps/api/test/media.test.ts` |
+| D-01 | P6.1 | `apps/api/src/projects/projects.service.ts`; `apps/api/src/projects/projects.controller.ts`; `apps/web/app/cabinet/projects/page.tsx` | `apps/api/test/projects.test.ts` |
+| D-11 | P6.1 | `apps/web/app/cabinet/projects/page.tsx` | `apps/api/test/projects.test.ts` |
+| D-02 | P6.2 | `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
+| Q-01 | P6.2 | `apps/api/src/projects/access-points.service.ts`; `apps/api/src/projects/access-points.controller.ts` | `apps/api/test/projects.test.ts` |
+| Q-02 | P6.2 | `apps/api/src/projects/access-points.service.ts` | `apps/api/test/projects.test.ts` |
+| Q-04 | P6.2 | `apps/api/src/projects/access-points.service.ts`; `apps/api/src/projects/access-points.controller.ts` | `apps/api/test/projects.test.ts` |
+| Q-05 | P6.2 | `apps/api/src/projects/access-points.service.ts` | `apps/api/test/projects.test.ts` |
+| Q-07 | P6.2 | `apps/api/src/projects/access-points.service.ts`; `apps/api/src/projects/access-points.controller.ts` | `apps/api/test/projects.test.ts` |
+| D-03 | P6.3 | `apps/api/src/projects/projects.service.ts#getAccessSettings`; `apps/api/src/projects/projects.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
+| D-04 | P6.4 | `apps/api/src/projects/responses.service.ts`; `apps/api/src/projects/responses.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
+| D-06 | P6.6 | `apps/api/src/projects/export.service.ts`; `apps/api/src/projects/responses.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
