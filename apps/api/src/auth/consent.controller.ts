@@ -1,10 +1,12 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import { CurrentUser } from './decorators.js';
-import { Public } from './decorators.js';
+import { schema } from '@blokum/db';
+import { CurrentUser, Public } from './decorators.js';
 import type { RequestUser } from './session.service.js';
 import { ConsentService, type PendingDocument } from './consent.service.js';
 import { LegalDocumentService } from './legal-document.service.js';
+
+const VALID_DOC_TYPES = new Set(schema.legalDocuments.type.enumValues);
 
 class RecordConsentsDto {
   documentIds!: string[];
@@ -72,6 +74,9 @@ export class LegalController {
   @Get(':type')
   async getDocument(@Param('type') typeSlug: string): Promise<DocumentResponse> {
     const type = typeSlug.toUpperCase().replace(/-/g, '_') as Parameters<LegalDocumentService['getLatest']>[0];
+    if (!VALID_DOC_TYPES.has(type)) {
+      throw new BadRequestException({ error: { code: 'DOCUMENT_NOT_FOUND', message: 'Документ не найден' } });
+    }
     const doc = await this.legalDocs.getLatest(type);
     if (!doc) {
       throw new BadRequestException({ error: { code: 'DOCUMENT_NOT_FOUND', message: 'Документ не найден' } });
