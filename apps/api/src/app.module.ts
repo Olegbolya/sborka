@@ -35,8 +35,9 @@ export interface AppDeps {
   alerts: Alerts;
   probes: HealthProbes;
   db: Db;
-  otpSender: OtpSender;
-  captchaVerifier: CaptchaVerifier;
+  /** Needed only when phone login is on (`config.phoneLogin`). */
+  otpSender?: OtpSender;
+  captchaVerifier?: CaptchaVerifier;
   emailSender?: EmailSender;
   /** Extra controllers (used by tests to exercise error handling). */
   extraControllers?: DynamicModule['controllers'];
@@ -52,7 +53,7 @@ export class AppModule {
       imports: [DatabaseModule.forRoot(deps.db), AuthModule],
       controllers: [
         HealthController,
-        OtpController,
+        ...(config.phoneLogin ? [OtpController] : []),
         OAuthController,
         ConsentController,
         LegalController,
@@ -61,7 +62,7 @@ export class AppModule {
         ...(deps.extraControllers ?? []),
       ],
       providers: [
-        OtpService,
+        ...(config.phoneLogin ? [OtpService] : []),
         OAuthService,
         LegalDocumentService,
         ConsentService,
@@ -72,8 +73,7 @@ export class AppModule {
         { provide: LOGGER, useValue: deps.logger },
         { provide: ALERTS, useValue: deps.alerts },
         { provide: HEALTH_PROBES, useValue: deps.probes },
-        { provide: OTP_SENDER, useValue: deps.otpSender },
-        { provide: CAPTCHA_VERIFIER, useValue: deps.captchaVerifier },
+        ...(config.phoneLogin ? [{ provide: OTP_SENDER, useValue: deps.otpSender }, { provide: CAPTCHA_VERIFIER, useValue: deps.captchaVerifier }] : []),
         { provide: EMAIL_SENDER, useValue: deps.emailSender ?? new DevEmailSender() },
         { provide: OAUTH_STATE_STORE, useValue: new InMemoryOAuthStateStore() },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -156,9 +156,9 @@ if [ "$DRY_RUN" = 0 ] && [ -f "$ENV_FILE" ]; then
 else
   if [ "$DRY_RUN" = 1 ]; then run "сгенерировать $ENV_FILE из infra/env.prod.example (секреты — openssl rand)"; else
     [ -n "$PG_PASSWORD" ] || fail "Роль blokum уже есть, а .env.prod нет: задайте пароль вручную (ALTER ROLE blokum PASSWORD …) и создайте .env.prod из infra/env.prod.example"
-    s1="$(openssl rand -hex 32)"; s2="$(openssl rand -hex 32)"
+    s1="$(openssl rand -hex 32)"; s2="$(openssl rand -hex 32)"; s3="$(openssl rand -hex 32)"
     sed -e "s#@@DOMAIN@@#${DOMAIN}#g" -e "s#@@MEDIA_DOMAIN@@#${MEDIA_DOMAIN}#g" -e "s#@@PG_PASSWORD@@#${PG_PASSWORD}#g" \
-        -e "s#@@SECRET_1@@#${s1}#g" -e "s#@@SECRET_2@@#${s2}#g" -e "s#^PRELAUNCH=.*#PRELAUNCH=${PRELAUNCH}#" \
+        -e "s#@@SECRET_1@@#${s1}#g" -e "s#@@SECRET_2@@#${s2}#g" -e "s#@@SECRET_3@@#${s3}#g" -e "s#^PRELAUNCH=.*#PRELAUNCH=${PRELAUNCH}#" \
         -e "s#@@DATA_ROOT@@#${DATA_ROOT}#g" "$SCRIPT_DIR/env.prod.example" > "$ENV_FILE"
     chown "$DEPLOY_USER:$DEPLOY_USER" "$ENV_FILE"; chmod 600 "$ENV_FILE"
     done_ ".env.prod создан (600), секреты сгенерированы и не выводятся"

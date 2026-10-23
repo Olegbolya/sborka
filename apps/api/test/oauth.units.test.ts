@@ -6,7 +6,7 @@ import { DevOAuthController } from '../src/auth/dev-oauth.controller.js';
 import type { SessionService } from '../src/auth/session.service.js';
 import type { Db } from '@blokum/db';
 import { schema } from '@blokum/db';
-import type { ApiConfig } from '../src/config.js';
+import { loadApiConfig, type ApiConfig } from '../src/config.js';
 import type { Request, Response } from 'express';
 
 // Suppress unused import warning — OAuthProvider is used in type positions.
@@ -18,6 +18,7 @@ const baseConfig: ApiConfig = {
   vkClientId: 'dev-vk', yandexClientId: 'dev-yandex',
   oauthBaseUrl: 'http://127.0.0.1:3100/api/v1',
   webUrl: 'http://localhost:3110',
+  phoneLogin: false,
   adminPhone: '',
   totpSecretKey: 'a'.repeat(64),
 };
@@ -303,5 +304,14 @@ describe('A-01: DevOAuthController', () => {
     expect((res as unknown as { json: ReturnType<typeof vi.fn> }).json).toHaveBeenCalledWith(
       expect.objectContaining({ id: '99', display_name: 'Яша Пупкин' }),
     );
+  });
+});
+
+describe('A-01 (ADR-033): вход по телефону выключен по умолчанию', () => {
+  it('A-01: без PHONE_LOGIN=1 вход по телефону выключен; в рабочей среде обязателен ключ TOTP', () => {
+    expect(loadApiConfig({ NODE_ENV: 'test' }).phoneLogin).toBe(false);
+    expect(loadApiConfig({ NODE_ENV: 'test', PHONE_LOGIN: '1' }).phoneLogin).toBe(true);
+    expect(() => loadApiConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgresql://x', REDIS_URL: 'redis://x' })).toThrow('TOTP_SECRET_KEY');
+    expect(() => loadApiConfig({ NODE_ENV: 'test', TOTP_SECRET_KEY: 'короткий' })).toThrow('64');
   });
 });

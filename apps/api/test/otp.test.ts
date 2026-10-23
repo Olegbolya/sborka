@@ -218,3 +218,12 @@ describe('A-01, TS-30 · OTP вход по телефону', () => {
     expect(res.body.error.code).toBe('RATE_LIMIT_IP');
   });
 });
+
+describe('A-01 (ADR-033) · вход по телефону выключен', () => {
+  it('A-01: без PHONE_LOGIN маршрутов входа по телефону нет — 404, код никому не отправляется', async () => {
+    const t = await startTestApp({}, { phoneLogin: false });
+    const res = await request(t.http()).post(`/${API_PREFIX}/auth/otp/request`).set('x-blokum-csrf', '1').send({ phone: '+79991234567', captchaToken: 'ok' });
+    expect(res.status).toBe(404);
+    await t.app.close();
+  });
+});

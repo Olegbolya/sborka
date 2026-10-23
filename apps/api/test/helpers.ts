@@ -27,6 +27,7 @@ export const testConfig: ApiConfig = {
   yandexClientId: 'dev-yandex',
   oauthBaseUrl: 'http://127.0.0.1:0/api/v1',
   webUrl: 'http://localhost:3110',
+  phoneLogin: true,
   adminPhone: '+79990000001',
   totpSecretKey: 'a'.repeat(64),
 };
@@ -74,7 +75,7 @@ export interface TestApp {
   alerts: Alert[];
 }
 
-export async function startTestApp(overrides: Partial<AppDeps> = {}): Promise<TestApp> {
+export async function startTestApp(overrides: Partial<AppDeps> = {}, configOverrides: Partial<typeof testConfig> = {}): Promise<TestApp> {
   const logs: Array<Record<string, unknown>> = [];
   const stream = new Writable({
     write(chunk: Buffer, _e, cb) {
@@ -89,7 +90,7 @@ export async function startTestApp(overrides: Partial<AppDeps> = {}): Promise<Te
   const stubOtpSender: OtpSender = { sendCode: () => Promise.resolve() };
   const stubCaptcha: CaptchaVerifier = { verify: () => Promise.resolve(true) };
   // Use a mutable config copy so we can patch oauthBaseUrl after the server binds to a port.
-  const dynamicConfig = { ...testConfig };
+  const dynamicConfig = { ...testConfig, ...configOverrides };
   const app = await createApp(dynamicConfig, { logger, alerts, probes: okProbes, db: stubDb, otpSender: stubOtpSender, captchaVerifier: stubCaptcha, ...overrides });
   await app.init();
   // Bind to an OS-assigned port so that OAuthService can call back to the dev emulator via HTTP.

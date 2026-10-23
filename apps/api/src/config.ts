@@ -17,6 +17,11 @@ export interface ApiConfig {
   oauthBaseUrl: string;
   /** Frontend URL for post-login redirect. */
   webUrl: string;
+  /**
+   * A-01: login by phone code. Off unless PHONE_LOGIN=1 — the owner declined SMS for cost (ADR-033); the code is
+   * kept for a cheaper provider later. In production it also needs a real `OtpSender`, which is not connected.
+   */
+  phoneLogin: boolean;
   /** AD-01: phone that is automatically promoted to ADMIN role on first login. */
   adminPhone: string;
   /** AD-01: AES-256-GCM key (64 hex chars = 32 bytes) for encrypting TOTP secrets. */
@@ -43,6 +48,8 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   if (!Number.isInteger(smsDailyBudget) || smsDailyBudget < 0) {
     throw new Error(`Неверный суточный бюджет СМС: «${env.SMS_DAILY_BUDGET}»`);
   }
+  if (production && !env.TOTP_SECRET_KEY) throw new Error('Не задан TOTP_SECRET_KEY (в рабочей среде он обязателен)');
+  if (env.TOTP_SECRET_KEY && !/^[0-9a-f]{64}$/i.test(env.TOTP_SECRET_KEY)) throw new Error('TOTP_SECRET_KEY — 64 шестнадцатеричных символа');
   const apiPort = env.API_PORT ?? env.PORT ?? '3100';
   const selfBaseUrl = `http://${env.API_HOST ?? '127.0.0.1'}:${apiPort}`;
   return {
@@ -58,6 +65,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     yandexClientId: env.YANDEX_CLIENT_ID ?? 'dev-yandex',
     oauthBaseUrl: env.OAUTH_BASE_URL ?? `${selfBaseUrl}/api/v1`,
     webUrl: env.WEB_URL ?? 'http://localhost:3110',
+    phoneLogin: env.PHONE_LOGIN === '1',
     adminPhone: env.ADMIN_PHONE ?? '',
     totpSecretKey: env.TOTP_SECRET_KEY ?? 'a'.repeat(64),
   };

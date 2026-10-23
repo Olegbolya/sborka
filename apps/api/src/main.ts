@@ -18,21 +18,20 @@ await redis.connect().catch((e: unknown) => logger.error({ err: e }, 'Не уд�
 
 const production = process.env.NODE_ENV === 'production';
 
-// Until a real Russian SMS/captcha provider is configured, log codes to server log.
-// The owner can see OTP codes via `pm2 logs blokum-api`.
-const otpSender: OtpSender = production
-  ? { sendCode: (phone, code) => { logger.warn({ phone, code }, 'OTP-код (SMS-провайдер не настроен — код в логе сервера)'); return Promise.resolve(); } }
-  : new DevOtpSender();
-const captchaVerifier: CaptchaVerifier = production
-  ? { verify: () => { logger.warn({}, 'Captcha пропущена (провайдер не настроен)'); return Promise.resolve(true); } }
-  : new DevCaptchaVerifier();
+// A-01 (ADR-033): phone login is off — the owner declined SMS. It can be switched on only outside production, with
+// the development sender; production has no SMS provider and refuses to start rather than fake one.
+if (config.phoneLogin && production) {
+  throw new Error('Вход по телефону включён (PHONE_LOGIN=1), но СМС-провайдер не подключён');
+}
+const otpSender: OtpSender | undefined = config.phoneLogin ? new DevOtpSender() : undefined;
+const captchaVerifier: CaptchaVerifier | undefined = config.phoneLogin ? new DevCaptchaVerifier() : undefined;
 
 const app = await createApp(config, {
   logger,
   alerts,
   db: db.db,
-  otpSender,
-  captchaVerifier,
+  ...(otpSender ? { otpSender } : {}),
+  ...(captchaVerifier ? { captchaVerifier } : {}),
   probes: {
     database: () => checkDatabase(db.db),
     redis: async () => (await redis.ping()) === 'PONG',

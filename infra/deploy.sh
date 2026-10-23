@@ -57,6 +57,14 @@ git --git-dir="$REPO_DIR" archive "$SHA" infra | tar -x -C "$APP_ROOT/setup"
 ok "Скрипты подготовки сервера: $APP_ROOT/setup/infra"
 
 [ -f "$ENV_FILE" ] || fail "Сервер ещё не подготовлен (нет $ENV_FILE). Владельцу: ssh на сервер и sudo bash $APP_ROOT/setup/infra/server-setup.sh" 3
+# Secrets added after the server was prepared are generated once into the existing file (never printed).
+ensure_secret() {
+  grep -qE "^$1=[0-9a-fA-F]{64}$" "$ENV_FILE" && return 0
+  sed -i "/^$1=/d" "$ENV_FILE"
+  printf '%s=%s\n' "$1" "$(openssl rand -hex 32)" >> "$ENV_FILE"
+  echo "→ в .env.prod добавлен новый секрет $1 (значение не выводится)"
+}
+ensure_secret TOTP_SECRET_KEY
 
 # ── Node 22 (у BST по умолчанию Node 20 — его не меняем) ──────────────────────
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
