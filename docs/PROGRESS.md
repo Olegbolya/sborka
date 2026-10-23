@@ -53,9 +53,9 @@
 |---|---|---|---|---|
 | P2.1 | Пользователи и сеансы · Opus | ✅ | bf4ef18 | Модуль `auth`: `SessionService` (скользящие сеансы 60 дней, SHA-256 хэш в БД, `HttpOnly Secure SameSite=Lax`), `CsrfGuard` (Origin/X-Blokum-CSRF), `AuthGuard`, `RolesGuard`, `AuthController` (list/revoke/revokeAll). Unit-покрытие: 95,5 % statements, 96 % branches. `pnpm --filter @blokum/api lint` — 0 ошибок; CI queued bf4ef18 |
 | P2.2 | Вход по телефону | ✅ | aa9fb41, fc5b010 | `OtpService`: нормализация +7, лимиты TS-30 (3/час, 10/сутки по номеру; 5/час по IP; бюджет), код 5 мин, 5 попыток, `findOrCreateUser`. `DevOtpSender`/`DevCaptchaVerifier` — throw в production. Unit: 89 тестов, 88,7 % statements, 86,7 % branches; fix fc5b010: очищать otpRequests между тестами. CI 39899990037 — success |
-| P2.3 | VK ID и Яндекс ID | ✅ | 13c3f42, 385fac8, 21f3ef4 | `OAuthService` (PKCE, state, token exchange, profile, findOrCreateUser, linkIdentity, unlinkIdentity), `OAuthController` (init/callback, session=), `DevOAuthController` (HTML-форма эмулятора, @Post token), `InMemoryOAuthStateStore`. `GET /auth/me`. Unit: 22 теста; интеграция: 12 тестов (полный VK/Яндекс flow, повторный вход). Исправления: dual decorator, port 0, cookie session=, CSRF header. CI 39899990037 — success |
-| P2.4 | Первый вход и согласия | ✅ | 0527fb0, 487b0b3 | `LegalDocumentService` (seeding TOS/PD/marketing из `legal/*.md`), `ConsentService` (getPendingConsents, recordConsents, hasCompletedOnboarding), `ConsentController` (GET /auth/onboarding, POST /auth/onboarding/consent), `LegalController` (GET /legal/documents/:type @Public). Frontend: `/onboarding` (клиентский компонент с чекбоксами, кнопка disabled без TOS+PD+возраст), `/legal/pd-consent` (серверный компонент). E2e: `onboarding.spec.ts` (4 теста). Интеграция: `consent.test.ts` (10 тестов). CI pending |
-| P2.5 | Аккаунт | ✅ | 1d8f469 | `AccountService` (профиль, email A-03, история согласий, отзыв маркетинга, экспорт JSON, мягкое удаление A-05 + восстановление за 30 дней), `AccountController` (10 endpoints), `DevEmailSender`, migration 0002 (`emailVerificationTokens`). Frontend: `/account` (профиль, email, удаление с подтверждением). Integration: 15 тестов. E2e: 4 теста (e2e fix `scrollIntoViewIfNeeded`+`click({force})` в 1baf452). CI 39951988898 — success |
+| P2.3 | VK ID и Яндекс ID | 🟨 | 13c3f42, 385fac8, 21f3ef4 | `OAuthService` (PKCE, state, token exchange, profile, findOrCreateUser, linkIdentity, unlinkIdentity), `OAuthController` (init/callback, session=), `DevOAuthController` (HTML-форма эмулятора, @Post token), `InMemoryOAuthStateStore`. `GET /auth/me`. Unit: 22 теста; интеграция: 12 тестов (полный VK/Яндекс flow, повторный вход). Исправления: dual decorator, port 0, cookie session=, CSRF header. CI 39899990037 — success |
+| P2.4 | Первый вход и согласия | 🟨 | 0527fb0, 487b0b3 | `LegalDocumentService` (seeding TOS/PD/marketing из `legal/*.md`), `ConsentService` (getPendingConsents, recordConsents, hasCompletedOnboarding), `ConsentController` (GET /auth/onboarding, POST /auth/onboarding/consent), `LegalController` (GET /legal/documents/:type @Public). Frontend: `/onboarding` (клиентский компонент с чекбоксами, кнопка disabled без TOS+PD+возраст), `/legal/pd-consent` (серверный компонент). E2e: `onboarding.spec.ts` (4 теста). Интеграция: `consent.test.ts` (10 тестов). CI pending |
+| P2.5 | Аккаунт | 🟨 | 1d8f469 | `AccountService` (профиль, email A-03, история согласий, отзыв маркетинга, экспорт JSON, мягкое удаление A-05 + восстановление за 30 дней), `AccountController` (10 endpoints), `DevEmailSender`, migration 0002 (`emailVerificationTokens`). Frontend: `/account` (профиль, email, удаление с подтверждением). Integration: 15 тестов. E2e: 4 теста (e2e fix `scrollIntoViewIfNeeded`+`click({force})` в 1baf452). CI 39951988898 — success |
 | P2.6 | Роли и админ · Opus | ✅ | 1baf452, 64d516d, 08d67ed | Роли USER/MODERATOR/ADMIN; первый админ через `ADMIN_PHONE`; TOTP 2FA (RFC 6238, AES-256-GCM, native без библиотек) + 8 резервных кодов (SHA-256); эндпоинты: `POST /auth/account/totp/setup`, `confirm`, `DELETE /auth/account/totp`, `POST /auth/otp/totp-verify`; `AuditLogService` (только INSERT) + триггер БД запрещает UPDATE/DELETE; migration 0003 (`totp_backup_codes`). Integration: 13 тестов (admin.test.ts). CI run 39951988898 — success |
 
 ### P3 · Редактор
@@ -178,6 +178,13 @@
 | P11.4 | Закрытая бета | ⬜ | | |
 
 ## Заметки по задачам в работе
+
+**P2.3–P2.5 · вход, согласия, аккаунт в интерфейсе** — проверка 23.10 (ADR-034): сервер (API) готов и покрыт тестами, но сайт с ним не связан:
+- нет страницы входа (кнопки VK ID / Яндекс ID);
+- `/onboarding` и `/account` не обращаются к API: кнопки `onClick={() => undefined}`, тексты «доступно через API»;
+- нет e2e «вход через эмулятор» (приёмка P2.3) и e2e согласий (приёмка P2.4).
+- Осталось: страница входа, онбординг с сохранением согласий, страница аккаунта (профиль, почта, сеансы, «выйти везде», история согласий, выгрузка, удаление и восстановление) — всё через API, + e2e. Делает поток A, шаг A0 MVP.
+
 
 _(для 🟨: какие подпункты сделаны, какие остались, где именно остановились)_
 
