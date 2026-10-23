@@ -8,6 +8,12 @@ import { SessionService, type SessionListItem, type RequestUser, clearSessionCoo
 export class AuthController {
   constructor(private readonly sessions: SessionService) {}
 
+  /** A-01: return the authenticated user's profile. */
+  @Get('me')
+  me(@CurrentUser() user: RequestUser): RequestUser {
+    return user;
+  }
+
   /** A-04: list active sessions for the current user. */
   @Get('sessions')
   async listSessions(

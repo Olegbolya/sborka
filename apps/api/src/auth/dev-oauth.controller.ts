@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { Controller, Get, HttpCode, Param, Post, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Public } from './decorators.js';
 
@@ -41,6 +41,7 @@ export class DevOAuthController {
 
   /** Issues a fake access_token embedding the user info from the form. */
   @Post(':provider/token')
+  @HttpCode(200)
   token(
     @Param('provider') provider: string,
     @Query('code') code: string,
