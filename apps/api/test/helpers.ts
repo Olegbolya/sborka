@@ -12,6 +12,7 @@ import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import { type ApiConfig } from '../src/config.js';
 import { type HealthProbes } from '../src/health/health.controller.js';
+import type { IMediaQueue } from '../src/media/media-jobs.js';
 
 export const TEST_BASE_URL = process.env.DATABASE_URL ?? 'postgresql://blokum:blokum@127.0.0.1:5432/blokum_test';
 
@@ -78,6 +79,9 @@ export interface TestApp {
   alerts: Alert[];
 }
 
+/** No-op queue: prevents real BullMQ/Redis connections in tests that don't test media. */
+const noopMediaQueue: IMediaQueue = { add: () => Promise.resolve() };
+
 export async function startTestApp(overrides: Partial<AppDeps> = {}, configOverrides: Partial<typeof testConfig> = {}): Promise<TestApp> {
   const logs: Array<Record<string, unknown>> = [];
   const stream = new Writable({
@@ -94,7 +98,7 @@ export async function startTestApp(overrides: Partial<AppDeps> = {}, configOverr
   const stubCaptcha: CaptchaVerifier = { verify: () => Promise.resolve(true) };
   // Use a mutable config copy so we can patch oauthBaseUrl after the server binds to a port.
   const dynamicConfig = { ...testConfig, ...configOverrides };
-  const app = await createApp(dynamicConfig, { logger, alerts, probes: okProbes, db: stubDb, otpSender: stubOtpSender, captchaVerifier: stubCaptcha, ...overrides });
+  const app = await createApp(dynamicConfig, { logger, alerts, probes: okProbes, db: stubDb, otpSender: stubOtpSender, captchaVerifier: stubCaptcha, mediaQueue: noopMediaQueue, ...overrides });
   await app.init();
   // Bind to an OS-assigned port so that OAuthService can call back to the dev emulator via HTTP.
   await app.listen(0);
