@@ -18,6 +18,9 @@ import { OAuthService } from './auth/oauth.service.js';
 import { OAuthController } from './auth/oauth.controller.js';
 import { DevOAuthController } from './auth/dev-oauth.controller.js';
 import { InMemoryOAuthStateStore } from './auth/oauth-state.js';
+import { LegalDocumentService } from './auth/legal-document.service.js';
+import { ConsentService } from './auth/consent.service.js';
+import { ConsentController, LegalController } from './auth/consent.controller.js';
 import type { CaptchaVerifier } from './auth/captcha.js';
 import type { OtpSender } from './auth/otp-sender.js';
 
@@ -44,12 +47,16 @@ export class AppModule {
         HealthController,
         OtpController,
         OAuthController,
+        ConsentController,
+        LegalController,
         ...(production ? [] : [DevOAuthController]),
         ...(deps.extraControllers ?? []),
       ],
       providers: [
         OtpService,
         OAuthService,
+        LegalDocumentService,
+        ConsentService,
         { provide: API_CONFIG, useValue: config },
         { provide: LOGGER, useValue: deps.logger },
         { provide: ALERTS, useValue: deps.alerts },

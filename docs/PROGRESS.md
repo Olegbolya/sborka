@@ -8,8 +8,8 @@
 ## Сейчас
 
 - **Текущая фаза:** P2 · Вход и аккаунт (P1 закончена; P0 закончена кроме проверки отката P0.5)
-- **Следующая задача:** P2.3 · VK ID и Яндекс ID (макрошаг М2, `docs/PLAN-MACRO.md`)
-- **Где остановились:** P2.2 готова (aa9fb41). OTP вход: нормализация +7, rate-limits TS-30, 5-мин код, 5 попыток.
+- **Текущая задача:** P2.5 · Аккаунт (макрошаг М2)
+- **Где остановились:** P2.4 завершена. ConsentService + LegalDocumentService + онбординг-страница + e2e.
 
 ## Вопросы владельцу
 
@@ -51,9 +51,9 @@
 | ID | Задача | Статус | Коммит | Доказательство / заметки |
 |---|---|---|---|---|
 | P2.1 | Пользователи и сеансы · Opus | ✅ | bf4ef18 | Модуль `auth`: `SessionService` (скользящие сеансы 60 дней, SHA-256 хэш в БД, `HttpOnly Secure SameSite=Lax`), `CsrfGuard` (Origin/X-Blokum-CSRF), `AuthGuard`, `RolesGuard`, `AuthController` (list/revoke/revokeAll). Unit-покрытие: 95,5 % statements, 96 % branches. `pnpm --filter @blokum/api lint` — 0 ошибок; CI queued bf4ef18 |
-| P2.2 | Вход по телефону | ✅ | aa9fb41 | `OtpService`: нормализация +7, лимиты TS-30 (3/час, 10/сутки по номеру; 5/час по IP; бюджет), код 5 мин, 5 попыток, `findOrCreateUser`. `DevOtpSender`/`DevCaptchaVerifier` — throw в production. Unit: 89 тестов, 88,7 % statements, 86,7 % branches; CI aa9fb41 — ожидается |
-| P2.3 | VK ID и Яндекс ID | 🟨 | | Реализовано: `OAuthService` (PKCE, state, token exchange, profile, findOrCreateUser), `OAuthController` (init/callback), `DevOAuthController` (HTML-форма эмулятора), `InMemoryOAuthStateStore`. Тесты: 22 unit + интеграция (oauth.test.ts). E2e-браузерный тест заблокирован: нужна страница входа (P2.4) и PostgreSQL в CI e2e — добавить вместе с P2.4. Приёмка `check-foreign-services` — ✅ |
-| P2.4 | Первый вход и согласия | ⬜ | | |
+| P2.2 | Вход по телефону | ✅ | aa9fb41, fc5b010 | `OtpService`: нормализация +7, лимиты TS-30 (3/час, 10/сутки по номеру; 5/час по IP; бюджет), код 5 мин, 5 попыток, `findOrCreateUser`. `DevOtpSender`/`DevCaptchaVerifier` — throw в production. Unit: 89 тестов, 88,7 % statements, 86,7 % branches; fix fc5b010: очищать otpRequests между тестами. CI 39899990037 — success |
+| P2.3 | VK ID и Яндекс ID | ✅ | 13c3f42, 385fac8, 21f3ef4 | `OAuthService` (PKCE, state, token exchange, profile, findOrCreateUser, linkIdentity, unlinkIdentity), `OAuthController` (init/callback, session=), `DevOAuthController` (HTML-форма эмулятора, @Post token), `InMemoryOAuthStateStore`. `GET /auth/me`. Unit: 22 теста; интеграция: 12 тестов (полный VK/Яндекс flow, повторный вход). Исправления: dual decorator, port 0, cookie session=, CSRF header. CI 39899990037 — success |
+| P2.4 | Первый вход и согласия | ✅ | (pending CI) | `LegalDocumentService` (seeding TOS/PD/marketing из `legal/*.md`), `ConsentService` (getPendingConsents, recordConsents, hasCompletedOnboarding), `ConsentController` (GET /auth/onboarding, POST /auth/onboarding/consent), `LegalController` (GET /legal/documents/:type @Public). Frontend: `/onboarding` (клиентский компонент с чекбоксами, кнопка disabled без TOS+PD+возраст), `/legal/pd-consent` (серверный компонент). E2e: `onboarding.spec.ts` (4 теста). Интеграция: `consent.test.ts` (10 тестов). CI pending |
 | P2.5 | Аккаунт | ⬜ | | |
 | P2.6 | Роли и админ · Opus | ⬜ | | |
 
