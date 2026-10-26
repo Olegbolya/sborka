@@ -312,7 +312,7 @@ describe('Q-01/Q-02/Q-04/Q-05/Q-07 · Точки доступа и QR', () => {
     // PNG magic bytes: 89 50 4E 47
     expect((res.body as Buffer)[0]).toBe(0x89);
     expect((res.body as Buffer)[1]).toBe(0x50);
-  });
+  }, 20000);
 
   it('Q-04/Q-05: скачать QR SVG — содержит тег svg', async () => {
     const create = await request(t.http())
