@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { schema } from '@blokum/db';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
@@ -156,5 +157,31 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     // A plain project (no contacts block) can be published freely.
     await request(t.http()).post(`/${API_PREFIX}/projects/${projectId}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(200);
     await request(t.http()).post(`/${API_PREFIX}/projects/${projectId}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'DRAFT' }).expect(200);
+  });
+
+  it('B-19/PL-23: проект с B-19 не публикуется без operatorInfo', async () => {
+    if (!t) return;
+    // Create a separate project for this test
+    const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 тест' }).expect(200);
+    const pid = proj.body.id as string;
+    // Inject a contacts block into the draft version document
+    const docWithContacts = { schemaVersion: 1, title: 'B-19 тест', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
+    // Publish without operatorInfo → OPERATOR_INFO_REQUIRED
+    const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
+    expect(res.body.error?.code ?? res.body.message).toMatch(/OPERATOR_INFO_REQUIRED/);
+  });
+
+  it('B-19/PL-23: проект с B-19 + operatorInfo, но без DPA — не публикуется', async () => {
+    if (!t) return;
+    const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 DPA тест' }).expect(200);
+    const pid = proj.body.id as string;
+    const docWithContacts = { schemaVersion: 1, title: 'B-19 DPA тест', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
+    // Set operator info but not DPA
+    await request(t.http()).patch(`/${API_PREFIX}/projects/${pid}/operator-info`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: 'Тест', email: 'test@example.com', purpose: 'Тест', retentionPeriod: '1 год' }).expect(200);
+    // Publish without DPA → DPA_REQUIRED
+    const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
+    expect(res.body.error?.code ?? res.body.message).toMatch(/DPA_REQUIRED/);
   });
 });
