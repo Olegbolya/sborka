@@ -108,12 +108,14 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
   let db: TestDb;
   let cookie: string;
   let projectId: string;
+  let loginFn: () => Promise<string>;
 
   beforeAll(async () => {
     try {
       const res = await setupWithAuth();
       t = res.t;
       db = res.db;
+      loginFn = res.login;
       cookie = await res.login();
 
       const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'ПД-тест' }).expect(200);
@@ -199,14 +201,14 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
 
   it('PL-23: GET operator-info чужого проекта → 403', async () => {
     if (!t) return;
-    const cookie2 = await setupWithAuth().then((r) => r.login());
+    const cookie2 = await loginFn();
     const res = await request(t.http()).get(`/${API_PREFIX}/projects/${projectId}/operator-info`).set('Cookie', cookie2).expect(403);
     expect(res.status).toBe(403);
   });
 
   it('PL-23: PATCH operator-info чужого проекта → 403', async () => {
     if (!t) return;
-    const cookie2 = await setupWithAuth().then((r) => r.login());
+    const cookie2 = await loginFn();
     await request(t.http()).patch(`/${API_PREFIX}/projects/${projectId}/operator-info`).set('Cookie', cookie2).set('X-Blokum-CSRF', '1').send({ name: 'X', email: 'x@x.com', purpose: 'x', retentionPeriod: '1' }).expect(403);
   });
 });
