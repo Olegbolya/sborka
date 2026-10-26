@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-type Tab = 'responses' | 'access' | 'settings' | 'export';
+type Tab = 'responses' | 'access' | 'settings' | 'export' | 'operator';
 
 interface ProjectDetail {
   id: string;
@@ -559,6 +559,131 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
   );
 }
 
+interface OperatorInfo {
+  name: string;
+  email: string;
+  inn?: string;
+  purpose: string;
+  retentionPeriod: string;
+}
+
+function OperatorTab({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
+  const [info, setInfo] = useState<OperatorInfo | null>(null);
+  const [dpaAcceptedAt, setDpaAcceptedAt] = useState<string | null>(null);
+  const [form, setForm] = useState<OperatorInfo>({ name: '', email: '', inn: '', purpose: '', retentionPeriod: '' });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiFetch<{ operatorInfo: OperatorInfo | null; dpaAcceptedAt: string | null }>(`/projects/${projectId}/operator-info`)
+      .then((res) => {
+        if (res.operatorInfo) {
+          setInfo(res.operatorInfo);
+          setForm(res.operatorInfo);
+        }
+        setDpaAcceptedAt(res.dpaAcceptedAt);
+      })
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [projectId, setError]);
+
+  async function saveInfo() {
+    setSaving(true);
+    try {
+      const updated = await apiFetch<OperatorInfo>(`/projects/${projectId}/operator-info`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Blokum-CSRF': '1' },
+        body: JSON.stringify(form),
+      });
+      setInfo(updated);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function acceptDpa() {
+    setSaving(true);
+    try {
+      const res = await apiFetch<{ acceptedAt: string }>(`/projects/${projectId}/dpa-accept`, {
+        method: 'POST',
+        headers: { 'X-Blokum-CSRF': '1' },
+      });
+      setDpaAcceptedAt(res.acceptedAt);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <p style={{ fontSize: 14, color: 'var(--muted)' }}>Загрузка...</p>;
+
+  return (
+    <div style={{ maxWidth: 540 }}>
+      <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 24 }}>
+        Если в сборке есть блок «Контакты» (сбор имени, телефона, email), заполните сведения об операторе персональных данных и примите условия поручения обработки. Без этого публикация сборки невозможна.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12, marginBottom: 24 }}>
+        {([
+          { key: 'name', label: 'Имя или название организации *', type: 'text' },
+          { key: 'email', label: 'Email для обращений по ПД *', type: 'email' },
+          { key: 'inn', label: 'ИНН (для ИП и юрлиц)', type: 'text' },
+          { key: 'purpose', label: 'Цель обработки *', type: 'text' },
+          { key: 'retentionPeriod', label: 'Срок хранения данных *', type: 'text' },
+        ] as Array<{ key: keyof OperatorInfo; label: string; type: string }>).map(({ key, label, type }) => (
+          <label key={key} style={{ display: 'flex', flexDirection: 'column' as const, gap: 4, fontSize: 13 }}>
+            <span style={{ color: 'var(--muted)' }}>{label}</span>
+            <input
+              type={type}
+              value={form[key] ?? ''}
+              onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border, #ddd)', fontSize: 14 }}
+            />
+          </label>
+        ))}
+      </div>
+
+      <button
+        onClick={() => void saveInfo()}
+        disabled={saving || !form.name || !form.email || !form.purpose || !form.retentionPeriod}
+        style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'var(--accent, #0066ff)', color: '#fff', cursor: 'pointer', fontSize: 14, marginBottom: 24 }}
+      >
+        {saving ? 'Сохранение...' : 'Сохранить сведения об операторе'}
+      </button>
+
+      {info && (
+        <div style={{ padding: 16, background: 'var(--surface, #f8f9fa)', borderRadius: 8, marginBottom: 24 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600 }}>
+            {dpaAcceptedAt ? '✓ Условия поручения обработки ПД приняты' : 'Условия поручения обработки ПД не приняты'}
+          </p>
+          {dpaAcceptedAt && <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Принято: {new Date(dpaAcceptedAt).toLocaleString('ru')}</p>}
+          {!dpaAcceptedAt && (
+            <>
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+                Ознакомьтесь с{' '}
+                <a href="/legal/dpa" target="_blank" style={{ color: 'var(--accent, #0066ff)' }}>
+                  условиями поручения обработки ПД (D6)
+                </a>{' '}
+                и примите их для возможности публикации сборки.
+              </p>
+              <button
+                onClick={() => void acceptDpa()}
+                disabled={saving}
+                style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid var(--accent, #0066ff)', background: '#fff', color: 'var(--accent, #0066ff)', cursor: 'pointer', fontSize: 13 }}
+              >
+                Принять условия поручения обработки ПД
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ExportTab({ projectId }: { projectId: string }) {
   return (
     <div style={s.exportBox}>
@@ -617,6 +742,7 @@ export default function ProjectDetailPage() {
     { key: 'responses', label: `Ответы (${project.completions})` },
     { key: 'access', label: 'Точки доступа' },
     { key: 'settings', label: 'Настройки доступа' },
+    { key: 'operator', label: 'Оператор ПД' },
     { key: 'export', label: 'Экспорт' },
   ];
 
@@ -649,6 +775,7 @@ export default function ProjectDetailPage() {
       {tab === 'responses' && <ResponsesTab projectId={projectId} setError={setError} />}
       {tab === 'access' && <AccessTab projectId={projectId} setError={setError} />}
       {tab === 'settings' && <SettingsTab projectId={projectId} settings={project.settings} setError={setError} />}
+      {tab === 'operator' && <OperatorTab projectId={projectId} setError={setError} />}
       {tab === 'export' && <ExportTab projectId={projectId} />}
     </main>
   );

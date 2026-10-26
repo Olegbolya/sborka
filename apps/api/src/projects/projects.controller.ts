@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
-import { type ProjectSettings, ProjectsService } from './projects.service.js';
+import { type OperatorInfo, type ProjectSettings, ProjectsService } from './projects.service.js';
 
 /** P6.1 · D-01: My projects CRUD + settings + status. */
 @Controller('projects')
@@ -81,5 +81,24 @@ export class ProjectsController {
   @Patch(':id/access-settings')
   updateAccessSettings(@Param('id') id: string, @Body() body: Partial<ProjectSettings>, @CurrentUser() user: RequestUser) {
     return this.projects.updateAccessSettings(user.id, id, body);
+  }
+
+  /** PL-23: Get operator info and DPA status for participant PD. */
+  @Get(':id/operator-info')
+  getOperatorInfo(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.projects.getOperatorInfo(user.id, id);
+  }
+
+  /** PL-23: Set operator info (name, email, inn, purpose, retentionPeriod). */
+  @Patch(':id/operator-info')
+  setOperatorInfo(@Param('id') id: string, @Body() body: OperatorInfo, @CurrentUser() user: RequestUser) {
+    return this.projects.setOperatorInfo(user.id, id, body);
+  }
+
+  /** PL-23: Accept DPA (D6 — условия поручения обработки ПД) for this project. */
+  @Post(':id/dpa-accept')
+  @HttpCode(200)
+  acceptDpa(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.projects.acceptDpa(user.id, id);
   }
 }

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { createDocument, createId, createSlug, type ProjectDocument } from '@blokum/schema';
+import { createDocument, createId, createSlug, type ProjectDocument, walkBlocks } from '@blokum/schema';
 import { Inject } from '@nestjs/common';
 import { DB } from '../tokens.js';
 
@@ -18,6 +18,15 @@ export interface ProjectSettings {
   password?: string;
   singleAttempt?: boolean;
   closedText?: string;
+}
+
+/** PL-23: operator info required when publishing a project with B-19 contacts block. */
+export interface OperatorInfo {
+  name: string;
+  email: string;
+  inn?: string;
+  purpose: string;
+  retentionPeriod: string;
 }
 
 export interface ProjectSummary {
@@ -65,6 +74,9 @@ export class ProjectsService {
     const docJson = doc as unknown as schema.ProjectDocumentJson;
     const versionId = createId();
 
+    const defaultPointId = createId();
+    const defaultPointCode = createId(8);
+
     await this.db.transaction(async (tx) => {
       await tx.insert(schema.projects).values({
         id: projectId,
@@ -84,6 +96,15 @@ export class ProjectsService {
         createdById: userId,
       });
       await tx.update(schema.projects).set({ draftVersionId: versionId }).where(eq(schema.projects.id, projectId));
+      // Q-01: auto-create a default access point for every new project.
+      await tx.insert(schema.accessPoints).values({
+        id: defaultPointId,
+        projectId,
+        code: defaultPointCode,
+        kind: 'LINK',
+        label: 'Основная ссылка',
+        active: true,
+      });
     });
 
     return {
@@ -229,6 +250,9 @@ export class ProjectsService {
     const doc = source.document ?? createDocument({ title: source.title });
     const docJson = doc as unknown as schema.ProjectDocumentJson;
 
+    const dupPointId = createId();
+    const dupPointCode = createId(8);
+
     await this.db.transaction(async (tx) => {
       await tx.insert(schema.projects).values({
         id: newId,
@@ -248,6 +272,14 @@ export class ProjectsService {
         createdById: userId,
       });
       await tx.update(schema.projects).set({ draftVersionId: newVersionId }).where(eq(schema.projects.id, newId));
+      await tx.insert(schema.accessPoints).values({
+        id: dupPointId,
+        projectId: newId,
+        code: dupPointCode,
+        kind: 'LINK',
+        label: 'Основная ссылка',
+        active: true,
+      });
     });
 
     return {
@@ -267,8 +299,74 @@ export class ProjectsService {
   }
 
   async setProjectStatus(userId: string, projectId: string, status: 'PUBLISHED' | 'CLOSED' | 'DRAFT'): Promise<void> {
-    await this.assertOwner(userId, projectId);
+    const row = await this.assertOwner(userId, projectId);
+    if (status === 'PUBLISHED') {
+      await this.checkPdRequirements(row.id, row.operatorInfo, row.dpaAcceptedAt);
+    }
     await this.db.update(schema.projects).set({ status }).where(eq(schema.projects.id, projectId));
+  }
+
+  /** PL-23: check that operator info and DPA are set if document has B-19 contacts blocks. */
+  private async checkPdRequirements(
+    projectId: string,
+    operatorInfo: Record<string, unknown> | null,
+    dpaAcceptedAt: Date | null,
+  ): Promise<void> {
+    const versions = await this.db
+      .select({ document: schema.projectVersions.document })
+      .from(schema.projectVersions)
+      .where(and(eq(schema.projectVersions.projectId, projectId), eq(schema.projectVersions.kind, 'DRAFT_SNAPSHOT')))
+      .orderBy(desc(schema.projectVersions.number))
+      .limit(1);
+    const doc = versions[0]?.document as ProjectDocument | undefined;
+    if (!doc) return;
+    const hasContactsBlock = doc.screens.some((screen) => {
+      for (const block of walkBlocks(screen.blocks)) {
+        if (block.type === 'contacts') return true;
+      }
+      return false;
+    });
+    if (!hasContactsBlock) return;
+    if (!operatorInfo || !operatorInfo['name'] || !operatorInfo['email'] || !operatorInfo['purpose'] || !operatorInfo['retentionPeriod']) {
+      throw new BadRequestException({
+        error: { code: 'OPERATOR_INFO_REQUIRED', message: 'Сборка содержит сбор контактных данных. Заполните сведения об операторе ПД перед публикацией.' },
+      });
+    }
+    if (!dpaAcceptedAt) {
+      throw new BadRequestException({
+        error: { code: 'DPA_REQUIRED', message: 'Примите условия поручения обработки персональных данных (D6) перед публикацией.' },
+      });
+    }
+  }
+
+  /** PL-23: set operator info for participant PD collection. */
+  async setOperatorInfo(userId: string, projectId: string, info: OperatorInfo): Promise<OperatorInfo> {
+    await this.assertOwner(userId, projectId);
+    await this.db
+      .update(schema.projects)
+      .set({ operatorInfo: info as unknown as Record<string, unknown> })
+      .where(eq(schema.projects.id, projectId));
+    return info;
+  }
+
+  /** PL-23: record DPA (D6) acceptance for this project. */
+  async acceptDpa(userId: string, projectId: string): Promise<{ acceptedAt: Date }> {
+    await this.assertOwner(userId, projectId);
+    const acceptedAt = new Date();
+    await this.db.update(schema.projects).set({ dpaAcceptedAt: acceptedAt }).where(eq(schema.projects.id, projectId));
+    return { acceptedAt };
+  }
+
+  /** PL-23: get operator info and DPA status. */
+  async getOperatorInfo(
+    userId: string,
+    projectId: string,
+  ): Promise<{ operatorInfo: OperatorInfo | null; dpaAcceptedAt: Date | null }> {
+    const row = await this.assertOwner(userId, projectId);
+    return {
+      operatorInfo: row.operatorInfo ? (row.operatorInfo as unknown as OperatorInfo) : null,
+      dpaAcceptedAt: row.dpaAcceptedAt,
+    };
   }
 
   async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings> {
@@ -295,6 +393,8 @@ export class ProjectsService {
         slug: schema.projects.slug,
         status: schema.projects.status,
         settings: schema.projects.settings,
+        operatorInfo: schema.projects.operatorInfo,
+        dpaAcceptedAt: schema.projects.dpaAcceptedAt,
         createdAt: schema.projects.createdAt,
         deletedAt: schema.projects.deletedAt,
       })

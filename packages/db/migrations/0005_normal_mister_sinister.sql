@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "dpa_accepted_at" timestamp with time zone;

@@ -83,4 +83,15 @@ export class LegalController {
     }
     return { id: doc.id, type: doc.type, version: doc.version, title: doc.title, bodyMd: doc.bodyMd, isDraft: !doc.publishedAt };
   }
+
+  /** AD-06: returns all versions of a legal document by type slug, newest first. */
+  @Get(':type/versions')
+  async getVersions(@Param('type') typeSlug: string): Promise<DocumentResponse[]> {
+    const type = typeSlug.toUpperCase().replace(/-/g, '_') as Parameters<LegalDocumentService['getLatest']>[0];
+    if (!VALID_DOC_TYPES.has(type)) {
+      throw new BadRequestException({ error: { code: 'DOCUMENT_NOT_FOUND', message: 'Документ не найден' } });
+    }
+    const docs = await this.legalDocs.getVersions(type);
+    return docs.map((doc) => ({ id: doc.id, type: doc.type, version: doc.version, title: doc.title, bodyMd: doc.bodyMd, isDraft: !doc.publishedAt }));
+  }
 }

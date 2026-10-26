@@ -10,8 +10,17 @@ import { DB } from '../tokens.js';
 /** Map from DB document type to the markdown file in legal/. */
 const DRAFT_DOCS: Array<{ type: (typeof schema.legalDocuments.$inferInsert)['type']; file: string; title: string }> = [
   { type: 'TOS', file: 'terms.md', title: 'Пользовательское соглашение' },
+  { type: 'OFFER', file: 'offer.md', title: 'Оферта на оказание услуг' },
+  { type: 'PRIVACY', file: 'privacy.md', title: 'Политика обработки персональных данных' },
   { type: 'PD_CONSENT_USER', file: 'pd-consent.md', title: 'Согласие на обработку персональных данных' },
+  { type: 'PARTICIPANT_CONSENT_TEMPLATE', file: 'participant-consent-template.md', title: 'Согласие участника (шаблон)' },
+  { type: 'DPA', file: 'dpa.md', title: 'Условия поручения обработки персональных данных' },
+  { type: 'CONTENT_RULES', file: 'content-rules.md', title: 'Правила допустимого контента' },
+  { type: 'COOKIES', file: 'cookies.md', title: 'Политика использования файлов cookie' },
   { type: 'MARKETING', file: 'marketing.md', title: 'Согласие на получение рекламных сообщений' },
+  { type: 'COMPLAINTS', file: 'complaints.md', title: 'Порядок рассмотрения жалоб и заявлений правообладателей' },
+  { type: 'CONTACTS', file: 'contacts.md', title: 'Контакты и реквизиты' },
+  { type: 'PARTICIPANT_NOTICE', file: 'participant-notice.md', title: 'Уведомление участника' },
 ];
 
 // From compiled dist/auth/ → up 4 levels to repo root → legal/
@@ -71,5 +80,14 @@ export class LegalDocumentService implements OnModuleInit {
       .orderBy(desc(schema.legalDocuments.version))
       .limit(1);
     return rows[0] ?? null;
+  }
+
+  /** AD-06: returns all versions of the document by type, newest first. */
+  async getVersions(type: (typeof schema.legalDocuments.$inferInsert)['type']): Promise<(typeof schema.legalDocuments.$inferSelect)[]> {
+    return this.db
+      .select()
+      .from(schema.legalDocuments)
+      .where(eq(schema.legalDocuments.type, type))
+      .orderBy(desc(schema.legalDocuments.version));
   }
 }

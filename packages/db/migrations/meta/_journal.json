@@ -36,6 +36,13 @@
       "when": 1792774693075,
       "tag": "0004_quiet_microchip",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793001022054,
+      "tag": "0005_normal_mister_sinister",
+      "breakpoints": true
     }
   ]
 }
