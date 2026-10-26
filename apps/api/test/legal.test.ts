@@ -199,6 +199,50 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     expect(res.body.error?.code ?? res.body.message).toMatch(/OPERATOR_INFO_REQUIRED/);
   });
 
+  it('B-19/PL-23: operatorInfo без имени → OPERATOR_INFO_REQUIRED', async () => {
+    if (!t) return;
+    const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 noname' }).expect(200);
+    const pid = proj.body.id as string;
+    const docWithContacts = { schemaVersion: 1, title: 'B-19 noname', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
+    await db.db.update(schema.projects).set({ operatorInfo: { email: 'x@x.com', purpose: 'Тест', retentionPeriod: '1 год' } }).where(eq(schema.projects.id, pid));
+    const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
+    expect(res.body.error?.code ?? res.body.message).toMatch(/OPERATOR_INFO_REQUIRED/);
+  });
+
+  it('B-19/PL-23: operatorInfo без purpose → OPERATOR_INFO_REQUIRED', async () => {
+    if (!t) return;
+    const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 nopurpose' }).expect(200);
+    const pid = proj.body.id as string;
+    const docWithContacts = { schemaVersion: 1, title: 'B-19 nopurpose', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
+    await db.db.update(schema.projects).set({ operatorInfo: { name: 'Тест', email: 'x@x.com', retentionPeriod: '1 год' } }).where(eq(schema.projects.id, pid));
+    const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
+    expect(res.body.error?.code ?? res.body.message).toMatch(/OPERATOR_INFO_REQUIRED/);
+  });
+
+  it('B-19/PL-23: operatorInfo без retentionPeriod → OPERATOR_INFO_REQUIRED', async () => {
+    if (!t) return;
+    const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 noretention' }).expect(200);
+    const pid = proj.body.id as string;
+    const docWithContacts = { schemaVersion: 1, title: 'B-19 noretention', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
+    await db.db.update(schema.projects).set({ operatorInfo: { name: 'Тест', email: 'x@x.com', purpose: 'Тест' } }).where(eq(schema.projects.id, pid));
+    const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
+    expect(res.body.error?.code ?? res.body.message).toMatch(/OPERATOR_INFO_REQUIRED/);
+  });
+
+  it('B-19/PL-23: проект с B-19 + полный operatorInfo + DPA успешно публикуется', async () => {
+    if (!t) return;
+    const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 success' }).expect(200);
+    const pid = proj.body.id as string;
+    const docWithContacts = { schemaVersion: 1, title: 'B-19 success', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
+    await request(t.http()).patch(`/${API_PREFIX}/projects/${pid}/operator-info`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: 'Тест', email: 'ok@ok.com', purpose: 'Тест', retentionPeriod: '1 год' }).expect(200);
+    await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/dpa-accept`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
+    await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(200);
+  });
+
   it('PL-23: GET operator-info чужого проекта → 403', async () => {
     if (!t) return;
     const cookie2 = await loginFn();
