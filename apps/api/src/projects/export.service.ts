@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { inArray } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { Workbook } from 'exceljs';
+import ExcelJS from 'exceljs';
 import { DB } from '../tokens.js';
 import { ResponsesService } from './responses.service.js';
 
@@ -29,7 +29,7 @@ export class ExportService {
   async exportXlsx(userId: string, projectId: string): Promise<Buffer> {
     const rows = await this.fetchAllResponses(userId, projectId);
     const headers = this.buildHeaders(rows);
-    const wb = new Workbook();
+    const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Ответы');
     ws.addRow(headers);
     for (const row of rows) {

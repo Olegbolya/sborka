@@ -284,14 +284,14 @@
 | §8.1 | P2.1 | `apps/api/src/auth/session.service.ts` | `apps/api/test/auth.units.test.ts` |
 | A-01 | P2.2 | `apps/api/src/auth/otp.service.ts`, `apps/api/src/auth/otp.controller.ts` | `apps/api/test/otp.test.ts`, `apps/api/test/otp.units.test.ts` |
 | TS-30 | P2.2 | `apps/api/src/auth/otp.service.ts`, `apps/api/src/auth/otp-sender.ts`, `apps/api/src/auth/captcha.ts` | `apps/api/test/otp.test.ts`, `apps/api/test/otp.units.test.ts` |
-| A-01 | P2.3 | `apps/api/src/auth/oauth.service.ts`, `apps/api/src/auth/oauth.controller.ts`, `apps/api/src/auth/dev-oauth.controller.ts`, `apps/api/src/auth/oauth-state.ts` | `apps/api/test/oauth.test.ts`, `apps/api/test/oauth.units.test.ts` |
+| A-01 | P2.3 | `apps/api/src/auth/oauth.service.ts`, `apps/api/src/auth/oauth.controller.ts`, `apps/api/src/auth/dev-oauth.controller.ts`, `apps/api/src/auth/oauth-state.ts`, `apps/web/app/login/LoginView.tsx`, `apps/web/lib/api-browser.ts` | `apps/api/test/oauth.test.ts`, `apps/api/test/oauth.units.test.ts`, `e2e/login.spec.ts` |
 | 05-LEGAL §2.5 | P2.3 | `apps/api/src/auth/oauth.service.ts` (unlinkIdentity) | `apps/api/test/oauth.units.test.ts` |
 | A-02 | P2.4 | `apps/api/src/auth/consent.service.ts`, `apps/api/src/auth/consent.controller.ts`, `apps/api/src/auth/legal-document.service.ts`, `apps/web/app/onboarding/page.tsx` | `apps/api/test/consent.test.ts`, `e2e/onboarding.spec.ts` |
 | 05-LEGAL §2.1 | P2.4 | `apps/api/src/auth/consent.service.ts` (evidence: ipHash, uaFamily, checkboxText, documentUrl) | `apps/api/test/consent.test.ts` |
 | D1 | P2.4 | `legal/terms.md`, `apps/api/src/auth/legal-document.service.ts`, `apps/api/src/auth/consent.controller.ts` (LegalController) | `apps/api/test/consent.test.ts` |
 | D4 | P2.4 | `legal/pd-consent.md`, `apps/api/src/auth/legal-document.service.ts`, `apps/web/app/legal/pd-consent/page.tsx` | `apps/api/test/consent.test.ts` |
 | D9 | P2.4 | `legal/marketing.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/consent.test.ts` |
-| A-03 | P2.5 | `apps/api/src/auth/account.service.ts`; `apps/api/src/auth/email-sender.ts`; `packages/db/src/schema/users.ts` | `apps/api/test/account.test.ts` |
+| A-03 | P2.5 | `apps/api/src/auth/account.service.ts`; `apps/api/src/auth/email-sender.ts`; `packages/db/src/schema/users.ts`; `apps/web/app/account/page.tsx` | `apps/api/test/account.test.ts`; `e2e/account.spec.ts` |
 | A-05 | P2.5 | `apps/api/src/auth/account.service.ts`; `apps/api/src/auth/session.service.ts` | `apps/api/test/account.test.ts`; `e2e/account.spec.ts` |
 | D-10 | P2.5 | `apps/api/src/auth/account.service.ts`; `apps/api/src/auth/account.controller.ts`; `apps/web/app/account/page.tsx` | `apps/api/test/account.test.ts`; `e2e/account.spec.ts` |
 | AD-01 | P2.6 | `apps/api/src/auth/totp.service.ts`; `apps/api/src/auth/otp.service.ts`; `apps/api/src/auth/otp.controller.ts`; `apps/api/src/auth/account.service.ts`; `apps/api/src/config.ts` | `apps/api/test/admin.test.ts` |

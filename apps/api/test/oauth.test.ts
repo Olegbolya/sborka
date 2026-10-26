@@ -123,7 +123,7 @@ describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
       ? (cbRes.headers['set-cookie'] as string[])
       : [cbRes.headers['set-cookie'] as string];
     expect(cookies.some((c: string) => c.startsWith('session='))).toBe(true);
-    expect(cbRes.headers['location']).toBe('http://localhost:3110');
+    expect(cbRes.headers['location']).toBe('http://localhost:3110/onboarding');
   });
 
   it('A-01 · полный Яндекс flow: init → callback → cookie', async () => {
@@ -181,19 +181,57 @@ describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
     expect(me1.body.id).toBe(me2.body.id);
   });
 
-  it('A-01 · callback без state → 400', async () => {
+  it('A-01 · отказ у провайдера (callback без code/state) → страница входа с ошибкой', async () => {
     if (skip()) return;
     const res = await request(t.http())
       .get(`/${API_PREFIX}/auth/oauth/vk/callback?code=abc`)
-      .expect(400);
-    expect(res.body.error?.code).toBe('OAUTH_MISSING_PARAMS');
+      .redirects(0)
+      .expect(302);
+    expect(res.headers['location']).toBe('http://localhost:3110/login?error=oauth');
+    expect(res.headers['set-cookie']).toBeUndefined();
   });
 
-  it('A-01 · callback с неверным state → 400', async () => {
+  it('A-01 · callback с неверным state → страница входа с ошибкой, сеанс не создан', async () => {
     if (skip()) return;
     const res = await request(t.http())
       .get(`/${API_PREFIX}/auth/oauth/vk/callback?code=abc&state=invalid-state`)
-      .expect(400);
-    expect(res.body.error?.code).toBe('INVALID_OAUTH_STATE');
+      .redirects(0)
+      .expect(302);
+    expect(res.headers['location']).toBe('http://localhost:3110/login?error=oauth');
+    expect(res.headers['set-cookie']).toBeUndefined();
+  });
+
+  it('A-01 · эмулятор входит под пользователем из формы, а не всегда под одним', async () => {
+    if (skip()) return;
+    async function loginAs(userId: string, name: string): Promise<{ id: string; displayName: string }> {
+      const initRes = await request(t.http()).get(`/${API_PREFIX}/auth/oauth/vk/init`).redirects(0);
+      const state = new URL(initRes.headers['location'] as string, 'http://127.0.0.1').searchParams.get('state')!;
+      const payload = Buffer.from(JSON.stringify({ userId, displayName: name })).toString('base64url');
+      const cb = await request(t.http())
+        .get(`/${API_PREFIX}/auth/oauth/vk/callback?code=dev-code-vk.${payload}&state=${state}`)
+        .redirects(0)
+        .expect(302);
+      const cookie = (cb.headers['set-cookie'] as unknown as string[]).find((c) => c.startsWith('session='))!.split(';')[0]!;
+      const me = await request(t.http()).get(`/${API_PREFIX}/auth/me`).set('Cookie', cookie).expect(200);
+      return me.body as { id: string; displayName: string };
+    }
+    const a = await loginAs('7001', 'Анна Первая');
+    const b = await loginAs('7002', 'Борис Второй');
+    expect(a.id).not.toBe(b.id);
+    expect(a.displayName).toBe('Анна Первая');
+    expect(b.displayName).toBe('Борис Второй');
+  });
+
+  it('A-01 · эмулятор: испорченные данные пользователя в code → 400, а не вход под другим', async () => {
+    if (skip()) return;
+    const bad = [
+      '%25%25%25',
+      Buffer.from(JSON.stringify({ userId: '1234567890123', displayName: 'Длинный' })).toString('base64url'),
+      Buffer.from(JSON.stringify({ userId: 'abc', displayName: 'Буквы' })).toString('base64url'),
+      Buffer.from(JSON.stringify({ userId: '5', displayName: '  ' })).toString('base64url'),
+    ];
+    for (const encoded of bad) {
+      await request(t.http()).post(`/${API_PREFIX}/dev/oauth/vk/token?code=dev-code-vk.${encoded}`).set('X-Blokum-CSRF', '1').expect(400);
+    }
   });
 });

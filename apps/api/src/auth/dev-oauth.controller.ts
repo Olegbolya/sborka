@@ -2,6 +2,18 @@ import { Controller, Get, HttpCode, Param, Post, Query, Req, Res } from '@nestjs
 import type { Request, Response } from 'express';
 import { Public } from './decorators.js';
 
+/** The user chosen on the emulator form, carried in the code; `null` for anything that is not a valid user. */
+function decodeUser(encoded: string): { userId: string; displayName: string } | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(encoded, 'base64url').toString()) as { userId?: unknown; displayName?: unknown };
+    if (typeof parsed.userId !== 'string' || !/^\d{1,12}$/.test(parsed.userId)) return null;
+    if (typeof parsed.displayName !== 'string' || !parsed.displayName.trim()) return null;
+    return { userId: parsed.userId, displayName: parsed.displayName.trim().slice(0, 100) };
+  } catch {
+    return null;
+  }
+}
+
 /** A-01: dev-only OAuth emulator — mirrors the minimal authorization/token/profile contract. */
 @Public()
 @Controller('dev/oauth')
@@ -33,6 +45,15 @@ export class DevOAuthController {
   <input type="hidden" name="code" value="dev-code-${safe(provider)}">
   <label>ID пользователя: <input name="user_id" value="42" required></label><br><br>
   <label>Имя: <input name="display_name" value="Тест Тестов" required></label><br><br>
+  <script>
+    // The code carries the chosen user to the token endpoint (the provider keeps it server-side in reality).
+    document.currentScript.closest('form').addEventListener('submit', function (e) {
+      var f = e.currentTarget;
+      var raw = JSON.stringify({ userId: f.user_id.value, displayName: f.display_name.value });
+      var b64 = btoa(String.fromCharCode.apply(null, new TextEncoder().encode(raw)));
+      f.code.value = f.code.value.split('.')[0] + '.' + b64.split('+').join('-').split('/').join('_').split('=').join('');
+    });
+  </script>
   <button type="submit">Войти через ${safe(name)}</button>
 </form>
 </body>
@@ -55,8 +76,18 @@ export class DevOAuthController {
       res.status(400).json({ error: 'invalid_grant' });
       return;
     }
-    // Token encodes provider and a default user so the profile endpoint can serve it.
-    const token = Buffer.from(JSON.stringify({ provider, userId: '42', displayName: 'Тест Тестов' })).toString('base64url');
+    // The code is «dev-code-<provider>» or «dev-code-<provider>.<base64url JSON of the form fields>».
+    let user = { userId: '42', displayName: 'Тест Тестов' };
+    const encoded = effectiveCode.split('.')[1];
+    if (encoded) {
+      const parsed = decodeUser(encoded);
+      if (!parsed) {
+        res.status(400).json({ error: 'invalid_grant' });
+        return;
+      }
+      user = parsed;
+    }
+    const token = Buffer.from(JSON.stringify({ provider, ...user })).toString('base64url');
     res.json({ access_token: token, token_type: 'bearer' });
   }
 

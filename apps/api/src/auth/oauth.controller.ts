@@ -31,15 +31,28 @@ export class OAuthController {
   ): Promise<void> {
     const p = this.assertProvider(provider);
     if (!code || !state) {
-      throw new BadRequestException({ error: { code: 'OAUTH_MISSING_PARAMS', message: 'Отсутствуют параметры code или state' } });
+      // A refusal at the provider comes back without a code.
+      res.redirect(302, `${this.config.webUrl}/login?error=oauth`);
+      return;
     }
     const fwd = req.headers['x-forwarded-for'];
     const ip = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim() ?? req.socket.remoteAddress ?? '';
     const ua = req.headers['user-agent'] ?? '';
-    const { token } = await this.oauth.processCallback(p, code, state, ip, ua);
+    let token: string;
+    try {
+      ({ token } = await this.oauth.processCallback(p, code, state, ip, ua));
+    } catch (e) {
+      // The participant sees the login page with a Russian message, not a JSON error page.
+      if (e instanceof BadRequestException) {
+        res.redirect(302, `${this.config.webUrl}/login?error=oauth`);
+        return;
+      }
+      throw e;
+    }
     const secure = this.config.databaseUrl.includes('ssl') || process.env.NODE_ENV === 'production';
     res.setHeader('Set-Cookie', sessionCookieHeader(token, secure));
-    res.redirect(302, this.config.webUrl);
+    // The onboarding page sends a user who has already accepted everything straight to the cabinet.
+    res.redirect(302, `${this.config.webUrl}/onboarding`);
   }
 
   private assertProvider(raw: string): OAuthProvider {

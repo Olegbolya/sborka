@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
 import { OAuthService, type OAuthProvider } from '../src/auth/oauth.service.js';
 import { InMemoryOAuthStateStore } from '../src/auth/oauth-state.js';
+import vm from 'node:vm';
 import { DevOAuthController } from '../src/auth/dev-oauth.controller.js';
 import type { SessionService } from '../src/auth/session.service.js';
 import type { Db } from '@blokum/db';
@@ -270,6 +271,24 @@ describe('A-01: DevOAuthController', () => {
     expect(html).toContain('<form');
   });
 
+  it('форма эмулятора: скрипт — исправный JavaScript и кладёт пользователя в code', () => {
+    const html = new DevOAuthController().authorize('vk', 'dev-vk', 'http://host/callback', 'st', 'ch');
+    const script = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '';
+    expect(script).not.toBe('');
+    let submit: ((e: { currentTarget: unknown }) => void) | undefined;
+    const form = { user_id: { value: '77' }, display_name: { value: 'Иван Петров' }, code: { value: 'dev-code-vk' }, addEventListener: (_: string, fn: typeof submit) => { submit = fn; } };
+    vm.runInNewContext(script, {
+      document: { currentScript: { closest: () => form } },
+      btoa: (b: string) => Buffer.from(b, 'latin1').toString('base64'),
+      TextEncoder,
+      String,
+    });
+    submit?.({ currentTarget: form });
+    const [prefix, encoded] = form.code.value.split('.');
+    expect(prefix).toBe('dev-code-vk');
+    expect(JSON.parse(Buffer.from(encoded ?? '', 'base64url').toString())).toEqual({ userId: '77', displayName: 'Иван Петров' });
+  });
+
   it('token returns access_token for dev-code- prefix', () => {
     const ctrl = new DevOAuthController();
     const jsonFn = vi.fn();
@@ -315,5 +334,65 @@ describe('A-01 (ADR-033): вход по телефону выключен по �
     expect(loadApiConfig({ NODE_ENV: 'test', PHONE_LOGIN: '1' }).phoneLogin).toBe(true);
     expect(() => loadApiConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgresql://x', REDIS_URL: 'redis://x' })).toThrow('TOTP_SECRET_KEY');
     expect(() => loadApiConfig({ NODE_ENV: 'test', TOTP_SECRET_KEY: 'короткий' })).toThrow('64');
+  });
+});
+
+// A-01: OAuthController.callback — ошибки провайдера не показываются JSON-страницей
+describe('A-01: OAuthController.callback', () => {
+  const makeRes = () => ({ redirect: vi.fn(), setHeader: vi.fn() });
+  const call = async (oauth: Partial<OAuthService>, req: Partial<Request>, res = makeRes()) => {
+    const { OAuthController } = await import('../src/auth/oauth.controller.js');
+    const ctrl = new OAuthController(oauth as OAuthService, baseConfig);
+    await ctrl.callback('vk', 'c', 's', { headers: {}, socket: {}, ...req } as Request, res as unknown as Response);
+    return res;
+  };
+
+  it('успех: сеанс в cookie, переход на онбординг; адрес берётся из первого элемента X-Forwarded-For', async () => {
+    const processCallback = vi.fn().mockResolvedValue({ token: 'tok', user: {} });
+    const res = await call({ processCallback }, { headers: { 'x-forwarded-for': ['1.1.1.1, 2.2.2.2'], 'user-agent': 'UA' } });
+    expect(processCallback).toHaveBeenCalledWith('vk', 'c', 's', '1.1.1.1', 'UA');
+    expect(res.setHeader).toHaveBeenCalledWith('Set-Cookie', expect.stringContaining('session=tok'));
+    expect(res.redirect).toHaveBeenCalledWith(302, 'http://localhost:3110/onboarding');
+  });
+
+  it('успех без заголовков: адрес берётся из сокета', async () => {
+    const processCallback = vi.fn().mockResolvedValue({ token: 'tok', user: {} });
+    await call({ processCallback }, { socket: { remoteAddress: '9.9.9.9' } as Request['socket'] });
+    expect(processCallback).toHaveBeenCalledWith('vk', 'c', 's', '9.9.9.9', '');
+  });
+
+  it('отказ провайдера (BadRequest) → страница входа, cookie нет', async () => {
+    const processCallback = vi.fn().mockRejectedValue(new BadRequestException('x'));
+    const res = await call({ processCallback }, {});
+    expect(res.redirect).toHaveBeenCalledWith(302, 'http://localhost:3110/login?error=oauth');
+    expect(res.setHeader).not.toHaveBeenCalled();
+  });
+
+  it('неожиданная ошибка не скрывается за страницей входа', async () => {
+    const processCallback = vi.fn().mockRejectedValue(new Error('сбой базы'));
+    await expect(call({ processCallback }, {})).rejects.toThrow('сбой базы');
+  });
+});
+
+describe('A-01: эмулятор — запасные ветви', () => {
+  it('форма для Яндекс ID называется «Яндекс ID»', () => {
+    expect(new DevOAuthController().authorize('yandex', 'dev-yandex', 'http://h/cb', 's', 'c')).toContain('Яндекс ID');
+  });
+
+  it('me: без токена или с мусором отвечает профилем по умолчанию', () => {
+    const ctrl = new DevOAuthController();
+    const res = { json: vi.fn() } as unknown as Response;
+    ctrl.me('vk', { headers: { authorization: 'Bearer ***' } } as unknown as Request, res);
+    ctrl.me('yandex', { headers: {} } as unknown as Request, res);
+    const calls = (res as unknown as { json: ReturnType<typeof vi.fn> }).json.mock.calls;
+    expect(calls[0]?.[0]).toEqual({ response: [{ id: 42, first_name: 'Тест', last_name: 'Тестов' }] });
+    expect(calls[1]?.[0]).toMatchObject({ id: '42', display_name: 'Тест Тестов' });
+  });
+
+  it('token: код из тела запроса (так его присылает сервис входа)', () => {
+    const ctrl = new DevOAuthController();
+    const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as unknown as Response;
+    ctrl.token('vk', undefined as unknown as string, { body: { code: 'dev-code-vk' } } as unknown as Request, res);
+    expect((res as unknown as { json: ReturnType<typeof vi.fn> }).json).toHaveBeenCalledWith(expect.objectContaining({ access_token: expect.any(String) }));
   });
 });
