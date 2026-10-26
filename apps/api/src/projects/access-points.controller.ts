@@ -3,7 +3,7 @@ import type { Response } from 'express';
 import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { AccessPointsService } from './access-points.service.js';
-import { WEB_URL } from './projects.module.js';
+import { WEB_URL } from './projects.tokens.js';
 
 /** P6.2 · D-02 · Q-01…Q-07: Access points and QR. */
 @Controller('projects/:projectId/access-points')

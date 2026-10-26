@@ -6,8 +6,9 @@ import { ResponsesController } from './responses.controller.js';
 import { AccessPointsService } from './access-points.service.js';
 import { AccessPointsController } from './access-points.controller.js';
 import { ExportService } from './export.service.js';
+import { WEB_URL } from './projects.tokens.js';
 
-export const WEB_URL = Symbol('WEB_URL');
+export { WEB_URL };
 
 @Module({})
 export class ProjectsModule {
