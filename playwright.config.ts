@@ -41,7 +41,7 @@ export default defineConfig({
   webServer: [
     {
       // A-01 (ADR-034): login is tested through the development provider emulator, so the real API and its database run.
-      command: 'bash scripts/dev-services.sh && pnpm db:migrate && pnpm --filter @blokum/api start',
+      command: 'bash scripts/e2e-api.sh',
       url: `http://127.0.0.1:${apiPort}/api/v1/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,

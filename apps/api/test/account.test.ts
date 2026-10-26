@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { schema } from '@blokum/db';
@@ -178,7 +179,7 @@ describe('A-03, A-05, D-10 · Аккаунт', () => {
     const cookie = await loginViaOtp('+79991240021');
     await request(t.http()).post(`/${API_PREFIX}/auth/account/email`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ email: 'expired@example.ru' }).expect(200);
     const token = new URL(sentEmails[0]!.url).searchParams.get('token')!;
-    await db.db.update(schema.emailVerificationTokens).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.emailVerificationTokens.token, token));
+    await db.db.update(schema.emailVerificationTokens).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.emailVerificationTokens.tokenHash, createHash('sha256').update(token).digest('hex')));
     const res = await request(t.http()).get(`/${API_PREFIX}/auth/account/email/verify?token=${token}`).expect(400);
     expect(res.body.error?.code).toBe('TOKEN_EXPIRED');
   });
