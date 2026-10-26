@@ -8,6 +8,8 @@ import {
   Post,
   Put,
   Query,
+  Req,
+  type RawBodyRequest,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -15,6 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
+import type { Request } from 'express';
 import { MediaService } from './media.service.js';
 
 const MAX_DIRECT_BYTES = 30 * 1024 * 1024; // 30 МБ — largest FREE limit (video)
@@ -53,13 +56,14 @@ export class MediaController {
     return { sessionId };
   }
 
-  /** P4.1: Upload a chunk. Body is raw bytes. */
+  /** P4.1: Upload a chunk. Body is raw bytes (octet-stream). rawBody is populated by rawBody:true in app.ts. */
   @Put('sessions/:id')
   async appendChunk(
     @CurrentUser() user: RequestUser,
     @Param('id') sessionId: string,
-    @Body() chunk: Buffer,
+    @Req() req: RawBodyRequest<Request>,
   ) {
+    const chunk = req.rawBody;
     if (!chunk || !Buffer.isBuffer(chunk) || chunk.length === 0) {
       throw new BadRequestException({ error: { code: 'CHUNK_EMPTY', message: 'Тело запроса пусто' } });
     }
