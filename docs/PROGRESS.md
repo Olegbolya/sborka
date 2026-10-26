@@ -8,7 +8,7 @@
 ## Сейчас
 
 - **Текущий этап:** MVP до 30 октября (ADR-032, `docs/PLAN-MACRO.md` → «Этап MVP»), два потока параллельно.
-- **Поток A (облачная сессия):** A1 · каркас редактора — P3.1, P3.2, P3.13.
+- **Поток A (облачная сессия):** A0 ✅ (вход, онбординг, аккаунт в интерфейсе, e2e — коммит 434354e). Дальше A1 · каркас редактора — P3.1, P3.2, P3.13.
 - **Поток B (Claude Code в VS Code):** B2 завершён ✅. B3 · юридическое — P8.1/P8.2/P8.3, коммит d65cc0c, ждёт CI.
 - **Где остановились:** P0–P2 закончены (кроме проверки отката P0.5, ждёт владельца). М1 и М2 закрыты.
 
@@ -53,9 +53,9 @@
 |---|---|---|---|---|
 | P2.1 | Пользователи и сеансы · Opus | ✅ | bf4ef18 | Модуль `auth`: `SessionService` (скользящие сеансы 60 дней, SHA-256 хэш в БД, `HttpOnly Secure SameSite=Lax`), `CsrfGuard` (Origin/X-Blokum-CSRF), `AuthGuard`, `RolesGuard`, `AuthController` (list/revoke/revokeAll). Unit-покрытие: 95,5 % statements, 96 % branches. `pnpm --filter @blokum/api lint` — 0 ошибок; CI queued bf4ef18 |
 | P2.2 | Вход по телефону | ✅ | aa9fb41, fc5b010 | `OtpService`: нормализация +7, лимиты TS-30 (3/час, 10/сутки по номеру; 5/час по IP; бюджет), код 5 мин, 5 попыток, `findOrCreateUser`. `DevOtpSender`/`DevCaptchaVerifier` — throw в production. Unit: 89 тестов, 88,7 % statements, 86,7 % branches; fix fc5b010: очищать otpRequests между тестами. CI 39899990037 — success |
-| P2.3 | VK ID и Яндекс ID | 🟨 | 13c3f42, 385fac8, 21f3ef4 | `OAuthService` (PKCE, state, token exchange, profile, findOrCreateUser, linkIdentity, unlinkIdentity), `OAuthController` (init/callback, session=), `DevOAuthController` (HTML-форма эмулятора, @Post token), `InMemoryOAuthStateStore`. `GET /auth/me`. Unit: 22 теста; интеграция: 12 тестов (полный VK/Яндекс flow, повторный вход). Исправления: dual decorator, port 0, cookie session=, CSRF header. CI 39899990037 — success |
-| P2.4 | Первый вход и согласия | 🟨 | 0527fb0, 487b0b3 | `LegalDocumentService` (seeding TOS/PD/marketing из `legal/*.md`), `ConsentService` (getPendingConsents, recordConsents, hasCompletedOnboarding), `ConsentController` (GET /auth/onboarding, POST /auth/onboarding/consent), `LegalController` (GET /legal/documents/:type @Public). Frontend: `/onboarding` (клиентский компонент с чекбоксами, кнопка disabled без TOS+PD+возраст), `/legal/pd-consent` (серверный компонент). E2e: `onboarding.spec.ts` (4 теста). Интеграция: `consent.test.ts` (10 тестов). CI pending |
-| P2.5 | Аккаунт | 🟨 | 1d8f469 | `AccountService` (профиль, email A-03, история согласий, отзыв маркетинга, экспорт JSON, мягкое удаление A-05 + восстановление за 30 дней), `AccountController` (10 endpoints), `DevEmailSender`, migration 0002 (`emailVerificationTokens`). Frontend: `/account` (профиль, email, удаление с подтверждением). Integration: 15 тестов. E2e: 4 теста (e2e fix `scrollIntoViewIfNeeded`+`click({force})` в 1baf452). CI 39951988898 — success |
+| P2.3 | VK ID и Яндекс ID | 🟨 | 13c3f42, 385fac8, 21f3ef4, 41c6dc7, 434354e | Сервер + интерфейс: `/login` (VK ID / Яндекс ID), эмулятор входит под пользователем из формы (ADR-036). e2e `login.spec.ts` (вход VK и Яндекс, разные пользователи, отказ → `/login?error=oauth`, закрытые страницы ведут на вход) — CI 40358052874: E2E 161 passed, все 4 задания success. **Осталось:** настоящие адреса VK ID / Яндекс ID (`OAuthService.providerConfig` всегда указывает на эмулятор, в рабочей среде его нет) — после ключей от владельца; переключатель «эмулятор / провайдер» |
+| P2.4 | Первый вход и согласия | ✅ | 0527fb0, 487b0b3, 41c6dc7, 434354e | `/onboarding` через API: чекбоксы по `GET /auth/onboarding`, `POST /auth/onboarding/consent`, реклама отдельной записью; повторный вход не показывает онбординг. e2e `onboarding.spec.ts` (7 тестов × 2 профиля, в т. ч. «кнопку не обойти запросом»). CI 40358052874 success |
+| P2.5 | Аккаунт | ✅ | 1d8f469, 41c6dc7, 434354e | `/account` через API: профиль, почта (A-03; без почтового сервиса — понятное сообщение), сеансы + «Завершить»/«Выйти»/«Выйти везде», история согласий + отзыв рекламы, выгрузка JSON, удаление и восстановление. e2e `account.spec.ts` (11 тестов × 2 профиля), скриншоты 390/1440 просмотрены (исправлены налезание поля на кнопку и одинаковые строки истории). CI 40358052874 success |
 | P2.6 | Роли и админ · Opus | ✅ | 1baf452, 64d516d, 08d67ed | Роли USER/MODERATOR/ADMIN; первый админ через `ADMIN_PHONE`; TOTP 2FA (RFC 6238, AES-256-GCM, native без библиотек) + 8 резервных кодов (SHA-256); эндпоинты: `POST /auth/account/totp/setup`, `confirm`, `DELETE /auth/account/totp`, `POST /auth/otp/totp-verify`; `AuditLogService` (только INSERT) + триггер БД запрещает UPDATE/DELETE; migration 0003 (`totp_backup_codes`). Integration: 13 тестов (admin.test.ts). CI run 39951988898 — success |
 
 ### P3 · Редактор
@@ -183,7 +183,7 @@
 - нет страницы входа (кнопки VK ID / Яндекс ID);
 - `/onboarding` и `/account` не обращаются к API: кнопки `onClick={() => undefined}`, тексты «доступно через API»;
 - нет e2e «вход через эмулятор» (приёмка P2.3) и e2e согласий (приёмка P2.4).
-- Осталось: страница входа, онбординг с сохранением согласий, страница аккаунта (профиль, почта, сеансы, «выйти везде», история согласий, выгрузка, удаление и восстановление) — всё через API, + e2e. Делает поток A, шаг A0 MVP.
+- **Сделано (A0, 26.10, коммиты 41c6dc7, 434354e):** страница входа, онбординг с сохранением согласий, страница аккаунта — всё через API, e2e в CI зелёные. **Осталось по P2.3:** настоящие VK ID / Яндекс ID после получения ключей (ADR-036).
 
 
 _(для 🟨: какие подпункты сделаны, какие остались, где именно остановились)_
@@ -199,3 +199,4 @@ P3.1 — не начата (поток A). Перед стартом реком�
 | 2026-10-20 | Opus 5.5 | Правки владельца: универсальные блоки, сценарии вместо встроенных игр, свои темы/шаблоны/элементы, библиотека (пустая на старте), самозанятость, название «Блокум» | Всё по плану, начиная с P0.1 |
 | 2026-10-23 | Sonnet 4.6 | P2.6 (AD-01, AD-08): роли/TOTP/резервные коды/аудит-лог; e2e fix P2.5 (Отмена, mobile); fix IP rate limit в тестах. Коммиты 1baf452, 64d516d, 08d67ed. CI 39951988898 — success. М2 закрыт. | P3.1 (рекомендуется review по docs/prompts/REVIEW.md перед стартом P3) |
 | 2026-10-23 | Sonnet 4.6 | B1 (P4.1-P4.4): медиатека — загрузка+обработка+хранение (c64112f); fix CI: B-04/B-05/EXE тесты + web/package.json (aadbe9f). P4.2 MVP частично (TS-20/21/25 готовы; GIF→MP4 и видео после MVP). P4.3, P4.4 полностью. | P6.1-P6.6 (B2, кабинет) |
+| 2026-10-26 | Sonnet 5.5 | A0 (P2.3–P2.5): `/login`, живые `/onboarding` и `/account`, эмулятор входа под выбранным пользователем, e2e (login/onboarding/account); исправлено: API не запускался (импорт exceljs), типы в тесте A-03 (CI main был красным), налезание поля на кнопку на 390. Коммиты 41c6dc7, 434354e; CI 40358052874 success (E2E 161) | P2.3: настоящие провайдеры (ключи владельца); A1 · P3.1 |
