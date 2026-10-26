@@ -198,6 +198,38 @@ describe('D-01 · Мои сборки', () => {
       .expect(200);
     await request(t.http()).get(`/${API_PREFIX}/projects/${c.body.id as string}`).set('Cookie', cookie2).expect(403);
   });
+
+  it('D-01: поиск без совпадений возвращает пустой массив', async () => {
+    const res = await request(t.http()).get(`/${API_PREFIX}/projects?search=ZZZ_NOT_EXIST_QQQ`).set('Cookie', cookie).expect(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBe(0);
+  });
+
+  it('D-01: PATCH без title не ломает сборку', async () => {
+    const c = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'Без изменений' }).expect(200);
+    const res = await request(t.http()).patch(`/${API_PREFIX}/projects/${c.body.id as string}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({}).expect(200);
+    expect(res.body.title).toBe('Без изменений');
+  });
+
+  it('D-01: восстановить неудалённую сборку → 400', async () => {
+    const c = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'Не удалена' }).expect(200);
+    await request(t.http()).post(`/${API_PREFIX}/projects/${c.body.id as string}/restore`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(400);
+  });
+
+  it('D-01: восстановить чужую сборку → 403', async () => {
+    const cookie2 = await loginViaOtp();
+    const c = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'Чужая' }).expect(200);
+    await request(t.http()).delete(`/${API_PREFIX}/projects/${c.body.id as string}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(204);
+    await request(t.http()).post(`/${API_PREFIX}/projects/${c.body.id as string}/restore`).set('Cookie', cookie2).set('X-Blokum-CSRF', '1').expect(403);
+  });
+
+  it('D-01: восстановить удалённую более 30 дней назад сборку → 400', async () => {
+    const c = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'Старая' }).expect(200);
+    await request(t.http()).delete(`/${API_PREFIX}/projects/${c.body.id as string}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(204);
+    const oldDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+    await db.db.update(schema.projects).set({ deletedAt: oldDate }).where(eq(schema.projects.id, c.body.id as string));
+    await request(t.http()).post(`/${API_PREFIX}/projects/${c.body.id as string}/restore`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(400);
+  });
 });
 
 describe('D-03 · Доступ', () => {
