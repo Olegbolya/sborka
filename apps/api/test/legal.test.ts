@@ -184,4 +184,29 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
     expect(res.body.error?.code ?? res.body.message).toMatch(/DPA_REQUIRED/);
   });
+
+  it('B-19/PL-23: operatorInfo с именем но без email → OPERATOR_INFO_REQUIRED', async () => {
+    if (!t) return;
+    const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 partial' }).expect(200);
+    const pid = proj.body.id as string;
+    const docWithContacts = { schemaVersion: 1, title: 'B-19 partial', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
+    // Set partial operator info (name present, email missing)
+    await db.db.update(schema.projects).set({ operatorInfo: { name: 'Тест', purpose: 'Тест', retentionPeriod: '1 год' } }).where(eq(schema.projects.id, pid));
+    const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
+    expect(res.body.error?.code ?? res.body.message).toMatch(/OPERATOR_INFO_REQUIRED/);
+  });
+
+  it('PL-23: GET operator-info чужого проекта → 403', async () => {
+    if (!t) return;
+    const cookie2 = await setupWithAuth().then((r) => r.login());
+    const res = await request(t.http()).get(`/${API_PREFIX}/projects/${projectId}/operator-info`).set('Cookie', cookie2).expect(403);
+    expect(res.status).toBe(403);
+  });
+
+  it('PL-23: PATCH operator-info чужого проекта → 403', async () => {
+    if (!t) return;
+    const cookie2 = await setupWithAuth().then((r) => r.login());
+    await request(t.http()).patch(`/${API_PREFIX}/projects/${projectId}/operator-info`).set('Cookie', cookie2).set('X-Blokum-CSRF', '1').send({ name: 'X', email: 'x@x.com', purpose: 'x', retentionPeriod: '1' }).expect(403);
+  });
 });
