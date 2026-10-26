@@ -163,6 +163,46 @@ describe('A-03, A-05, D-10 · Аккаунт', () => {
     expect(res.body.error?.code).toBe('INVALID_TOKEN');
   });
 
+  it('A-03 · повторная верификация уже использованного токена → TOKEN_USED', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991240020');
+    await request(t.http()).post(`/${API_PREFIX}/auth/account/email`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ email: 'used@example.ru' }).expect(200);
+    const token = new URL(sentEmails[0]!.url).searchParams.get('token')!;
+    await request(t.http()).get(`/${API_PREFIX}/auth/account/email/verify?token=${token}`).expect(302);
+    const res = await request(t.http()).get(`/${API_PREFIX}/auth/account/email/verify?token=${token}`).expect(400);
+    expect(res.body.error?.code).toBe('TOKEN_USED');
+  });
+
+  it('A-03 · верификация истёкшего токена → TOKEN_EXPIRED', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991240021');
+    await request(t.http()).post(`/${API_PREFIX}/auth/account/email`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ email: 'expired@example.ru' }).expect(200);
+    const token = new URL(sentEmails[0]!.url).searchParams.get('token')!;
+    await db.db.update(schema.emailVerificationTokens).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.emailVerificationTokens.token, token));
+    const res = await request(t.http()).get(`/${API_PREFIX}/auth/account/email/verify?token=${token}`).expect(400);
+    expect(res.body.error?.code).toBe('TOKEN_EXPIRED');
+  });
+
+  it('A-03 · email уже занят другим пользователем → 409', async () => {
+    if (skip()) return;
+    const cookie1 = await loginViaOtp('+79991240022');
+    const cookie2 = await loginViaOtp('+79991240023');
+    await request(t.http()).post(`/${API_PREFIX}/auth/account/email`).set('Cookie', cookie1).set('X-Blokum-CSRF', '1').send({ email: 'taken@example.ru' }).expect(200);
+    const token = new URL(sentEmails[sentEmails.length - 1]!.url).searchParams.get('token')!;
+    await request(t.http()).get(`/${API_PREFIX}/auth/account/email/verify?token=${token}`).expect(302);
+    const res = await request(t.http()).post(`/${API_PREFIX}/auth/account/email`).set('Cookie', cookie2).set('X-Blokum-CSRF', '1').send({ email: 'taken@example.ru' }).expect(409);
+    expect(res.body.error?.code).toBe('EMAIL_TAKEN');
+  });
+
+  it('A-05 · восстановить аккаунт после истечения 30 дней → 403', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991240024');
+    await request(t.http()).delete(`/${API_PREFIX}/auth/account`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
+    await db.db.update(schema.users).set({ deletedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) }).where(eq(schema.users.phoneE164, '+79991240024'));
+    const res = await request(t.http()).post(`/${API_PREFIX}/auth/account/restore`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(403);
+    expect(res.body.error?.code).toBe('GRACE_PERIOD_EXPIRED');
+  });
+
   it('A-03 · POST /auth/account/email → некорректный email → 400', async () => {
     if (skip()) return;
     const cookie = await loginViaOtp('+79991240006');
