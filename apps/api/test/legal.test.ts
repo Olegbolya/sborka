@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { schema } from '@blokum/db';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';

@@ -107,7 +107,7 @@
 | ID | Задача | Статус | Коммит | Доказательство / заметки |
 |---|---|---|---|---|
 | P6.1 | Мои сборки и моё творчество | ✅ | f014fc0 | API: ProjectsService (CRUD+дублировать+восстановить), ProjectsController (D-01). Frontend: /cabinet/projects — список с поиском/фильтром/статусом/действиями; D-11 — пустые разделы. Q-01 fix (auto access point) — d65cc0c. CI f014fc0 — success (run 40287531157 исправлен в d65cc0c) |
-| P6.2 | Поделиться и QR · Opus | ✅ | f014fc0 | API: AccessPointsService+Controller (Q-01: точки+коды, Q-02: QR, Q-04: PNG+SVG, Q-07: вкл/выкл). Frontend: tab «Точки доступа» (D-02). Q-03/Q-05/Q-06 — после MVP (ADR-035) |
+| P6.2 | Поделиться и QR · Opus | 🟨 | f014fc0 | API: AccessPointsService+Controller (Q-01: точки+коды, Q-02: QR, Q-04: PNG+SVG, Q-07: вкл/выкл). Frontend: tab «Точки доступа» (D-02). Q-03 (конструктор QR), Q-06 (статистика точки) — отложены после MVP (ADR-035), блокируют ✅ |
 | P6.3 | Доступ | ✅ | f014fc0 | API: access-settings (D-03: лимиты, расписание, пароль, одна попытка, текст «закрыто»). Frontend: tab «Настройки доступа» |
 | P6.4 | Ответы | ✅ | f014fc0 | API: ResponsesService (D-04: пагинация, фильтр, карточка, удаление, просмотрено). Frontend: tab «Ответы» с таблицей+карточкой |
 | P6.5 | Аналитика | ⬜ | | |
