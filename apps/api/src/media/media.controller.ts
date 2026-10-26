@@ -1,3 +1,4 @@
+import type { IncomingMessage } from 'node:http';
 import {
   BadRequestException,
   Body,
@@ -9,7 +10,6 @@ import {
   Put,
   Query,
   Req,
-  type RawBodyRequest,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -17,7 +17,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
-import type { Request } from 'express';
 import { MediaService } from './media.service.js';
 
 const MAX_DIRECT_BYTES = 30 * 1024 * 1024; // 30 МБ — largest FREE limit (video)
@@ -56,15 +55,21 @@ export class MediaController {
     return { sessionId };
   }
 
-  /** P4.1: Upload a chunk. Body is raw bytes (octet-stream). rawBody is populated by rawBody:true in app.ts. */
+  /** P4.1: Upload a chunk. Body is raw bytes (application/octet-stream). Reads from the stream directly
+   * because NestJS body parsers skip octet-stream and leave the stream unconsumed. */
   @Put('sessions/:id')
   async appendChunk(
     @CurrentUser() user: RequestUser,
     @Param('id') sessionId: string,
-    @Req() req: RawBodyRequest<Request>,
+    @Req() req: IncomingMessage,
   ) {
-    const chunk = req.rawBody;
-    if (!chunk || !Buffer.isBuffer(chunk) || chunk.length === 0) {
+    const chunk = await new Promise<Buffer>((resolve, reject) => {
+      const parts: Buffer[] = [];
+      req.on('data', (c: Buffer) => parts.push(c));
+      req.on('end', () => resolve(Buffer.concat(parts)));
+      req.on('error', reject);
+    });
+    if (!chunk || chunk.length === 0) {
       throw new BadRequestException({ error: { code: 'CHUNK_EMPTY', message: 'Тело запроса пусто' } });
     }
     return this.media.appendChunk(user.id, sessionId, chunk);
