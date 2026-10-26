@@ -317,3 +317,19 @@
 | D-03 | P6.3 | `apps/api/src/projects/projects.service.ts#getAccessSettings`; `apps/api/src/projects/projects.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
 | D-04 | P6.4 | `apps/api/src/projects/responses.service.ts`; `apps/api/src/projects/responses.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
 | D-06 | P6.6 | `apps/api/src/projects/export.service.ts`; `apps/api/src/projects/responses.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
+| D1 | P8.1 | `legal/terms.md`, `apps/api/src/auth/legal-document.service.ts`, `apps/api/src/auth/consent.controller.ts` (LegalController), `apps/web/app/legal/[type]/page.tsx` | `apps/api/test/legal.test.ts` |
+| D2 | P8.1 | `legal/offer.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D3 | P8.1 | `legal/privacy.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D4 | P8.1 | `legal/pd-consent.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D5 | P8.1 | `legal/participant-consent-template.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D6 | P8.1 | `legal/dpa.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D7 | P8.1 | `legal/content-rules.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D8 | P8.1 | `legal/cookies.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D9 | P8.1 | `legal/marketing.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D10 | P8.1 | `legal/complaints.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D11 | P8.1 | `legal/contacts.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| D12 | P8.1 | `legal/participant-notice.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| AD-06 | P8.2 | `apps/api/src/auth/legal-document.service.ts#getVersions`, `apps/api/src/auth/consent.controller.ts` | `apps/api/test/legal.test.ts` |
+| PL-23 | P8.3 | `apps/api/src/projects/projects.service.ts` (setOperatorInfo, acceptDpa, getOperatorInfo, checkPdRequirements), `apps/api/src/projects/projects.controller.ts`, `packages/db/src/schema/projects.ts` (dpaAcceptedAt), `apps/web/app/cabinet/projects/[id]/page.tsx` (OperatorTab) | `apps/api/test/legal.test.ts` |
+| B-19 | P8.3 | `apps/api/src/projects/projects.service.ts#checkPdRequirements`, `@blokum/schema#walkBlocks` | `apps/api/test/legal.test.ts` |
+| B-20 | P8.3 | `legal/participant-consent-template.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
