@@ -6,6 +6,7 @@ export class FlowError extends Error {
       | 'NOT_ON_SCREEN'
       | 'NOT_A_QUESTION'
       | 'INVALID_ANSWER'
+      | 'CARD_LIKE'
       | 'ANSWER_LOCKED'
       | 'REQUIRED'
       | 'BACK_FORBIDDEN'

@@ -74,7 +74,11 @@ export class RuntimeStore {
   }
 
   dispatch = (event: RuntimeEvent): void => {
-    this.publish(this.runtime.dispatch(event), false);
+    const step = this.runtime.dispatch(event);
+    // The runtime reports the answers that rules gave; the one the participant gave is reported here, so the owner of the
+    // passage (the player, the preview) sees every answer the same way and in the order it happened.
+    if (event.type === 'answer') step.effects.unshift({ type: 'answer', questionBlockId: event.questionBlockId, answer: event.answer });
+    this.publish(step, false);
   };
 
   /** SC-03: the debugger sets a variable by hand; false when it does not fit. */

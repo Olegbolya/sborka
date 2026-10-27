@@ -343,9 +343,7 @@ export class Runtime {
     if (!fits || compare(this.vars[variableId]!, 'eq', value)) return { ok: fits, step: this.end() };
     this.vars[variableId] = structuredClone(value);
     this.out.variables[variableId] = structuredClone(value);
-    for (const inst of this.instances.values()) {
-      if (inst.block.type === 'value' && inst.block.props.variableId === variableId) this.touch(inst);
-    }
+    this.touchUsers(variableId);
     if (this.screen && !this.halted) {
       this.fireMatching('variableChange', (t) => (t as Extract<Trigger, { kind: 'variableChange' }>).variableId === variableId, undefined, false, 0);
     }
@@ -669,6 +667,17 @@ export class Runtime {
   private end(): StepResult {
     this.out.changed = [...this.changed];
     return this.out;
+  }
+
+  /** Does the block show the variable: a «значение» or «прогресс» block, or a text with the variable in it (L-05)? */
+  private usesVariable(block: Block, variableId: string): boolean {
+    if ((block.type === 'value' || block.type === 'progress') && block.props.variableId === variableId) return true;
+    return block.textLayer?.paragraphs.some((p) => p.runs.some((r) => 'v' in r && r.v === variableId)) ?? false;
+  }
+
+  /** Blocks that show a variable are drawn again when it changes. */
+  private touchUsers(variableId: string): void {
+    for (const inst of this.instances.values()) if (this.usesVariable(inst.block, variableId)) this.touch(inst);
   }
 
   private touch(inst: Instance): void {
@@ -1075,7 +1084,7 @@ export class Runtime {
     this.vars[a.variableId] = next;
     this.out.variables[a.variableId] = structuredClone(next);
     for (const inst of this.instances.values()) {
-      if (inst.block.type === 'value' && inst.block.props.variableId === a.variableId) this.touch(inst);
+      if (this.usesVariable(inst.block, a.variableId)) this.touch(inst);
     }
     this.fireMatching('variableChange', (t) => (t as Extract<Trigger, { kind: 'variableChange' }>).variableId === a.variableId, job.self, false, job.depth + 1);
   }
@@ -1109,6 +1118,10 @@ export class Runtime {
     if (q) {
       this.touch(q);
       for (const id of q.children) this.changed.add(id);
+    }
+    // L-05: texts that show this answer are drawn again.
+    for (const inst of this.instances.values()) {
+      if (inst.block.textLayer?.paragraphs.some((p) => p.runs.some((r) => 'answer' in r && r.answer === questionBlockId))) this.touch(inst);
     }
     if (notify && depth > 0) this.out.effects.push({ type: 'answer', questionBlockId, answer });
     this.fireMatching('answer', (t) => (t as Extract<Trigger, { kind: 'answer' }>).questionBlockId === questionBlockId, questionBlockId, false, depth);

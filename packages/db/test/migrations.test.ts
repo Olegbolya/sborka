@@ -32,7 +32,7 @@ describe('миграции', () => {
     await runMigrations(t.db);
     await runMigrations(t.db);
     const applied = await t.db.execute<{ n: string }>(sql`select count(*)::text as n from drizzle.__drizzle_migrations`);
-    expect(Number(applied.rows[0]?.n)).toBe(7);
+    expect(Number(applied.rows[0]?.n)).toBe(8);
   });
 
   it('checkDatabase отвечает true для живой базы и false для недоступной', async () => {

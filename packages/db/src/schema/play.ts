@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigserial, boolean, date, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, date, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { createdAt, id, ts } from './columns.js';
 import { accessPoints, projectVersions, projects } from './projects.js';
 import { answerSource, deviceType, limitKind, playEventType, sessionStatus } from './enums.js';
@@ -34,6 +34,7 @@ export const participantSessions = pgTable(
     index('psessions_project_status_idx').on(t.projectId, t.status),
     index('psessions_device_idx').on(t.projectId, t.deviceTokenHash),
     index('psessions_access_point_idx').on(t.accessPointId),
+    index('psessions_ip_started_idx').on(t.ipHash, t.startedAt),
   ],
 );
 
@@ -52,8 +53,12 @@ export const answers = pgTable(
     deviceReported: boolean('device_reported').notNull().default(false),
     answeredAt: ts('answered_at').notNull().defaultNow(),
     timeOnScreenMs: integer('time_on_screen_ms'),
+    /** PL-12 · what the browser calls this event and when it happened: a repeat of the same event changes nothing, an older one never overwrites a newer. */
+    clientEventId: text('client_event_id'),
+    clientTs: bigint('client_ts', { mode: 'number' }),
   },
   (t) => [
+    uniqueIndex('answers_session_event_uq').on(t.sessionId, t.clientEventId).where(sql`${t.clientEventId} IS NOT NULL`),
     uniqueIndex('answers_session_block_uq').on(t.sessionId, t.blockId).where(sql`${t.blockId} IS NOT NULL`),
     uniqueIndex('answers_session_variable_uq').on(t.sessionId, t.variableId).where(sql`${t.variableId} IS NOT NULL`),
   ],

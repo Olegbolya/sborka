@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@blokum/db": "workspace:*",
+    "@blokum/engine": "workspace:*",
     "@blokum/observability": "workspace:*",
     "@blokum/schema": "workspace:*",
     "@nestjs/common": "12.2.0",

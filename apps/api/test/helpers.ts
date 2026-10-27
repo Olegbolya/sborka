@@ -32,6 +32,7 @@ export const testConfig: ApiConfig = {
   phoneLogin: true,
   adminPhone: '+79990000001',
   totpSecretKey: 'a'.repeat(64),
+  playLimits: { startsPerHourPerIp: 1_000_000, answersPerMinutePerSession: 1_000_000 },
   mediaDir: os.tmpdir(),
   mediaBaseUrl: 'http://127.0.0.1:0/api/v1/media',
 };

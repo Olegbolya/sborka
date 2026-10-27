@@ -355,3 +355,24 @@ describe('L-07 · хозяин отклонил переход', () => {
     expect(rt.dispatch(ev.tap('knopka1')).effects).toEqual([]);
   });
 });
+
+describe('L-05 · тексты с переменной и ответом перерисовываются', () => {
+  it('L-05 · изменение переменной помечает блок с подстановкой изменённым, обычный текст — нет; ответ — блок, который его показывает', () => {
+    const doc = buildDoc({
+      vars: [num('ochki_var')],
+      blocks: [
+        b('text', 'schet_text', { textLayer: { paragraphs: [{ kind: 'p', runs: [{ t: 'Очки: ' }, { v: 'ochki_var' }] }] } }),
+        b('text', 'prostoj_t', { textLayer: textOf('просто') }),
+        question('vopros_t'),
+        b('text', 'otvet_text', { textLayer: { paragraphs: [{ kind: 'p', runs: [{ answer: 'vopros_t' }] }] } }),
+      ],
+    });
+    const rt = createRuntime(doc, { seed: 1 });
+    rt.enterScreen(doc.screens[0]!.id);
+    const set = rt.setVariableValue('ochki_var', 5);
+    expect(set.step.changed).toContain('schet_text');
+    expect(set.step.changed).not.toContain('prostoj_t');
+    const answered = rt.dispatch({ type: 'answer', questionBlockId: 'vopros_t', answer: { kind: 'choice', optionIds: ['vopros_t_otvet1'] } });
+    expect(answered.changed).toContain('otvet_text');
+  });
+});

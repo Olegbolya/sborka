@@ -1,13 +1,17 @@
-import { Body, Controller, Get, Headers, HttpCode, Ip, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Ip, Param, Post, Put, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Public } from '../auth/decorators.js';
+import { PlaySessionsService } from './play-sessions.service.js';
 import { PlayService } from './play.service.js';
 
 /** The public side: no session, nothing here is allowed to reach the answer key (PL-15). */
 @Public()
 @Controller('play')
 export class PlayController {
-  constructor(private readonly play: PlayService) {}
+  constructor(
+    private readonly play: PlayService,
+    private readonly sessions: PlaySessionsService,
+  ) {}
 
   @Get('scan/:code')
   scan(@Param('code') code: string) {
@@ -30,8 +34,50 @@ export class PlayController {
   /** PL-11 · the start of a passage (docs/02-ARCHITECTURE.md §6: `POST /play/:projectId/sessions`). */
   @Post(':projectId/sessions')
   @HttpCode(201)
-  start(@Param('projectId') projectId: string, @Body() body: { deviceToken?: unknown; source?: unknown; unlock?: unknown; age18?: unknown }, @Headers('user-agent') ua: string | undefined) {
-    return this.play.start(projectId, body ?? {}, ua);
+  start(@Param('projectId') projectId: string, @Body() body: { deviceToken?: unknown; source?: unknown; unlock?: unknown; age18?: unknown }, @Headers('user-agent') ua: string | undefined, @Ip() ip: string) {
+    return this.play.start(projectId, body ?? {}, ua, ip);
+  }
+
+  /** PL-11 · continue a passage: where it was, the answers, and the version it began with. */
+  @Get('sessions/:id')
+  async resume(@Param('id') id: string) {
+    const saved = await this.sessions.resume(id);
+    return { ...saved, view: await this.play.openFor(saved.projectId, saved.versionId) };
+  }
+
+  /** PL-12, PL-13 · an answer (idempotent by `clientEventId`). */
+  @Post('sessions/:id/answers')
+  @HttpCode(200)
+  answer(@Param('id') id: string, @Body() body: Record<string, unknown>) {
+    return this.sessions.answer(id, body ?? {});
+  }
+
+  /** L-03 · feedback after an answer («сразу»). */
+  @Post('sessions/:id/check')
+  @HttpCode(200)
+  check(@Param('id') id: string, @Body() body: { blockId?: unknown }) {
+    return this.sessions.check(id, body?.blockId);
+  }
+
+  /** L-02 · a branch that reads the answer key is decided by the server. */
+  @Post('sessions/:id/branch')
+  @HttpCode(200)
+  branch(@Param('id') id: string, @Body() body: { screenId?: unknown }) {
+    return this.sessions.branch(id, body?.screenId);
+  }
+
+  /** PL-11 · the place of the passage and the variables of scenarios. */
+  @Put('sessions/:id/state')
+  @HttpCode(200)
+  state(@Param('id') id: string, @Body() body: unknown) {
+    return this.sessions.saveState(id, body);
+  }
+
+  /** PL-15 · the end: points, right answers and the result are the server's. */
+  @Post('sessions/:id/complete')
+  @HttpCode(200)
+  complete(@Param('id') id: string) {
+    return this.sessions.complete(id);
   }
 
   @Get(':slug/media/:mediaId')

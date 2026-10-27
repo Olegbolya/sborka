@@ -219,13 +219,21 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
     await second.ctx.close();
   });
 
-  test('PL-10 · одна попытка: повторный заход с того же устройства — «Вы уже проходили»', async ({ page, browser }, info) => {
+  test('PL-10 · одна попытка: после прохождения повторный заход с того же устройства — «Вы уже проходили»; другое устройство проходит', async ({ page, browser }, info) => {
     const { id, slug } = await published(page);
     await patch(page, `/projects/${id}/access-settings`, { singleAttempt: true });
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
     await p.goto(`/s/${slug}`);
     await expect(p.getByText('Привет, участник')).toBeVisible();
     await expect.poll(async () => ((await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { starts: number }).starts).toBe(1);
+    // Перезагрузка посреди прохождения продолжает его (PL-11), а не начинает второе.
+    await p.reload();
+    await expect(p.getByText('Привет, участник')).toBeVisible();
+    await p.getByText('Да, верно', { exact: true }).click();
+    await p.getByRole('button', { name: 'Дальше' }).click();
+    await p.getByRole('button', { name: 'Закончить' }).click();
+    await expect(p.getByTestId('play-end')).toBeVisible();
+    await expect.poll(async () => ((await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { completions: number }).completions).toBe(1);
     await p.reload();
     await expect(p.getByTestId('play-state')).toContainText('Вы уже проходили');
     const other = await participant(browser, info.project.use.baseURL!);

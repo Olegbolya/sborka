@@ -1,4 +1,5 @@
 import { HttpException, Inject, Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { and, count, eq, gt, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createId, type ProjectDocument, type PublicDocument, type ThemeTokens, toPublicDocument } from '@blokum/schema';
@@ -122,6 +123,29 @@ export class PlayService {
     return !p.settings.passwordHash || checkUnlockToken(this.config.totpSecretKey, p.id, p.settings.passwordHash, token);
   }
 
+  /** The open project of a published version for a participant who is already in it (resuming a passage). */
+  async openFor(projectId: string, versionId: string): Promise<PlayOpen> {
+    const [row] = await this.db
+      .select({ slug: schema.projects.slug, ownerId: schema.projects.ownerId, title: schema.projects.title, document: schema.projectVersions.document })
+      .from(schema.projectVersions)
+      .innerJoin(schema.projects, eq(schema.projects.id, schema.projectVersions.projectId))
+      .where(and(eq(schema.projectVersions.id, versionId), eq(schema.projects.id, projectId)));
+    if (!row) throw unavailable();
+    const doc = row.document as unknown as ProjectDocument;
+    return {
+      state: 'ok',
+      projectId,
+      versionId,
+      slug: row.slug,
+      title: doc.meta.title,
+      description: doc.meta.description,
+      ogImageId: doc.meta.ogImage?.source === 'media' ? doc.meta.ogImage.id : null,
+      indexable: false,
+      document: toPublicDocument(doc),
+      media: await this.mediaOf(row.ownerId, doc),
+    };
+  }
+
   async view(slug: string, ctx: PlayContext = {}): Promise<PlayView> {
     const now = ctx.now ?? new Date();
     const p = await this.published({ slug });
@@ -222,8 +246,12 @@ export class PlayService {
    * PL-06…PL-11 · the start of a passage: the checks of §10.3 in their order, then the admission under a lock so that a
    * flood of starts never goes over a limit (the project's own limits and the monthly limit of the tariff).
    */
-  async start(projectId: string, body: { deviceToken?: unknown; source?: unknown; unlock?: unknown; age18?: unknown }, userAgent: string | undefined, now = new Date()): Promise<{ sessionId: string; versionId: string }> {
+  async start(projectId: string, body: { deviceToken?: unknown; source?: unknown; unlock?: unknown; age18?: unknown }, userAgent: string | undefined, ip: string, now = new Date()): Promise<{ sessionId: string; versionId: string }> {
     const p = await this.published({ projectId });
+    // TS-13: starts are limited by the hash of the address (rotating every day; the address itself is not kept).
+    const ipHash = createHash('sha256').update(`ip:${now.toISOString().slice(0, 10)}:${ip}`).digest('hex');
+    const [recent] = await this.db.select({ n: count() }).from(schema.participantSessions).where(and(eq(schema.participantSessions.ipHash, ipHash), gte(schema.participantSessions.startedAt, new Date(now.getTime() - 3_600_000))));
+    if ((recent?.n ?? 0) >= (this.config.playLimits?.startsPerHourPerIp ?? 120)) throw fail(429, 'TOO_MANY_REQUESTS', 'Слишком много запусков с вашего адреса. Попробуйте позже.');
     const closed = await this.closedReason(p, now);
     if (closed) throw fail(403, closed.state === 'not_open' ? 'NOT_OPEN' : 'CLOSED', closed.text);
     if (!this.unlocked(p, typeof body.unlock === 'string' ? body.unlock : undefined)) throw fail(403, 'PASSWORD_REQUIRED', 'Нужен пароль.');
@@ -270,7 +298,7 @@ export class PlayService {
         accessPointId = ap?.id ?? null;
       }
       const sessionId = createId();
-      await tx.insert(schema.participantSessions).values({ id: sessionId, projectId: p.id, versionId: p.versionId, accessPointId, deviceTokenHash: device, deviceType: deviceTypeOf(userAgent), startedAt: now, lastActivityAt: now });
+      await tx.insert(schema.participantSessions).values({ id: sessionId, projectId: p.id, versionId: p.versionId, accessPointId, deviceTokenHash: device, ipHash, deviceType: deviceTypeOf(userAgent), startedAt: now, lastActivityAt: now });
       await tx
         .insert(schema.limitCounters)
         .values({ projectId: p.id, kind: 'STARTS', value: 1 })

@@ -185,7 +185,8 @@ describe('PL-06…PL-10 · проверки доступа и лимиты', () 
     await start(p.id, { deviceToken: 'ustrojstvo-2' }).expect(201);
     const stored = await rows(p.id);
     expect(stored.every((r) => r.deviceTokenHash && !r.deviceTokenHash.includes('ustrojstvo'))).toBe(true);
-    expect(stored.every((r) => r.ipHash === null)).toBe(true);
+    // Адрес не хранится; только хэш с ежедневной солью (TS-13), по нему считаются лимиты частоты.
+    expect(stored.every((r) => /^[0-9a-f]{64}$/.test(r.ipHash ?? ''))).toBe(true);
   });
 
   it('§10.3 · порядок проверок: закрыто раньше пароля, пароль раньше «18+»', async () => {

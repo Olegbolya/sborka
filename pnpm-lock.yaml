@@ -50,6 +50,9 @@ importers:
       '@blokum/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@blokum/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@blokum/observability':
         specifier: workspace:*
         version: link:../../packages/observability

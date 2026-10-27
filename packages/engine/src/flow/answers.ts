@@ -1,4 +1,5 @@
 import { type Block, plainText } from '@blokum/schema';
+import { CARD_WARNING, looksLikeCardNumber } from './card.js';
 import { FlowError } from './errors.js';
 
 /** Answer of a participant to one question block, as stored in the session and sent to the API. */
@@ -65,6 +66,7 @@ export function normalizeAnswer(block: QuestionBlock, answer: AnswerValue): Answ
       const value = (answer as Extract<AnswerValue, { kind: 'text' }>).value.trim();
       if (value.length > block.props.maxLength) fail(`Ответ длиннее ${block.props.maxLength} символов`);
       if (block.props.mask === 'number' && value !== '' && !/^-?\d+([.,]\d+)?$/.test(value)) fail('Введите число');
+      if (looksLikeCardNumber(value)) throw new FlowError('CARD_LIKE', CARD_WARNING);
       return { kind: 'text', value };
     }
     case 'date': {
@@ -101,6 +103,7 @@ export function normalizeAnswer(block: QuestionBlock, answer: AnswerValue): Answ
         const v = (raw ?? '').trim();
         if (v.length > 200) fail('Слишком длинное значение в контактах');
         if (v === '') continue;
+        if (looksLikeCardNumber(v)) throw new FlowError('CARD_LIKE', CARD_WARNING);
         if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) fail('Проверьте адрес почты');
         if (field === 'phone' && !/^\+?[\d\s()-]{7,20}$/.test(v)) fail('Проверьте номер телефона');
         out[field] = v;
