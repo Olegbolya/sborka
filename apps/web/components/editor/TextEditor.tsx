@@ -6,7 +6,8 @@ import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { patchBlocks } from '../../lib/editor/commands';
 import { type EditorNode, fromEditorDoc, toEditorDoc } from '../../lib/editor/rich-text';
-import { useEditor } from './context';
+import { findBlock } from '../../lib/editor/tree';
+import { useEditor, useEnv } from './context';
 
 /** A variable, a system value or an answer inside the text: one indivisible piece shown as «{{имя}}» (L-04, L-05). */
 const Placeholder = (label: (kind: string, ref: string) => string) =>
@@ -29,6 +30,7 @@ const textOf = (rt: RichText | undefined): string => JSON.stringify(rt ?? { para
 
 /** B-01 · the text of a block: bold, italic, underline, strikethrough, a link, lists, variables. The document holds it as `textLayer`. */
 export function TextEditor({ block }: { block: Block }) {
+  const { store } = useEnv();
   const apply = useEditor((s) => s.apply);
   const variables = useEditor((s) => s.doc.variables);
   const doc = useEditor((s) => s.doc);
@@ -79,12 +81,17 @@ export function TextEditor({ block }: { block: Block }) {
     },
   });
 
-  // Undo, redo or a restored version changed the text from outside: the editor follows.
+  // Undo, redo or a restored version changed the text from outside: the editor follows. The text is read from the store
+  // now, not from the props of the render that scheduled this: typing may have moved on since (the stale text would wipe it).
   useEffect(() => {
-    if (!editor || textOf(block.textLayer) === last.current) return;
-    last.current = textOf(block.textLayer);
-    editor.commands.setContent(toEditorDoc(block.textLayer), { emitUpdate: false });
-  }, [editor, block.textLayer]);
+    if (!editor) return;
+    const state = store.getState();
+    const loc = findBlock(state.doc, block.id);
+    const latest = loc?.siblings[loc.index]?.textLayer;
+    if (textOf(latest) === last.current) return;
+    last.current = textOf(latest);
+    editor.commands.setContent(toEditorDoc(latest), { emitUpdate: false });
+  }, [editor, store, block.id, block.textLayer]);
 
   if (!editor) return null;
   void tick;

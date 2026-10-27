@@ -99,7 +99,8 @@ export function placeholderValue(name: TextPlaceholder, ctx: TextContext): strin
   }
 }
 
-function runText(run: TextRun, ctx: TextContext): string | null {
+/** The text one placeholder run stands for (null for an ordinary run): the player draws runs one by one. */
+export function runText(run: TextRun, ctx: TextContext): string | null {
   if ('v' in run) return formatValue(ctx.state.variables[run.v]);
   if ('sys' in run) return placeholderValue(run.sys, ctx);
   if ('answer' in run) return formatAnswer(findBlock(ctx.doc, run.answer), ctx.state.answers[run.answer]);

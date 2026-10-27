@@ -386,3 +386,4 @@
 | L-05 | P3.7 | `packages/schema/src/validate.ts`, `apps/web/components/editor/LogicDialog.tsx`, `apps/web/components/editor/ConditionEditor.tsx`, `apps/web/lib/editor/logic.ts`, `apps/web/lib/editor/graph.ts` | `apps/web/test/editor-logic.test.ts`, `e2e/logic.spec.ts` |
 | L-07 | P3.7 | `packages/schema/src/validate.ts`, `apps/web/components/editor/LogicDialog.tsx`, `apps/web/components/editor/ConditionEditor.tsx`, `apps/web/lib/editor/logic.ts`, `apps/web/lib/editor/graph.ts` | `apps/web/test/editor-logic.test.ts`, `e2e/logic.spec.ts` |
 | L-08 | P3.7 | `packages/schema/src/validate.ts`, `apps/web/components/editor/LogicDialog.tsx`, `apps/web/components/editor/ConditionEditor.tsx`, `apps/web/lib/editor/logic.ts`, `apps/web/lib/editor/graph.ts` | `apps/web/test/editor-logic.test.ts`, `e2e/logic.spec.ts` |
+| L-06 | P3.7 | `packages/schema/src/validate.ts`, `apps/web/components/editor/LogicDialog.tsx` | `apps/web/test/editor-props.test.ts`, `e2e/screens.spec.ts` |

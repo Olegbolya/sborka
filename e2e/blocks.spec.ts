@@ -170,6 +170,9 @@ test.describe('P3.5 · содержимое блоков', () => {
     await page.keyboard.press('Control+A');
     await page.getByRole('button', { name: 'Жирный' }).click();
     await page.keyboard.press('End');
+    // Редактор узнаёт о новом положении курсора по событию выделения; без паузы «Enter» может застать выделение всего текста.
+    await page.waitForFunction(() => window.getSelection()?.isCollapsed === true);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.keyboard.press('Enter');
     await expect(field.locator('p')).toHaveCount(2);
     await page.getByRole('button', { name: 'Список', exact: true }).click();

@@ -10,6 +10,7 @@ import {
   expireTimer,
   goBack,
   navigate,
+  runText,
   screenTimer,
   scoreTotals,
   startFlow,
@@ -172,6 +173,9 @@ export class PreviewSession {
       }
     }, Math.max(0, t.endsAt - this.now()));
   }
+
+  /** L-04, L-05 · what a variable, an answer or «баллы», «результат»… in a text stands for now. */
+  textValue = (run: Parameters<typeof runText>[0]): string | null => runText(run, { doc: this.doc, state: this.synced(), now: this.now() });
 
   /** The preview's own «Назад» (L-01). */
   back(): void {

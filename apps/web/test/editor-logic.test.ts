@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeScreenGraph, createBlock, createDocument, createScreen, validateDocument } from '@blokum/schema';
+import { analyzeScreenGraph, createBlock, createDocument, createScreen, createVariable, validateDocument } from '@blokum/schema';
+import { PreviewSession } from '../lib/editor/preview-session';
 import { layoutGraph } from '../lib/editor/graph';
+import { setBlockProps } from '../lib/editor/commands';
 import { newBranch, questionsOf, setBranches, setResults, setSettings } from '../lib/editor/logic';
 import { createEditorStore } from '../lib/editor/store';
 
@@ -98,5 +100,30 @@ describe('L-02, L-08 · схема переходов', () => {
     const same = layoutGraph(['a', 'b', 'c'], [['a', 'b'], ['a', 'c']], 'a');
     expect(same.nodes.get('b')!.col).toBe(same.nodes.get('c')!.col);
     expect(same.nodes.get('b')!.y).not.toBe(same.nodes.get('c')!.y);
+  });
+});
+
+describe('L-07 · обязательные вопросы', () => {
+  it('L-07 · флажок «обязательный» записывается в свойства вопроса и снимается обратно', () => {
+    const { store, q } = docWith();
+    store.getState().apply(setBlockProps([q.id], (p) => ({ ...p, required: true })), { label: 'x' });
+    expect(JSON.stringify(store.getState().doc.screens[0]!.blocks[0]!.props)).toContain('"required":true');
+    store.getState().apply(setBlockProps([q.id], (p) => ({ ...p, required: false })), { label: 'x' });
+    expect(JSON.stringify(store.getState().doc.screens[0]!.blocks[0]!.props)).toContain('"required":false');
+  });
+});
+
+describe('L-05 · подстановки в текстах предпросмотра', () => {
+  it('L-05 · переменная и системные значения заменяются текущими значениями', () => {
+    const { doc } = docWith();
+    const v = createVariable('очки', 'number', 7);
+    doc.variables.push(v);
+    const session = new PreviewSession(doc, { seed: 1 });
+    expect(session.textValue({ v: v.id })).toBe('7');
+    expect(session.textValue({ sys: 'номер_экрана' })).toBe('1');
+    expect(session.textValue({ sys: 'баллы' })).toBe('0');
+    expect(session.textValue({ t: 'обычный' })).toBeNull();
+    expect(session.setVariable(v.id, 12)).toBe(true);
+    expect(session.textValue({ v: v.id })).toBe('12');
   });
 });

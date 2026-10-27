@@ -192,4 +192,39 @@ test.describe('P3.7 · логика', () => {
     await expect.poll(async () => JSON.stringify((await serverDraft(page, id)).doc.settings), { timeout: 15_000 }).toContain('"allowBack":false');
     expect((await serverDraft(page, id)).doc.settings).toMatchObject({ feedbackMode: 'instant', tieBreak: 'random', allowBack: false });
   });
+
+  test('L-05 · на экране результата «результат» и «баллы» подставляются в текст', async ({ page }) => {
+    const { id } = await seedProject(page, (d) => {
+      d.screens[0]!.blocks.push(textBlock('privet_1', 'Начнём', 20, 40, 300, 60), goTo('knopka_1', 'Узнать', 300, { kind: 'finish' }));
+      const text = { ...textBlock('itog_t', 'Итоговый текст', 20, 60, 300, 60), textLayer: { paragraphs: [{ kind: 'p', runs: [{ t: 'Ваш результат: ' }, { sys: 'результат' }, { t: ', баллов: ' }, { sys: 'баллы' }] }] } };
+      d.screens.push({ ...resultScreen('itog_ekran', 'Итог', ''), blocks: [text] });
+      (d as unknown as { results: unknown[] }).results = [{ kind: 'scoreRange', id: 'rezultat_1', key: 'Хороший', screenId: 'itog_ekran', min: 0, max: 100 }];
+    });
+    await openEditor(page, id);
+    await page.getByRole('button', { name: 'Предпросмотр' }).click();
+    const frame = page.getByRole('dialog', { name: 'Предпросмотр' }).locator('[data-preview="true"]');
+    await frame.getByRole('button', { name: 'Узнать' }).click();
+    await expect(frame.locator('[data-block-id="itog_t"]')).toContainText('Ваш результат: Хороший, баллов: 0');
+  });
+
+  test('L-07 · обязательный вопрос включается в панели «Содержимое» и не пускает дальше без ответа', async ({ page }) => {
+    const { id } = await seedProject(page, (d) => {
+      d.screens[0]!.blocks.push(question('vopros_1', 'Вопрос', 40, ['Да', 'Нет']), nextButton('knopka_1', 'Дальше', 300));
+      d.screens.push({ id: 'ekran_dva', name: 'Второй', blocks: [textBlock('vtoroj_t', 'Это второй экран', 20, 60, 300, 60)] });
+    });
+    await openEditor(page, id);
+    await page.getByRole('tab', { name: 'Слои' }).click();
+    await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: 'Вопрос', exact: true }).click();
+    await page.getByRole('tab', { name: 'Содержимое' }).click();
+    await page.getByLabel('Обязательный вопрос').check();
+    await expect.poll(async () => JSON.stringify((await serverDraft(page, id)).doc.screens[0]!.blocks[0]), { timeout: 15_000 }).toContain('"required":true');
+    await page.getByRole('button', { name: 'Предпросмотр' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Предпросмотр' });
+    const frame = dialog.locator('[data-preview="true"]');
+    await frame.getByRole('button', { name: 'Дальше' }).click();
+    await expect(dialog.getByRole('alert')).toContainText(/[а-яё]/i);
+    await frame.getByText('Да', { exact: true }).click();
+    await frame.getByRole('button', { name: 'Дальше' }).click();
+    await expect(frame.getByText('Это второй экран')).toBeVisible();
+  });
 });

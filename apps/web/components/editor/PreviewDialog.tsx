@@ -106,7 +106,7 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
           >
             <div style={{ width: size.w, height: Math.min(size.h, 640), overflow: 'auto', position: 'relative' }}>
               {view.screen ? (
-                <Artboard mode="player" unit={size.unit} tokens={doc.theme.tokens} media={media.resolver}>
+                <Artboard mode="player" unit={size.unit} tokens={doc.theme.tokens} media={media.resolver} runText={session.textValue}>
                   <PlayerScreen key={`${view.screen.id}:${view.screenKey}`} screen={view.screen} store={session.store} {...(view.progress ? { progress: view.progress } : {})} />
                 </Artboard>
               ) : (
