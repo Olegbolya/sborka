@@ -4,7 +4,15 @@ import { type Block, type Screen } from '@blokum/schema';
 import { type ReactNode, useState, useSyncExternalStore } from 'react';
 import { withGroupMates } from '../../lib/editor/arrange';
 import { stackOf } from '../../lib/editor/tree';
-import { addScreen, deleteScreen, duplicateScreen, moveScreen, patchBlocks, renameScreen } from '../../lib/editor/commands';
+import {
+  addScreen,
+  deleteScreen,
+  duplicateScreen,
+  moveScreen,
+  patchBlocks,
+  renameScreen,
+} from '../../lib/editor/commands';
+import { AddPanel } from './AddPanel';
 import { useEditor, useEnv } from './context';
 
 const THUMB = 0.22;
@@ -14,7 +22,11 @@ function Thumbnail({ screen }: { screen: Screen }) {
   useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
   const tokens = useEditor((s) => s.doc.theme.tokens);
   return (
-    <span className="ed-thumb" aria-hidden="true" style={{ width: 390 * THUMB, height: screen.height * THUMB, maxHeight: 120 }}>
+    <span
+      className="ed-thumb"
+      aria-hidden="true"
+      style={{ width: 390 * THUMB, height: screen.height * THUMB, maxHeight: 120 }}
+    >
       <Artboard mode="thumbnail" unit={THUMB} tokens={tokens} media={media.resolver}>
         <ScreenView screen={screen} />
       </Artboard>
@@ -36,7 +48,10 @@ function ScreensList() {
   /** Adds or copies a screen after the current one and goes to it (the new screen's id is known once the change is made). */
   const createScreenWith = (make: typeof addScreen | typeof duplicateScreen, label: string) => {
     let created = '';
-    apply(make(current.id, (c) => (created = c.id)), { label });
+    apply(
+      make(current.id, (c) => (created = c.id)),
+      { label },
+    );
     if (created) selectScreen(created);
   };
 
@@ -64,7 +79,13 @@ function ScreensList() {
                 }}
               />
             ) : (
-              <button type="button" className="ed-item" aria-current={s.id === current.id} data-screen-id={s.id} onClick={() => selectScreen(s.id)}>
+              <button
+                type="button"
+                className="ed-item"
+                aria-current={s.id === current.id}
+                data-screen-id={s.id}
+                onClick={() => selectScreen(s.id)}
+              >
                 <Thumbnail screen={s} />
                 <span className="name">
                   {i + 1}. {s.name}
@@ -75,7 +96,12 @@ function ScreensList() {
         ))}
       </ul>
       <div className="ed-actions" role="group" aria-label="Действия с экраном">
-        <button type="button" className="ed-btn small" onClick={() => createScreenWith(addScreen, 'Добавить экран')} disabled={doc.screens.length >= 50}>
+        <button
+          type="button"
+          className="ed-btn small"
+          onClick={() => createScreenWith(addScreen, 'Добавить экран')}
+          disabled={doc.screens.length >= 50}
+        >
           Добавить экран
         </button>
         <button
@@ -88,16 +114,38 @@ function ScreensList() {
         >
           Переименовать
         </button>
-        <button type="button" className="ed-btn small" onClick={() => createScreenWith(duplicateScreen, 'Дублировать экран')} disabled={doc.screens.length >= 50}>
+        <button
+          type="button"
+          className="ed-btn small"
+          onClick={() => createScreenWith(duplicateScreen, 'Дублировать экран')}
+          disabled={doc.screens.length >= 50}
+        >
           Дублировать
         </button>
-        <button type="button" className="ed-btn small" aria-label="Экран выше" onClick={() => apply(moveScreen(current.id, index - 1), { label: 'Порядок экранов' })} disabled={index === 0}>
+        <button
+          type="button"
+          className="ed-btn small"
+          aria-label="Экран выше"
+          onClick={() => apply(moveScreen(current.id, index - 1), { label: 'Порядок экранов' })}
+          disabled={index === 0}
+        >
           ↑
         </button>
-        <button type="button" className="ed-btn small" aria-label="Экран ниже" onClick={() => apply(moveScreen(current.id, index + 1), { label: 'Порядок экранов' })} disabled={index === doc.screens.length - 1}>
+        <button
+          type="button"
+          className="ed-btn small"
+          aria-label="Экран ниже"
+          onClick={() => apply(moveScreen(current.id, index + 1), { label: 'Порядок экранов' })}
+          disabled={index === doc.screens.length - 1}
+        >
           ↓
         </button>
-        <button type="button" className="ed-btn small danger" onClick={() => apply(deleteScreen(current.id), { label: 'Удалить экран' })} disabled={doc.screens.length <= 1}>
+        <button
+          type="button"
+          className="ed-btn small danger"
+          onClick={() => apply(deleteScreen(current.id), { label: 'Удалить экран' })}
+          disabled={doc.screens.length <= 1}
+        >
           Удалить
         </button>
       </div>
@@ -106,7 +154,17 @@ function ScreensList() {
 }
 
 /** One row of the layers: the name, «скрыть в редакторе», «заблокировать». */
-function LayerRow({ block, depth, screenId, children }: { block: Block; depth: number; screenId: string; children?: ReactNode }) {
+function LayerRow({
+  block,
+  depth,
+  screenId,
+  children,
+}: {
+  block: Block;
+  depth: number;
+  screenId: string;
+  children?: ReactNode;
+}) {
   const selected = useEditor((s) => s.selection.blockIds.includes(block.id));
   const select = useEditor((s) => s.select);
   const apply = useEditor((s) => s.apply);
@@ -119,7 +177,12 @@ function LayerRow({ block, depth, screenId, children }: { block: Block; depth: n
           className="ed-item"
           aria-pressed={selected}
           data-layer-id={block.id}
-          onClick={(e) => select(screenId, e.shiftKey ? (selected ? ids.filter((x) => x !== block.id) : [...ids, block.id]) : [block.id])}
+          onClick={(e) =>
+            select(
+              screenId,
+              e.shiftKey ? (selected ? ids.filter((x) => x !== block.id) : [...ids, block.id]) : [block.id],
+            )
+          }
         >
           <span className="name" style={block.hiddenInEditor ? { opacity: 0.5 } : undefined}>
             {block.name}
@@ -131,7 +194,12 @@ function LayerRow({ block, depth, screenId, children }: { block: Block; depth: n
           aria-pressed={block.hiddenInEditor}
           aria-label={`${block.hiddenInEditor ? 'Показать' : 'Скрыть'} в редакторе: ${block.name}`}
           title="Скрыть в редакторе"
-          onClick={() => apply(patchBlocks([block.id], (b) => void (b.hiddenInEditor = !b.hiddenInEditor)), { label: 'Скрыть в редакторе' })}
+          onClick={() =>
+            apply(
+              patchBlocks([block.id], (b) => void (b.hiddenInEditor = !b.hiddenInEditor)),
+              { label: 'Скрыть в редакторе' },
+            )
+          }
         >
           {block.hiddenInEditor ? '◌' : '●'}
         </button>
@@ -141,7 +209,12 @@ function LayerRow({ block, depth, screenId, children }: { block: Block; depth: n
           aria-pressed={block.locked}
           aria-label={`${block.locked ? 'Разблокировать' : 'Заблокировать'}: ${block.name}`}
           title="Заблокировать"
-          onClick={() => apply(patchBlocks([block.id], (b) => void (b.locked = !b.locked)), { label: 'Блокировка' })}
+          onClick={() =>
+            apply(
+              patchBlocks([block.id], (b) => void (b.locked = !b.locked)),
+              { label: 'Блокировка' },
+            )
+          }
         >
           {block.locked ? '🔒' : '🔓'}
         </button>
@@ -179,7 +252,13 @@ function LayerTree({ blocks, depth, screenId }: { blocks: readonly Block[]; dept
     const active = ids.every((id) => groupSelected.includes(id));
     rows.push(
       <li key={`group-${b.groupId}`} style={{ paddingLeft: depth * 14 }}>
-        <button type="button" className="ed-item" aria-pressed={active} data-group-id={b.groupId} onClick={() => select(screenId, withGroupMates(doc, ids))}>
+        <button
+          type="button"
+          className="ed-item"
+          aria-pressed={active}
+          data-group-id={b.groupId}
+          onClick={() => select(screenId, withGroupMates(doc, ids))}
+        >
           <span className="name">Группа ({members.length})</span>
         </button>
       </li>,
@@ -211,18 +290,33 @@ function LayersList() {
 }
 
 export function LeftPanel() {
-  const [tab, setTab] = useState<'screens' | 'layers'>('screens');
+  const [tab, setTab] = useState<'screens' | 'layers' | 'add'>('screens');
   return (
     <aside className="ed-panel left" aria-label="Экраны и слои">
       <div className="ed-tabs" role="tablist">
-        <button type="button" role="tab" className="ed-tab" aria-selected={tab === 'screens'} onClick={() => setTab('screens')}>
+        <button
+          type="button"
+          role="tab"
+          className="ed-tab"
+          aria-selected={tab === 'screens'}
+          onClick={() => setTab('screens')}
+        >
           Экраны
         </button>
-        <button type="button" role="tab" className="ed-tab" aria-selected={tab === 'layers'} onClick={() => setTab('layers')}>
+        <button
+          type="button"
+          role="tab"
+          className="ed-tab"
+          aria-selected={tab === 'layers'}
+          onClick={() => setTab('layers')}
+        >
           Слои
         </button>
+        <button type="button" role="tab" className="ed-tab" aria-selected={tab === 'add'} onClick={() => setTab('add')}>
+          Добавить
+        </button>
       </div>
-      {tab === 'screens' ? <ScreensList /> : <LayersList />}
+      {tab === 'screens' ? <ScreensList /> : tab === 'layers' ? <LayersList /> : <AddPanel />}
     </aside>
   );
 }

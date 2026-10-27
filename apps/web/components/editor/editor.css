@@ -637,3 +637,37 @@
   background: var(--hover);
   font-size: 12px;
 }
+
+.ed-richtext {
+  min-height: 72px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  outline: none;
+}
+.ed-richtext:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+.ed-richtext p {
+  margin: 0 0 6px;
+}
+.ed-placeholder {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--hover);
+  white-space: nowrap;
+}
+.ed-field input[type='checkbox'],
+.ed-field input[type='radio'] {
+  width: auto;
+}
+.ed-addgroup {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.65;
+}

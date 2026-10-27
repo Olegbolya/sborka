@@ -1,9 +1,21 @@
 'use client';
 import { type Block } from '@blokum/schema';
 import { useState } from 'react';
-import { type AlignMode, type OrderMode, alignBlocks, distributeBlocks, groupBlocks, orderBlocks, selectionIsGroup, ungroupBlocks } from '../../lib/editor/arrange';
-import { flipBlocks, patchBlocks, renameScreen, setFrame, setScreenHeight } from '../../lib/editor/commands';
+import {
+  type AlignMode,
+  type OrderMode,
+  alignBlocks,
+  distributeBlocks,
+  groupBlocks,
+  orderBlocks,
+  selectionIsGroup,
+  ungroupBlocks,
+} from '../../lib/editor/arrange';
+import { flipBlocks, patchBlocks, setFrame } from '../../lib/editor/commands';
 import { selectedBlocks } from '../../lib/editor/store';
+import { PropsInspector } from './PropsInspector';
+import { ScreenPanel } from './ScreenPanel';
+import { TextEditor } from './TextEditor';
 import { AnimationInspector, StyleInspector } from './StylePanels';
 import { useEditor } from './context';
 
@@ -12,11 +24,24 @@ export function mixed<T>(values: readonly T[]): T | null {
   return values.length > 0 && values.every((v) => v === values[0]) ? values[0]! : null;
 }
 
-function NumberField({ label, value, onChange, min, max }: { label: string; value: number | null; onChange: (v: number) => void; min?: number; max?: number }) {
+function NumberField({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  label: string;
+  value: number | null;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+}) {
   const shown = value === null ? '' : String(value);
   // The typed text is shown while it still means the stored number; otherwise the stored value, with no lag after a change elsewhere.
   const [draft, setDraft] = useState<string | null>(null);
-  const text = draft !== null && (Number.isNaN(Number(draft)) || shown === '' || Number(draft) === Number(shown)) ? draft : shown;
+  const text =
+    draft !== null && (Number.isNaN(Number(draft)) || shown === '' || Number(draft) === Number(shown)) ? draft : shown;
   return (
     <label className="ed-num">
       <span>{label}</span>
@@ -38,11 +63,27 @@ function NumberField({ label, value, onChange, min, max }: { label: string; valu
   );
 }
 
-function TextField({ label, value, onChange, max }: { label: string; value: string | null; onChange: (v: string) => void; max: number }) {
+function TextField({
+  label,
+  value,
+  onChange,
+  max,
+}: {
+  label: string;
+  value: string | null;
+  onChange: (v: string) => void;
+  max: number;
+}) {
   return (
     <label className="ed-field">
       <span>{label}</span>
-      <input type="text" value={value ?? ''} placeholder={value === null ? 'смешанно' : undefined} maxLength={max} onChange={(e) => onChange(e.target.value)} />
+      <input
+        type="text"
+        value={value ?? ''}
+        placeholder={value === null ? 'смешанно' : undefined}
+        maxLength={max}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </label>
   );
 }
@@ -73,29 +114,67 @@ function Arrange({ blocks }: { blocks: Block[] }) {
       <h2>Расположение</h2>
       <div className="ed-actions" role="group" aria-label="Выравнивание">
         {ALIGN.map(([mode, label, glyph]) => (
-          <button key={mode} type="button" className="ed-btn small" aria-label={label} title={label} onClick={() => apply(alignBlocks(ids, mode), { label })}>
+          <button
+            key={mode}
+            type="button"
+            className="ed-btn small"
+            aria-label={label}
+            title={label}
+            onClick={() => apply(alignBlocks(ids, mode), { label })}
+          >
             {glyph}
           </button>
         ))}
-        <button type="button" className="ed-btn small" aria-label="Распределить по горизонтали" title="Распределить по горизонтали" disabled={blocks.length < 3} onClick={() => apply(distributeBlocks(ids, 'horizontal'), { label: 'Распределить по горизонтали' })}>
+        <button
+          type="button"
+          className="ed-btn small"
+          aria-label="Распределить по горизонтали"
+          title="Распределить по горизонтали"
+          disabled={blocks.length < 3}
+          onClick={() => apply(distributeBlocks(ids, 'horizontal'), { label: 'Распределить по горизонтали' })}
+        >
           ⇹
         </button>
-        <button type="button" className="ed-btn small" aria-label="Распределить по вертикали" title="Распределить по вертикали" disabled={blocks.length < 3} onClick={() => apply(distributeBlocks(ids, 'vertical'), { label: 'Распределить по вертикали' })}>
+        <button
+          type="button"
+          className="ed-btn small"
+          aria-label="Распределить по вертикали"
+          title="Распределить по вертикали"
+          disabled={blocks.length < 3}
+          onClick={() => apply(distributeBlocks(ids, 'vertical'), { label: 'Распределить по вертикали' })}
+        >
           ⇳
         </button>
       </div>
       <div className="ed-actions" role="group" aria-label="Порядок слоёв">
         {ORDER.map(([mode, label, glyph]) => (
-          <button key={mode} type="button" className="ed-btn small" aria-label={label} title={label} onClick={() => apply(orderBlocks(ids, mode), { label })}>
+          <button
+            key={mode}
+            type="button"
+            className="ed-btn small"
+            aria-label={label}
+            title={label}
+            onClick={() => apply(orderBlocks(ids, mode), { label })}
+          >
             {glyph}
           </button>
         ))}
       </div>
       <div className="ed-actions" role="group" aria-label="Группа">
-        <button type="button" className="ed-btn small" disabled={blocks.length < 2 || grouped} onClick={() => apply(groupBlocks(ids), { label: 'Сгруппировать' })}>
+        <button
+          type="button"
+          className="ed-btn small"
+          disabled={blocks.length < 2 || grouped}
+          onClick={() => apply(groupBlocks(ids), { label: 'Сгруппировать' })}
+        >
           Сгруппировать
         </button>
-        <button type="button" className="ed-btn small" disabled={!blocks.some((b) => b.groupId)} onClick={() => apply(ungroupBlocks(ids), { label: 'Разгруппировать' })}>
+        <button
+          type="button"
+          className="ed-btn small"
+          disabled={!blocks.some((b) => b.groupId)}
+          onClick={() => apply(ungroupBlocks(ids), { label: 'Разгруппировать' })}
+        >
           Разгруппировать
         </button>
       </div>
@@ -111,7 +190,9 @@ function Appearance({ blocks }: { blocks: Block[] }) {
     <NumberField
       label={label}
       value={mixed(blocks.map((b) => b.frame[key]))}
-      onChange={(v) => apply(setFrame(ids, { [key]: v }), { label: 'Положение и размер', mergeKey: `frame:${ids.join(',')}:${key}` })}
+      onChange={(v) =>
+        apply(setFrame(ids, { [key]: v }), { label: 'Положение и размер', mergeKey: `frame:${ids.join(',')}:${key}` })
+      }
     />
   );
   return (
@@ -129,14 +210,32 @@ function Appearance({ blocks }: { blocks: Block[] }) {
             value={mixed(blocks.map((b) => b.frame.rotation))}
             min={-360}
             max={360}
-            onChange={(v) => apply(patchBlocks(ids, (b) => void (b.frame.rotation = Math.min(360, Math.max(-360, Math.round(v * 10) / 10)))), { label: 'Поворот', mergeKey: `rotation:${ids.join(',')}` })}
+            onChange={(v) =>
+              apply(
+                patchBlocks(
+                  ids,
+                  (b) => void (b.frame.rotation = Math.min(360, Math.max(-360, Math.round(v * 10) / 10))),
+                ),
+                { label: 'Поворот', mergeKey: `rotation:${ids.join(',')}` },
+              )
+            }
           />
         </div>
         <div className="ed-actions">
-          <button type="button" className="ed-btn small" aria-pressed={blocks.every((b) => b.frame.flipX)} onClick={() => apply(flipBlocks(ids, 'x'), { label: 'Отразить по горизонтали' })}>
+          <button
+            type="button"
+            className="ed-btn small"
+            aria-pressed={blocks.every((b) => b.frame.flipX)}
+            onClick={() => apply(flipBlocks(ids, 'x'), { label: 'Отразить по горизонтали' })}
+          >
             Отразить по горизонтали
           </button>
-          <button type="button" className="ed-btn small" aria-pressed={blocks.every((b) => b.frame.flipY)} onClick={() => apply(flipBlocks(ids, 'y'), { label: 'Отразить по вертикали' })}>
+          <button
+            type="button"
+            className="ed-btn small"
+            aria-pressed={blocks.every((b) => b.frame.flipY)}
+            onClick={() => apply(flipBlocks(ids, 'y'), { label: 'Отразить по вертикали' })}
+          >
             Отразить по вертикали
           </button>
         </div>
@@ -153,23 +252,53 @@ function Content({ blocks }: { blocks: Block[] }) {
   const ids = blocks.map((b) => b.id);
   const single = blocks.length === 1 ? blocks[0]! : null;
   return (
-    <div className="ed-section">
-      <h2>Содержимое</h2>
-      {single && (
+    <>
+      <div className="ed-section">
+        <h2>Содержимое</h2>
+        {single && (
+          <TextField
+            label="Название блока"
+            value={single.name}
+            max={60}
+            onChange={(v) =>
+              v.trim() &&
+              apply(
+                patchBlocks(ids, (b) => void (b.name = v.slice(0, 60))),
+                { label: 'Название блока', mergeKey: `name:${single.id}` },
+              )
+            }
+          />
+        )}
+        {single && (single.type === 'text' || single.textLayer) ? (
+          <>
+            <TextEditor key={single.id} block={single} />
+            {single.type !== 'text' && (
+              <button type="button" className="ed-btn small" onClick={() => apply(patchBlocks(ids, (b) => void (b.textLayer = undefined)), { label: 'Убрать текст' })}>
+                Убрать текст
+              </button>
+            )}
+          </>
+        ) : single ? (
+          <button type="button" className="ed-btn small" onClick={() => apply(patchBlocks(ids, (b) => void (b.textLayer = { paragraphs: [{ kind: 'p', runs: [] }] })), { label: 'Добавить текст' })}>
+            Добавить текст
+          </button>
+        ) : (
+          <p className="ed-hint">Чтобы изменить текст, выберите один блок.</p>
+        )}
         <TextField
-          label="Название блока"
-          value={single.name}
-          max={60}
-          onChange={(v) => v.trim() && apply(patchBlocks(ids, (b) => void (b.name = v.slice(0, 60))), { label: 'Название блока', mergeKey: `name:${single.id}` })}
+          label="Описание для скринридера"
+          value={mixed(blocks.map((b) => b.a11y.alt ?? ''))}
+          max={300}
+          onChange={(v) =>
+            apply(
+              patchBlocks(ids, (b) => void (b.a11y.alt = v || undefined)),
+              { label: 'Описание для скринридера', mergeKey: `alt:${ids.join(',')}` },
+            )
+          }
         />
-      )}
-      <TextField
-        label="Описание для скринридера"
-        value={mixed(blocks.map((b) => b.a11y.alt ?? ''))}
-        max={300}
-        onChange={(v) => apply(patchBlocks(ids, (b) => void (b.a11y.alt = v || undefined)), { label: 'Описание для скринридера', mergeKey: `alt:${ids.join(',')}` })}
-      />
-    </div>
+      </div>
+      <PropsInspector blocks={blocks} />
+    </>
   );
 }
 
@@ -183,22 +312,6 @@ function Scenarios({ blocks }: { blocks: Block[] }) {
       <p className="ed-hint" data-testid="scenario-counts">
         Правил: {rules}. Поведений: {behaviors}.
       </p>
-    </div>
-  );
-}
-
-/** With nothing selected the right panel shows the current screen. */
-function ScreenProps() {
-  const apply = useEditor((s) => s.apply);
-  const doc = useEditor((s) => s.doc);
-  const screenId = useEditor((s) => s.selection.screenId);
-  const screen = doc.screens.find((s) => s.id === screenId) ?? doc.screens[0]!;
-  return (
-    <div className="ed-section">
-      <h2>Экран</h2>
-      <TextField label="Название экрана" value={screen.name} max={80} onChange={(v) => apply(renameScreen(screen.id, v), { label: 'Название экрана', mergeKey: `screen-name:${screen.id}` })} />
-      <NumberField label="Высота экрана" value={screen.height} min={400} max={5000} onChange={(v) => apply(setScreenHeight(screen.id, v), { label: 'Высота экрана', mergeKey: `screen-height:${screen.id}` })} />
-      <p className="ed-hint">Выберите блок на экране или в слоях, чтобы изменить его.</p>
     </div>
   );
 }
@@ -220,14 +333,21 @@ export function Inspector() {
     <aside className="ed-panel right" aria-label="Свойства">
       <div className="ed-tabs" role="tablist">
         {TABS.map(([id, label]) => (
-          <button key={id} type="button" role="tab" className="ed-tab" aria-selected={tab === id} onClick={() => setTab(id)}>
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            className="ed-tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+          >
             {label}
           </button>
         ))}
       </div>
       {blocks.length === 0 ? (
         tab === 'look' ? (
-          <ScreenProps />
+          <ScreenPanel />
         ) : (
           <div className="ed-section">
             <p className="ed-hint">Выберите блок, чтобы увидеть его свойства.</p>

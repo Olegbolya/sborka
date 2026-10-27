@@ -6,7 +6,17 @@ import { type StyleGroup } from './style-edit';
  * lacks fails the test.
  */
 export type Field =
-  | { t: 'num'; key: string; label: string; min?: number; max?: number; step?: number; scale?: number; suffix?: string; slider?: boolean }
+  | {
+      t: 'num';
+      key: string;
+      label: string;
+      min?: number;
+      max?: number;
+      step?: number;
+      scale?: number;
+      suffix?: string;
+      slider?: boolean;
+    }
   | { t: 'select'; key: string; label: string; options: ReadonlyArray<readonly [string, string]> }
   | { t: 'bool'; key: string; label: string }
   | { t: 'color'; key: string; label: string }
@@ -14,9 +24,17 @@ export type Field =
   | { t: 'point'; key: string; label: string; keys?: readonly [string, string] }
   | { t: 'text'; key: string; label: string; max?: number }
   /** A reference to a file of the media library. */
-  | { t: 'media'; key: string; label: string }
+  | { t: 'media'; key: string; label: string; kinds?: ReadonlyArray<'IMAGE' | 'GIF' | 'VIDEO' | 'AUDIO' | 'LOTTIE'> }
   /** Several of top / right / bottom / left. */
   | { t: 'edges'; key: string; label: string }
+  /** Several of a fixed set of values (at least one). */
+  | { t: 'multi'; key: string; label: string; options: ReadonlyArray<readonly [string, string]> }
+  /** One of the variables of the document. */
+  | { t: 'variable'; key: string; label: string; optional?: boolean }
+  /** The options of a choice question: each is a block of its own (B-11, B-12). */
+  | { t: 'choiceOptions'; key: string }
+  /** One of the screens of the document. */
+  | { t: 'screen'; key: string; label: string }
   /** A list of items with their own fields (gradient stops, fill layers, shadows). */
   | { t: 'list'; key: string; label: string; min: number; max: number; make: () => unknown; item: Field[] }
   /** A list of numbers (a dash pattern). */
@@ -24,7 +42,12 @@ export type Field =
   /** A part that may be absent (a shadow of the text, the outline): a switch and, when on, its fields. */
   | { t: 'optional'; key: string; label: string; make: () => unknown; fields: Field[] }
   /** An object that is one of several kinds: a selector by `kind` and the fields of the chosen kind. */
-  | { t: 'variant'; key: string; label: string; variants: Record<string, { title: string; make: () => unknown; fields: Field[] }> };
+  | {
+      t: 'variant';
+      key: string;
+      label: string;
+      variants: Record<string, { title: string; make: () => unknown; fields: Field[] }>;
+    };
 
 const SOLID = { kind: 'solid', color: { token: 'primary', alpha: 1 } };
 const STOPS = [
@@ -36,7 +59,15 @@ export const STOP_FIELDS: Field[] = [
   { t: 'num', key: 'offset', label: 'Положение', min: 0, max: 1, step: 1, scale: 100, suffix: '%' },
   { t: 'color', key: 'color', label: 'Цвет' },
 ];
-const stopsField: Field = { t: 'list', key: 'stops', label: 'Точки градиента', min: 2, max: 10, make: () => ({ offset: 1, color: { token: 'accent', alpha: 1 } }), item: STOP_FIELDS };
+const stopsField: Field = {
+  t: 'list',
+  key: 'stops',
+  label: 'Точки градиента',
+  min: 2,
+  max: 10,
+  make: () => ({ offset: 1, color: { token: 'accent', alpha: 1 } }),
+  item: STOP_FIELDS,
+};
 
 const PAINT_FIELDS = (media: boolean): Record<string, { title: string; make: () => unknown; fields: Field[] }> => ({
   solid: { title: 'Цвет', make: () => ({ ...SOLID }), fields: [{ t: 'color', key: 'color', label: 'Цвет' }] },
@@ -53,16 +84,36 @@ const PAINT_FIELDS = (media: boolean): Record<string, { title: string; make: () 
   conic: {
     title: 'Конический градиент',
     make: () => ({ kind: 'conic', angle: 0, cx: 0.5, cy: 0.5, stops: STOPS }),
-    fields: [{ t: 'num', key: 'angle', label: 'Угол', min: 0, max: 360, step: 1, suffix: '°' }, { t: 'point', key: 'center', label: 'Центр', keys: ['cx', 'cy'] }, stopsField],
+    fields: [
+      { t: 'num', key: 'angle', label: 'Угол', min: 0, max: 360, step: 1, suffix: '°' },
+      { t: 'point', key: 'center', label: 'Центр', keys: ['cx', 'cy'] },
+      stopsField,
+    ],
   },
   ...(media
     ? {
         media: {
           title: 'Фото, GIF или видео',
-          make: () => ({ kind: 'media', media: { source: 'media', id: 'media_unset' }, fit: 'cover', focal: { x: 0.5, y: 0.5 }, scale: 1 }),
+          make: () => ({
+            kind: 'media',
+            media: { source: 'media', id: 'media_unset' },
+            fit: 'cover',
+            focal: { x: 0.5, y: 0.5 },
+            scale: 1,
+          }),
           fields: [
             { t: 'media', key: 'media', label: 'Файл' },
-            { t: 'select', key: 'fit', label: 'Вписывание', options: [['cover', 'Заполнить'], ['contain', 'Вписать'], ['fill', 'Растянуть'], ['tile', 'Замостить']] },
+            {
+              t: 'select',
+              key: 'fit',
+              label: 'Вписывание',
+              options: [
+                ['cover', 'Заполнить'],
+                ['contain', 'Вписать'],
+                ['fill', 'Растянуть'],
+                ['tile', 'Замостить'],
+              ],
+            },
             { t: 'point', key: 'focal', label: 'Фокус-точка' },
             { t: 'num', key: 'scale', label: 'Масштаб', min: 0.1, max: 10, step: 0.1 },
           ],
@@ -96,7 +147,16 @@ export const SHAPE_VARIANTS: Record<string, { title: string; make: () => unknown
     make: () => ({ kind: 'polygon', sides: 6, cornerRadius: 0 }),
     fields: [
       { t: 'num', key: 'sides', label: 'Сторон', min: 3, max: 24, step: 1 },
-      { t: 'num', key: 'cornerRadius', label: 'Скругление вершин', min: 0, max: 0.5, step: 0.01, scale: 100, suffix: '%' },
+      {
+        t: 'num',
+        key: 'cornerRadius',
+        label: 'Скругление вершин',
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+        scale: 100,
+        suffix: '%',
+      },
     ],
   },
   star: {
@@ -105,7 +165,16 @@ export const SHAPE_VARIANTS: Record<string, { title: string; make: () => unknown
     fields: [
       { t: 'num', key: 'points', label: 'Лучей', min: 3, max: 48, step: 1 },
       { t: 'num', key: 'depth', label: 'Глубина', min: 0.05, max: 0.95, step: 0.01, scale: 100, suffix: '%' },
-      { t: 'num', key: 'cornerRadius', label: 'Скругление вершин', min: 0, max: 0.5, step: 0.01, scale: 100, suffix: '%' },
+      {
+        t: 'num',
+        key: 'cornerRadius',
+        label: 'Скругление вершин',
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+        scale: 100,
+        suffix: '%',
+      },
     ],
   },
   heart: { title: 'Сердце', make: () => ({ kind: 'heart' }), fields: [] },
@@ -122,7 +191,16 @@ export const SHAPE_VARIANTS: Record<string, { title: string; make: () => unknown
     make: () => ({ kind: 'bubble', tail: { x: 0.2, y: 1 }, tailWidth: 0.15 }),
     fields: [
       { t: 'point', key: 'tail', label: 'Хвостик' },
-      { t: 'num', key: 'tailWidth', label: 'Ширина хвостика', min: 0.05, max: 0.5, step: 0.01, scale: 100, suffix: '%' },
+      {
+        t: 'num',
+        key: 'tailWidth',
+        label: 'Ширина хвостика',
+        min: 0.05,
+        max: 0.5,
+        step: 0.01,
+        scale: 100,
+        suffix: '%',
+      },
     ],
   },
   arrow: {
@@ -130,7 +208,16 @@ export const SHAPE_VARIANTS: Record<string, { title: string; make: () => unknown
     make: () => ({ kind: 'arrow', thickness: 0.4, head: 'triangle' }),
     fields: [
       { t: 'num', key: 'thickness', label: 'Толщина', min: 0.1, max: 0.9, step: 0.01, scale: 100, suffix: '%' },
-      { t: 'select', key: 'head', label: 'Наконечник', options: [['triangle', 'Треугольник'], ['round', 'Круглый'], ['chevron', 'Уголок']] },
+      {
+        t: 'select',
+        key: 'head',
+        label: 'Наконечник',
+        options: [
+          ['triangle', 'Треугольник'],
+          ['round', 'Круглый'],
+          ['chevron', 'Уголок'],
+        ],
+      },
     ],
   },
   wave: {
@@ -163,7 +250,15 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
   radius: {
     title: 'Скругление',
     fields: [
-      { t: 'select', key: 'unit', label: 'Единицы', options: [['u', 'Единицы'], ['%', 'Проценты']] },
+      {
+        t: 'select',
+        key: 'unit',
+        label: 'Единицы',
+        options: [
+          ['u', 'Единицы'],
+          ['%', 'Проценты'],
+        ],
+      },
       { t: 'num', key: 'tl', label: 'Левый верхний угол', min: 0, max: 1500, step: 1 },
       { t: 'num', key: 'tr', label: 'Правый верхний угол', min: 0, max: 1500, step: 1 },
       { t: 'num', key: 'br', label: 'Правый нижний угол', min: 0, max: 1500, step: 1 },
@@ -173,19 +268,73 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
   // Lists have their own editor: the items are described by `FILL_ITEM`/`SHADOW_ITEM` below.
   fills: {
     title: 'Заливка',
-    fields: [{ t: 'list', key: '', label: 'Слои заливки', min: 0, max: 4, make: () => ({ ...SOLID }), item: [{ t: 'variant', key: '', label: 'Слой', variants: { none: { title: 'Нет', make: () => ({ kind: 'none' }), fields: [] }, ...PAINT_FIELDS(true) } }] }],
+    fields: [
+      {
+        t: 'list',
+        key: '',
+        label: 'Слои заливки',
+        min: 0,
+        max: 4,
+        make: () => ({ ...SOLID }),
+        item: [
+          {
+            t: 'variant',
+            key: '',
+            label: 'Слой',
+            variants: { none: { title: 'Нет', make: () => ({ kind: 'none' }), fields: [] }, ...PAINT_FIELDS(true) },
+          },
+        ],
+      },
+    ],
   },
   stroke: {
     title: 'Обводка',
     fields: [
       { t: 'num', key: 'width', label: 'Толщина', min: 0, max: 60, step: 0.5 },
-      { t: 'select', key: 'style', label: 'Вид', options: [['solid', 'Сплошная'], ['dashed', 'Пунктир'], ['dotted', 'Точки']] },
-      { t: 'optional', key: 'dash', label: 'Свой шаблон штриха', make: () => [8, 4], fields: [{ t: 'numlist', key: '', label: 'Штрих', max: 8, min: 0, maxValue: 200 }] },
+      {
+        t: 'select',
+        key: 'style',
+        label: 'Вид',
+        options: [
+          ['solid', 'Сплошная'],
+          ['dashed', 'Пунктир'],
+          ['dotted', 'Точки'],
+        ],
+      },
+      {
+        t: 'optional',
+        key: 'dash',
+        label: 'Свой шаблон штриха',
+        make: () => [8, 4],
+        fields: [{ t: 'numlist', key: '', label: 'Штрих', max: 8, min: 0, maxValue: 200 }],
+      },
       { t: 'variant', key: 'paint', label: 'Краска', variants: PAINT_FIELDS(false) },
-      { t: 'select', key: 'align', label: 'Положение', options: [['inside', 'Внутри'], ['center', 'По центру'], ['outside', 'Снаружи']] },
+      {
+        t: 'select',
+        key: 'align',
+        label: 'Положение',
+        options: [
+          ['inside', 'Внутри'],
+          ['center', 'По центру'],
+          ['outside', 'Снаружи'],
+        ],
+      },
     ],
   },
-  shadows: { title: 'Тени', fields: [{ t: 'list', key: '', label: 'Тени', min: 0, max: 6, make: () => ({ x: 0, y: 4, blur: 12, spread: 0, color: { hex: '#00000033' }, inset: false }), item: SHADOW_FIELDS }] },
+  shadows: {
+    title: 'Тени',
+    fields: [
+      {
+        t: 'list',
+        key: '',
+        label: 'Тени',
+        min: 0,
+        max: 6,
+        make: () => ({ x: 0, y: 4, blur: 12, spread: 0, color: { hex: '#00000033' }, inset: false }),
+        item: SHADOW_FIELDS,
+      },
+    ],
+  },
   glow: {
     title: 'Свечение',
     fields: [
@@ -196,14 +345,33 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
   effects: {
     title: 'Эффекты',
     fields: [
-      { t: 'num', key: 'opacity', label: 'Прозрачность', min: 0, max: 1, step: 1, scale: 100, suffix: '%', slider: true },
+      {
+        t: 'num',
+        key: 'opacity',
+        label: 'Прозрачность',
+        min: 0,
+        max: 1,
+        step: 1,
+        scale: 100,
+        suffix: '%',
+        slider: true,
+      },
       { t: 'num', key: 'blur', label: 'Размытие', min: 0, max: 60, step: 1, slider: true },
       { t: 'num', key: 'backdropBlur', label: 'Размытие фона', min: 0, max: 60, step: 1, slider: true },
       {
         t: 'select',
         key: 'blendMode',
         label: 'Режим наложения',
-        options: [['normal', 'Обычный'], ['multiply', 'Умножение'], ['screen', 'Экран'], ['overlay', 'Перекрытие'], ['darken', 'Затемнение'], ['lighten', 'Осветление'], ['color-dodge', 'Осветление основы'], ['difference', 'Разница']],
+        options: [
+          ['normal', 'Обычный'],
+          ['multiply', 'Умножение'],
+          ['screen', 'Экран'],
+          ['overlay', 'Перекрытие'],
+          ['darken', 'Затемнение'],
+          ['lighten', 'Осветление'],
+          ['color-dodge', 'Осветление основы'],
+          ['difference', 'Разница'],
+        ],
       },
     ],
   },
@@ -212,8 +380,28 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
     fields: [
       { t: 'num', key: 'brightness', label: 'Яркость', min: 0, max: 3, step: 1, scale: 100, suffix: '%', slider: true },
       { t: 'num', key: 'contrast', label: 'Контраст', min: 0, max: 3, step: 1, scale: 100, suffix: '%', slider: true },
-      { t: 'num', key: 'saturate', label: 'Насыщенность', min: 0, max: 3, step: 1, scale: 100, suffix: '%', slider: true },
-      { t: 'num', key: 'grayscale', label: 'Чёрно-белый', min: 0, max: 1, step: 1, scale: 100, suffix: '%', slider: true },
+      {
+        t: 'num',
+        key: 'saturate',
+        label: 'Насыщенность',
+        min: 0,
+        max: 3,
+        step: 1,
+        scale: 100,
+        suffix: '%',
+        slider: true,
+      },
+      {
+        t: 'num',
+        key: 'grayscale',
+        label: 'Чёрно-белый',
+        min: 0,
+        max: 1,
+        step: 1,
+        scale: 100,
+        suffix: '%',
+        slider: true,
+      },
       { t: 'num', key: 'sepia', label: 'Сепия', min: 0, max: 1, step: 1, scale: 100, suffix: '%', slider: true },
       { t: 'num', key: 'hueRotate', label: 'Поворот оттенка', min: -180, max: 180, step: 1, suffix: '°', slider: true },
       { t: 'num', key: 'invert', label: 'Инверсия', min: 0, max: 1, step: 1, scale: 100, suffix: '%', slider: true },
@@ -236,30 +424,132 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
         key: 'font',
         label: 'Шрифт',
         variants: {
-          theme: { title: 'Из темы', make: () => ({ kind: 'theme', role: 'body' }), fields: [{ t: 'select', key: 'role', label: 'Роль', options: [['heading', 'Заголовок'], ['body', 'Основной'], ['accent', 'Акцентный']] }] },
-          system: { title: 'Системный', make: () => ({ kind: 'system', name: 'sans' }), fields: [{ t: 'select', key: 'name', label: 'Гарнитура', options: [['sans', 'Без засечек'], ['serif', 'С засечками'], ['mono', 'Моноширинный'], ['rounded', 'Округлый']] }] },
-          font: { title: 'Свой шрифт', make: () => ({ kind: 'font', id: 'font_unset' }), fields: [{ t: 'text', key: 'id', label: 'Идентификатор шрифта', max: 64 }] },
+          theme: {
+            title: 'Из темы',
+            make: () => ({ kind: 'theme', role: 'body' }),
+            fields: [
+              {
+                t: 'select',
+                key: 'role',
+                label: 'Роль',
+                options: [
+                  ['heading', 'Заголовок'],
+                  ['body', 'Основной'],
+                  ['accent', 'Акцентный'],
+                ],
+              },
+            ],
+          },
+          system: {
+            title: 'Системный',
+            make: () => ({ kind: 'system', name: 'sans' }),
+            fields: [
+              {
+                t: 'select',
+                key: 'name',
+                label: 'Гарнитура',
+                options: [
+                  ['sans', 'Без засечек'],
+                  ['serif', 'С засечками'],
+                  ['mono', 'Моноширинный'],
+                  ['rounded', 'Округлый'],
+                ],
+              },
+            ],
+          },
+          font: {
+            title: 'Свой шрифт',
+            make: () => ({ kind: 'font', id: 'font_unset' }),
+            fields: [{ t: 'text', key: 'id', label: 'Идентификатор шрифта', max: 64 }],
+          },
         },
       },
       { t: 'num', key: 'size', label: 'Размер', min: 6, max: 400, step: 1 },
-      { t: 'select', key: 'weight', label: 'Начертание', options: [['100', '100 · тонкое'], ['200', '200'], ['300', '300 · лёгкое'], ['400', '400 · обычное'], ['500', '500'], ['600', '600 · полужирное'], ['700', '700 · жирное'], ['800', '800'], ['900', '900 · сверхжирное']] },
+      {
+        t: 'select',
+        key: 'weight',
+        label: 'Начертание',
+        options: [
+          ['100', '100 · тонкое'],
+          ['200', '200'],
+          ['300', '300 · лёгкое'],
+          ['400', '400 · обычное'],
+          ['500', '500'],
+          ['600', '600 · полужирное'],
+          ['700', '700 · жирное'],
+          ['800', '800'],
+          ['900', '900 · сверхжирное'],
+        ],
+      },
       { t: 'bool', key: 'italic', label: 'Курсив' },
       { t: 'num', key: 'lineHeight', label: 'Межстрочный интервал', min: 0.5, max: 4, step: 0.05 },
       { t: 'num', key: 'letterSpacing', label: 'Межбуквенный интервал', min: -0.5, max: 2, step: 0.01 },
-      { t: 'select', key: 'align', label: 'По горизонтали', options: [['left', 'Слева'], ['center', 'По центру'], ['right', 'Справа'], ['justify', 'По ширине']] },
-      { t: 'select', key: 'verticalAlign', label: 'По вертикали', options: [['top', 'Сверху'], ['middle', 'По середине'], ['bottom', 'Снизу']] },
-      { t: 'select', key: 'transform', label: 'Регистр', options: [['none', 'Как набрано'], ['uppercase', 'ВЕРХНИЙ'], ['lowercase', 'нижний'], ['capitalize', 'Каждое Слово']] },
+      {
+        t: 'select',
+        key: 'align',
+        label: 'По горизонтали',
+        options: [
+          ['left', 'Слева'],
+          ['center', 'По центру'],
+          ['right', 'Справа'],
+          ['justify', 'По ширине'],
+        ],
+      },
+      {
+        t: 'select',
+        key: 'verticalAlign',
+        label: 'По вертикали',
+        options: [
+          ['top', 'Сверху'],
+          ['middle', 'По середине'],
+          ['bottom', 'Снизу'],
+        ],
+      },
+      {
+        t: 'select',
+        key: 'transform',
+        label: 'Регистр',
+        options: [
+          ['none', 'Как набрано'],
+          ['uppercase', 'ВЕРХНИЙ'],
+          ['lowercase', 'нижний'],
+          ['capitalize', 'Каждое Слово'],
+        ],
+      },
       { t: 'variant', key: 'paint', label: 'Краска текста', variants: TEXT_PAINT_VARIANTS },
-      { t: 'optional', key: 'shadow', label: 'Тень текста', make: () => ({ x: 0, y: 2, blur: 4, spread: 0, color: { hex: '#00000066' }, inset: false }), fields: SHADOW_FIELDS },
-      { t: 'optional', key: 'outline', label: 'Контур текста', make: () => ({ width: 1, color: { token: 'text', alpha: 1 } }), fields: [{ t: 'num', key: 'width', label: 'Толщина', min: 0, max: 20, step: 0.5 }, { t: 'color', key: 'color', label: 'Цвет' }] },
+      {
+        t: 'optional',
+        key: 'shadow',
+        label: 'Тень текста',
+        make: () => ({ x: 0, y: 2, blur: 4, spread: 0, color: { hex: '#00000066' }, inset: false }),
+        fields: SHADOW_FIELDS,
+      },
+      {
+        t: 'optional',
+        key: 'outline',
+        label: 'Контур текста',
+        make: () => ({ width: 1, color: { token: 'text', alpha: 1 } }),
+        fields: [
+          { t: 'num', key: 'width', label: 'Толщина', min: 0, max: 20, step: 0.5 },
+          { t: 'color', key: 'color', label: 'Цвет' },
+        ],
+      },
       {
         t: 'variant',
         key: 'path',
         label: 'Текст по контуру',
         variants: {
           none: { title: 'Нет', make: () => ({ kind: 'none', curvature: 0.5 }), fields: [] },
-          circle: { title: 'По кругу', make: () => ({ kind: 'circle', curvature: 0.5 }), fields: [{ t: 'num', key: 'curvature', label: 'Изгиб', min: -1, max: 1, step: 0.05 }] },
-          arc: { title: 'По дуге', make: () => ({ kind: 'arc', curvature: 0.5 }), fields: [{ t: 'num', key: 'curvature', label: 'Изгиб', min: -1, max: 1, step: 0.05 }] },
+          circle: {
+            title: 'По кругу',
+            make: () => ({ kind: 'circle', curvature: 0.5 }),
+            fields: [{ t: 'num', key: 'curvature', label: 'Изгиб', min: -1, max: 1, step: 0.05 }],
+          },
+          arc: {
+            title: 'По дуге',
+            make: () => ({ kind: 'arc', curvature: 0.5 }),
+            fields: [{ t: 'num', key: 'curvature', label: 'Изгиб', min: -1, max: 1, step: 0.05 }],
+          },
         },
       },
     ],
@@ -267,7 +557,16 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
   media: {
     title: 'Медиа',
     fields: [
-      { t: 'select', key: 'fit', label: 'Вписывание', options: [['cover', 'Заполнить'], ['contain', 'Вписать'], ['fill', 'Растянуть']] },
+      {
+        t: 'select',
+        key: 'fit',
+        label: 'Вписывание',
+        options: [
+          ['cover', 'Заполнить'],
+          ['contain', 'Вписать'],
+          ['fill', 'Растянуть'],
+        ],
+      },
       {
         t: 'optional',
         key: 'crop',
@@ -285,7 +584,13 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
       { t: 'bool', key: 'muted', label: 'Без звука' },
       { t: 'bool', key: 'loop', label: 'По кругу' },
       { t: 'bool', key: 'controls', label: 'Кнопки управления' },
-      { t: 'optional', key: 'poster', label: 'Обложка', make: () => ({ source: 'media', id: 'media_unset' }), fields: [{ t: 'media', key: '', label: 'Файл обложки' }] },
+      {
+        t: 'optional',
+        key: 'poster',
+        label: 'Обложка',
+        make: () => ({ source: 'media', id: 'media_unset' }),
+        fields: [{ t: 'media', key: '', label: 'Файл обложки' }],
+      },
       { t: 'num', key: 'speed', label: 'Скорость', min: 0.25, max: 4, step: 0.25 },
     ],
   },
@@ -304,7 +609,13 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
     title: 'Маска',
     fields: [
       { t: 'bool', key: 'clipToShape', label: 'Обрезать формой блока' },
-      { t: 'optional', key: 'image', label: 'Маска по картинке', make: () => ({ source: 'media', id: 'media_unset' }), fields: [{ t: 'media', key: '', label: 'Файл маски' }] },
+      {
+        t: 'optional',
+        key: 'image',
+        label: 'Маска по картинке',
+        make: () => ({ source: 'media', id: 'media_unset' }),
+        fields: [{ t: 'media', key: '', label: 'Файл маски' }],
+      },
       {
         t: 'optional',
         key: 'fade',
@@ -320,10 +631,41 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
   layout: {
     title: 'Раскладка вложенных блоков',
     fields: [
-      { t: 'select', key: 'mode', label: 'Режим', options: [['free', 'Свободно'], ['row', 'В строку'], ['column', 'В столбец'], ['grid', 'Сетка']] },
+      {
+        t: 'select',
+        key: 'mode',
+        label: 'Режим',
+        options: [
+          ['free', 'Свободно'],
+          ['row', 'В строку'],
+          ['column', 'В столбец'],
+          ['grid', 'Сетка'],
+        ],
+      },
       { t: 'num', key: 'gap', label: 'Промежуток', min: 0, max: 500, step: 1 },
-      { t: 'select', key: 'align', label: 'Выравнивание', options: [['start', 'К началу'], ['center', 'По центру'], ['end', 'К концу'], ['stretch', 'Растянуть']] },
-      { t: 'select', key: 'justify', label: 'Распределение', options: [['start', 'К началу'], ['center', 'По центру'], ['end', 'К концу'], ['between', 'Между'], ['around', 'Вокруг']] },
+      {
+        t: 'select',
+        key: 'align',
+        label: 'Выравнивание',
+        options: [
+          ['start', 'К началу'],
+          ['center', 'По центру'],
+          ['end', 'К концу'],
+          ['stretch', 'Растянуть'],
+        ],
+      },
+      {
+        t: 'select',
+        key: 'justify',
+        label: 'Распределение',
+        options: [
+          ['start', 'К началу'],
+          ['center', 'По центру'],
+          ['end', 'К концу'],
+          ['between', 'Между'],
+          ['around', 'Вокруг'],
+        ],
+      },
       { t: 'bool', key: 'wrap', label: 'Перенос' },
       { t: 'num', key: 'columns', label: 'Столбцов', min: 1, max: 12, step: 1 },
       { t: 'bool', key: 'scroll', label: 'Прокрутка содержимого' },
@@ -358,7 +700,7 @@ export function specKeys(group: StyleGroup): string[] {
   return [...out];
 }
 
-const EASING_VARIANT: Field = {
+export const EASING_VARIANT: Field = {
   t: 'variant',
   key: 'easing',
   label: 'Плавность',
@@ -366,7 +708,20 @@ const EASING_VARIANT: Field = {
     preset: {
       title: 'Стандартная',
       make: () => ({ kind: 'preset', name: 'easeOut' }),
-      fields: [{ t: 'select', key: 'name', label: 'Вид', options: [['linear', 'Равномерно'], ['ease', 'Плавно'], ['easeIn', 'С разгоном'], ['easeOut', 'С торможением'], ['easeInOut', 'С разгоном и торможением']] }],
+      fields: [
+        {
+          t: 'select',
+          key: 'name',
+          label: 'Вид',
+          options: [
+            ['linear', 'Равномерно'],
+            ['ease', 'Плавно'],
+            ['easeIn', 'С разгоном'],
+            ['easeOut', 'С торможением'],
+            ['easeInOut', 'С разгоном и торможением'],
+          ],
+        },
+      ],
     },
     spring: {
       title: 'Пружина',
@@ -395,10 +750,44 @@ export const ANIMATION_SPEC: Field[] = [
     t: 'optional',
     key: 'enter',
     label: 'Анимация появления',
-    make: () => ({ kind: 'fade', direction: 'up', durationMs: 600, delayMs: 0, easing: { kind: 'preset', name: 'easeOut' } }),
+    make: () => ({
+      kind: 'fade',
+      direction: 'up',
+      durationMs: 600,
+      delayMs: 0,
+      easing: { kind: 'preset', name: 'easeOut' },
+    }),
     fields: [
-      { t: 'select', key: 'kind', label: 'Вид', options: [['fade', 'Проявление'], ['slide', 'Выезд'], ['zoom', 'Увеличение'], ['bounce', 'Отскок'], ['flip', 'Переворот'], ['rotate', 'Вращение'], ['typewriter', 'Печатная машинка'], ['snowflake', 'Падение снежинкой']] },
-      { t: 'select', key: 'direction', label: 'Направление', options: [['up', 'Снизу'], ['down', 'Сверху'], ['left', 'Справа'], ['right', 'Слева'], ['upLeft', 'Снизу справа'], ['upRight', 'Снизу слева'], ['downLeft', 'Сверху справа'], ['downRight', 'Сверху слева']] },
+      {
+        t: 'select',
+        key: 'kind',
+        label: 'Вид',
+        options: [
+          ['fade', 'Проявление'],
+          ['slide', 'Выезд'],
+          ['zoom', 'Увеличение'],
+          ['bounce', 'Отскок'],
+          ['flip', 'Переворот'],
+          ['rotate', 'Вращение'],
+          ['typewriter', 'Печатная машинка'],
+          ['snowflake', 'Падение снежинкой'],
+        ],
+      },
+      {
+        t: 'select',
+        key: 'direction',
+        label: 'Направление',
+        options: [
+          ['up', 'Снизу'],
+          ['down', 'Сверху'],
+          ['left', 'Справа'],
+          ['right', 'Слева'],
+          ['upLeft', 'Снизу справа'],
+          ['upRight', 'Снизу слева'],
+          ['downLeft', 'Сверху справа'],
+          ['downRight', 'Сверху слева'],
+        ],
+      },
       { t: 'num', key: 'durationMs', label: 'Длительность, мс', min: 50, max: 10000, step: 50 },
       { t: 'num', key: 'delayMs', label: 'Задержка, мс', min: 0, max: 30000, step: 50 },
       EASING_VARIANT,
@@ -410,7 +799,20 @@ export const ANIMATION_SPEC: Field[] = [
     label: 'Постоянная анимация',
     make: () => ({ kind: 'pulse', speed: 1, amplitude: 1, pauseMs: 0 }),
     fields: [
-      { t: 'select', key: 'kind', label: 'Вид', options: [['pulse', 'Пульсация'], ['sway', 'Покачивание'], ['float', 'Парение'], ['spin', 'Вращение'], ['shake', 'Тряска'], ['blink', 'Мерцание'], ['heartbeat', 'Сердцебиение']] },
+      {
+        t: 'select',
+        key: 'kind',
+        label: 'Вид',
+        options: [
+          ['pulse', 'Пульсация'],
+          ['sway', 'Покачивание'],
+          ['float', 'Парение'],
+          ['spin', 'Вращение'],
+          ['shake', 'Тряска'],
+          ['blink', 'Мерцание'],
+          ['heartbeat', 'Сердцебиение'],
+        ],
+      },
       { t: 'num', key: 'speed', label: 'Скорость', min: 0.1, max: 10, step: 0.1 },
       { t: 'num', key: 'amplitude', label: 'Размах', min: 0, max: 10, step: 0.1 },
       { t: 'num', key: 'pauseMs', label: 'Пауза между повторами, мс', min: 0, max: 30000, step: 100 },
@@ -421,7 +823,20 @@ export const ANIMATION_SPEC: Field[] = [
     key: 'press',
     label: 'Реакция на нажатие',
     make: () => ({ kind: 'grow' }),
-    fields: [{ t: 'select', key: 'kind', label: 'Вид', options: [['grow', 'Увеличение'], ['shrink', 'Уменьшение'], ['glow', 'Свечение'], ['bounce', 'Подпрыгивание'], ['vibrate', 'Вибрация телефона']] }],
+    fields: [
+      {
+        t: 'select',
+        key: 'kind',
+        label: 'Вид',
+        options: [
+          ['grow', 'Увеличение'],
+          ['shrink', 'Уменьшение'],
+          ['glow', 'Свечение'],
+          ['bounce', 'Подпрыгивание'],
+          ['vibrate', 'Вибрация телефона'],
+        ],
+      },
+    ],
   },
 ];
 
