@@ -8,7 +8,7 @@ import { useEditor, useEnv } from './context';
 const STATUS_NAMES = { DRAFT: 'Черновик', PUBLISHED: 'Опубликована', CLOSED: 'Закрыта' } as const;
 
 /** E-16 · the top bar: title, save status, undo/redo, history, preview, publish. */
-export function TopBar({ status, onStatus, onPreview, onHistory }: { status: keyof typeof STATUS_NAMES; onStatus: (s: keyof typeof STATUS_NAMES) => void; onPreview: () => void; onHistory: () => void }) {
+export function TopBar({ status, onStatus, onPreview, onHistory, onLogic }: { status: keyof typeof STATUS_NAMES; onStatus: (s: keyof typeof STATUS_NAMES) => void; onPreview: () => void; onHistory: () => void; onLogic: () => void }) {
   const { saver, projectId, store, flash } = useEnv();
   const title = useEditor((s) => s.doc.meta.title);
   const apply = useEditor((s) => s.apply);
@@ -62,6 +62,9 @@ export function TopBar({ status, onStatus, onPreview, onHistory }: { status: key
       </button>
       <button type="button" className="ed-btn" onClick={onHistory}>
         История
+      </button>
+      <button type="button" className="ed-btn" onClick={onLogic}>
+        Логика
       </button>
       <button type="button" className="ed-btn" onClick={onPreview}>
         Предпросмотр

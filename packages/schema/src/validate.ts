@@ -349,46 +349,69 @@ export function validateDocument(doc: ProjectDocument): ValidationIssue[] {
   });
 
   // ── Graph of screens (L-08) ─────────────────────────────────────────────────
-  const { edges, finishing, exits } = screenEdges(doc);
-  const last = doc.screens[doc.screens.length - 1]?.id;
-  const isFinal = (s: Screen) => s.kind === 'result' || s.id === last || finishing.has(s.id);
-
+  const graph = analyzeScreenGraph(doc);
   doc.screens.forEach((s, si) => {
-    if (!isFinal(s) && !exits.has(s.id)) {
+    if (graph.noExit.has(s.id)) {
       err('NO_EXIT', ['screens', si], `С экрана «${s.name}» нельзя уйти: добавьте кнопку перехода, таймер или автопереход`);
     }
   });
+  doc.screens.forEach((s, si) => {
+    if (graph.unreachable.has(s.id)) {
+      err('UNREACHABLE_SCREEN', ['screens', si], `Экран «${s.name}» недостижим: на него не ведёт ни один переход`);
+    }
+  });
+  for (const comp of graph.endlessLoops) {
+    const names = comp.map((id) => `«${screenName(id)}»`).join(', ');
+    err('ENDLESS_LOOP', ['screens'], `Экраны ${names} ведут только друг на друга — из этого круга нет выхода`);
+  }
 
-  const start = doc.screens[0]?.id;
+  return issues;
+}
+
+/** What the graph of screens says (L-02, L-08): where one can get from the first screen, which screens are in a loop. */
+export interface ScreenGraph {
+  /** Transitions between screens: «следующий», ветки, таймер, переходы правил. */
+  edges: Array<[from: string, to: string]>;
+  /** Screens the participant can reach from the first one (or through a result rule). */
+  reached: Set<string>;
+  unreachable: Set<string>;
+  /** Screens with no way out that are not final. */
+  noExit: Set<string>;
+  /** Screens that end the passage. */
+  finals: Set<string>;
+  /** Groups of screens that can reach only each other (no way out of the loop). */
+  endlessLoops: string[][];
+  /** Screens that are in any loop (it may have a way out). */
+  inLoop: Set<string>;
+}
+
+export function analyzeScreenGraph(doc: ProjectDocument): ScreenGraph {
+  const { edges, finishing, exits } = screenEdges(doc);
+  const last = doc.screens[doc.screens.length - 1]?.id;
+  const isFinal = (s: Screen) => s.kind === 'result' || s.id === last || finishing.has(s.id);
+  const noExit = new Set(doc.screens.filter((s) => !isFinal(s) && !exits.has(s.id)).map((s) => s.id));
   const reached = new Set<string>();
-  const resultScreens = new Set(doc.results.map((r) => r.screenId));
-  const queue = start ? [start] : [];
+  const queue = doc.screens[0] ? [doc.screens[0].id] : [];
   while (queue.length) {
     const v = queue.shift()!;
     if (reached.has(v)) continue;
     reached.add(v);
     for (const w of edges.get(v) ?? []) queue.push(w);
   }
-  doc.screens.forEach((s, si) => {
-    if (!reached.has(s.id) && !resultScreens.has(s.id)) {
-      err('UNREACHABLE_SCREEN', ['screens', si], `Экран «${s.name}» недостижим: на него не ведёт ни один переход`);
-    }
-  });
-
+  const resultScreens = new Set(doc.results.map((r) => r.screenId));
+  const unreachable = new Set(doc.screens.filter((s) => !reached.has(s.id) && !resultScreens.has(s.id)).map((s) => s.id));
   const finals = new Set(doc.screens.filter(isFinal).map((s) => s.id));
+  const endlessLoops: string[][] = [];
+  const inLoop = new Set<string>();
   for (const comp of stronglyConnected([...reached], edges)) {
     const set = new Set(comp);
     const looped = comp.length > 1 || (edges.get(comp[0]!)?.has(comp[0]!) ?? false);
     if (!looped) continue;
+    comp.forEach((v) => inLoop.add(v));
     const leaves = comp.some((v) => [...(edges.get(v) ?? [])].some((w) => !set.has(w)));
-    const ends = comp.some((v) => finals.has(v));
-    if (!leaves && !ends) {
-      const names = comp.map((id) => `«${screenName(id)}»`).join(', ');
-      err('ENDLESS_LOOP', ['screens'], `Экраны ${names} ведут только друг на друга — из этого круга нет выхода`);
-    }
+    if (!leaves && !comp.some((v) => finals.has(v))) endlessLoops.push(comp);
   }
-
-  return issues;
+  return { edges: [...edges].flatMap(([from, tos]) => [...tos].map((to) => [from, to] as [string, string])), reached, unreachable, noExit, finals, endlessLoops, inLoop };
 }
 
 /** A block that shows nothing: no text, no media fill or media props, no children. */

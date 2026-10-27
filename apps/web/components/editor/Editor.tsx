@@ -17,6 +17,7 @@ import { EditorProvider, type EditorEnv } from './context';
 import { HistoryDialog } from './HistoryDialog';
 import { Inspector } from './Inspector';
 import { LeftPanel } from './LeftPanel';
+import { LogicDialog } from './LogicDialog';
 import { PreviewDialog } from './PreviewDialog';
 import { TopBar } from './TopBar';
 
@@ -32,7 +33,7 @@ export function Editor({ projectId }: { projectId: string }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [status, setStatus] = useState<Loaded['status']>('DRAFT');
-  const [dialog, setDialog] = useState<'preview' | 'history' | null>(null);
+  const [dialog, setDialog] = useState<'preview' | 'history' | 'logic' | null>(null);
   const [message, setMessage] = useState<{ text: string; kind: 'ok' | 'error' } | null>(null);
   const suppress = useRef(false);
 
@@ -227,14 +228,14 @@ export function Editor({ projectId }: { projectId: string }) {
   return (
     <EditorProvider value={env}>
       <div className="ed-root" data-testid="editor">
-        <TopBar status={status} onStatus={setStatus} onPreview={() => setDialog('preview')} onHistory={() => setDialog('history')} />
+        <TopBar status={status} onStatus={setStatus} onPreview={() => setDialog('preview')} onHistory={() => setDialog('history')} onLogic={() => setDialog('logic')} />
         <Body message={message} dialog={dialog} setDialog={setDialog} saver={env.saver} store={env.store} />
       </div>
     </EditorProvider>
   );
 }
 
-function Body({ message, dialog, setDialog, saver, store }: { message: { text: string; kind: 'ok' | 'error' } | null; dialog: 'preview' | 'history' | null; setDialog: (d: 'preview' | 'history' | null) => void; saver: Saver; store: EditorStore }) {
+function Body({ message, dialog, setDialog, saver, store }: { message: { text: string; kind: 'ok' | 'error' } | null; dialog: 'preview' | 'history' | 'logic' | null; setDialog: (d: 'preview' | 'history' | 'logic' | null) => void; saver: Saver; store: EditorStore }) {
   const save = useSyncExternalStore(saver.subscribe, () => saver.state, () => saver.state);
   const doc = useSyncExternalStore(store.subscribe, () => store.getState().doc, () => store.getState().doc);
   return (
@@ -251,6 +252,7 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
       </div>
       {save.status === 'conflict' && <ConflictDialog />}
       {dialog === 'history' && <HistoryDialog onClose={() => setDialog(null)} />}
+      {dialog === 'logic' && <LogicDialog onClose={() => setDialog(null)} />}
       {dialog === 'preview' && <PreviewDialog doc={doc} onClose={() => setDialog(null)} />}
     </>
   );
