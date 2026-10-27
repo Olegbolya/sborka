@@ -1,5 +1,6 @@
 'use client';
 
+import { outHref } from '../../../lib/play/out';
 import { createRuntime } from '@blokum/engine';
 import { Artboard, BlockView, DEV_THEMES, PlayerScreen, RuntimeStore, SoundManager, u } from '@blokum/renderer';
 import { BLOCK_STATES } from '@blokum/schema';
@@ -25,7 +26,7 @@ export function DevRenderGallery({ theme, sections }: { theme: 'light' | 'dark';
   const tokens = DEV_THEMES[theme];
   const [sound] = useState(() => new SoundManager(devMedia));
   return (
-    <Artboard mode="player" tokens={tokens} media={devMedia} sound={sound} consentUrl="#tekst-soglasiya" variables={{ 'zhizni-galerei': 3 }} linkHref={(url) => `/out?url=${encodeURIComponent(url)}`}>
+    <Artboard mode="player" tokens={tokens} media={devMedia} sound={sound} consentUrl="#tekst-soglasiya" variables={{ 'zhizni-galerei': 3 }} linkHref={outHref}>
       <div style={{ color: tokens.colors.text, fontFamily: 'system-ui, sans-serif' }}>
         <h1 style={{ ...heading, fontSize: u(24) }}>Галерея блоков</h1>
         {sections.map((section, i) => (

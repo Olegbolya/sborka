@@ -3,7 +3,8 @@ dist/
 dist.prev/
 .next/
 .next.prev/
-out/
+/out/
+/apps/*/out/
 build/
 coverage/
 .turbo/

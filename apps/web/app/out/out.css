@@ -1,0 +1,50 @@
+.out {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 48px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.out h1 {
+  font-size: 24px;
+  margin: 0;
+}
+.out p {
+  margin: 0;
+  line-height: 1.5;
+}
+.out-host {
+  font-weight: 700;
+  font-size: 20px;
+}
+.out-url {
+  word-break: break-all;
+  color: #5a554c;
+  font-size: 14px;
+}
+.out-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.out-go,
+.out-back {
+  padding: 12px 18px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+.out-go {
+  background: #e4572e;
+  color: #fff;
+  border: 0;
+}
+.out-back {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
