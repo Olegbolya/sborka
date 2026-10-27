@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { bigint, boolean, check, index, integer, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
-import { createdAt, id, ts } from './columns.js';
+import { createdAt, id, ts, updatedAt } from './columns.js';
 import { assetLicense, libraryKind, mediaKind, mediaStatus } from './enums.js';
 import { users } from './users.js';
 
@@ -42,8 +42,11 @@ export const themes = pgTable(
     tokens: jsonb('tokens').$type<Record<string, unknown>>().notNull(),
     coverMediaId: text('cover_media_id').references(() => media.id, { onDelete: 'set null' }),
     isSystem: boolean('is_system').notNull().default(false),
+    /** TH-03: the theme new projects of the owner start with (at most one per owner). */
+    isDefault: boolean('is_default').notNull().default(false),
     publishedAt: ts('published_at'),
     createdAt: createdAt(),
+    updatedAt: updatedAt(),
     deletedAt: ts('deleted_at'),
   },
   (t) => [index('themes_owner_idx').on(t.ownerId), index('themes_system_idx').on(t.isSystem, t.publishedAt)],

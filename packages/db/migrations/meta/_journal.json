@@ -43,6 +43,13 @@
       "when": 1793001022054,
       "tag": "0005_normal_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793108218836,
+      "tag": "0006_smiling_power_pack",
+      "breakpoints": true
     }
   ]
 }

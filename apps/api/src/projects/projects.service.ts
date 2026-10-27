@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { createDocument, createId, createSlug, type ProjectDocument, walkBlocks } from '@blokum/schema';
+import { createDocument, createId, createSlug, type ProjectDocument, ThemeTokens, walkBlocks } from '@blokum/schema';
 import { Inject } from '@nestjs/common';
 import { DB } from '../tokens.js';
 
@@ -71,6 +71,15 @@ export class ProjectsService {
     const projectId = createId();
     const slug = createSlug();
     const doc = createDocument({ title });
+    // TH-03: a project starts with the theme its owner made the default.
+    const [theme] = await this.db
+      .select({ id: schema.themes.id, tokens: schema.themes.tokens })
+      .from(schema.themes)
+      .where(and(eq(schema.themes.ownerId, userId), eq(schema.themes.isDefault, true), isNull(schema.themes.deletedAt)));
+    if (theme) {
+      const tokens = ThemeTokens.safeParse(theme.tokens);
+      if (tokens.success) doc.theme = { themeId: theme.id, tokens: tokens.data };
+    }
     const docJson = doc as unknown as schema.ProjectDocumentJson;
     const versionId = createId();
 
