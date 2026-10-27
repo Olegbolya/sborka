@@ -165,4 +165,86 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
     await expect(alert).toContainText('нельзя опубликовать');
     await expect(alert).toContainText('«Логика» → «Проверка»');
   });
+
+  test('PL-08 · пароль: без него содержимого нет, неверный отклоняется, верный открывает; вкладка помнит допуск', async ({ page, browser }, info) => {
+    const { id, slug } = await published(page);
+    await patch(page, `/projects/${id}/access-settings`, { password: 'sekret-1' });
+    const base = info.project.use.baseURL!;
+    const html = await (await page.request.get(`${base}/s/${slug}`, { headers: { cookie: '' } })).text();
+    expect(html).not.toContain('Привет, участник');
+    const { ctx, page: p } = await participant(browser, base);
+    await p.goto(`/s/${slug}`);
+    await expect(p.getByTestId('play-state')).toContainText('Нужен пароль');
+    await p.getByLabel('Пароль', { exact: true }).fill('неверный');
+    await p.getByRole('button', { name: 'Открыть' }).click();
+    await expect(p.locator('.pl-error')).toContainText('Неверный пароль');
+    await p.getByLabel('Пароль', { exact: true }).fill('sekret-1');
+    await p.getByRole('button', { name: 'Открыть' }).click();
+    await expect(p.getByText('Привет, участник')).toBeVisible();
+    await p.reload();
+    await expect(p.getByText('Привет, участник')).toBeVisible();
+    await ctx.close();
+  });
+
+  test('PL-09 · «18+»: до подтверждения содержимого нет; «Мне нет 18» закрывает доступ, «Мне есть 18» открывает', async ({ page, browser }, info) => {
+    const { id, slug } = await published(page);
+    await patch(page, `/projects/${id}/access-settings`, { age18: true });
+    const base = info.project.use.baseURL!;
+    expect(await (await page.request.get(`${base}/s/${slug}`, { headers: { cookie: '' } })).text()).not.toContain('Привет, участник');
+    const { ctx, page: p } = await participant(browser, base);
+    await p.goto(`/s/${slug}`);
+    await expect(p.getByTestId('play-state')).toContainText('Вам есть 18 лет?');
+    mkdirSync('e2e/__screenshots__', { recursive: true });
+    await p.screenshot({ path: `e2e/__screenshots__/play-gate-${info.project.name}.png` });
+    await p.getByRole('button', { name: 'Мне нет 18' }).click();
+    await expect(p.getByText('Доступ закрыт.')).toBeVisible();
+    await p.reload();
+    await p.getByRole('button', { name: 'Мне есть 18' }).click();
+    await expect(p.getByText('Привет, участник')).toBeVisible();
+    await ctx.close();
+  });
+
+  test('PL-06 · лимит начатых: первый проходит, следующий видит «Сборка закрыта» с текстом создателя', async ({ page, browser }, info) => {
+    const { id, slug } = await published(page);
+    await patch(page, `/projects/${id}/access-settings`, { maxStarts: 1, closedText: 'Места закончились' });
+    const base = info.project.use.baseURL!;
+    const first = await participant(browser, base);
+    await first.page.goto(`/s/${slug}`);
+    await expect(first.page.getByText('Привет, участник')).toBeVisible();
+    await expect.poll(async () => ((await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { starts: number }).starts).toBe(1);
+    const second = await participant(browser, base);
+    await second.page.goto(`/s/${slug}`);
+    await expect(second.page.getByTestId('play-state')).toContainText('Места закончились');
+    await first.ctx.close();
+    await second.ctx.close();
+  });
+
+  test('PL-10 · одна попытка: повторный заход с того же устройства — «Вы уже проходили»', async ({ page, browser }, info) => {
+    const { id, slug } = await published(page);
+    await patch(page, `/projects/${id}/access-settings`, { singleAttempt: true });
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.goto(`/s/${slug}`);
+    await expect(p.getByText('Привет, участник')).toBeVisible();
+    await expect.poll(async () => ((await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { starts: number }).starts).toBe(1);
+    await p.reload();
+    await expect(p.getByTestId('play-state')).toContainText('Вы уже проходили');
+    const other = await participant(browser, info.project.use.baseURL!);
+    await other.page.goto(`/s/${slug}`);
+    await expect(other.page.getByText('Привет, участник')).toBeVisible();
+    await ctx.close();
+    await other.ctx.close();
+  });
+
+  test('PL-07 · месячный лимит тарифа: после 100 прохождений новый участник видит «Временно недоступно»', async ({ page, browser }, info) => {
+    test.setTimeout(120_000);
+    const { id, slug } = await published(page);
+    for (let batch = 0; batch < 5; batch++) {
+      const results = await Promise.all(Array.from({ length: 20 }, () => post(page, `/play/${id}/sessions`, {})));
+      expect(results.every((r) => r.status() === 201)).toBe(true);
+    }
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.goto(`/s/${slug}`);
+    await expect(p.getByTestId('play-state')).toContainText('Временно недоступно');
+    await ctx.close();
+  });
 });

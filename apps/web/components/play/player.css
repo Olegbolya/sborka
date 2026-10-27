@@ -38,3 +38,40 @@
   cursor: pointer;
   z-index: 20;
 }
+.pl-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.pl-form input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgb(0 0 0 / 0.3);
+  background: rgb(255 255 255 / 0.9);
+  color: #1d1b18;
+  font: inherit;
+}
+.pl-form button {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 0;
+  background: #e4572e;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pl-form button.secondary {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
+.pl-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.pl-error {
+  margin: 0;
+  color: #b3261e;
+}

@@ -9,7 +9,8 @@ export const FREE_LIMITS = {
   videoDurationMs: 60_000,               // 60 с
   audioMaxBytes: 5 * 1024 * 1024,        // 5 МБ / аудио (не указано → берём фото-лимит)
   lottieMaxBytes: 5 * 1024 * 1024,       // 5 МБ (TS-25)
-  themes: 2,                             // свои темы (TH-02, TH-03)
+  themes: 2,
+  passesPerMonth: 100,                   // прохождений в месяц на аккаунт (PL-07)                             // свои темы (TH-02, TH-03)
 } as const;
 
 export class QuotaError extends Error {

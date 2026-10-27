@@ -18,12 +18,16 @@ interface ProjectDetail {
 }
 
 interface ProjectSettings {
-  maxCompletions?: number;
-  scheduledOpenAt?: string;
-  scheduledCloseAt?: string;
+  maxStarts?: number | null;
+  maxCompletions?: number | null;
+  scheduledOpenAt?: string | null;
+  scheduledCloseAt?: string | null;
+  /** What is typed to set a new password (`''` removes it); the server keeps only a hash and says `hasPassword`. */
   password?: string;
-  singleAttempt?: boolean;
-  closedText?: string;
+  hasPassword?: boolean;
+  age18?: boolean | null;
+  singleAttempt?: boolean | null;
+  closedText?: string | null;
 }
 
 interface ResponseSummary {
@@ -451,6 +455,7 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
   const [settings, setSettings] = useState<ProjectSettings>(initialSettings);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
 
   async function save() {
     setSaving(true);
@@ -458,9 +463,11 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
     try {
       const updated = await apiFetch<ProjectSettings>(`/projects/${projectId}/access-settings`, {
         method: 'PATCH', headers: CSRF,
-        body: JSON.stringify(settings),
+        // The password goes only when it was typed (or cleared): the page never has the saved one.
+        body: JSON.stringify(passwordTouched ? settings : { ...settings, password: undefined }),
       });
       setSettings(updated);
+      setPasswordTouched(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) { setError((e as Error).message); }
@@ -474,7 +481,22 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
   return (
     <div style={s.form}>
       <div>
-        <label style={s.label} htmlFor="maxCompletions">Максимум прохождений</label>
+        <label style={s.label} htmlFor="maxStarts">Максимум начатых прохождений</label>
+        <input
+          id="maxStarts"
+          type="number"
+          min={1}
+          style={s.inputFull}
+          placeholder="Без ограничений"
+          value={settings.maxStarts ?? ''}
+          onChange={(e) => update('maxStarts', e.target.value ? Number(e.target.value) : null)}
+          aria-label="Максимум начатых прохождений"
+        />
+        <p style={s.hint}>Когда начато столько прохождений, новые не принимаются — участники увидят «Сборка закрыта»</p>
+      </div>
+
+      <div>
+        <label style={s.label} htmlFor="maxCompletions">Максимум завершённых прохождений</label>
         <input
           id="maxCompletions"
           type="number"
@@ -482,10 +504,10 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           style={s.inputFull}
           placeholder="Без ограничений"
           value={settings.maxCompletions ?? ''}
-          onChange={(e) => update('maxCompletions', e.target.value ? Number(e.target.value) : undefined)}
-          aria-label="Максимум прохождений"
+          onChange={(e) => update('maxCompletions', e.target.value ? Number(e.target.value) : null)}
+          aria-label="Максимум завершённых прохождений"
         />
-        <p style={s.hint}>Сборка автоматически закроется при достижении лимита</p>
+        <p style={s.hint}>Незавершённые прохождения занимают место, пока человек проходит (до суток без действий), поэтому завершённых не будет больше лимита</p>
       </div>
 
       <div>
@@ -495,7 +517,7 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           type="datetime-local"
           style={s.inputFull}
           value={settings.scheduledOpenAt ? settings.scheduledOpenAt.slice(0, 16) : ''}
-          onChange={(e) => update('scheduledOpenAt', e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+          onChange={(e) => update('scheduledOpenAt', e.target.value ? new Date(e.target.value).toISOString() : null)}
           aria-label="Дата и время открытия"
         />
       </div>
@@ -507,7 +529,7 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           type="datetime-local"
           style={s.inputFull}
           value={settings.scheduledCloseAt ? settings.scheduledCloseAt.slice(0, 16) : ''}
-          onChange={(e) => update('scheduledCloseAt', e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+          onChange={(e) => update('scheduledCloseAt', e.target.value ? new Date(e.target.value).toISOString() : null)}
           aria-label="Дата и время закрытия"
         />
       </div>
@@ -516,13 +538,39 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
         <label style={s.label} htmlFor="password">Пароль для входа</label>
         <input
           id="password"
-          type="text"
+          type="password"
+          autoComplete="new-password"
           style={s.inputFull}
-          placeholder="Без пароля"
+          placeholder={settings.hasPassword ? 'Пароль задан — введите новый, чтобы заменить' : 'Без пароля'}
           value={settings.password ?? ''}
-          onChange={(e) => update('password', e.target.value || undefined)}
+          onChange={(e) => {
+            setPasswordTouched(true);
+            update('password', e.target.value);
+          }}
           aria-label="Пароль для входа"
         />
+        {settings.hasPassword && (
+          <p style={s.hint}>
+            Пароль задан.{' '}
+            <button type="button" style={{ ...s.btnSecondary, padding: '2px 8px' }} onClick={() => { setPasswordTouched(true); update('password', ''); }}>
+              Убрать пароль
+            </button>{' '}
+            Сохранить настройки, чтобы применить. Не используйте здесь пароль от других сервисов.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+          <input
+            type="checkbox"
+            checked={settings.age18 ?? false}
+            onChange={(e) => update('age18', e.target.checked)}
+            aria-label="Вопрос про возраст 18+"
+          />
+          Спрашивать «Вам есть 18 лет?» перед началом
+        </label>
+        <p style={s.hint}>До подтверждения участник не видит содержимое</p>
       </div>
 
       <div>
@@ -530,7 +578,7 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           <input
             type="checkbox"
             checked={settings.singleAttempt ?? false}
-            onChange={(e) => update('singleAttempt', e.target.checked || undefined)}
+            onChange={(e) => update('singleAttempt', e.target.checked)}
             aria-label="Одна попытка"
           />
           Одна попытка на участника
@@ -545,7 +593,7 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           style={s.textarea}
           placeholder="Сборка временно недоступна"
           value={settings.closedText ?? ''}
-          onChange={(e) => update('closedText', e.target.value || undefined)}
+          onChange={(e) => update('closedText', e.target.value || null)}
           aria-label="Текст экрана закрыто"
         />
       </div>

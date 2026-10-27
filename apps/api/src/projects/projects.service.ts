@@ -11,12 +11,22 @@ import { type Db, schema } from '@blokum/db';
 import { createDocument, createId, createSlug, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
 import { Inject } from '@nestjs/common';
 import { DB } from '../tokens.js';
+import { hashPassword } from '../play/secrets.js';
 
 export interface ProjectSettings {
+  /** PL-06 · at most so many started and/or completed passages. */
+  maxStarts?: number;
   maxCompletions?: number;
-  scheduledOpenAt?: string;
-  scheduledCloseAt?: string;
+  scheduledOpenAt?: string | null;
+  scheduledCloseAt?: string | null;
+  /** PL-08 · the password is kept only as a hash (`passwordHash`); the plain text is never stored or returned. */
+  passwordHash?: string;
+  /** What the cabinet sends to set (`string`) or remove (`''`) the password; never stored. */
   password?: string;
+  hasPassword?: boolean;
+  /** PL-09 · the screen «Вам есть 18 лет?» before the first screen. */
+  age18?: boolean;
+  /** PL-10 · one passage per device. */
   singleAttempt?: boolean;
   closedText?: string;
 }
@@ -207,7 +217,7 @@ export class ProjectsService {
       document: row.document ? (row.document as unknown as ProjectDocument) : null,
       draftVersionId: row.draftVersionId ?? null,
       draftVersionNumber: row.versionNumber ?? null,
-      settings: (row.settings ?? {}) as unknown as ProjectSettings,
+      settings: this.forOwner((row.settings ?? {})),
       starts,
       completions,
       updatedAt: row.updatedAt,
@@ -427,19 +437,39 @@ export class ProjectsService {
     };
   }
 
+  /** The settings as the cabinet sees them: the password hash is replaced by the sign that there is a password. */
+  private forOwner(settings: ProjectSettings): ProjectSettings {
+    const { passwordHash, password: _password, ...rest } = settings;
+    return passwordHash ? { ...rest, hasPassword: true } : rest;
+  }
+
   async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings> {
     const row = await this.assertOwner(userId, projectId);
-    return (row.settings ?? {});
+    return this.forOwner((row.settings ?? {}));
   }
 
   async updateAccessSettings(userId: string, projectId: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings> {
     const row = await this.assertOwner(userId, projectId);
-    const merged: ProjectSettings = { ...((row.settings ?? {}) as unknown as ProjectSettings), ...settings };
+    const { password, hasPassword: _has, passwordHash: _hash, ...incoming } = settings;
+    const merged: ProjectSettings = { ...((row.settings ?? {}) as ProjectSettings), ...incoming };
+    for (const key of ['maxStarts', 'maxCompletions'] as const) {
+      const v = merged[key];
+      if (v !== undefined && v !== null && (!Number.isInteger(v) || v < 1 || v > 10_000_000)) {
+        throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Лимит — целое число от 1.' } });
+      }
+    }
+    // PL-08: a new password replaces the hash, an empty one removes it.
+    if (typeof password === 'string') {
+      if (password === '') delete merged.passwordHash;
+      else if (password.length < 4 || password.length > 100) throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Пароль — от 4 до 100 знаков.' } });
+      else merged.passwordHash = await hashPassword(password);
+    }
+    delete merged.password;
     await this.db
       .update(schema.projects)
       .set({ settings: merged as Record<string, unknown> })
       .where(eq(schema.projects.id, projectId));
-    return merged;
+    return this.forOwner(merged);
   }
 
   private async assertOwner(userId: string, projectId: string) {

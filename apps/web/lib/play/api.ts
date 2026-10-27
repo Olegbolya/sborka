@@ -13,15 +13,19 @@ export interface PlayOpen {
   indexable: boolean;
   document: PublicDocument;
   media: Record<string, { kind: string; mime: string }>;
+  /** The proof of the password (PL-08). */
+  unlock?: string;
 }
 
 export interface PlayBlocked {
-  state: 'not_open' | 'closed';
+  state: 'not_open' | 'closed' | 'password' | 'age18';
   slug: string;
+  projectId: string;
   title: string;
   text: string;
   opensAt?: string;
   theme: ThemeTokens;
+  unlock?: string;
 }
 
 export type PlayView = PlayOpen | PlayBlocked;
