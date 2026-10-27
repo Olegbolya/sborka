@@ -35,6 +35,8 @@ export type Field =
   | { t: 'choiceOptions'; key: string }
   /** One of the screens of the document. */
   | { t: 'screen'; key: string; label: string }
+  /** One of the transition presets of the theme (T-32). */
+  | { t: 'transitionPreset'; key: string; label: string }
   /** A list of items with their own fields (gradient stops, fill layers, shadows). */
   | { t: 'list'; key: string; label: string; min: number; max: number; make: () => unknown; item: Field[] }
   /** A list of numbers (a dash pattern). */

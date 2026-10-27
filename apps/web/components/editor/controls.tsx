@@ -2,7 +2,7 @@
 import { cssColor } from '@blokum/renderer';
 import { type Color, type ThemeTokens } from '@blokum/schema';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { useEnv } from './context';
+import { useControlEnv } from './context';
 
 /** Names of the colour roles every theme has (TH-01), for the list of theme colours. */
 export const ROLE_TITLES: Record<string, string> = {
@@ -51,7 +51,7 @@ const roundTo = (n: number, step: number): number => Number(n.toFixed(precision(
  * history. `value` is null when the selected blocks differ («смешанно»).
  */
 export function NumberInput({ control, label, value, onChange, min, max, step = 1, suffix, scale = 1 }: { control: string; label: string; value: number | null; onChange: (n: number) => void; min?: number; max?: number; step?: number; suffix?: string; scale?: number }) {
-  const { store } = useEnv();
+  const { store } = useControlEnv();
   const shown = value === null ? '' : String(roundTo(value * scale, step));
   // What is typed is shown while it still means the stored number («5.», «05», a lone «-»); otherwise the stored value
   // (after undo, after another block is picked): there is no frame in which the field shows an old number.

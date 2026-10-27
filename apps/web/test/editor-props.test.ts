@@ -164,7 +164,7 @@ describe('E-13, L-06 · свойства экрана', () => {
   it('T-01 · для каждого вида перехода в панели есть вариант, и его значение по умолчанию допустимо', () => {
     const variant = SCREEN_SECTIONS.find((s) => s.id === 'transition')!.fields[0]!;
     if (variant.t !== 'variant') throw new Error('Ожидался выбор вида перехода');
-    expect(Object.keys(variant.variants).sort()).toEqual([...TRANSITION_KINDS, 'media'].sort());
+    expect(Object.keys(variant.variants).sort()).toEqual([...TRANSITION_KINDS, 'media', 'preset'].sort());
     for (const [kind, v] of Object.entries(variant.variants)) {
       const t = screenOf();
       t.store.getState().apply(setScreenProps(t.id, (p) => ({ ...p, transitionIn: v.make() })), { label: 'x' });

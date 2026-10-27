@@ -96,6 +96,21 @@ export function ScreenField({ control, label, value, onChange }: { control: stri
   );
 }
 
+/** T-32 · one of the transition presets of the theme of the document. */
+export function TransitionPresetField({ control, label, value, onChange }: { control: string; label: string; value: string | null; onChange: (id: string) => void }) {
+  const presets = useEditor((s) => s.doc.theme.tokens.transitions);
+  const known = value !== null && presets.some((p) => p.id === value);
+  return (
+    <SelectInput<string>
+      control={control}
+      label={label}
+      value={known ? value : NONE}
+      options={[[NONE, presets.length === 0 ? 'В теме нет своих переходов' : 'Выберите переход'], ...presets.map((p) => [p.id, p.name] as const)]}
+      onChange={(v) => v !== NONE && onChange(v)}
+    />
+  );
+}
+
 /** B-11, B-12 · the options of a question: text, right answer, score, result tags, order. */
 export function OptionsEditor({ ids }: { ids: readonly string[] }) {
   const apply = useEditor((s) => s.apply);

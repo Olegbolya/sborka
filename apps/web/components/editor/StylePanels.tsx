@@ -18,7 +18,7 @@ import { ANIMATION_SPEC, EDGES, type Field, GROUP_SPECS, MEDIA_TYPES } from '../
 import { ColorInput, NumberInput, Section, SelectInput, SliderInput, TextInput, Toggle } from './controls';
 import { useEditor } from './context';
 import { MediaField } from './MediaPicker';
-import { OptionsEditor, ScreenField, VariableField } from './PropsFields';
+import { OptionsEditor, ScreenField, TransitionPresetField, VariableField } from './PropsFields';
 
 /** The object (or value) one level of the tree stands for, in every selected block, and how to change it in all of them. */
 export interface Level {
@@ -202,6 +202,8 @@ export function FieldView({ field, level, prefix }: { field: Field; level: Level
       );
     case 'screen':
       return <ScreenField control={id} label={field.label} value={typeof shared === 'string' ? shared : null} onChange={(v) => here.write(() => v)} />;
+    case 'transitionPreset':
+      return <TransitionPresetField control={id} label={field.label} value={typeof shared === 'string' ? shared : null} onChange={(v) => here.write(() => v)} />;
     case 'choiceOptions':
       return <OptionsEditor ids={level.ids ?? []} />;
     case 'edges': {
@@ -408,7 +410,7 @@ export function groupsFor(block: Pick<Block, 'type' | 'children'>): StyleGroup[]
   });
 }
 
-const GLOW_DEFAULT = { color: { token: 'accent', alpha: 1 }, size: 16 };
+export const GLOW_DEFAULT = { color: { token: 'accent', alpha: 1 }, size: 16 };
 
 /** One style group as a section of the panel. */
 function GroupSection({ group, blocks, state }: { group: StyleGroup; blocks: Block[]; state: BlockState | null }) {

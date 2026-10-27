@@ -39,7 +39,7 @@ export function themeColorsFromPalette(extracted: string[]): Record<string, stri
   const others = palette.filter((c) => c !== pickedBg);
   const bestText = [...others].sort((a, b) => contrastRatio(b, background) - contrastRatio(a, background))[0];
   const fallbackText = dark ? '#F5F3EE' : '#1D1B18';
-  const text = bestText && contrastRatio(bestText, background) >= 7 ? bestText : withContrast(bestText ?? fallbackText, background, 7);
+  const text = withContrast(withContrast(bestText ?? fallbackText, background, 7), surface, 4.5);
 
   const vivid = (c: string) => toHsl(c).s * (1 - Math.abs(toHsl(c).l - 0.5));
   const ranked = [...others].sort((a, b) => vivid(b) - vivid(a));
@@ -50,7 +50,7 @@ export function themeColorsFromPalette(extracted: string[]): Record<string, stri
   };
   const accentSource = ranked.find((c) => c !== ranked[0] && hueGap(c) >= 30) ?? fromHsl(toHsl(primary).h + 150, 0.6, 0.45);
   const accent = withContrast(accentSource, background, 3);
-  const muted = withContrast(mixHex(text, background, 0.45), background, 4.5);
+  const muted = withContrast(withContrast(mixHex(text, background, 0.45), background, 4.5), surface, 4.5);
 
   const colors: Record<string, string> = {
     background,

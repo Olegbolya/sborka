@@ -46,6 +46,9 @@ const basicTransition = (kind: (typeof TRANSITION_KINDS)[number]) => ({
         ] satisfies Field[]),
 });
 
+/** The built-in transitions as the variants of a choice (T-01…T-08); a theme keeps its own presets of them (T-32). */
+export const BASIC_TRANSITIONS: Record<string, { title: string; make: () => unknown; fields: Field[] }> = Object.fromEntries(TRANSITION_KINDS.map((k) => [k, basicTransition(k)]));
+
 const MEDIA_TRANSITION = {
   title: 'Вставка из медиатеки',
   make: () => ({ kind: 'media', overlay: { media: { source: 'media', id: 'media_unset' }, seconds: 1.5, skippable: true } }),
@@ -87,6 +90,36 @@ const PARTICLE_TITLES: ReadonlyArray<readonly [ParticlesConfig['preset'], string
   ['custom', 'Свои картинки'],
 ];
 
+/** P-01…P-08 · particles over a screen or behind every screen of a theme. */
+export const PARTICLES_FIELD: Field = {
+  t: 'optional',
+  key: 'particles',
+  label: 'Частицы на экране',
+  make: () => ({ preset: 'snow', images: [], density: 0.5, speed: 1, size: 1, rotation: true, wind: 0, onlyAtStart: false }),
+  fields: [
+    { t: 'select', key: 'preset', label: 'Какие', options: PARTICLE_TITLES },
+    { t: 'list', key: 'images', label: 'Свои картинки', min: 0, max: 5, make: () => ({ source: 'media', id: 'media_unset' }), item: [{ t: 'media', key: '', label: 'Картинка', kinds: ['IMAGE'] }] },
+    { t: 'num', key: 'density', label: 'Густота', min: 0, max: 1, step: 5, scale: 100, suffix: '%', slider: true },
+    { t: 'num', key: 'speed', label: 'Скорость', min: 0.1, max: 5, step: 0.1 },
+    { t: 'num', key: 'size', label: 'Размер', min: 0.2, max: 5, step: 0.1 },
+    { t: 'bool', key: 'rotation', label: 'Вращаются' },
+    { t: 'num', key: 'wind', label: 'Ветер', min: -1, max: 1, step: 0.1 },
+    { t: 'bool', key: 'onlyAtStart', label: 'Только при входе на экран' },
+    {
+      t: 'optional',
+      key: 'area',
+      label: 'Только в части экрана',
+      make: () => ({ x: 0, y: 0, w: 390, h: 400 }),
+      fields: [
+        { t: 'num', key: 'x', label: 'Область: X', min: -10000, max: 10000, step: 1 },
+        { t: 'num', key: 'y', label: 'Область: Y', min: -10000, max: 10000, step: 1 },
+        { t: 'num', key: 'w', label: 'Область: ширина', min: 0, max: 10000, step: 1 },
+        { t: 'num', key: 'h', label: 'Область: высота', min: 0, max: 10000, step: 1 },
+      ],
+    },
+  ],
+};
+
 const BRANCH_TARGET: Field = {
   t: 'variant',
   key: 'onExpire',
@@ -109,40 +142,7 @@ export const SCREEN_SECTIONS: ScreenSection[] = [
     ],
   },
   { id: 'background', title: 'Фон', fields: [{ ...GROUP_SPECS.fills.fields[0]!, key: 'background', label: 'Слои фона' } as Field] },
-  {
-    id: 'particles',
-    title: 'Частицы',
-    fields: [
-      {
-        t: 'optional',
-        key: 'particles',
-        label: 'Частицы на экране',
-        make: () => ({ preset: 'snow', images: [], density: 0.5, speed: 1, size: 1, rotation: true, wind: 0, onlyAtStart: false }),
-        fields: [
-          { t: 'select', key: 'preset', label: 'Какие', options: PARTICLE_TITLES },
-          { t: 'list', key: 'images', label: 'Свои картинки', min: 0, max: 5, make: () => ({ source: 'media', id: 'media_unset' }), item: [{ t: 'media', key: '', label: 'Картинка', kinds: ['IMAGE'] }] },
-          { t: 'num', key: 'density', label: 'Густота', min: 0, max: 1, step: 5, scale: 100, suffix: '%', slider: true },
-          { t: 'num', key: 'speed', label: 'Скорость', min: 0.1, max: 5, step: 0.1 },
-          { t: 'num', key: 'size', label: 'Размер', min: 0.2, max: 5, step: 0.1 },
-          { t: 'bool', key: 'rotation', label: 'Вращаются' },
-          { t: 'num', key: 'wind', label: 'Ветер', min: -1, max: 1, step: 0.1 },
-          { t: 'bool', key: 'onlyAtStart', label: 'Только при входе на экран' },
-          {
-            t: 'optional',
-            key: 'area',
-            label: 'Только в части экрана',
-            make: () => ({ x: 0, y: 0, w: 390, h: 400 }),
-            fields: [
-              { t: 'num', key: 'x', label: 'Область: X', min: -10000, max: 10000, step: 1 },
-              { t: 'num', key: 'y', label: 'Область: Y', min: -10000, max: 10000, step: 1 },
-              { t: 'num', key: 'w', label: 'Область: ширина', min: 0, max: 10000, step: 1 },
-              { t: 'num', key: 'h', label: 'Область: высота', min: 0, max: 10000, step: 1 },
-            ],
-          },
-        ],
-      },
-    ],
-  },
+  { id: 'particles', title: 'Частицы', fields: [PARTICLES_FIELD] },
   {
     id: 'transition',
     title: 'Переход на этот экран',
@@ -151,7 +151,11 @@ export const SCREEN_SECTIONS: ScreenSection[] = [
         t: 'variant',
         key: 'transitionIn',
         label: 'Переход',
-        variants: { ...Object.fromEntries(TRANSITION_KINDS.map((k) => [k, basicTransition(k)])), media: MEDIA_TRANSITION },
+        variants: {
+          ...BASIC_TRANSITIONS,
+          media: MEDIA_TRANSITION,
+          preset: { title: 'Из темы', make: () => ({ kind: 'preset', presetId: 'preset_unset' }), fields: [{ t: 'transitionPreset', key: 'presetId', label: 'Переход из темы' }] },
+        },
       },
     ],
   },

@@ -6,6 +6,7 @@ import {
   type ProjectDocument,
   type Screen,
   Screen as ScreenSchema,
+  ThemeTokens,
   createBlock,
   createId,
   createScreen,
@@ -349,3 +350,24 @@ export const setScreenProps =
     Object.assign(screen, parsed);
     for (const key of SCREEN_KEYS) if (parsed[key] === undefined) delete (screen as Record<string, unknown>)[key];
   };
+
+/**
+ * TH-01 · changes the tokens of the theme of the document (in the theme editor the document is a sample screen).
+ * `change` gets a copy; a result the schema refuses is not written.
+ */
+export const setThemeTokens =
+  (change: (tokens: ThemeTokens) => unknown): Recipe =>
+  (doc) => {
+    const next = ThemeTokens.safeParse(change(JSON.parse(JSON.stringify(doc.theme.tokens)) as ThemeTokens));
+    if (next.success) doc.theme.tokens = next.data;
+  };
+
+/** TH-03, TH-06 · puts a theme into the document: its tokens replace the copy; styles the blocks have of their own stay. */
+export const applyTheme =
+  (themeId: string | undefined, tokens: unknown): Recipe =>
+  (doc) => {
+    const next = ThemeTokens.safeParse(tokens);
+    if (!next.success) return;
+    doc.theme = themeId ? { themeId, tokens: next.data } : { tokens: next.data };
+  };
+

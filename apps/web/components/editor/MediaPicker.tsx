@@ -4,13 +4,13 @@ import { useState, useSyncExternalStore } from 'react';
 import { errorText, upload } from '../../lib/api-browser';
 import { type MediaItem, type MediaKind, mediaUrl } from '../../lib/editor/media';
 import { Dialog } from './Dialog';
-import { useEnv } from './context';
+import { useControlEnv } from './context';
 
 const KIND_TITLES: Record<MediaKind, string> = { IMAGE: 'Фото', GIF: 'GIF', VIDEO: 'Видео', AUDIO: 'Звук', LOTTIE: 'Анимация', FONT_SOURCE: 'Шрифт' };
 
 /** Files of the creator's library; a new one can be uploaded right here. */
 export function MediaPicker({ kinds, onPick, onClose }: { kinds: readonly MediaKind[]; onPick: (ref: MediaRef) => void; onClose: () => void }) {
-  const { media } = useEnv();
+  const { media } = useControlEnv();
   useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

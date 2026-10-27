@@ -141,6 +141,8 @@ export default function ProjectsPage() {
         <Link href="/account" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Аккаунт</Link>
         <span>/</span>
         <span style={{ color: 'var(--fg)' }}>Мои сборки</span>
+        <span>/</span>
+        <Link href="/app/themes" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Мои темы</Link>
       </nav>
       <h1 style={s.heading}>Мои сборки</h1>
 
