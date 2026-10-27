@@ -76,7 +76,7 @@ describe('PL-12 · очередь отправки прохождения', () =
     expect(t.calls).toHaveLength(3);
   });
 
-  it('PL-12 · очередь переживает перезагрузку: новая вкладка отправляет то, что осталось', async () => {
+  it('PL-11, PL-12 · очередь переживает перезагрузку: новая вкладка отправляет то, что осталось', async () => {
     const storage = memory();
     const offline = transport(['network']);
     const first = new PlayClient({ transport: offline, storage, instantFeedback: false, setTimer: () => 0, clearTimer: () => undefined });
