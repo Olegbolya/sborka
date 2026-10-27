@@ -334,7 +334,7 @@ describe('PL-11…PL-15 · прохождение на сервере', () => {
     expect(second / N).toBeLessThan(0.85);
   }, 60_000);
 
-  it('RN-02 · значения с устройства: переменные и «записать в ответы» хранятся с пометкой «посчитано на устройстве»', async () => {
+  it('RN-02, AC-14, VR-04 · значения с устройства: переменные и «записать в ответы» хранятся с пометкой «посчитано на устройстве»', async () => {
     const g = await game();
     const sid = await startSession(g.id);
     await open(t, 'post', `/play/sessions/${sid}/values`, { values: [{ variableId: 'ochki_var', value: 120 }, { label: 'Приз', value: 'Билет' }, { label: 'Ходы', value: 14 }], clientTs: 10_000 }).expect(200);
