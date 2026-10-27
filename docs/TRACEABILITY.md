@@ -336,11 +336,11 @@
 | E-11 | P3.1 | `apps/web/lib/editor/store.ts`, `apps/web/lib/editor/commands.ts`, `apps/web/components/editor/Editor.tsx` | `apps/web/test/editor-store.test.ts`, `e2e/editor.spec.ts` |
 | E-17 | P3.2 | `apps/web/lib/editor/saver.ts`, `apps/web/lib/editor/remote.ts`, `apps/api/src/projects/drafts.service.ts` | `apps/web/test/editor-saver.test.ts`, `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
 | E-18 | P3.2 | `apps/web/lib/editor/saver.ts`, `apps/web/components/editor/ConflictDialog.tsx`, `apps/api/src/projects/drafts.service.ts` | `apps/web/test/editor-saver.test.ts`, `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
-| E-04 | P3.3 | `apps/web/lib/editor/gestures.ts` (startMarquee), `apps/web/components/editor/Canvas.tsx` | `e2e/canvas.spec.ts` |
+| E-04 | P3.3 | `apps/web/lib/editor/gestures.ts`, `apps/web/components/editor/Canvas.tsx` | `e2e/canvas.spec.ts` |
 | E-05 | P3.3 | `apps/web/lib/editor/geometry.ts`, `apps/web/lib/editor/gestures.ts`, `apps/web/components/editor/Canvas.tsx` | `apps/web/test/editor-geometry.test.ts`, `e2e/canvas.spec.ts` |
 | E-06 | P3.3 | `apps/web/lib/editor/snap.ts`, `apps/web/lib/editor/gestures.ts` | `apps/web/test/editor-geometry.test.ts`, `e2e/canvas.spec.ts` |
-| E-07 | P3.3 | `apps/web/components/editor/Editor.tsx`, `apps/web/lib/editor/commands.ts` (moveBlocksBy) | `e2e/canvas.spec.ts` |
-| E-08 | P3.3 | `apps/web/lib/editor/clipboard.ts`, `apps/web/lib/editor/commands.ts` (duplicateBlocks) | `apps/web/test/editor-arrange.test.ts`, `e2e/canvas.spec.ts` |
+| E-07 | P3.3 | `apps/web/components/editor/Editor.tsx`, `apps/web/lib/editor/commands.ts` | `e2e/canvas.spec.ts` |
+| E-08 | P3.3 | `apps/web/lib/editor/clipboard.ts`, `apps/web/lib/editor/commands.ts` | `apps/web/test/editor-arrange.test.ts`, `e2e/canvas.spec.ts` |
 | E-09 | P3.3 | `apps/web/lib/editor/arrange.ts`, `apps/web/components/editor/Inspector.tsx`, `apps/web/components/editor/LeftPanel.tsx` | `apps/web/test/editor-arrange.test.ts`, `e2e/canvas.spec.ts` |
 | E-10 | P3.3 | `apps/web/components/editor/Canvas.tsx` | `e2e/canvas.spec.ts` |
 | S-03 | P3.4 | `apps/web/lib/editor/style-specs.ts`, `apps/web/lib/editor/style-edit.ts`, `apps/web/components/editor/StylePanels.tsx`, `apps/web/components/editor/controls.tsx` | `apps/web/test/editor-controls.test.tsx`, `apps/web/test/editor-style.test.ts`, `e2e/inspector.spec.ts` |
