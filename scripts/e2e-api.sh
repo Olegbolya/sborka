@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Starts the API for the e2e run (A-01, ADR-036): makes sure PostgreSQL is reachable, applies migrations, runs the API.
 # Locally the database comes from `scripts/dev-services.sh`; on a CI runner without a database service
-# (the E2E job has none) a throw-away `postgres:16` container is started, like the «Проверки» job does.
+# (the E2E job has none) a throw-away `postgres:16` container is started, like the «Проверки» job does. Redis, which the
+# media queue needs (uploading a file puts a job in it), is handled the same way.
 set -euo pipefail
 
 DATABASE_URL="${DATABASE_URL:-postgresql://blokum:blokum@127.0.0.1:5432/blokum_test}"
 export DATABASE_URL
 
 db_up() { (exec 3<>/dev/tcp/127.0.0.1/5432) 2>/dev/null; }
+redis_up() { (exec 3<>/dev/tcp/127.0.0.1/6379) 2>/dev/null; }
 
 if ! db_up; then
   if command -v pg_ctlcluster >/dev/null 2>&1; then
@@ -25,6 +27,28 @@ if ! db_up && command -v docker >/dev/null 2>&1; then
 fi
 if ! db_up; then
   echo "PostgreSQL недоступен на 127.0.0.1:5432 — e2e входа не может запустить API" >&2
+  exit 1
+fi
+
+if ! redis_up; then
+  if command -v redis-server >/dev/null 2>&1; then
+    redis-server --daemonize yes --port 6379 >/dev/null || true
+    for _ in $(seq 1 10); do
+      redis_up && break
+      sleep 0.5
+    done
+  fi
+  if ! redis_up && command -v docker >/dev/null 2>&1; then
+    docker rm -f blokum-e2e-redis >/dev/null 2>&1 || true
+    docker run -d --name blokum-e2e-redis -p 6379:6379 redis:7 >/dev/null
+    for _ in $(seq 1 30); do
+      redis_up && break
+      sleep 1
+    done
+  fi
+fi
+if ! redis_up; then
+  echo "Redis недоступен на 127.0.0.1:6379 — очередь медиа не заработает" >&2
   exit 1
 fi
 
