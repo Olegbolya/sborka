@@ -222,6 +222,7 @@ test.describe('E-17 · автосохранение и сеть', () => {
     await page.getByLabel('Название сборки').fill('Из очереди');
     await expect(saveStatus(page)).toHaveAttribute('data-status', 'offline');
     await page.close(); // the tab is closed while there is no network
+    await new Promise((resolve) => setTimeout(resolve, 600)); // the closing page is gone before the network comes back
     await context.setOffline(false);
 
     const again = await context.newPage();
