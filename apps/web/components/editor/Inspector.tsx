@@ -1,7 +1,8 @@
 'use client';
 import { type Block } from '@blokum/schema';
 import { useEffect, useState } from 'react';
-import { patchBlocks, renameScreen, setFrame, setScreenHeight } from '../../lib/editor/commands';
+import { type AlignMode, type OrderMode, alignBlocks, distributeBlocks, groupBlocks, orderBlocks, selectionIsGroup, ungroupBlocks } from '../../lib/editor/arrange';
+import { flipBlocks, patchBlocks, renameScreen, setFrame, setScreenHeight } from '../../lib/editor/commands';
 import { selectedBlocks } from '../../lib/editor/store';
 import { useEditor } from './context';
 
@@ -47,7 +48,63 @@ function TextField({ label, value, onChange, max }: { label: string; value: stri
   );
 }
 
-/** «Оформление»: place and size of the selected blocks (the other style groups arrive with P3.4). */
+const ALIGN: Array<[AlignMode, string, string]> = [
+  ['left', 'По левому краю', '⇤'],
+  ['center', 'По центру', '↔'],
+  ['right', 'По правому краю', '⇥'],
+  ['top', 'По верхнему краю', '⤒'],
+  ['middle', 'По середине', '↕'],
+  ['bottom', 'По нижнему краю', '⤓'],
+];
+const ORDER: Array<[OrderMode, string, string]> = [
+  ['front', 'На передний план', '⤒'],
+  ['forward', 'Вперёд', '↑'],
+  ['backward', 'Назад', '↓'],
+  ['back', 'На задний план', '⤓'],
+];
+
+/** E-09 · align, distribute, layer order, group — for the selected blocks. */
+function Arrange({ blocks }: { blocks: Block[] }) {
+  const apply = useEditor((s) => s.apply);
+  const doc = useEditor((s) => s.doc);
+  const ids = blocks.map((b) => b.id);
+  const grouped = selectionIsGroup(doc, ids);
+  return (
+    <div className="ed-section" data-testid="arrange">
+      <h2>Расположение</h2>
+      <div className="ed-actions" role="group" aria-label="Выравнивание">
+        {ALIGN.map(([mode, label, glyph]) => (
+          <button key={mode} type="button" className="ed-btn small" aria-label={label} title={label} onClick={() => apply(alignBlocks(ids, mode), { label })}>
+            {glyph}
+          </button>
+        ))}
+        <button type="button" className="ed-btn small" aria-label="Распределить по горизонтали" title="Распределить по горизонтали" disabled={blocks.length < 3} onClick={() => apply(distributeBlocks(ids, 'horizontal'), { label: 'Распределить по горизонтали' })}>
+          ⇹
+        </button>
+        <button type="button" className="ed-btn small" aria-label="Распределить по вертикали" title="Распределить по вертикали" disabled={blocks.length < 3} onClick={() => apply(distributeBlocks(ids, 'vertical'), { label: 'Распределить по вертикали' })}>
+          ⇳
+        </button>
+      </div>
+      <div className="ed-actions" role="group" aria-label="Порядок слоёв">
+        {ORDER.map(([mode, label, glyph]) => (
+          <button key={mode} type="button" className="ed-btn small" aria-label={label} title={label} onClick={() => apply(orderBlocks(ids, mode), { label })}>
+            {glyph}
+          </button>
+        ))}
+      </div>
+      <div className="ed-actions" role="group" aria-label="Группа">
+        <button type="button" className="ed-btn small" disabled={blocks.length < 2 || grouped} onClick={() => apply(groupBlocks(ids), { label: 'Сгруппировать' })}>
+          Сгруппировать
+        </button>
+        <button type="button" className="ed-btn small" disabled={!blocks.some((b) => b.groupId)} onClick={() => apply(ungroupBlocks(ids), { label: 'Разгруппировать' })}>
+          Разгруппировать
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** «Оформление»: place, size and turn of the selected blocks (the other style groups arrive with P3.4). */
 function Appearance({ blocks }: { blocks: Block[] }) {
   const apply = useEditor((s) => s.apply);
   const ids = blocks.map((b) => b.id);
@@ -59,15 +116,33 @@ function Appearance({ blocks }: { blocks: Block[] }) {
     />
   );
   return (
-    <div className="ed-section">
-      <h2>Положение и размер</h2>
-      <div className="ed-grid">
-        {field('x', 'X')}
-        {field('y', 'Y')}
-        {field('w', 'Ширина')}
-        {field('h', 'Высота')}
+    <>
+      <Arrange blocks={blocks} />
+      <div className="ed-section">
+        <h2>Положение и размер</h2>
+        <div className="ed-grid">
+          {field('x', 'X')}
+          {field('y', 'Y')}
+          {field('w', 'Ширина')}
+          {field('h', 'Высота')}
+          <NumberField
+            label="Поворот"
+            value={mixed(blocks.map((b) => b.frame.rotation))}
+            min={-360}
+            max={360}
+            onChange={(v) => apply(patchBlocks(ids, (b) => void (b.frame.rotation = Math.min(360, Math.max(-360, Math.round(v * 10) / 10)))), { label: 'Поворот', mergeKey: `rotation:${ids.join(',')}` })}
+          />
+        </div>
+        <div className="ed-actions">
+          <button type="button" className="ed-btn small" aria-pressed={blocks.every((b) => b.frame.flipX)} onClick={() => apply(flipBlocks(ids, 'x'), { label: 'Отразить по горизонтали' })}>
+            Отразить по горизонтали
+          </button>
+          <button type="button" className="ed-btn small" aria-pressed={blocks.every((b) => b.frame.flipY)} onClick={() => apply(flipBlocks(ids, 'y'), { label: 'Отразить по вертикали' })}>
+            Отразить по вертикали
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

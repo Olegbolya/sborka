@@ -102,21 +102,61 @@ export const removeBlocks =
 
 const NUDGE = 12;
 
-/** Copies next to the originals, shifted a little, on top; `onCreated` gets the new identifiers. */
+/** Copies next to the originals, shifted a little, on top; `onCreated` gets the new identifiers. Groups stay groups. */
 export const duplicateBlocks =
   (ids: readonly string[], onCreated?: (ids: string[]) => void): Recipe =>
   (doc) => {
     const created: string[] = [];
+    // One level at a time, so the copies of a group share a new group identifier.
+    const levels = new Map<Block[], Block[]>();
     for (const id of ids) {
       const loc = findBlock(doc, id);
-      if (!loc) continue;
-      const copy = cloneWithNewIds(loc.siblings[loc.index]!);
-      copy.frame.x += NUDGE;
-      copy.frame.y += NUDGE;
-      copy.z = Math.max(0, ...loc.siblings.map((b) => b.z)) + 1;
-      delete copy.groupId;
-      loc.siblings.splice(loc.index + 1, 0, copy);
-      created.push(copy.id);
+      if (loc) levels.set(loc.siblings, [...(levels.get(loc.siblings) ?? []), loc.siblings[loc.index]!]);
+    }
+    for (const [siblings, originals] of levels) {
+      const copies = cloneWithNewIds(originals);
+      const top = Math.max(0, ...siblings.map((b) => b.z));
+      copies.forEach((copy, i) => {
+        copy.frame.x += NUDGE;
+        copy.frame.y += NUDGE;
+        copy.z = top + 1 + i;
+        siblings.push(copy);
+        created.push(copy.id);
+      });
     }
     onCreated?.(created);
   };
+
+/**
+ * E-05/E-07 · puts frames of blocks where the gesture says: every entry is the whole frame to set. Written from the
+ * state at the start of the gesture, so repeating a move changes nothing.
+ */
+export const setFrames =
+  (frames: ReadonlyMap<string, Pick<Block['frame'], 'x' | 'y' | 'w' | 'h' | 'rotation'>>): Recipe =>
+  (doc) => {
+    for (const [id, f] of frames) {
+      const loc = findBlock(doc, id);
+      if (!loc) continue;
+      const frame = loc.siblings[loc.index]!.frame;
+      for (const k of ['x', 'y', 'w', 'h', 'rotation'] as const) {
+        const v = f[k];
+        const r = Math.round(v * 10) / 10;
+        if (Number.isFinite(r) && frame[k] !== r) frame[k] = r;
+      }
+    }
+  };
+
+/** E-07 · moves blocks by a distance (keyboard arrows). */
+export const moveBlocksBy =
+  (ids: readonly string[], dx: number, dy: number): Recipe =>
+  patchBlocks(ids, (b) => {
+    b.frame.x = Math.round((b.frame.x + dx) * 10) / 10;
+    b.frame.y = Math.round((b.frame.y + dy) * 10) / 10;
+  });
+
+/** E-05 · flips a block (S-01 «отражение»). */
+export const flipBlocks = (ids: readonly string[], axis: 'x' | 'y'): Recipe =>
+  patchBlocks(ids, (b) => {
+    if (axis === 'x') b.frame.flipX = !b.frame.flipX;
+    else b.frame.flipY = !b.frame.flipY;
+  });

@@ -213,7 +213,6 @@
   margin: 0 auto;
   background: #fff;
   box-shadow: 0 2px 14px rgb(0 0 0 / 18%);
-  overflow: hidden;
 }
 .ed-hit {
   position: absolute;
@@ -365,4 +364,109 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.ed-center {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.ed-viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.ed-viewbar .ed-btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+}
+.ed-center .ed-canvas {
+  flex: 1;
+  display: flex;
+}
+.ed-canvas[data-panning='true'] {
+  cursor: grab;
+}
+.ed-canvas[data-panning='true'] .ed-hit {
+  cursor: grab;
+}
+.ed-stage {
+  flex: none;
+  margin: auto;
+}
+.ed-selbox {
+  position: absolute;
+  pointer-events: none;
+  outline: 1.5px solid var(--accent);
+  transform-origin: center;
+}
+.ed-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 1.5px solid var(--accent);
+  border-radius: 2px;
+  background: #fff;
+  pointer-events: auto;
+  touch-action: none;
+}
+.ed-handle.rotate {
+  left: 50%;
+  top: -24px;
+  border-radius: 50%;
+  cursor: grab;
+}
+@media (pointer: coarse) {
+  .ed-handle {
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+  }
+  .ed-handle.rotate {
+    top: -40px;
+  }
+}
+.ed-guide {
+  position: absolute;
+  pointer-events: none;
+  background: #e91e8c;
+}
+.ed-gap {
+  position: absolute;
+  pointer-events: none;
+  background: #e91e8c;
+}
+.ed-gap span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #e91e8c;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.ed-marquee {
+  position: absolute;
+  pointer-events: none;
+  border: 1px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+@media (min-width: 961px) {
+  .ed-stage {
+    touch-action: none;
+  }
+}
+
+.ed-canvas,
+.ed-canvas * {
+  user-select: none;
+  -webkit-user-drag: none;
 }

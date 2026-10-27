@@ -152,17 +152,17 @@ test.describe('E-11 · отмена и повтор', () => {
     for (let i = 0; i < 99; i++) await page.keyboard.press('Control+d'); // 99 steps: 100 blocks on the screen (the limit)
     await page.getByLabel('Название сборки').fill('x');
     await page.getByLabel('Название сборки').blur(); // title typing is one step (merged): 100 steps in all
-    await expect(stage(page).getByRole('button')).toHaveCount(100);
+    await expect(stage(page).locator('.ed-hit')).toHaveCount(100);
     await expect(undo).toBeEnabled();
 
     await page.locator('body').click({ position: { x: 5, y: 5 } });
     for (let i = 0; i < 100; i++) await page.keyboard.press('Control+z');
-    await expect(stage(page).getByRole('button')).toHaveCount(1);
+    await expect(stage(page).locator('.ed-hit')).toHaveCount(1);
     await expect(page.getByLabel('Название сборки')).toHaveValue('Сборка для проверки');
     await expect(undo).toBeDisabled();
     await expect(redo).toBeEnabled();
     for (let i = 0; i < 100; i++) await page.keyboard.press('Control+Shift+z');
-    await expect(stage(page).getByRole('button')).toHaveCount(100);
+    await expect(stage(page).locator('.ed-hit')).toHaveCount(100);
     await expect(page.getByLabel('Название сборки')).toHaveValue('x');
     await expect(saveStatus(page)).toHaveText('Сохранено');
   });
@@ -285,7 +285,7 @@ test.describe('E-19 · история версий', () => {
     await openEditor(page, id);
     await hit(page, 'Текст A').click();
     await page.keyboard.press('Control+d');
-    await expect(stage(page).getByRole('button')).toHaveCount(2);
+    await expect(stage(page).locator('.ed-hit')).toHaveCount(2);
     await expect(saveStatus(page)).toHaveText('Сохранено');
 
     await page.getByRole('button', { name: 'История' }).click();
@@ -298,7 +298,7 @@ test.describe('E-19 · история версий', () => {
     await expect(dialog).toHaveCount(0);
     await expect(page.getByText('Версия восстановлена')).toBeVisible();
     // The first snapshot is the project as it was created: without blocks.
-    await expect(stage(page).getByRole('button')).toHaveCount(0);
+    await expect(stage(page).locator('.ed-hit')).toHaveCount(0);
     await expect.poll(async () => (await serverDraft(page, id)).doc.screens[0]!.blocks.length).toBe(0);
 
     // The draft with two blocks that was replaced is in the history: bring it back.
@@ -307,7 +307,7 @@ test.describe('E-19 · история версий', () => {
     await expect(again.getByRole('list', { name: 'Версии' }).getByRole('button')).not.toHaveCount(0);
     await again.getByRole('list', { name: 'Версии' }).getByRole('button').first().click();
     await again.getByRole('button', { name: 'Восстановить эту версию' }).click();
-    await expect(stage(page).getByRole('button')).toHaveCount(2);
+    await expect(stage(page).locator('.ed-hit')).toHaveCount(2);
     await expect.poll(async () => (await serverDraft(page, id)).doc.screens[0]!.blocks.length).toBe(2);
     await expect(saveStatus(page)).toHaveText('Сохранено');
   });

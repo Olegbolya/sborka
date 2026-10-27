@@ -2,7 +2,10 @@
 import { type ProjectDocument } from '@blokum/schema';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { isApiError, errorText } from '../../lib/api-browser';
-import { duplicateBlocks, removeBlocks } from '../../lib/editor/commands';
+import { groupBlocks, orderBlocks, selectionIsGroup, ungroupBlocks } from '../../lib/editor/arrange';
+import { copyBlocks, pasteBlocks, readClipboard, writeClipboard } from '../../lib/editor/clipboard';
+import { duplicateBlocks, moveBlocksBy, removeBlocks } from '../../lib/editor/commands';
+import { findBlock } from '../../lib/editor/tree';
 import { IdbQueue, browserSaverDeps, loadProject } from '../../lib/editor/remote';
 import { Saver } from '../../lib/editor/saver';
 import { type EditorStore, createEditorStore } from '../../lib/editor/store';
@@ -80,6 +83,7 @@ export function Editor({ projectId }: { projectId: string }) {
     };
   }, [projectId]);
 
+  const flash = useCallback((text: string, kind: 'ok' | 'error' = 'ok') => setMessage({ text, kind }), []);
   const saver = loaded?.saver;
   const store = loaded?.store;
 
@@ -118,27 +122,63 @@ export function Editor({ projectId }: { projectId: string }) {
         return;
       }
       if (isTyping(e.target)) return;
+      const ids = s.selection.blockIds;
+      const unlocked = ids.filter((id) => {
+        const loc = findBlock(s.doc, id);
+        return loc !== null && !loc.siblings[loc.index]!.locked;
+      });
       if (mod && key === 'z' && !e.shiftKey) {
         e.preventDefault();
         s.undo();
       } else if (mod && (key === 'y' || (key === 'z' && e.shiftKey))) {
         e.preventDefault();
         s.redo();
-      } else if (mod && key === 'd' && s.selection.blockIds.length > 0) {
+      } else if (mod && key === 'a') {
+        e.preventDefault();
+        const screen = s.doc.screens.find((x) => x.id === s.selection.screenId) ?? s.doc.screens[0]!;
+        s.select(screen.id, screen.blocks.filter((b) => !b.hiddenInEditor).map((b) => b.id));
+      } else if (mod && key === 'd' && ids.length > 0) {
         e.preventDefault();
         let created: string[] = [];
-        s.apply(duplicateBlocks(s.selection.blockIds, (ids) => (created = ids)), { label: 'Дублировать блоки' });
+        s.apply(duplicateBlocks(ids, (made) => (created = made)), { label: 'Дублировать блоки' });
         if (created.length) store.getState().select(s.selection.screenId, created);
-      } else if ((key === 'delete' || key === 'backspace') && s.selection.blockIds.length > 0) {
+      } else if (mod && (key === 'c' || key === 'x') && ids.length > 0) {
         e.preventDefault();
-        s.apply(removeBlocks(s.selection.blockIds), { label: 'Удалить блоки' });
+        const payload = copyBlocks(s.doc, ids);
+        if (payload) writeClipboard(payload);
+        if (key === 'x') s.apply(removeBlocks(unlocked), { label: 'Вырезать' });
+      } else if (mod && key === 'v') {
+        e.preventDefault();
+        const payload = readClipboard();
+        if (!payload) return;
+        let created: string[] = [];
+        s.apply(pasteBlocks(payload, s.selection.screenId, 12, (made) => (created = made)), { label: 'Вставить' });
+        if (created.length) store.getState().select(s.selection.screenId, created);
+        else flash('Вставить не получилось: на экране уже 100 блоков.', 'error');
+      } else if (mod && key === 'g' && ids.length > 0) {
+        e.preventDefault();
+        if (e.shiftKey) s.apply(ungroupBlocks(ids), { label: 'Разгруппировать' });
+        else if (!selectionIsGroup(s.doc, ids)) s.apply(groupBlocks(ids), { label: 'Сгруппировать' });
+      } else if (mod && (e.code === 'BracketRight' || e.code === 'BracketLeft') && ids.length > 0) {
+        e.preventDefault();
+        const up = e.code === 'BracketRight';
+        s.apply(orderBlocks(ids, up ? (e.shiftKey ? 'front' : 'forward') : e.shiftKey ? 'back' : 'backward'), { label: 'Порядок слоёв' });
+      } else if (!mod && key.startsWith('arrow') && unlocked.length > 0) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const dx = key === 'arrowleft' ? -step : key === 'arrowright' ? step : 0;
+        const dy = key === 'arrowup' ? -step : key === 'arrowdown' ? step : 0;
+        s.apply(moveBlocksBy(unlocked, dx, dy), { label: 'Сдвиг стрелками', mergeKey: `nudge:${unlocked.join(',')}` });
+      } else if ((key === 'delete' || key === 'backspace') && unlocked.length > 0) {
+        e.preventDefault();
+        s.apply(removeBlocks(unlocked), { label: 'Удалить блоки' });
       } else if (key === 'escape') {
         s.select(s.selection.screenId, []);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [store, saver]);
+  }, [store, saver, flash]);
 
   useEffect(() => {
     if (!message) return;
@@ -146,7 +186,6 @@ export function Editor({ projectId }: { projectId: string }) {
     return () => clearTimeout(t);
   }, [message]);
 
-  const flash = useCallback((text: string, kind: 'ok' | 'error' = 'ok') => setMessage({ text, kind }), []);
   const loadDocument = useCallback(
     (doc: ProjectDocument) => {
       suppress.current = true;

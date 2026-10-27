@@ -1,7 +1,9 @@
 'use client';
 import { Artboard, ScreenView } from '@blokum/renderer';
 import { type Block, type Screen } from '@blokum/schema';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
+import { withGroupMates } from '../../lib/editor/arrange';
+import { stackOf } from '../../lib/editor/tree';
 import { addScreen, deleteScreen, duplicateScreen, moveScreen, patchBlocks, renameScreen } from '../../lib/editor/commands';
 import { useEditor } from './context';
 
@@ -101,7 +103,8 @@ function ScreensList() {
   );
 }
 
-function LayerRow({ block, depth, screenId }: { block: Block; depth: number; screenId: string }) {
+/** One row of the layers: the name, «скрыть в редакторе», «заблокировать». */
+function LayerRow({ block, depth, screenId, children }: { block: Block; depth: number; screenId: string; children?: ReactNode }) {
   const selected = useEditor((s) => s.selection.blockIds.includes(block.id));
   const select = useEditor((s) => s.select);
   const apply = useEditor((s) => s.apply);
@@ -141,14 +144,50 @@ function LayerRow({ block, depth, screenId }: { block: Block; depth: number; scr
           {block.locked ? '🔒' : '🔓'}
         </button>
       </li>
-      {[...block.children].sort((a, b) => b.z - a.z).map((c) => (
-        <LayerRow key={c.id} block={c} depth={depth + 1} screenId={screenId} />
-      ))}
+      {children}
     </>
   );
 }
 
-/** E-13 · layers of the current screen: the tree with containers, the top layer first. */
+/**
+ * The blocks of one level from the top layer down. Blocks of a group are shown together under a row «Группа»;
+ * a container's children are shown inside it (E-13).
+ */
+function LayerTree({ blocks, depth, screenId }: { blocks: readonly Block[]; depth: number; screenId: string }) {
+  const select = useEditor((s) => s.select);
+  const doc = useEditor((s) => s.doc);
+  const groupSelected = useEditor((s) => s.selection.blockIds);
+  const top = stackOf(blocks).reverse();
+  const shown = new Set<string>();
+  const rows: ReactNode[] = [];
+  const row = (b: Block, d: number) => (
+    <LayerRow key={b.id} block={b} depth={d} screenId={screenId}>
+      {b.children.length > 0 && <LayerTree blocks={b.children} depth={d + 1} screenId={screenId} />}
+    </LayerRow>
+  );
+  for (const b of top) {
+    if (shown.has(b.id)) continue;
+    if (!b.groupId) {
+      rows.push(row(b, depth));
+      continue;
+    }
+    const members = top.filter((m) => m.groupId === b.groupId);
+    members.forEach((m) => shown.add(m.id));
+    const ids = members.map((m) => m.id);
+    const active = ids.every((id) => groupSelected.includes(id));
+    rows.push(
+      <li key={`group-${b.groupId}`} style={{ paddingLeft: depth * 14 }}>
+        <button type="button" className="ed-item" aria-pressed={active} data-group-id={b.groupId} onClick={() => select(screenId, withGroupMates(doc, ids))}>
+          <span className="name">Группа ({members.length})</span>
+        </button>
+      </li>,
+      ...members.map((m) => row(m, depth + 1)),
+    );
+  }
+  return <>{rows}</>;
+}
+
+/** E-13 · layers of the current screen: the tree with groups and containers, the top layer first. */
 function LayersList() {
   const doc = useEditor((s) => s.doc);
   const screenId = useEditor((s) => s.selection.screenId);
@@ -163,9 +202,7 @@ function LayersList() {
   return (
     <div className="ed-section">
       <ul className="ed-list" aria-label="Слои">
-        {[...screen.blocks].sort((a, b) => b.z - a.z).map((b) => (
-          <LayerRow key={b.id} block={b} depth={0} screenId={screen.id} />
-        ))}
+        <LayerTree blocks={screen.blocks} depth={0} screenId={screen.id} />
       </ul>
     </div>
   );

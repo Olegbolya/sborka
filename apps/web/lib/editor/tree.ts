@@ -51,7 +51,7 @@ function collectIds(value: unknown, into: Set<string>): void {
     for (const v of value) collectIds(v, into);
   } else if (value && typeof value === 'object') {
     for (const [k, v] of Object.entries(value)) {
-      if (k === 'id' && typeof v === 'string') into.add(v);
+      if ((k === 'id' || k === 'groupId') && typeof v === 'string') into.add(v);
       else collectIds(v, into);
     }
   }
@@ -83,4 +83,9 @@ export function drawOrder(blocks: readonly Block[]): Block[] {
     out.push(...drawOrder(b.children));
   }
   return out;
+}
+
+/** Blocks of one level from the bottom layer to the top one: by `z`, equal `z` keep the order of the list. */
+export function stackOf<T extends { z: number }>(blocks: readonly T[]): T[] {
+  return blocks.map((b, i) => ({ b, i })).sort((a, c) => a.b.z - c.b.z || a.i - c.i).map((x) => x.b);
 }
