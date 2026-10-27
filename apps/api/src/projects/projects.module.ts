@@ -6,6 +6,8 @@ import { ResponsesController } from './responses.controller.js';
 import { AccessPointsService } from './access-points.service.js';
 import { AccessPointsController } from './access-points.controller.js';
 import { ExportService } from './export.service.js';
+import { DraftsService } from './drafts.service.js';
+import { DraftsController } from './drafts.controller.js';
 import { WEB_URL } from './projects.tokens.js';
 
 export { WEB_URL };
@@ -20,9 +22,10 @@ export class ProjectsModule {
         ResponsesService,
         AccessPointsService,
         ExportService,
+        DraftsService,
         { provide: WEB_URL, useValue: webUrl },
       ],
-      controllers: [ProjectsController, ResponsesController, AccessPointsController],
+      controllers: [ProjectsController, DraftsController, ResponsesController, AccessPointsController],
       exports: [ProjectsService],
     };
   }

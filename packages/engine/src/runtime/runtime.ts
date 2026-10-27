@@ -326,6 +326,32 @@ export class Runtime {
     return structuredClone(this.vars);
   }
 
+  /**
+   * SC-03: the debugger of the preview sets a variable by hand. It is a normal change: «значение» blocks redraw and
+   * rules «переменная изменилась» fire. `ok` is false when the variable does not exist or the value does not fit
+   * its type (number, text up to 1000 characters, yes/no, list).
+   */
+  setVariableValue(variableId: string, value: VariableValue): { ok: boolean; step: StepResult } {
+    this.begin();
+    const def = this.variableDefs.get(variableId);
+    const fits =
+      def !== undefined &&
+      ((def.type === 'number' && typeof value === 'number' && Number.isFinite(value)) ||
+        (def.type === 'text' && typeof value === 'string' && value.length <= 1000) ||
+        (def.type === 'bool' && typeof value === 'boolean') ||
+        (def.type === 'list' && Array.isArray(value)));
+    if (!fits || compare(this.vars[variableId]!, 'eq', value)) return { ok: fits, step: this.end() };
+    this.vars[variableId] = structuredClone(value);
+    this.out.variables[variableId] = structuredClone(value);
+    for (const inst of this.instances.values()) {
+      if (inst.block.type === 'value' && inst.block.props.variableId === variableId) this.touch(inst);
+    }
+    if (this.screen && !this.halted) {
+      this.fireMatching('variableChange', (t) => (t as Extract<Trigger, { kind: 'variableChange' }>).variableId === variableId, undefined, false, 0);
+    }
+    return { ok: true, step: this.end() };
+  }
+
   /** Shows a screen: builds its blocks, starts its timers and fires «показ экрана» (TR-09). */
   enterScreen(screenId: string): StepResult {
     this.begin();
@@ -367,6 +393,14 @@ export class Runtime {
     }
     for (const inst of this.instances.values()) this.touch(inst);
     return this.end();
+  }
+
+  /**
+   * The host refused the navigation a rule asked for (a required question is not answered, there is no way back):
+   * the screen was frozen by `goTo`/`finish` and now goes on, so the participant can answer and press «дальше» again.
+   */
+  resume(): void {
+    if (this.screen && !this.left) this.halted = false;
   }
 
   /** The screen is about to be left: fires «уход с экрана» (TR-09) and ignores everything until the next screen. */

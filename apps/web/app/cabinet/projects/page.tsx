@@ -205,6 +205,9 @@ export default function ProjectsPage() {
             </div>
           </div>
           <div style={s.actions}>
+            <Link href={`/app/projects/${p.id}/edit`} style={{ textDecoration: 'none' }}>
+              <button style={s.btnSm}>Редактор</button>
+            </Link>
             <Link href={`/cabinet/projects/${p.id}`} style={{ textDecoration: 'none' }}>
               <button style={s.btnSm}>Ответы и доступ</button>
             </Link>

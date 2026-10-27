@@ -77,6 +77,13 @@ export class RuntimeStore {
     this.publish(this.runtime.dispatch(event), false);
   };
 
+  /** SC-03: the debugger sets a variable by hand; false when it does not fit. */
+  setVariable(variableId: string, value: Parameters<Runtime['setVariableValue']>[1]): boolean {
+    const { ok, step } = this.runtime.setVariableValue(variableId, value);
+    this.publish(step, false);
+    return ok;
+  }
+
   /** Starts the frame loop (player and preview); idempotent. */
   start(): void {
     if (this.handle !== null) return;

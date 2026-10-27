@@ -283,3 +283,75 @@ describe('B-04 · B-11 · B-12: поведение блоков в движке'
     expect(play({ blocks: [question('vopros')], seed: 3 }).view('vopros_variant1')!.y).toBe(60);
   });
 });
+
+describe('SC-03 · отладчик: ручная правка переменной', () => {
+  it('SC-03 · значение меняется, срабатывает «переменная изменилась», блок «значение» перерисовывается', () => {
+    const rt = createRuntime(
+      buildDoc({
+        vars: [num('ochkiv', 1), num('kopiya', 0)],
+        blocks: [b('value', 'znachenie', { props: { variableId: 'ochkiv' } })],
+        rules: [rule(on.change('ochkiv'), [act.add('kopiya', 10)])],
+      }),
+      { seed: 1 },
+    );
+    rt.enterScreen('ekran1');
+    const { ok, step } = rt.setVariableValue('ochkiv', 7);
+    expect(ok).toBe(true);
+    expect(rt.variables).toMatchObject({ ochkiv: 7, kopiya: 10 });
+    expect(step.variables).toMatchObject({ ochkiv: 7, kopiya: 10 });
+    expect(step.changed).toContain('znachenie');
+  });
+
+  it('SC-03 · то же значение — ничего не происходит; неверный тип или несуществующая переменная — отказ без изменений', () => {
+    const rt = createRuntime(buildDoc({ vars: [num('ochkiv', 1), txt('imyaaa', 'a'), bool('flagzz'), list('spisok')] }), { seed: 1 });
+    rt.enterScreen('ekran1');
+    expect(rt.setVariableValue('ochkiv', 1)).toMatchObject({ ok: true, step: { variables: {} } });
+    for (const [id, bad] of [
+      ['ochkiv', 'семь'],
+      ['ochkiv', Number.NaN],
+      ['imyaaa', 5],
+      ['imyaaa', 'я'.repeat(1001)],
+      ['flagzz', 'да'],
+      ['spisok', 'не список'],
+      ['net_takoj', 1],
+    ] as const) {
+      expect(rt.setVariableValue(id, bad as never).ok).toBe(false);
+    }
+    expect(rt.variables).toEqual({ ochkiv: 1, imyaaa: 'a', flagzz: false, spisok: [] });
+    expect(rt.setVariableValue('imyaaa', 'б').ok && rt.setVariableValue('flagzz', true).ok && rt.setVariableValue('spisok', [1, 'a']).ok).toBe(true);
+    expect(rt.variables).toEqual({ ochkiv: 1, imyaaa: 'б', flagzz: true, spisok: [1, 'a'] });
+  });
+
+  it('SC-03 · до входа на экран правка значения работает, правила не запускаются', () => {
+    const rt = createRuntime(buildDoc({ vars: [num('ochkiv', 1), num('kopiya', 0)], rules: [rule(on.change('ochkiv'), [act.add('kopiya', 10)])] }), { seed: 1 });
+    expect(rt.setVariableValue('ochkiv', 5).ok).toBe(true);
+    expect(rt.variables).toMatchObject({ ochkiv: 5, kopiya: 0 });
+  });
+});
+
+describe('L-07 · хозяин отклонил переход', () => {
+  it('L-07 · после goTo экран заморожен; resume() возвращает управление, и ответ принимается', () => {
+    const rt = createRuntime(
+      buildDoc({ blocks: [question('vopros'), b('shape', 'knopka1')], rules: [rule(on.tap('knopka1'), [act.goNext()])] }),
+      { seed: 1 },
+    );
+    rt.enterScreen('ekran1');
+    const step = rt.dispatch(ev.tap('knopka1'));
+    expect(step.effects).toContainEqual({ type: 'navigate', to: 'next' });
+    rt.dispatch({ type: 'answer', questionBlockId: 'vopros', answer: { kind: 'choice', optionIds: ['vopros_otvet1'] } });
+    expect(rt.currentAnswers).toEqual({}); // frozen
+    rt.resume();
+    rt.dispatch({ type: 'answer', questionBlockId: 'vopros', answer: { kind: 'choice', optionIds: ['vopros_otvet1'] } });
+    expect(rt.currentAnswers).toHaveProperty('vopros');
+    expect(rt.dispatch(ev.tap('knopka1')).effects).toContainEqual({ type: 'navigate', to: 'next' }); // and «дальше» works again
+  });
+
+  it('L-07 · resume() не оживляет экран, который уже покидают, и не нужен до входа на экран', () => {
+    const rt = createRuntime(buildDoc({ blocks: [b('shape', 'knopka1')], rules: [rule(on.tap('knopka1'), [act.goNext()])] }), { seed: 1 });
+    rt.resume(); // no screen yet: nothing happens
+    rt.enterScreen('ekran1');
+    rt.leaveScreen();
+    rt.resume();
+    expect(rt.dispatch(ev.tap('knopka1')).effects).toEqual([]);
+  });
+});

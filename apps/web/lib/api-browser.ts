@@ -6,6 +6,8 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    /** 409 of the draft: the revision the server has now. */
+    readonly currentRevision?: number,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -16,8 +18,10 @@ export class ApiError extends Error {
 async function toApiError(res: Response): Promise<ApiError> {
   let code = 'UNKNOWN';
   let message = 'Что-то пошло не так. Попробуйте ещё раз.';
+  let revision: number | undefined;
   try {
-    const body = (await res.json()) as { error?: { code?: string; message?: string }; message?: unknown };
+    const body = (await res.json()) as { error?: { code?: string; message?: string; currentRevision?: number }; message?: unknown };
+    revision = body.error?.currentRevision;
     if (body.error?.code) code = body.error.code;
     if (body.error?.message) message = body.error.message;
     else if (typeof body.message === 'string' && /[а-яё]/i.test(body.message)) message = body.message;
@@ -25,24 +29,35 @@ async function toApiError(res: Response): Promise<ApiError> {
     // The body is not JSON; keep the general text.
   }
   if (res.status === 401) message = 'Войдите, чтобы продолжить.';
-  return new ApiError(res.status, code, message);
+  return new ApiError(res.status, code, message, revision);
 }
 
 /**
  * Call to the API from a page. The cookie travels with the request (same origin); the browser adds `Origin`
  * to mutating requests, which the server's CSRF check requires. Throws `ApiError` on any non-2xx answer.
  */
-export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
-  const res = await apiRaw(path, init);
-  return (await res.json()) as T;
+export interface ApiInit {
+  method?: string;
+  body?: unknown;
+  headers?: Record<string, string>;
+  /** The request may finish after the page is closed (leaving the editor). */
+  keepalive?: boolean;
 }
 
-export async function apiRaw(path: string, init: { method?: string; body?: unknown } = {}): Promise<Response> {
+export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
+  const res = await apiRaw(path, init);
+  // Some answers have no body (a status change): there is nothing to read.
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
+}
+
+export async function apiRaw(path: string, init: ApiInit = {}): Promise<Response> {
   const hasBody = init.body !== undefined;
   const res = await fetch(`${API_BASE}${path}`, {
     method: init.method ?? 'GET',
     credentials: 'same-origin',
-    headers: hasBody ? { 'content-type': 'application/json', accept: 'application/json' } : { accept: 'application/json' },
+    headers: { accept: 'application/json', ...(hasBody ? { 'content-type': 'application/json' } : {}), ...init.headers },
+    ...(init.keepalive ? { keepalive: true } : {}),
     ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
   });
   if (!res.ok) throw await toApiError(res);

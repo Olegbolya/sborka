@@ -333,3 +333,6 @@
 | PL-23 | P8.3 | `apps/api/src/projects/projects.service.ts` (setOperatorInfo, acceptDpa, getOperatorInfo, checkPdRequirements), `apps/api/src/projects/projects.controller.ts`, `packages/db/src/schema/projects.ts` (dpaAcceptedAt), `apps/web/app/cabinet/projects/[id]/page.tsx` (OperatorTab) | `apps/api/test/legal.test.ts` |
 | B-19 | P8.3 | `apps/api/src/projects/projects.service.ts#checkPdRequirements`, `@blokum/schema#walkBlocks` | `apps/api/test/legal.test.ts` |
 | B-20 | P8.3 | `legal/participant-consent-template.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
+| E-11 | P3.1 | `apps/web/lib/editor/store.ts`, `apps/web/lib/editor/commands.ts`, `apps/web/components/editor/Editor.tsx` | `apps/web/test/editor-store.test.ts`, `e2e/editor.spec.ts` |
+| E-17 | P3.2 | `apps/web/lib/editor/saver.ts`, `apps/web/lib/editor/remote.ts`, `apps/api/src/projects/drafts.service.ts` | `apps/web/test/editor-saver.test.ts`, `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
+| E-18 | P3.2 | `apps/web/lib/editor/saver.ts`, `apps/web/components/editor/ConflictDialog.tsx`, `apps/api/src/projects/drafts.service.ts` | `apps/web/test/editor-saver.test.ts`, `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
