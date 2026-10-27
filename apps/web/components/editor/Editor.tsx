@@ -6,6 +6,7 @@ import { groupBlocks, orderBlocks, selectionIsGroup, ungroupBlocks } from '../..
 import { copyBlocks, pasteBlocks, readClipboard, writeClipboard } from '../../lib/editor/clipboard';
 import { duplicateBlocks, moveBlocksBy, removeBlocks } from '../../lib/editor/commands';
 import { findBlock } from '../../lib/editor/tree';
+import { MediaCatalog } from '../../lib/editor/media';
 import { IdbQueue, browserSaverDeps, loadProject } from '../../lib/editor/remote';
 import { Saver } from '../../lib/editor/saver';
 import { type EditorStore, createEditorStore } from '../../lib/editor/store';
@@ -19,7 +20,7 @@ import { LeftPanel } from './LeftPanel';
 import { PreviewDialog } from './PreviewDialog';
 import { TopBar } from './TopBar';
 
-type Loaded = { store: EditorStore; saver: Saver; status: 'DRAFT' | 'PUBLISHED' | 'CLOSED'; restored: boolean };
+type Loaded = { store: EditorStore; saver: Saver; media: MediaCatalog; status: 'DRAFT' | 'PUBLISHED' | 'CLOSED'; restored: boolean };
 
 const isTyping = (t: EventTarget | null): boolean => {
   const el = t as HTMLElement | null;
@@ -67,7 +68,10 @@ export function Editor({ projectId }: { projectId: string }) {
         }
         if (cancelled) return;
         setStatus(p.status);
-        setLoaded({ store, saver, status: p.status, restored });
+        const media = new MediaCatalog();
+        // The library is read in the background: a fill with a photo is drawn when its list arrives.
+        void media.load().catch(() => undefined);
+        setLoaded({ store, saver, media, status: p.status, restored });
       } catch (e) {
         if (cancelled) return;
         if (isApiError(e) && e.status === 401) {
@@ -195,7 +199,7 @@ export function Editor({ projectId }: { projectId: string }) {
     [store],
   );
 
-  const env: EditorEnv | null = useMemo(() => (store && saver ? { store, saver, projectId, flash, loadDocument } : null), [store, saver, projectId, flash, loadDocument]);
+  const env: EditorEnv | null = useMemo(() => (store && saver && loaded ? { store, saver, media: loaded.media, projectId, flash, loadDocument } : null), [store, saver, loaded, projectId, flash, loadDocument]);
 
   useEffect(() => {
     if (loaded?.restored) flash('Восстановлены несохранённые правки с прошлого раза — они сохраняются.', 'ok');

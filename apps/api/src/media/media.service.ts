@@ -150,6 +150,19 @@ export class MediaService {
     return { items, nextCursor: hasMore ? (items[items.length - 1]?.id ?? null) : null };
   }
 
+  /**
+   * The owner's own file for the editor (a photo in a fill, a preview): the original as it was uploaded. The public
+   * player gets processed files from the media domain (P4.3); this one never serves anybody but the owner.
+   */
+  async fileOf(ownerId: string, mediaId: string): Promise<{ path: string; mime: string }> {
+    const [row] = await this.db
+      .select({ mime: schema.media.mime, status: schema.media.status })
+      .from(schema.media)
+      .where(and(eq(schema.media.id, mediaId), eq(schema.media.ownerId, ownerId), isNull(schema.media.deletedAt)));
+    if (!row || row.status === 'BLOCKED' || row.status === 'REJECTED') throw makeError('NOT_FOUND', 'Медиафайл не найден');
+    return { path: this.storage.getPath(`${ownerId}/${mediaId}`), mime: row.mime };
+  }
+
   /** P4.4/D-08: Delete media — block if in use unless confirm=true. */
   async delete(
     ownerId: string,

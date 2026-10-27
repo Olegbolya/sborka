@@ -1,7 +1,7 @@
 'use client';
 import { Artboard, ScreenView } from '@blokum/renderer';
 import { type Block } from '@blokum/schema';
-import { type KeyboardEvent, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type KeyboardEvent, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { withGroupMates } from '../../lib/editor/arrange';
 import { type Handle, HANDLES, absoluteFrames, boundsOf, unionOf } from '../../lib/editor/geometry';
 import { type GestureEnv, NO_TRANSIENT, type Transient, startMarquee, startMove, startResize, startRotate } from '../../lib/editor/gestures';
@@ -42,7 +42,8 @@ const HANDLE_POS: Record<Handle, [string, string]> = {
  * `lib/editor/gestures.ts`; here are the views, the zoom and the panning.
  */
 export function Canvas() {
-  const { store } = useEnv();
+  const { store, media } = useEnv();
+  useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
   const doc = useEditor((s) => s.doc);
   const selection = useEditor((s) => s.selection);
   const screen = doc.screens.find((s) => s.id === selection.screenId) ?? doc.screens[0]!;
@@ -330,7 +331,7 @@ export function Canvas() {
             if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.bk-artboard')) onStageDown(e);
           }}
         >
-          <Artboard mode="editor" unit={unit} tokens={doc.theme.tokens}>
+          <Artboard mode="editor" unit={unit} tokens={doc.theme.tokens} media={media.resolver}>
             <ScreenView screen={screen} />
           </Artboard>
           {grid && unit * 8 >= 4 && (

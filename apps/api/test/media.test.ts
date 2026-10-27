@@ -336,6 +336,57 @@ describe('P4.1, P4.4, B-02–B-07, D-08, TS-01 · Медиатека', () => {
     expect(list2.body.items).toHaveLength(0);
   });
 
+  it('P4.3 · GET /media/:id/file отдаёт владельцу его файл с типом по сигнатуре и nosniff', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991250031');
+    const up = await request(t.http())
+      .post(`/${API_PREFIX}/media`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .attach('file', JPEG_1PX, { filename: 'a.jpg', contentType: 'image/jpeg' })
+      .expect(201);
+    const res = await request(t.http()).get(`/${API_PREFIX}/media/${up.body.id as string}/file`).set('Cookie', cookie).buffer(true).parse((r, cb) => {
+      const parts: Buffer[] = [];
+      r.on('data', (c: Buffer) => parts.push(c));
+      r.on('end', () => cb(null, Buffer.concat(parts)));
+    }).expect(200);
+    expect(res.headers['content-type']).toBe('image/jpeg');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(Buffer.compare(res.body as Buffer, JPEG_1PX)).toBe(0);
+  });
+
+  it('P4.3 · GET /media/:id/file: чужой файл, удалённый и несуществующий — 404; без входа — 401', async () => {
+    if (skip()) return;
+    const owner = await loginViaOtp('+79991250032');
+    const other = await loginViaOtp('+79991250033');
+    const up = await request(t.http())
+      .post(`/${API_PREFIX}/media`)
+      .set('Cookie', owner)
+      .set('X-Blokum-CSRF', '1')
+      .attach('file', JPEG_1PX, { filename: 'a.jpg', contentType: 'image/jpeg' })
+      .expect(201);
+    const id = up.body.id as string;
+    await request(t.http()).get(`/${API_PREFIX}/media/${id}/file`).set('Cookie', other).expect(404);
+    await request(t.http()).get(`/${API_PREFIX}/media/net-takogo/file`).set('Cookie', owner).expect(404);
+    await request(t.http()).get(`/${API_PREFIX}/media/${id}/file`).expect(401);
+    await request(t.http()).delete(`/${API_PREFIX}/media/${id}`).set('Cookie', owner).set('X-Blokum-CSRF', '1').expect(200);
+    await request(t.http()).get(`/${API_PREFIX}/media/${id}/file`).set('Cookie', owner).expect(404);
+  });
+
+  it('P4.3 · GET /media/:id/file: файл заблокированной проверкой не отдаётся', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991250034');
+    const up = await request(t.http())
+      .post(`/${API_PREFIX}/media`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .attach('file', JPEG_1PX, { filename: 'a.jpg', contentType: 'image/jpeg' })
+      .expect(201);
+    const id = up.body.id as string;
+    await db.db.update(schema.media).set({ status: 'BLOCKED' }).where(eq(schema.media.id, id));
+    await request(t.http()).get(`/${API_PREFIX}/media/${id}/file`).set('Cookie', cookie).expect(404);
+  });
+
   it('D-08 · DELETE /media/:id — удаляет файл без использования', async () => {
     if (skip()) return;
     const cookie = await loginViaOtp('+79991250012');

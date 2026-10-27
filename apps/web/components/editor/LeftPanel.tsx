@@ -1,19 +1,21 @@
 'use client';
 import { Artboard, ScreenView } from '@blokum/renderer';
 import { type Block, type Screen } from '@blokum/schema';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useState, useSyncExternalStore } from 'react';
 import { withGroupMates } from '../../lib/editor/arrange';
 import { stackOf } from '../../lib/editor/tree';
 import { addScreen, deleteScreen, duplicateScreen, moveScreen, patchBlocks, renameScreen } from '../../lib/editor/commands';
-import { useEditor } from './context';
+import { useEditor, useEnv } from './context';
 
 const THUMB = 0.22;
 
 function Thumbnail({ screen }: { screen: Screen }) {
+  const { media } = useEnv();
+  useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
   const tokens = useEditor((s) => s.doc.theme.tokens);
   return (
     <span className="ed-thumb" aria-hidden="true" style={{ width: 390 * THUMB, height: screen.height * THUMB, maxHeight: 120 }}>
-      <Artboard mode="thumbnail" unit={THUMB} tokens={tokens}>
+      <Artboard mode="thumbnail" unit={THUMB} tokens={tokens} media={media.resolver}>
         <ScreenView screen={screen} />
       </Artboard>
     </span>

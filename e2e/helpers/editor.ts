@@ -85,8 +85,19 @@ export async function blockCenter(page: Page, name: string): Promise<{ x: number
 
 /** Frame of a block as the inspector shows it (the block must be the only one selected). */
 export async function frameFields(page: Page): Promise<{ x: number; y: number; w: number; h: number; rotation: number }> {
-  const read = async (label: string) => Number(await page.getByLabel(label, { exact: true }).inputValue());
-  return { x: await read('X'), y: await read('Y'), w: await read('Ширина'), h: await read('Высота'), rotation: await read('Поворот') };
+  const read = async () => {
+    const field = async (label: string) => Number(await page.getByLabel(label, { exact: true }).inputValue());
+    return { x: await field('X'), y: await field('Y'), w: await field('Ширина'), h: await field('Высота'), rotation: await field('Поворот') };
+  };
+  // The inspector follows the document a moment after it changes: read until the numbers stop moving.
+  let last = await read();
+  for (let i = 0; i < 20; i++) {
+    await page.waitForTimeout(60);
+    const now = await read();
+    if (JSON.stringify(now) === JSON.stringify(last)) return now;
+    last = now;
+  }
+  return last;
 }
 
 export async function snapOff(page: Page): Promise<void> {

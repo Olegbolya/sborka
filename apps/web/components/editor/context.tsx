@@ -2,12 +2,15 @@
 import { type ReactNode, createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import { type EditorActions, type EditorState, type EditorStore } from '../../lib/editor/store';
+import { type MediaCatalog } from '../../lib/editor/media';
 import { type Saver } from '../../lib/editor/saver';
 
 export interface EditorEnv {
   store: EditorStore;
   saver: Saver;
   projectId: string;
+  /** Files of the creator's library, for fills and the like. */
+  media: MediaCatalog;
   /** Shows a short message under the top bar. */
   flash: (message: string, kind?: 'ok' | 'error') => void;
   /** Puts a document from the server into the editor: nothing is saved back, the history starts anew. */

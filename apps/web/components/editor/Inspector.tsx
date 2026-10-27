@@ -1,9 +1,10 @@
 'use client';
 import { type Block } from '@blokum/schema';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { type AlignMode, type OrderMode, alignBlocks, distributeBlocks, groupBlocks, orderBlocks, selectionIsGroup, ungroupBlocks } from '../../lib/editor/arrange';
 import { flipBlocks, patchBlocks, renameScreen, setFrame, setScreenHeight } from '../../lib/editor/commands';
 import { selectedBlocks } from '../../lib/editor/store';
+import { AnimationInspector, StyleInspector } from './StylePanels';
 import { useEditor } from './context';
 
 /** A field whose value is shown as «смешанно» when the selected blocks differ (E-15). */
@@ -12,11 +13,10 @@ export function mixed<T>(values: readonly T[]): T | null {
 }
 
 function NumberField({ label, value, onChange, min, max }: { label: string; value: number | null; onChange: (v: number) => void; min?: number; max?: number }) {
-  const [text, setText] = useState(value === null ? '' : String(value));
-  const [focused, setFocused] = useState(false);
-  useEffect(() => {
-    if (!focused) setText(value === null ? '' : String(value));
-  }, [value, focused]);
+  const shown = value === null ? '' : String(value);
+  // The typed text is shown while it still means the stored number; otherwise the stored value, with no lag after a change elsewhere.
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = draft !== null && (Number.isNaN(Number(draft)) || shown === '' || Number(draft) === Number(shown)) ? draft : shown;
   return (
     <label className="ed-num">
       <span>{label}</span>
@@ -27,10 +27,9 @@ function NumberField({ label, value, onChange, min, max }: { label: string; valu
         placeholder={value === null ? 'смешанно' : undefined}
         {...(min !== undefined ? { min } : {})}
         {...(max !== undefined ? { max } : {})}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onBlur={() => setDraft(null)}
         onChange={(e) => {
-          setText(e.target.value);
+          setDraft(e.target.value);
           const n = e.target.valueAsNumber;
           if (Number.isFinite(n)) onChange(n);
         }}
@@ -142,6 +141,8 @@ function Appearance({ blocks }: { blocks: Block[] }) {
           </button>
         </div>
       </div>
+      <StyleInspector blocks={blocks} />
+      <AnimationInspector blocks={blocks} />
     </>
   );
 }

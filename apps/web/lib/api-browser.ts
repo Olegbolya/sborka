@@ -64,6 +64,13 @@ export async function apiRaw(path: string, init: ApiInit = {}): Promise<Response
   return res;
 }
 
+/** Sends a file (multipart): the browser sets the boundary itself, so there is no `content-type` here. */
+export async function upload<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, { method: 'POST', credentials: 'same-origin', headers: { accept: 'application/json' }, body: form });
+  if (!res.ok) throw await toApiError(res);
+  return (await res.json()) as T;
+}
+
 export function isApiError(e: unknown): e is ApiError {
   return e instanceof ApiError;
 }

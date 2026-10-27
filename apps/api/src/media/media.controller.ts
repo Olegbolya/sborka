@@ -10,10 +10,12 @@ import {
   Put,
   Query,
   Req,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
@@ -93,6 +95,23 @@ export class MediaController {
     @Query('limit') limit?: string,
   ) {
     return this.media.list(user.id, { kind, cursor, limit: limit ? Number(limit) : undefined });
+  }
+
+  /** The owner's original file (the editor shows it in fills and previews); other people get a 404. */
+  @Get(':id/file')
+  async file(@CurrentUser() user: RequestUser, @Param('id') mediaId: string, @Res() res: Response): Promise<void> {
+    const { path, mime } = await this.media.fileOf(user.id, mediaId);
+    await new Promise<void>((resolve, reject) => {
+      res.sendFile(
+        path,
+        {
+          // Ranges (video seeking) are handled by sendFile; the type is the one found by the signature check, never the upload's.
+          headers: { 'Content-Type': mime, 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': 'inline' },
+          dotfiles: 'allow',
+        },
+        (err) => (err ? reject(err) : resolve()),
+      );
+    });
   }
 
   /** P4.4/D-08: Delete media. ?confirm=true skips the usage check. */

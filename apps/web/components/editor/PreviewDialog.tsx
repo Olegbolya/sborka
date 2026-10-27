@@ -4,6 +4,7 @@ import { type ProjectDocument } from '@blokum/schema';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { PreviewSession } from '../../lib/editor/preview-session';
 import { Dialog } from './Dialog';
+import { useEnv } from './context';
 
 type Frame = 'phone' | 'desktop';
 const SIZES: Record<Frame, { w: number; h: number; unit: number }> = {
@@ -66,6 +67,7 @@ function VariableEditor({ session, id, name, type }: { session: PreviewSession; 
  * the variables and lets the author change them; the log of fired rules and step mode come with the scenario editor.
  */
 export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose: () => void }) {
+  const { media } = useEnv();
   const [frame, setFrame] = useState<Frame>('phone');
   const [session, setSession] = useState(() => new PreviewSession(doc));
   useEffect(() => () => session.dispose(), [session]);
@@ -104,7 +106,7 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
           >
             <div style={{ width: size.w, height: Math.min(size.h, 640), overflow: 'auto', position: 'relative' }}>
               {view.screen ? (
-                <Artboard mode="player" unit={size.unit} tokens={doc.theme.tokens}>
+                <Artboard mode="player" unit={size.unit} tokens={doc.theme.tokens} media={media.resolver}>
                   <PlayerScreen key={`${view.screen.id}:${view.screenKey}`} screen={view.screen} store={session.store} {...(view.progress ? { progress: view.progress } : {})} />
                 </Artboard>
               ) : (
