@@ -27,6 +27,10 @@ export interface PlayOpen {
   document: PublicDocument;
   /** Kinds of the media the document refers to, so the player draws a picture, a video or a sound as it should. */
   media: Record<string, { kind: string; mime: string }>;
+  /** PL-16 · the tariff of the creator asks for the mark «Сделано в Блокуме — создать свою». */
+  watermark: boolean;
+  /** PL-18 · an advertising project says so: who advertises and the erid. */
+  ad: { advertiser: string; inn?: string; erid: string } | null;
   /** Given after the right password: the browser keeps it for the tab and sends it with later calls (PL-08). */
   unlock?: string;
 }
@@ -61,6 +65,11 @@ const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_TRIES = 10;
 const PASSWORD_WINDOW_MS = 10 * 60 * 1000;
 
+/** PL-16, PL-18 · what the player must show whatever the creator drew: the tariff's mark and the advertising label. */
+function marks(p: { isAdvertising: boolean; adMarking: { advertiser: string; inn?: string; erid: string } | null }): Pick<PlayOpen, 'watermark' | 'ad'> {
+  return { watermark: FREE_LIMITS.watermark, ad: p.isAdvertising && p.adMarking ? p.adMarking : null };
+}
+
 export function deviceTypeOf(userAgent: string | undefined): 'PHONE' | 'TABLET' | 'DESKTOP' | 'UNKNOWN' {
   if (!userAgent) return 'UNKNOWN';
   if (/iPad|Tablet|Nexus 7|SM-T\d/i.test(userAgent)) return 'TABLET';
@@ -89,6 +98,8 @@ export class PlayService {
         status: schema.projects.status,
         moderationStatus: schema.projects.moderationStatus,
         settings: schema.projects.settings,
+        isAdvertising: schema.projects.isAdvertising,
+        adMarking: schema.projects.adMarking,
         versionId: schema.projectVersions.id,
         document: schema.projectVersions.document,
       })
@@ -126,7 +137,7 @@ export class PlayService {
   /** The open project of a published version for a participant who is already in it (resuming a passage). */
   async openFor(projectId: string, versionId: string): Promise<PlayOpen> {
     const [row] = await this.db
-      .select({ slug: schema.projects.slug, ownerId: schema.projects.ownerId, title: schema.projects.title, document: schema.projectVersions.document })
+      .select({ slug: schema.projects.slug, ownerId: schema.projects.ownerId, title: schema.projects.title, isAdvertising: schema.projects.isAdvertising, adMarking: schema.projects.adMarking, document: schema.projectVersions.document })
       .from(schema.projectVersions)
       .innerJoin(schema.projects, eq(schema.projects.id, schema.projectVersions.projectId))
       .where(and(eq(schema.projectVersions.id, versionId), eq(schema.projects.id, projectId)));
@@ -143,6 +154,7 @@ export class PlayService {
       indexable: false,
       document: toPublicDocument(doc),
       media: await this.mediaOf(row.ownerId, doc),
+      ...marks(row),
     };
   }
 
@@ -167,6 +179,7 @@ export class PlayService {
       indexable: false,
       document: toPublicDocument(p.doc),
       media,
+      ...marks(p),
     };
   }
 

@@ -27,7 +27,7 @@ export interface ApiConfig {
   /** AD-01: AES-256-GCM key (64 hex chars = 32 bytes) for encrypting TOTP secrets. */
   totpSecretKey: string;
   /** TS-13 · limits of frequency on the public side, by the hash of the address. */
-  playLimits?: { startsPerHourPerIp: number; answersPerMinutePerSession: number };
+  playLimits?: { startsPerHourPerIp: number; answersPerMinutePerSession: number; reportsPerHourPerIp?: number };
   /** P4.3: directory where uploaded media files are stored (under DATA_ROOT). */
   mediaDir: string;
   /** P4.3: base URL for serving media files (media.blokum.ru in production, /api/v1/media in dev). */
@@ -74,7 +74,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     phoneLogin: env.PHONE_LOGIN === '1',
     adminPhone: env.ADMIN_PHONE ?? '',
     totpSecretKey: env.TOTP_SECRET_KEY ?? 'a'.repeat(64),
-    playLimits: { startsPerHourPerIp: Number(env.PLAY_STARTS_PER_HOUR_PER_IP ?? 120), answersPerMinutePerSession: Number(env.PLAY_ANSWERS_PER_MINUTE ?? 240) },
+    playLimits: { startsPerHourPerIp: Number(env.PLAY_STARTS_PER_HOUR_PER_IP ?? 120), answersPerMinutePerSession: Number(env.PLAY_ANSWERS_PER_MINUTE ?? 240), reportsPerHourPerIp: Number(env.REPORTS_PER_HOUR_PER_IP ?? 5) },
     mediaDir: env.MEDIA_DIR ?? (production ? '/srv/blokum/media' : `${env.DATA_ROOT ?? '/tmp'}/blokum-media`),
     mediaBaseUrl: env.MEDIA_BASE_URL ?? `http://${env.API_HOST ?? '127.0.0.1'}:${parsed}/api/v1/media`,
   };

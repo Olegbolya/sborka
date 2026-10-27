@@ -55,4 +55,6 @@ fi
 pnpm db:migrate
 # Все участники e2e приходят с одного адреса: лимит стартов по адресу (TS-13) для них отодвинут; его проверяет тест API.
 export PLAY_STARTS_PER_HOUR_PER_IP="${PLAY_STARTS_PER_HOUR_PER_IP:-1000000}"
+# То же для жалоб (TS-11): их ограничение по адресу проверяет тест API.
+export REPORTS_PER_HOUR_PER_IP="${REPORTS_PER_HOUR_PER_IP:-1000000}"
 exec pnpm --filter @blokum/api start

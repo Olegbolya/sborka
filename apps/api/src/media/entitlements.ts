@@ -10,6 +10,7 @@ export const FREE_LIMITS = {
   audioMaxBytes: 5 * 1024 * 1024,        // 5 МБ / аудио (не указано → берём фото-лимит)
   lottieMaxBytes: 5 * 1024 * 1024,       // 5 МБ (TS-25)
   themes: 2,
+  watermark: true,                       // водяной знак «Сделано в Блокуме» на плеере (PL-16, 04-TARIFFS)
   passesPerMonth: 100,                   // прохождений в месяц на аккаунт (PL-07)                             // свои темы (TH-02, TH-03)
 } as const;
 

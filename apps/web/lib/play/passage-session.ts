@@ -49,6 +49,9 @@ export interface PassageHooks {
   values?: (values: Array<{ variableId?: string; label?: string; value: unknown }>) => void;
   /** RN-01 · randomness that affects the result: the sector a server drew for a wheel, and the stream for the rest. */
   random?: { drawWheel: (blockId: string) => number | undefined; next: () => number };
+  /** AC-16, AC-17 · a rule started by a gesture of the participant opens a link or copies a text. */
+  openLink?: (url: string) => void;
+  copyText?: (text: string) => void;
   /** Branches that read the key of answers are decided by the server (L-02, PL-15): the screen to go to, `null` — the end. */
   branch?: (screenId: string) => Promise<{ to: string | null }>;
 }
@@ -164,6 +167,8 @@ export class PassageSession {
       else if (e.type === 'finish') this.finish();
       else if (e.type === 'answer' && e.answer) this.recordAnswer(e.questionBlockId, e.answer);
       else if (e.type === 'record') this.hooks.values?.([{ label: e.label, value: e.value }]);
+      else if (e.type === 'openLink') this.hooks.openLink?.(e.url);
+      else if (e.type === 'copyText') this.hooks.copyText?.(e.text);
     }
   }
 

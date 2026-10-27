@@ -260,6 +260,14 @@ describe('B-13…B-17, B-19, B-20: вопросы', () => {
     v.unmount();
   });
 
+  it('PL-17, TS-11: под полем ввода в плеере — подпись «Не вводите пароли…», в редакторе её нет', () => {
+    const t = make('textInput', { name: 'Имя' });
+    const v = live([t]);
+    expect(v.host.querySelector('[data-testid="field-warning"]')!.textContent).toBe('Не вводите пароли, коды из СМС и данные банковских карт');
+    v.unmount();
+    expect(render(<BlockView block={t} />).querySelector('[data-testid="field-warning"]')).toBeNull();
+  });
+
   it('B-13: многострочный ответ, числовая клавиатура и автозаполнение по смыслу поля', () => {
     expect(render(<BlockView block={make('textInput', { props: { multiline: true } })} />).querySelector('textarea')).not.toBeNull();
     const num = render(<BlockView block={make('textInput', { props: { mask: 'number' } })} />).querySelector('input')!;

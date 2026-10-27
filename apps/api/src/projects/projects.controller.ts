@@ -90,6 +90,18 @@ export class ProjectsController {
     return this.projects.updateAccessSettings(user.id, id, body);
   }
 
+  /** PL-18: the advertising mark of the project (or `null`). */
+  @Get(':id/advertising')
+  getAdvertising(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.projects.getAdvertising(user.id, id).then((ad) => ({ ad }));
+  }
+
+  /** PL-18: «Это реклама» — advertiser, INN, erid; an empty body turns the mark off. */
+  @Patch(':id/advertising')
+  async setAdvertising(@Param('id') id: string, @Body() body: { advertiser?: unknown; inn?: unknown; erid?: unknown } | null, @CurrentUser() user: RequestUser) {
+    return { ad: await this.projects.setAdvertising(user.id, id, body ?? null) };
+  }
+
   /** PL-23: Get operator info and DPA status for participant PD. */
   @Get(':id/operator-info')
   getOperatorInfo(@Param('id') id: string, @CurrentUser() user: RequestUser) {

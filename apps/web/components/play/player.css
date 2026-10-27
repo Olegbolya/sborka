@@ -85,3 +85,104 @@
   font-size: 14px;
   cursor: pointer;
 }
+.pl-footer {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.85);
+  color: #1d1b18;
+  font-size: 11px;
+  line-height: 1.3;
+  z-index: 19;
+}
+.pl-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.pl-ad {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 3px 8px;
+  background: rgb(29 27 24 / 0.88);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  z-index: 21;
+}
+.pl-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.5);
+  z-index: 30;
+}
+.pl-modal-card {
+  width: min(100%, 420px);
+  max-height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #fff;
+  color: #1d1b18;
+  font-size: 14px;
+}
+.pl-modal-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pl-modal-card select,
+.pl-modal-card textarea,
+.pl-modal-card input:not([type='checkbox']) {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgb(0 0 0 / 0.3);
+  font: inherit;
+}
+.pl-modal-card .pl-check {
+  flex-direction: row;
+  align-items: center;
+}
+.pl-modal-actions {
+  display: flex;
+  gap: 8px;
+}
+.pl-modal-card button {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 0;
+  background: #e4572e;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pl-modal-card button.secondary {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
+.pl-modal-card button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

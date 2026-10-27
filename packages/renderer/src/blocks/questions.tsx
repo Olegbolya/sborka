@@ -63,6 +63,7 @@ const INPUT_TYPE = { none: 'text', name: 'text', phone: 'tel', email: 'email', c
 
 /** B-13 Текстовый ответ: a real input with a label, hint, length limits and a numeric keyboard for numbers. */
 export function TextInputContent({ block, css }: { block: Of<'textInput'>; css: BlockCss }): ReactNode {
+  const ctx = useRenderContext();
   const [answer, send, live] = useAnswer(block.id);
   const remote = answer?.kind === 'text' ? answer.value : '';
   const [value, setValue] = useState(remote);
@@ -94,14 +95,20 @@ export function TextInputContent({ block, css }: { block: Of<'textInput'>; css: 
       flush();
     },
     onClick: (e: { stopPropagation: () => void }) => e.stopPropagation(),
-    style: fieldStyle(css),
+    style: ctx.mode === 'player' ? { ...fieldStyle(css), height: 'auto', flex: 1, minHeight: 0 } : fieldStyle(css),
   };
   return (
-    <div className="bk-question" style={{ ...fill, ...css.content, display: 'flex', flexDirection: 'row' }}>
+    <div className="bk-question" style={{ ...fill, ...css.content, display: 'flex', flexDirection: ctx.mode === 'player' ? 'column' : 'row' }}>
       {p.multiline ? (
         <textarea {...common} />
       ) : (
         <input {...common} type={p.mask === 'number' ? 'text' : INPUT_TYPE[p.semantic]} inputMode={p.mask === 'number' ? 'decimal' : p.semantic === 'phone' ? 'tel' : undefined} />
+      )}
+      {/* PL-17: the participant is told under every field what must not be typed in. */}
+      {ctx.mode === 'player' && (
+        <small className="bk-field-warning" data-testid="field-warning" style={{ flex: 'none', marginTop: u(2), fontSize: u(11), lineHeight: 1.25, opacity: 0.7 }}>
+          Не вводите пароли, коды из СМС и данные банковских карт
+        </small>
       )}
     </div>
   );

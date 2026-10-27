@@ -40,6 +40,12 @@ export interface OperatorInfo {
   retentionPeriod: string;
 }
 
+export interface AdMarking {
+  advertiser: string;
+  inn?: string;
+  erid: string;
+}
+
 export interface ProjectSummary {
   id: string;
   title: string;
@@ -417,6 +423,29 @@ export class ProjectsService {
     return info;
   }
 
+  /** PL-18 · the project is advertising: who advertises and the erid; the player shows them under «Реклама». `null` — not advertising. */
+  async setAdvertising(userId: string, projectId: string, body: { advertiser?: unknown; inn?: unknown; erid?: unknown } | null): Promise<AdMarking | null> {
+    await this.assertOwner(userId, projectId);
+    if (body === null || (body.advertiser === undefined && body.erid === undefined)) {
+      await this.db.update(schema.projects).set({ isAdvertising: false, adMarking: null }).where(eq(schema.projects.id, projectId));
+      return null;
+    }
+    const advertiser = typeof body.advertiser === 'string' ? body.advertiser.trim() : '';
+    const erid = typeof body.erid === 'string' ? body.erid.trim() : '';
+    const inn = typeof body.inn === 'string' ? body.inn.replace(/\s/g, '') : '';
+    if (advertiser.length < 2 || advertiser.length > 200) throw new UnprocessableEntityException({ error: { code: 'AD_ADVERTISER', message: 'Укажите рекламодателя: наименование или ФИО (от 2 до 200 знаков).' } });
+    if (!/^[A-Za-z0-9]{4,64}$/.test(erid)) throw new UnprocessableEntityException({ error: { code: 'AD_ERID', message: 'Укажите токен рекламы (erid): латинские буквы и цифры, от 4 знаков.' } });
+    if (inn !== '' && !/^(\d{10}|\d{12})$/.test(inn)) throw new UnprocessableEntityException({ error: { code: 'AD_INN', message: 'ИНН — 10 или 12 цифр.' } });
+    const ad: AdMarking = { advertiser, erid, ...(inn ? { inn } : {}) };
+    await this.db.update(schema.projects).set({ isAdvertising: true, adMarking: ad }).where(eq(schema.projects.id, projectId));
+    return ad;
+  }
+
+  async getAdvertising(userId: string, projectId: string): Promise<AdMarking | null> {
+    const row = await this.assertOwner(userId, projectId);
+    return row.isAdvertising && row.adMarking ? row.adMarking : null;
+  }
+
   /** PL-23: record DPA (D6) acceptance for this project. */
   async acceptDpa(userId: string, projectId: string): Promise<{ acceptedAt: Date }> {
     await this.assertOwner(userId, projectId);
@@ -483,6 +512,8 @@ export class ProjectsService {
         settings: schema.projects.settings,
         operatorInfo: schema.projects.operatorInfo,
         dpaAcceptedAt: schema.projects.dpaAcceptedAt,
+        isAdvertising: schema.projects.isAdvertising,
+        adMarking: schema.projects.adMarking,
         createdAt: schema.projects.createdAt,
         deletedAt: schema.projects.deletedAt,
       })

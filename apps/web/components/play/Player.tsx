@@ -7,7 +7,9 @@ import { type PlayOpen, playMediaResolver } from '../../lib/play/api';
 import { type Proof, startSession } from '../../lib/play/client';
 import { type PassageResume, PassageSession } from '../../lib/play/passage-session';
 import { ServerDraws } from '../../lib/play/draws';
+import { outHref } from '../../lib/play/out';
 import { PlayClient, type PlayTransport } from '../../lib/play/play-client';
+import { AdBanner, PlayFooter } from './PlayFooter';
 import './player.css';
 
 const REFUSALS: Record<string, string> = { ALREADY_PLAYED: 'Вы уже проходили', TEMPORARILY_UNAVAILABLE: 'Временно недоступно', CLOSED: 'Сборка закрыта', NOT_OPEN: 'Пока закрыто', TOO_MANY_REQUESTS: 'Слишком часто' };
@@ -68,6 +70,12 @@ function makeBoot(view: PlayOpen, resume?: PassageResume): Boot {
       branch: (screenId) => client.branch(screenId),
       values: (v) => client.values(v),
       random: { drawWheel: draws.drawWheel, next: draws.next },
+      // AC-16: the rule was started by a gesture of the participant; the link still goes through the page of the safe redirect (PL-22).
+      openLink: (url) => {
+        const href = outHref(url);
+        if (href !== '#') window.open(href, '_blank', 'noopener,noreferrer');
+      },
+      copyText: (text) => void navigator.clipboard?.writeText(text).catch(() => undefined),
     },
   });
   holder.session = session;
@@ -172,7 +180,8 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
   };
 
   return (
-    <Artboard mode="player" tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue}>
+    <Artboard mode="player" tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} linkHref={outHref}>
+      {boot.view.ad && <AdBanner ad={boot.view.ad} />}
       {passage.screen ? (
         <PlayerScreen key={`${passage.screen.id}:${passage.screenKey}`} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} />
       ) : (
@@ -195,6 +204,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
           ← Назад
         </button>
       )}
+      <PlayFooter slug={boot.view.slug} watermark={boot.view.watermark} />
     </Artboard>
   );
 }

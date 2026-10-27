@@ -13,6 +13,10 @@ export interface PlayOpen {
   indexable: boolean;
   document: PublicDocument;
   media: Record<string, { kind: string; mime: string }>;
+  /** PL-16 · the mark «Сделано в Блокуме — создать свою». */
+  watermark: boolean;
+  /** PL-18 · «Реклама», the advertiser and the erid. */
+  ad: { advertiser: string; inn?: string; erid: string } | null;
   /** The proof of the password (PL-08). */
   unlock?: string;
 }

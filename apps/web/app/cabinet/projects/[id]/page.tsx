@@ -76,8 +76,8 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`/api/v1${path}`, { credentials: 'include', ...init });
   if (res.status === 204) return undefined as T;
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ message: 'Ошибка сервера' })) as { message?: string };
-    throw new Error(body.message ?? `Ошибка ${res.status}`);
+    const body = await res.json().catch(() => ({ message: 'Ошибка сервера' })) as { message?: string; error?: { message?: string } };
+    throw new Error(body.error?.message ?? body.message ?? `Ошибка ${res.status}`);
   }
   return res.json() as Promise<T>;
 }
@@ -110,7 +110,7 @@ const s = {
   nav: { fontSize: 14, marginBottom: 24, display: 'flex', gap: 12, alignItems: 'center', color: 'var(--muted)' },
   heading: { fontSize: 'clamp(18px, 3vw, 26px)', lineHeight: 1.2, margin: '0 0 4px', letterSpacing: '-0.02em' },
   subHeading: { fontSize: 13, color: 'var(--muted)', margin: '0 0 24px' },
-  tabs: { display: 'flex', gap: 2, marginBottom: 24, borderBottom: '2px solid var(--border, #eee)' },
+  tabs: { display: 'flex', flexWrap: 'wrap' as const, gap: 2, marginBottom: 24, borderBottom: '2px solid var(--border, #eee)' },
   tab: (active: boolean) => ({
     padding: '10px 18px', fontSize: 14, fontWeight: active ? 600 : 400,
     border: 'none', cursor: 'pointer', background: 'transparent', color: active ? 'var(--accent)' : 'var(--muted)',
@@ -451,6 +451,67 @@ function AccessTab({ projectId, setError }: { projectId: string; setError: (e: s
   );
 }
 
+interface AdMarking {
+  advertiser: string;
+  inn?: string;
+  erid: string;
+}
+
+/** PL-18 · «Это реклама»: the player shows «Реклама · рекламодатель · erid» on every screen. */
+function AdSection({ projectId }: { projectId: string }) {
+  const [error, setError] = useState('');
+  const [on, setOn] = useState(false);
+  const [advertiser, setAdvertiser] = useState('');
+  const [inn, setInn] = useState('');
+  const [erid, setErid] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    apiFetch<{ ad: AdMarking | null }>(`/projects/${projectId}/advertising`)
+      .then(({ ad }) => {
+        setOn(ad !== null);
+        setAdvertiser(ad?.advertiser ?? '');
+        setInn(ad?.inn ?? '');
+        setErid(ad?.erid ?? '');
+        setLoaded(true);
+      })
+      .catch((e: Error) => setError(e.message));
+  }, [projectId]);
+
+  async function save() {
+    setSaved(false);
+    setError('');
+    try {
+      await apiFetch(`/projects/${projectId}/advertising`, { method: 'PATCH', headers: CSRF, body: JSON.stringify(on ? { advertiser, inn, erid } : {}) });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) { setError((e as Error).message); }
+  }
+
+  return (
+    <div data-testid="ad-section">
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+        <input type="checkbox" checked={on} disabled={!loaded} onChange={(e) => setOn(e.target.checked)} aria-label="Это реклама" />
+        Это реклама
+      </label>
+      <p style={s.hint}>Если сборка рекламная, закон требует пометки «Реклама», сведений о рекламодателе и токена erid. Они будут показаны участникам на каждом экране.</p>
+      {on && (
+        <>
+          <label style={s.label} htmlFor="adAdvertiser">Рекламодатель (наименование или ФИО)</label>
+          <input id="adAdvertiser" style={s.inputFull} value={advertiser} maxLength={200} onChange={(e) => setAdvertiser(e.target.value)} aria-label="Рекламодатель" />
+          <label style={s.label} htmlFor="adInn">ИНН (если есть)</label>
+          <input id="adInn" style={s.inputFull} value={inn} maxLength={12} inputMode="numeric" onChange={(e) => setInn(e.target.value)} aria-label="ИНН рекламодателя" />
+          <label style={s.label} htmlFor="adErid">Токен рекламы (erid)</label>
+          <input id="adErid" style={s.inputFull} value={erid} maxLength={64} onChange={(e) => setErid(e.target.value)} aria-label="erid" />
+        </>
+      )}
+      {error && <div style={s.error} role="alert">{error}</div>}
+      <button style={s.btn} onClick={() => void save()}>{saved ? 'Сохранено!' : 'Сохранить пометку'}</button>
+    </div>
+  );
+}
+
 function SettingsTab({ projectId, settings: initialSettings, setError }: { projectId: string; settings: ProjectSettings; setError: (e: string) => void }) {
   const [settings, setSettings] = useState<ProjectSettings>(initialSettings);
   const [saving, setSaving] = useState(false);
@@ -603,6 +664,8 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           {saving ? 'Сохранение...' : saved ? 'Сохранено!' : 'Сохранить настройки'}
         </button>
       </div>
+
+      <AdSection projectId={projectId} />
     </div>
   );
 }
