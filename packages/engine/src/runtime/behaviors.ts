@@ -132,11 +132,13 @@ export function pointAt(track: PathTrack, distance: number): { x: number; y: num
  * BH-06: the drawn sector by weights (the source is the server in the player, RN-01) and the final turn of the
  * wheel that brings its middle under the pointer at the top: sectors go clockwise from the top in their order.
  */
-export function spinWheel(wheel: BehaviorOf<'wheel'>, current: number, random: RandomSource): { index: number; rotation: number } {
+export function spinWheel(wheel: BehaviorOf<'wheel'>, current: number, random: RandomSource, drawn?: number): { index: number; rotation: number } {
   const total = wheel.sectors.reduce((s, x) => s + x.weight, 0);
   const last = wheel.sectors.length - 1;
   let index: number;
-  if (total > 0) {
+  // RN-01: in the player the sector was drawn by the server (with the weights it alone knows) before the wheel turns.
+  if (drawn !== undefined && Number.isInteger(drawn) && drawn >= 0 && drawn <= last) index = drawn;
+  else if (total > 0) {
     let r = random.next() * total;
     index = wheel.sectors.findIndex((x) => (r -= x.weight) < 0);
     if (index < 0) index = last;

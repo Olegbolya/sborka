@@ -59,6 +59,20 @@ export class PlayController {
     return this.sessions.check(id, body?.blockId);
   }
 
+  /** RN-01 · a draw that affects the result is made here before the animation. */
+  @Post('sessions/:id/random')
+  @HttpCode(200)
+  random(@Param('id') id: string, @Body() body: { sourceId?: unknown; seq?: unknown }) {
+    return this.sessions.random(id, body ?? {});
+  }
+
+  /** RN-02, AC-14, VR-04 · values counted on the device, kept as such. */
+  @Post('sessions/:id/values')
+  @HttpCode(200)
+  values(@Param('id') id: string, @Body() body: { values?: unknown; clientTs?: unknown }) {
+    return this.sessions.values(id, body ?? {});
+  }
+
   /** L-02 · a branch that reads the answer key is decided by the server. */
   @Post('sessions/:id/branch')
   @HttpCode(200)

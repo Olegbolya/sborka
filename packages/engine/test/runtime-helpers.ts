@@ -176,6 +176,8 @@ export interface World {
   screen2?: { blocks?: BlockInput[]; rules?: RuleInput[] };
   seed?: number;
   random?: number;
+  /** The sector the server drew for a wheel (RN-01). */
+  drawWheel?: (blockId: string, sectorCount: number) => number | undefined;
 }
 
 export interface Outcome {
@@ -203,7 +205,7 @@ export function buildDoc(w: World): ProjectDocument {
 /** Builds the document, enters the first screen and plays the steps. */
 export function play(w: World, steps: Step[] = []): Outcome {
   const doc = buildDoc(w);
-  const rt = createRuntime(doc, { seed: w.seed ?? 1, ...(w.random !== undefined ? { randomSource: { next: () => w.random! } } : {}) });
+  const rt = createRuntime(doc, { seed: w.seed ?? 1, ...(w.random !== undefined ? { randomSource: { next: () => w.random! } } : {}), ...(w.drawWheel ? { drawWheel: w.drawWheel } : {}) });
   const results: StepResult[] = [rt.enterScreen('ekran1')];
   for (const s of steps) {
     if (typeof s === 'function') s(rt);

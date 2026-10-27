@@ -27,6 +27,8 @@ export interface ResponseDetail extends ResponseRow {
     source: string;
     value: unknown;
     answeredAt: Date;
+    /** RN-02 · counted on the participant's device, only checked for plausibility here. */
+    deviceReported: boolean;
   }>;
 }
 
@@ -112,6 +114,7 @@ export class ResponsesService {
         source: schema.answers.source,
         value: schema.answers.value,
         answeredAt: schema.answers.answeredAt,
+        deviceReported: schema.answers.deviceReported,
       })
       .from(schema.answers)
       .where(eq(schema.answers.sessionId, sessionId))

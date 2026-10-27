@@ -216,6 +216,15 @@ describe('BH-06: колесо', () => {
     expect(o.of('wheel')).toHaveLength(1);
   });
 
+  it('RN-01: сектор назвал сервер — колесо встаёт на него, а не на тот, что выпал бы по местной случайности и весам', () => {
+    const asked: Array<[string, number]> = [];
+    const o = play({ ...wheelWorld([1, 1, 1, 1]), random: 0.6, drawWheel: (id, n) => (asked.push([id, n]), 3) }, [ev.tap('koleso'), tick(2100)]);
+    expect(asked).toEqual([['koleso', 4]]);
+    expect(o.of('wheel')).toEqual([{ type: 'wheel', blockId: 'koleso', sectorBlockId: 'sektor3' }]);
+    const none = play({ ...wheelWorld([1, 1, 1, 1]), random: 0.6, drawWheel: () => undefined }, [ev.tap('koleso'), tick(2100)]);
+    expect(none.of('wheel')).toEqual([{ type: 'wheel', blockId: 'koleso', sectorBlockId: 'sektor2' }]);
+  });
+
   it('BH-06: «проиграть» действием тоже крутит колесо', () => {
     const go = rule({ kind: 'key', key: ' ' }, [{ kind: 'media', target: { kind: 'block', blockId: 'koleso' }, command: 'play' }]);
     expect(play({ ...wheelWorld([1, 1, 1], [go]), random: 0.99 }, [ev.key(' '), tick(2100)]).of('wheel')).toEqual([{ type: 'wheel', blockId: 'koleso', sectorBlockId: 'sektor2' }]);
@@ -256,5 +265,18 @@ describe('BH-08: следует за пальцем', () => {
     expect(play({ blocks: [follower({ lagMs: 0, bounds: { x: 0, y: 0, w: 100, h: 100 } })] }, [pointer(300, 50), tick(16)]).view('zvezda')).toMatchObject({ x: 80, y: 40 });
     expect(followShare(0, 16)).toBe(1);
     expect(followShare(100, 100)).toBeCloseTo(1 - Math.exp(-1));
+  });
+});
+
+describe('RN-01 · сектор колеса, разыгранный сервером', () => {
+  it('RN-01 · если сервер назвал сектор, колесо останавливается на нём независимо от весов и местной случайности', async () => {
+    const { spinWheel } = await import('../src/index.js');
+    const wheel = { kind: 'wheel' as const, spinMs: 4000, sectors: [{ blockId: 'sektor_a', weight: 1000 }, { blockId: 'sektor_b', weight: 0 }, { blockId: 'sektor_c', weight: 1 }] };
+    const local = { next: () => 0 };
+    expect(spinWheel(wheel, 0, local).index).toBe(0);
+    for (const drawn of [0, 1, 2]) expect(spinWheel(wheel, 0, local, drawn).index).toBe(drawn);
+    // Неверный ответ (вне колеса) в расчёт не берётся: колесо вертится по своим правилам.
+    expect(spinWheel(wheel, 0, local, 7).index).toBe(0);
+    expect(spinWheel(wheel, 0, local, -1).index).toBe(0);
   });
 });

@@ -37,6 +37,11 @@ export interface RuntimeOptions {
   seed: number;
   /** Randomness that affects the result (CN-05 with the flag); the player passes a server-backed one (RN-01). */
   randomSource?: RandomSource;
+  /**
+   * RN-01 · the sector the server drew for a wheel (its index), asked for when the wheel is spun; `undefined` — no draw is
+   * available and the runtime draws by itself (the preview, tests).
+   */
+  drawWheel?: (blockId: string, sectorCount: number) => number | undefined;
   /** Wall-clock time of the start, ms since epoch — for B-08 timers «до даты». */
   startedAt?: number;
 }
@@ -262,6 +267,7 @@ function pickFrom(a: SetVariable, rng: Rng, vars: Readonly<Record<string, Variab
 export class Runtime {
   private readonly rng: Rng;
   private readonly random: RandomSource;
+  private readonly drawWheel: RuntimeOptions['drawWheel'];
   private readonly startedAt: number;
   /** Time since the start of the passage, ms. */
   private time = 0;
@@ -304,6 +310,7 @@ export class Runtime {
   ) {
     this.rng = createRng(options.seed);
     this.random = options.randomSource ?? createRng((options.seed ^ 0x9e3779b9) >>> 0);
+    this.drawWheel = options.drawWheel;
     this.startedAt = options.startedAt ?? 0;
     this.vars = Object.fromEntries(doc.variables.map((v) => [v.id, structuredClone(v.initial)]));
     this.variableDefs = new Map(doc.variables.map((v) => [v.id, v]));
@@ -1429,7 +1436,7 @@ export class Runtime {
   /** BH-06: the server draws the sector (RandomSource), the wheel turns to it and «анимация закончилась» fires. */
   private spin(inst: Instance, wheel: BehaviorOf<'wheel'>): void {
     if (inst.spinning) return;
-    const { index, rotation } = spinWheel(wheel, inst.rotation, this.random);
+    const { index, rotation } = spinWheel(wheel, inst.rotation, this.random, this.drawWheel?.(inst.id, wheel.sectors.length));
     inst.spinning = true;
     inst.winner = null;
     for (const c of inst.children) this.changed.add(c);

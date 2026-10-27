@@ -5,6 +5,7 @@ import { ApiError } from '../api-browser';
 type Op =
   | { id: string; kind: 'answer'; body: { blockId: string; value: AnswerValue; clientEventId: string; clientTs: number; timeOnScreenMs: number } }
   | { id: string; kind: 'state'; body: Record<string, unknown> }
+  | { id: string; kind: 'values'; body: { values: Array<{ variableId?: string; label?: string; value: unknown }>; clientTs: number } }
   | { id: string; kind: 'complete' };
 
 export interface CompleteResult {
@@ -105,6 +106,12 @@ export class PlayClient {
     this.enqueue({ id: newId(), kind: 'answer', body: { blockId, value, clientEventId: newId(), clientTs: this.now(), timeOnScreenMs } });
   }
 
+  /** RN-02, AC-14, VR-04 · values counted on the device: variables saved to the answers and what «записать в ответы» writes. */
+  values(values: Array<{ variableId?: string; label?: string; value: unknown }>): void {
+    if (values.length === 0) return;
+    this.enqueue({ id: newId(), kind: 'values', body: { values, clientTs: this.now() } });
+  }
+
   /** Only the latest state matters: an older one still waiting is replaced. */
   state(body: Record<string, unknown>): void {
     this.queue = this.queue.filter((op) => op.kind !== 'state');
@@ -152,7 +159,7 @@ export class PlayClient {
             this.persist();
             this.waiting.get(op.id)?.reject(e);
             this.waiting.delete(op.id);
-            if (op.kind === 'answer') this.o.onRejected?.(e.message);
+            if (op.kind === 'answer' || op.kind === 'values') this.o.onRejected?.(e.message);
             continue;
           }
           const delay = this.delays[Math.min(this.attempt, this.delays.length - 1)]!;
@@ -180,6 +187,8 @@ export class PlayClient {
       }
     } else if (op.kind === 'state') {
       await this.o.transport.call('PUT', `${base}/state`, op.body);
+    } else if (op.kind === 'values') {
+      await this.o.transport.call('POST', `${base}/values`, op.body);
     } else {
       const res = await this.o.transport.call<{ score: number; max: number; correct: number; keyed: number; result: { key: string; screenId: string | null } | null }>('POST', `${base}/complete`);
       this.waiting.get(op.id)?.resolve({ totals: { score: res.score, max: res.max, correct: res.correct, keyed: res.keyed }, result: res.result });

@@ -45,6 +45,10 @@ export interface PassageHooks {
   state?: (state: { screenId: string | null; history: string[]; variables: Record<string, unknown> }) => void;
   /** The end: resolves with what the server worked out (PL-15). */
   complete?: () => Promise<{ totals: ScoreTotals; result: { key: string; screenId: string | null } | null }>;
+  /** AC-14 · «записать в ответы»: a labelled value, and (VR-04) at the end the variables kept in the answers. */
+  values?: (values: Array<{ variableId?: string; label?: string; value: unknown }>) => void;
+  /** RN-01 · randomness that affects the result: the sector a server drew for a wheel, and the stream for the rest. */
+  random?: { drawWheel: (blockId: string) => number | undefined; next: () => number };
   /** Branches that read the key of answers are decided by the server (L-02, PL-15): the screen to go to, `null` — the end. */
   branch?: (screenId: string) => Promise<{ to: string | null }>;
 }
@@ -102,7 +106,7 @@ export class PassageSession {
     const seed = options.seed ?? Math.floor(Math.random() * 2 ** 31);
     this.now = options.now ?? Date.now;
     this.rng = createRng(seed);
-    this.runtime = createRuntime(doc, { seed, randomSource: { next: () => Math.random() }, startedAt: this.now() });
+    this.runtime = createRuntime(doc, { seed, randomSource: options.hooks?.random ? { next: options.hooks.random.next } : { next: () => Math.random() }, ...(options.hooks?.random ? { drawWheel: options.hooks.random.drawWheel } : {}), startedAt: this.now() });
     this.store = new RuntimeStore(this.runtime, (effects) => this.onEffects(effects), options.scheduler);
     this.flow = startFlow(doc, this.now());
     const resume = options.resume;
@@ -159,6 +163,7 @@ export class PassageSession {
       if (e.type === 'navigate') this.go(e.to === 'screen' && e.screenId ? { to: 'screen', screenId: e.screenId } : { to: e.to === 'screen' ? 'next' : e.to }, e.transition);
       else if (e.type === 'finish') this.finish();
       else if (e.type === 'answer' && e.answer) this.recordAnswer(e.questionBlockId, e.answer);
+      else if (e.type === 'record') this.hooks.values?.([{ label: e.label, value: e.value }]);
     }
   }
 
@@ -266,6 +271,8 @@ export class PassageSession {
       this.publish();
       return;
     }
+    // VR-04: the variables the creator keeps in the answers go with the end.
+    this.hooks.values?.(this.doc.variables.filter((v) => v.saveToAnswers).map((v) => ({ variableId: v.id, value: this.runtime.variables[v.id] })));
     this.completing = true;
     this.publish();
     void this.hooks.complete().then(

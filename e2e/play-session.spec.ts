@@ -141,4 +141,31 @@ test.describe('P5.3 · прохождение и ответы', () => {
     await expect.poll(async () => (await sessions(page, id))[0]!.answers.find((a) => a.blockId === 'vopros_1')?.value.optionIds, { timeout: 15_000 }).toEqual(['vopros_1_o2']);
     await ctx.close();
   });
+  test('RN-01 · колесо: исход заранее называет сервер, весов секторов в сетевых ответах нет', async ({ page, browser }, info) => {
+    const { id, slug } = await published(page, (d) => {
+      d.screens[0]!.blocks.push({
+        id: 'koleso_1',
+        type: 'container',
+        name: 'Колесо',
+        frame: { x: 20, y: 480, w: 200, h: 200 },
+        props: {},
+        behaviors: [{ kind: 'wheel', spinMs: 2000, sectors: [{ blockId: 'sektor_a', weight: 7 }, { blockId: 'sektor_b', weight: 3 }] }],
+        children: [
+          { ...textBlock('sektor_a', 'Приз А', 0, 0, 80, 40), type: 'shape' },
+          { ...textBlock('sektor_b', 'Приз Б', 100, 0, 80, 40), type: 'shape' },
+        ],
+      });
+    });
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    const seen: string[] = [];
+    p.on('response', async (r) => {
+      if (r.url().includes('/api/v1/play/')) seen.push(await r.text().catch(() => ''));
+    });
+    await p.goto(`/s/${slug}`);
+    await expect(p.locator('.bk-player-screen[data-live="true"]')).toBeVisible();
+    await expect.poll(() => seen.join('\n'), { timeout: 15_000 }).toContain('"outcome"');
+    expect(seen.join('\n')).not.toMatch(/"weight"/);
+    expect(JSON.stringify(await sessions(page, id))).not.toContain('"weight"');
+    await ctx.close();
+  });
 });

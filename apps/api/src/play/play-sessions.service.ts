@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
 import { HttpException, Inject, Injectable } from '@nestjs/common';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import {
   type AnswerValue,
@@ -15,6 +15,7 @@ import {
   isAnswered,
   isCorrect,
   isQuestion,
+  looksLikeCardNumber,
   normalizeAnswer,
   questionScore,
   scoreTotals,
@@ -181,7 +182,7 @@ export class PlaySessionsService {
     const variables = ((session.runtimeState ?? {}) as { variables?: Record<string, never> }).variables ?? {};
     const seed = createHash('sha256').update(sessionId).digest().readUInt32BE(0);
     const totals = scoreTotals(doc, answers);
-    const computed = computeResult(doc, totals, { doc, answers, variables: { ...startFlow(doc, 0).variables, ...variables }, rng: createRng(seed), random: createRng(seed ^ 0x9e3779b9) });
+    const computed = computeResult(doc, totals, { doc, answers, variables: { ...startFlow(doc, 0).variables, ...variables }, rng: createRng(seed), random: await this.resultRandom(sessionId) });
     // No rule fits: a screen of kind «результат» that no rule points at is the result «по ветке» (L-04).
     const fallback = doc.screens.find((s) => s.kind === 'result' && !doc.results.some((r) => r.screenId === s.id));
     const result = computed ?? (fallback ? { ruleId: null, key: fallback.name, screenId: fallback.id } : null);
@@ -221,7 +222,165 @@ export class PlaySessionsService {
     const base = startFlow(doc, session.startedAt.getTime());
     const state: FlowState = { ...base, screenId, history: saved.history ?? [], answers, variables: { ...base.variables, ...(saved.variables ?? {}) } };
     // Required questions were checked in the browser, where it is known which of them are on show; here only the branches are read.
-    const nav = navigate(doc, state, { to: 'branch' }, { now: Date.now(), rng: createRng(seed), random: createRng(seed ^ 0x9e3779b9), isVisible: () => false });
+    const nav = navigate(doc, state, { to: 'branch' }, { now: Date.now(), rng: createRng(seed), random: await this.resultRandom(sessionId), isVisible: () => false });
     return { to: nav.to };
   }
+
+  /**
+   * RN-01 · randomness the server itself needs for the result (a tie between results, a «chance» condition that affects it):
+   * 32 numbers written down once for the session, so that repeating the call gives the same outcome.
+   */
+  private async resultRandom(sessionId: string): Promise<{ next(): number }> {
+    const SOURCE = 'result';
+    const COUNT = 32;
+    let rows = await this.db.select().from(schema.randomDraws).where(and(eq(schema.randomDraws.sessionId, sessionId), eq(schema.randomDraws.sourceId, SOURCE)));
+    if (rows.length < COUNT) {
+      await this.db
+        .insert(schema.randomDraws)
+        .values(Array.from({ length: COUNT }, (_x, seq) => ({ sessionId, sourceId: SOURCE, seq, outcome: { value: unit() } })))
+        .onConflictDoNothing();
+      rows = await this.db.select().from(schema.randomDraws).where(and(eq(schema.randomDraws.sessionId, sessionId), eq(schema.randomDraws.sourceId, SOURCE)));
+    }
+    const values = rows.sort((a, b) => a.seq - b.seq).map((r) => (r.outcome as { value: number }).value);
+    let at = 0;
+    return { next: () => values[at++ % values.length]! };
+  }
+
+  // ── RN-01 · random that affects the result ─────────────────────────────────
+
+  /**
+   * RN-01 · the draw of a wheel (the index of the sector, by weights the browser never has) or of the general stream (a float):
+   * made here and written down before the animation is shown. The same request (session, source, number) gets the same outcome;
+   * numbers go one after another, so nobody can ask again until a draw he does not like.
+   */
+  async random(sessionId: string, body: { sourceId?: unknown; seq?: unknown }): Promise<{ sourceId: string; seq: number; outcome: { index: number } | { value: number } }> {
+    this.throttle(sessionId);
+    const { session, doc } = await this.load(sessionId);
+    if (session.status !== 'IN_PROGRESS') throw fail(409, 'SESSION_FINISHED', 'Прохождение уже завершено.');
+    const sourceId = body.sourceId;
+    const seq = body.seq;
+    if (typeof sourceId !== 'string' || sourceId.length === 0 || sourceId.length > 64) throw fail(400, 'INVALID_INPUT', 'Не указан источник случайности');
+    if (typeof seq !== 'number' || !Number.isInteger(seq) || seq < 0 || seq >= MAX_DRAWS) throw fail(400, 'INVALID_INPUT', 'Неверный номер розыгрыша');
+    let wheel: Extract<Block['behaviors'][number], { kind: 'wheel' }> | undefined;
+    if (sourceId !== MAIN_STREAM) {
+      for (const s of doc.screens) for (const b of walkBlocks(s.blocks)) if (b.id === sourceId) wheel = b.behaviors.find((x): x is NonNullable<typeof wheel> => x.kind === 'wheel');
+      if (!wheel) throw fail(422, 'UNKNOWN_SOURCE', 'Такого колеса нет');
+    }
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'random:' + sessionId}))`);
+      const [existing] = await tx.select().from(schema.randomDraws).where(and(eq(schema.randomDraws.sessionId, sessionId), eq(schema.randomDraws.sourceId, sourceId), eq(schema.randomDraws.seq, seq)));
+      if (existing) return { sourceId, seq, outcome: existing.outcome as { index: number } | { value: number } };
+      const [last] = await tx.select({ n: sql<number>`coalesce(max(${schema.randomDraws.seq}), -1)` }).from(schema.randomDraws).where(and(eq(schema.randomDraws.sessionId, sessionId), eq(schema.randomDraws.sourceId, sourceId)));
+      if (seq > Number(last?.n ?? -1) + 1) throw fail(409, 'SEQ_GAP', 'Розыгрыши идут по порядку.');
+      const outcome = wheel ? { index: drawSector(wheel.sectors.map((x) => x.weight)) } : { value: unit() };
+      await tx.insert(schema.randomDraws).values({ sessionId, sourceId, seq, outcome });
+      return { sourceId, seq, outcome };
+    });
+  }
+
+  // ── RN-02, AC-14, VR-04 · values counted on the device ─────────────────────
+
+  /**
+   * RN-02 · values the browser reports (a score of a game, a time, moves; variables with «сохранять в ответы»; «записать в ответы»):
+   * kept as «посчитано на устройстве», after checks of plausibility — the type, the range, the speed of change, the size and the
+   * number. Anything that does not pass is refused whole; nothing of the request is kept.
+   */
+  async values(sessionId: string, body: { values?: unknown; clientTs?: unknown }): Promise<{ stored: number }> {
+    this.throttle(sessionId);
+    const { session, doc } = await this.load(sessionId);
+    if (session.status !== 'IN_PROGRESS') throw fail(409, 'SESSION_FINISHED', 'Прохождение уже завершено.');
+    if (!Array.isArray(body.values) || body.values.length === 0 || body.values.length > 50) throw fail(400, 'INVALID_INPUT', 'Не переданы значения');
+    const now = typeof body.clientTs === 'number' && Number.isFinite(body.clientTs) ? Math.round(body.clientTs) : Date.now();
+    const defs = new Map(doc.variables.map((v) => [v.id, v]));
+    const checked: Array<{ variableId: string | null; label: string | null; value: unknown }> = [];
+    for (const raw of body.values as Array<Record<string, unknown>>) {
+      if (typeof raw !== 'object' || raw === null) throw fail(400, 'INVALID_INPUT', 'Неверное значение');
+      const value = raw.value;
+      if (typeof raw.variableId === 'string') {
+        const def = defs.get(raw.variableId);
+        if (!def) throw fail(422, 'UNKNOWN_VARIABLE', 'Такой переменной нет');
+        checked.push({ variableId: def.id, label: null, value: this.plausible(def.type, value, def.name) });
+      } else if (typeof raw.label === 'string') {
+        const label = raw.label.trim();
+        if (label.length === 0 || label.length > 60) throw fail(422, 'INVALID_LABEL', 'Название значения — от 1 до 60 знаков');
+        if (typeof value === 'string' && value.length > 500) throw fail(422, 'VALUE_TOO_LONG', 'Значение слишком длинное');
+        if (!(typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= MAX_NUMBER))) throw fail(422, 'OUT_OF_RANGE', `Значение «${label}» не подходит`);
+        if (typeof value === 'string' && looksLikeCardNumber(value)) throw fail(422, 'CARD_LIKE', 'Похоже на номер карты. Никогда не вводите данные карт в опросах');
+        checked.push({ variableId: null, label, value });
+      } else throw fail(400, 'INVALID_INPUT', 'Не указано, что за значение');
+    }
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'values:' + sessionId}))`);
+      const existing = await tx.select().from(schema.answers).where(and(eq(schema.answers.sessionId, sessionId), inArray(schema.answers.source, ['VARIABLE', 'ACTION'])));
+      let labels = existing.filter((r) => r.source === 'ACTION').length;
+      for (const c of checked) {
+        const prev = existing.find((r) => (c.variableId ? r.variableId === c.variableId : r.source === 'ACTION' && (r.value as { label?: string }).label === c.label));
+        if (c.variableId) {
+          const def = defs.get(c.variableId)!;
+          // The speed of change: a number cannot grow faster than a person plays.
+          if (prev && def.type === 'number' && typeof c.value === 'number' && typeof prev.value === 'number') {
+            const seconds = Math.max(0, (now - (prev.clientTs ?? prev.answeredAt.getTime())) / 1000);
+            if (Math.abs(c.value - prev.value) > MAX_CHANGE_BASE + MAX_CHANGE_PER_SECOND * seconds) throw fail(422, 'CHANGE_TOO_FAST', `Значение «${def.name}» изменилось слишком быстро`);
+          }
+          if (prev) await tx.update(schema.answers).set({ value: c.value, clientTs: now, answeredAt: new Date(), deviceReported: true }).where(eq(schema.answers.id, prev.id));
+          else await tx.insert(schema.answers).values({ sessionId, variableId: c.variableId, source: 'VARIABLE', value: c.value, deviceReported: true, clientTs: now });
+        } else {
+          const payload = { label: c.label, value: c.value };
+          if (prev) await tx.update(schema.answers).set({ value: payload, clientTs: now, answeredAt: new Date() }).where(eq(schema.answers.id, prev.id));
+          else {
+            if (labels >= MAX_LABELS) throw fail(422, 'TOO_MANY_VALUES', 'Слишком много разных значений');
+            labels++;
+            await tx.insert(schema.answers).values({ sessionId, source: 'ACTION', value: payload, deviceReported: true, clientTs: now });
+          }
+        }
+      }
+      await tx.update(schema.participantSessions).set({ lastActivityAt: new Date() }).where(eq(schema.participantSessions.id, sessionId));
+      return { stored: checked.length };
+    });
+  }
+
+  /** The type and range of a value of a variable (VR-01); the value is returned as it will be kept. */
+  private plausible(type: 'number' | 'text' | 'bool' | 'list', value: unknown, name: string): unknown {
+    const bad = (message: string): never => {
+      throw fail(422, 'OUT_OF_RANGE', message);
+    };
+    if (type === 'number') {
+      if (typeof value !== 'number' || !Number.isFinite(value)) return bad(`Значение «${name}» — не число`);
+      if (Math.abs(value) > MAX_NUMBER) return bad(`Значение «${name}» вне допустимых пределов`);
+      return value;
+    }
+    if (type === 'bool') return typeof value === 'boolean' ? value : bad(`Значение «${name}» — не «да/нет»`);
+    if (type === 'text') {
+      if (typeof value !== 'string') return bad(`Значение «${name}» — не текст`);
+      if (value.length > 1000) return bad(`Значение «${name}» слишком длинное`);
+      if (looksLikeCardNumber(value)) throw fail(422, 'CARD_LIKE', 'Похоже на номер карты. Никогда не вводите данные карт в опросах');
+      return value;
+    }
+    if (!Array.isArray(value) || value.length > 500 || value.some((x) => !(typeof x === 'number' ? Number.isFinite(x) : typeof x === 'string' && x.length <= 200))) return bad(`Значение «${name}» — неверный список`);
+    return value;
+  }
+}
+
+/** A float in [0, 1) from the system's secure source (`randomInt` takes a range up to 2^48 − 1). */
+const RANGE = 2 ** 48 - 1;
+const unit = (): number => randomInt(0, RANGE) / RANGE;
+
+const MAIN_STREAM = 'main';
+const MAX_DRAWS = 5000;
+const MAX_NUMBER = 1_000_000_000;
+/** A number reported by the device may differ from the previous report by this much, plus this much for every second between them. */
+const MAX_CHANGE_BASE = 10_000;
+const MAX_CHANGE_PER_SECOND = 10_000;
+const MAX_LABELS = 50;
+
+/** The sector of a wheel by its weights (all zero — any sector with the same chance). */
+function drawSector(weights: number[]): number {
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (total <= 0) return randomInt(0, weights.length);
+  let r = unit() * total;
+  for (let i = 0; i < weights.length; i++) {
+    r -= weights[i]!;
+    if (r < 0) return i;
+  }
+  return weights.length - 1;
 }

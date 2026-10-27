@@ -1,10 +1,12 @@
 'use client';
 import { Artboard, PlayerScreen } from '@blokum/renderer';
+import { walkBlocks } from '@blokum/schema';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { api, isApiError } from '../../lib/api-browser';
 import { type PlayOpen, playMediaResolver } from '../../lib/play/api';
 import { type Proof, startSession } from '../../lib/play/client';
 import { type PassageResume, PassageSession } from '../../lib/play/passage-session';
+import { ServerDraws } from '../../lib/play/draws';
 import { PlayClient, type PlayTransport } from '../../lib/play/play-client';
 import './player.css';
 
@@ -51,6 +53,10 @@ function makeBoot(view: PlayOpen, resume?: PassageResume): Boot {
     onVerdict: (blockId, verdict) => holder.session?.setVerdict(blockId, verdict),
     onRejected: (message) => holder.session?.say(message),
   });
+  // RN-01: a draw that affects the result is made by the server; a wheel gets its sector from there, the results their numbers.
+  const draws = new ServerDraws(transport, { main: 8, default: 1 }, () => client.values([{ label: 'Случайность на устройстве', value: true }]));
+  draws.watch('main');
+  for (const screen of view.document.screens) for (const block of walkBlocks(screen.blocks)) if (block.behaviors.some((b) => b.kind === 'wheel')) draws.watch(block.id);
   // The public document has no key and no result rules; for the flow it is a document like any other.
   const session = new PassageSession(view.document, {
     scoring: 'server',
@@ -60,10 +66,12 @@ function makeBoot(view: PlayOpen, resume?: PassageResume): Boot {
       state: (s) => client.state(s),
       complete: () => client.complete(),
       branch: (screenId) => client.branch(screenId),
+      values: (v) => client.values(v),
+      random: { drawWheel: draws.drawWheel, next: draws.next },
     },
   });
   holder.session = session;
-  return { view, session, client, setSession: (id) => ((key = outboxKey(id)), client.attach(id)) };
+  return { view, session, client, setSession: (id) => ((key = outboxKey(id)), client.attach(id), draws.attach(id)) };
 }
 
 /**
