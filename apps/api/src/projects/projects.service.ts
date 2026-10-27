@@ -4,10 +4,11 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { createDocument, createId, createSlug, type ProjectDocument, ThemeTokens, walkBlocks } from '@blokum/schema';
+import { createDocument, createId, createSlug, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
 import { Inject } from '@nestjs/common';
 import { DB } from '../tokens.js';
 
@@ -310,9 +311,57 @@ export class ProjectsService {
   async setProjectStatus(userId: string, projectId: string, status: 'PUBLISHED' | 'CLOSED' | 'DRAFT'): Promise<void> {
     const row = await this.assertOwner(userId, projectId);
     if (status === 'PUBLISHED') {
-      await this.checkPdRequirements(row.id, row.operatorInfo, row.dpaAcceptedAt);
+      await this.publish(row);
+      return;
     }
     await this.db.update(schema.projects).set({ status }).where(eq(schema.projects.id, projectId));
+  }
+
+  /**
+   * L-08, SC-07, PL-23 · publishing: the draft is checked (errors block, warnings do not), and a copy of it becomes the
+   * published version — the player reads that copy, so later edits of the draft or of a theme reach participants only at
+   * the next publication.
+   */
+  private async publish(row: { id: string; operatorInfo: Record<string, unknown> | null; dpaAcceptedAt: Date | null }): Promise<void> {
+    const [project] = await this.db.select({ draftVersionId: schema.projects.draftVersionId }).from(schema.projects).where(eq(schema.projects.id, row.id));
+    const [draft] = project?.draftVersionId
+      ? await this.db.select({ document: schema.projectVersions.document }).from(schema.projectVersions).where(eq(schema.projectVersions.id, project.draftVersionId))
+      : [];
+    if (!draft) throw new BadRequestException({ error: { code: 'NO_DRAFT', message: 'У сборки нет черновика, который можно опубликовать.' } });
+    await this.checkPdRequirements(row.id, row.operatorInfo, row.dpaAcceptedAt);
+    const parsed = ProjectDocument.safeParse(draft.document);
+    if (!parsed.success) {
+      throw new BadRequestException({ error: { code: 'INVALID_DOCUMENT', message: `Сборка не прошла проверку: ${parsed.error.issues[0]?.message ?? 'неверная структура'}` } });
+    }
+    const doc = parsed.data;
+    const errors = validateDocument(doc).filter((i) => i.severity === 'error');
+    if (errors.length > 0) {
+      throw new UnprocessableEntityException({
+        error: {
+          code: 'PUBLISH_BLOCKED',
+          message: `Сборку нельзя опубликовать, пока не исправлены ошибки: ${errors.length}.`,
+          issues: errors.map((i) => ({ code: i.code, message: i.message, path: i.path })),
+        },
+      });
+    }
+    await this.db.transaction(async (tx) => {
+      await tx.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.id, row.id)).for('update');
+      const [last] = await tx.select({ n: max(schema.projectVersions.number) }).from(schema.projectVersions).where(eq(schema.projectVersions.projectId, row.id));
+      const versionId = createId();
+      await tx.insert(schema.projectVersions).values({
+        id: versionId,
+        projectId: row.id,
+        number: (last?.n ?? 0) + 1,
+        document: doc,
+        schemaVersion: doc.schemaVersion,
+        sha256: sha256(doc),
+        kind: 'PUBLISHED',
+      });
+      await tx
+        .update(schema.projects)
+        .set({ status: 'PUBLISHED', publishedVersionId: versionId, publishedAt: new Date(), themeId: doc.theme.themeId ?? null })
+        .where(eq(schema.projects.id, row.id));
+    });
   }
 
   /** PL-23: check that operator info and DPA are set if document has B-19 contacts blocks. */

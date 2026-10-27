@@ -8,6 +8,8 @@ export class ApiError extends Error {
     message: string,
     /** 409 of the draft: the revision the server has now. */
     readonly currentRevision?: number,
+    /** Details the API adds to an error (the list of problems of a refused publication). */
+    readonly issues?: Array<{ code: string; message: string; path: Array<string | number> }>,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -19,9 +21,11 @@ async function toApiError(res: Response): Promise<ApiError> {
   let code = 'UNKNOWN';
   let message = 'Что-то пошло не так. Попробуйте ещё раз.';
   let revision: number | undefined;
+  let issues: ApiError['issues'];
   try {
-    const body = (await res.json()) as { error?: { code?: string; message?: string; currentRevision?: number }; message?: unknown };
+    const body = (await res.json()) as { error?: { code?: string; message?: string; currentRevision?: number; issues?: ApiError['issues'] }; message?: unknown };
     revision = body.error?.currentRevision;
+    issues = body.error?.issues;
     if (body.error?.code) code = body.error.code;
     if (body.error?.message) message = body.error.message;
     else if (typeof body.message === 'string' && /[а-яё]/i.test(body.message)) message = body.message;
@@ -29,7 +33,7 @@ async function toApiError(res: Response): Promise<ApiError> {
     // The body is not JSON; keep the general text.
   }
   if (res.status === 401) message = 'Войдите, чтобы продолжить.';
-  return new ApiError(res.status, code, message, revision);
+  return new ApiError(res.status, code, message, revision, issues);
 }
 
 /**

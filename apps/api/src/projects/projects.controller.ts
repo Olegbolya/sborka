@@ -71,6 +71,13 @@ export class ProjectsController {
     return this.projects.setProjectStatus(user.id, id, body.status);
   }
 
+  /** L-08, SC-07 · publishes the draft: errors of the check block it (422 with the list), otherwise a published version is made. */
+  @Post(':id/publish')
+  @HttpCode(200)
+  publish(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.projects.setProjectStatus(user.id, id, 'PUBLISHED');
+  }
+
   /** D-03: Get access settings (limits, schedule, password…). */
   @Get(':id/access-settings')
   getAccessSettings(@Param('id') id: string, @CurrentUser() user: RequestUser) {

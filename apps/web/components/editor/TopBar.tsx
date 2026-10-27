@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useState, useSyncExternalStore } from 'react';
-import { api, errorText } from '../../lib/api-browser';
+import { api, errorText, isApiError } from '../../lib/api-browser';
 import { setTitle } from '../../lib/editor/commands';
 import { useEditor, useEnv } from './context';
 
@@ -25,11 +25,13 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onThem
         flash('Сначала нужно сохранить правки — публикация остановлена.', 'error');
         return;
       }
-      await api(`/projects/${encodeURIComponent(projectId)}/status`, { method: 'POST', body: { status: 'PUBLISHED' } });
+      await api(`/projects/${encodeURIComponent(projectId)}/publish`, { method: 'POST' });
       onStatus('PUBLISHED');
-      flash('Сборка опубликована. Ссылку и QR-код можно взять в кабинете.', 'ok');
+      const { slug } = await api<{ slug: string }>(`/projects/${encodeURIComponent(projectId)}`);
+      flash(`Сборка опубликована: ${window.location.origin}/s/${slug}. QR-код можно взять в кабинете.`, 'ok');
     } catch (e) {
-      flash(errorText(e), 'error');
+      const issues = isApiError(e) ? (e.issues ?? []) : [];
+      flash(issues.length > 0 ? `${errorText(e)} ${issues.slice(0, 3).map((i) => i.message).join('; ')}${issues.length > 3 ? '…' : ''} Полный список — «Логика» → «Проверка».` : errorText(e), 'error');
     } finally {
       setPublishing(false);
     }

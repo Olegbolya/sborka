@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { schema } from '@blokum/db';
+import { createBlock, createDocument } from '@blokum/schema';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
@@ -103,6 +104,13 @@ describe('AD-06 · Версии юридических документов', ()
 
 // ─── P8.3 · Сбор ПД участников (PL-23, B-19, B-20) ───────────────────────
 
+/** A valid document with a contacts block and the consent under it (publishing refuses documents the schema does not accept). */
+function documentWithContacts(title: string) {
+  const doc = createDocument({ title });
+  doc.screens[0]!.blocks.push(createBlock('contacts'), createBlock('consent'));
+  return doc as unknown as schema.ProjectDocumentJson;
+}
+
 describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
   let t: TestApp;
   let db: TestDb;
@@ -167,7 +175,7 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 тест' }).expect(200);
     const pid = proj.body.id as string;
     // Inject a contacts block into the draft version document
-    const docWithContacts = { schemaVersion: 1, title: 'B-19 тест', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    const docWithContacts = documentWithContacts('B-19 тест');
     await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
     // Publish without operatorInfo → OPERATOR_INFO_REQUIRED
     const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
@@ -178,7 +186,7 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     if (!t) return;
     const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 DPA тест' }).expect(200);
     const pid = proj.body.id as string;
-    const docWithContacts = { schemaVersion: 1, title: 'B-19 DPA тест', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    const docWithContacts = documentWithContacts('B-19 DPA тест');
     await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
     // Set operator info but not DPA
     await request(t.http()).patch(`/${API_PREFIX}/projects/${pid}/operator-info`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: 'Тест', email: 'test@example.com', purpose: 'Тест', retentionPeriod: '1 год' }).expect(200);
@@ -191,7 +199,7 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     if (!t) return;
     const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 partial' }).expect(200);
     const pid = proj.body.id as string;
-    const docWithContacts = { schemaVersion: 1, title: 'B-19 partial', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    const docWithContacts = documentWithContacts('B-19 partial');
     await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
     // Set partial operator info (name present, email missing)
     await db.db.update(schema.projects).set({ operatorInfo: { name: 'Тест', purpose: 'Тест', retentionPeriod: '1 год' } }).where(eq(schema.projects.id, pid));
@@ -203,7 +211,7 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     if (!t) return;
     const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 noname' }).expect(200);
     const pid = proj.body.id as string;
-    const docWithContacts = { schemaVersion: 1, title: 'B-19 noname', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    const docWithContacts = documentWithContacts('B-19 noname');
     await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
     await db.db.update(schema.projects).set({ operatorInfo: { email: 'x@x.com', purpose: 'Тест', retentionPeriod: '1 год' } }).where(eq(schema.projects.id, pid));
     const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
@@ -214,7 +222,7 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     if (!t) return;
     const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 nopurpose' }).expect(200);
     const pid = proj.body.id as string;
-    const docWithContacts = { schemaVersion: 1, title: 'B-19 nopurpose', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    const docWithContacts = documentWithContacts('B-19 nopurpose');
     await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
     await db.db.update(schema.projects).set({ operatorInfo: { name: 'Тест', email: 'x@x.com', retentionPeriod: '1 год' } }).where(eq(schema.projects.id, pid));
     const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
@@ -225,7 +233,7 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     if (!t) return;
     const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 noretention' }).expect(200);
     const pid = proj.body.id as string;
-    const docWithContacts = { schemaVersion: 1, title: 'B-19 noretention', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    const docWithContacts = documentWithContacts('B-19 noretention');
     await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
     await db.db.update(schema.projects).set({ operatorInfo: { name: 'Тест', email: 'x@x.com', purpose: 'Тест' } }).where(eq(schema.projects.id, pid));
     const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
@@ -236,7 +244,7 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     if (!t) return;
     const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 success' }).expect(200);
     const pid = proj.body.id as string;
-    const docWithContacts = { schemaVersion: 1, title: 'B-19 success', screens: [{ id: 'scr1', title: '', blocks: [{ id: 'blk1', type: 'contacts' }] }] };
+    const docWithContacts = documentWithContacts('B-19 success');
     await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
     await request(t.http()).patch(`/${API_PREFIX}/projects/${pid}/operator-info`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: 'Тест', email: 'ok@ok.com', purpose: 'Тест', retentionPeriod: '1 год' }).expect(200);
     await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/dpa-accept`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
