@@ -33,9 +33,8 @@ test.describe('B-01…B-23 · S-15 · PL-21: галерея блоков', () =>
       expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(' | ')}`)).toEqual([]);
       expect(errors).toEqual([]);
       mkdirSync(SHOTS, { recursive: true });
-      // WebKit refuses a screenshot taller than 32767 pixels, and the gallery of 22 blocks × 9 states is taller on a phone: the first 16000.
-      const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, height: document.documentElement.scrollHeight }));
-      await page.screenshot({ path: `${SHOTS}/render-gallery-${theme}-${info.project.name}.png`, fullPage: true, clip: { x: 0, y: 0, width: size.width, height: Math.min(size.height, 16000) } });
+      // WebKit refuses a screenshot taller than 32767 pixels, and the whole gallery is taller: the picture is of its first section.
+      await page.locator('.dev-block-section').first().screenshot({ path: `${SHOTS}/render-gallery-${theme}-${info.project.name}.png` });
     });
   }
 
