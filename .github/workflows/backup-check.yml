@@ -51,7 +51,7 @@ jobs:
           pg_dump --version
       - name: База с тестовыми данными
         run: |
-          pnpm --filter @blokum/db build
+          pnpm --filter "@blokum/db..." build
           pnpm db:migrate
           pnpm db:seed
       - name: Копия, восстановление, сверка
