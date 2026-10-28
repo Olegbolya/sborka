@@ -25,6 +25,10 @@ const REFERENCE_SPECS = [
   'render-gallery.spec.ts',
   'artboard.spec.ts',
 ].map((name) => `**/${name}`);
+// The gallery of animations (dozens of blocks animated through Motion and nine particle fields on one page) does not run in the
+// WebKit that Playwright ships for Linux: the values of the animated variables stay put and the page is never «stable» (ADR-048).
+// It is a defect to find on a real Safari; until then the gallery is checked in Chromium and Firefox.
+const WEBKIT_SPECS = REFERENCE_SPECS.filter((spec) => !spec.endsWith('animations.spec.ts'));
 
 export default defineConfig({
   testDir: './e2e',
@@ -54,8 +58,9 @@ export default defineConfig({
     // Safari on a phone: WebKit with the iPhone profile at the site's narrow width; Firefox on a desktop.
     ...(allBrowsers
       ? [
-          { name: 'webkit-390', testMatch: REFERENCE_SPECS, use: { ...devices['iPhone 14'], viewport: { width: 390, height: 844 } } },
-          { name: 'firefox-1440', testMatch: REFERENCE_SPECS, use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } } },
+          { name: 'webkit-390', testMatch: WEBKIT_SPECS, use: { ...devices['iPhone 14'], viewport: { width: 390, height: 844 } } },
+          // The frame counts with the processor slowed down (P-01) go through CDP, which only Chromium has.
+          { name: 'firefox-1440', testMatch: REFERENCE_SPECS, grepInvert: /P-01/, use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } } },
         ]
       : []),
     { name: 'perf-390', testMatch: 'perf/**/*.spec.ts', dependencies: ['mobile-390', 'desktop-1440'], fullyParallel: false, use: mobile },

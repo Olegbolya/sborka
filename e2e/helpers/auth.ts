@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { totpCode } from './totp';
 
 /** A new user number for the provider emulator (it accepts up to 12 digits): every test signs in as its own person (ADR-034). */
 export function freshUser(prefix: string): { id: string; name: string } {
@@ -34,4 +35,29 @@ export async function loginAndOnboard(page: Page, user: { id: string; name: stri
     await page.getByRole('button', { name: 'Продолжить' }).click();
     await page.waitForURL(/\/cabinet\/projects/);
   }
+}
+
+/**
+ * Signs in as an administrator the way a person does the first time: the provider's page → the setup of the second step (the key
+ * is read from the page and the code made from it) → the reserve codes. The account must be named in ADMIN_ACCOUNTS (scripts/e2e-api.sh)
+ * and have no key yet — the script clears the e2e administrators when the API starts.
+ */
+export async function adminLogin(page: Page, user: { id: string; name: string }): Promise<void> {
+  await page.goto('/login');
+  await page.getByRole('link', { name: 'Войти через VK ID' }).click();
+  await page.getByLabel('ID пользователя').fill(user.id);
+  await page.getByLabel('Имя').fill(user.name);
+  await page.getByRole('button', { name: /^Войти через/ }).click();
+  await page.waitForURL(/\/login\/2fa/);
+  const secret = (await page.getByTestId('totp-secret').textContent())!.trim();
+  await page.getByLabel('Код', { exact: true }).fill(totpCode(secret));
+  await page.getByRole('button', { name: 'Подтвердить' }).click();
+  await expect(page.getByTestId('backup-codes')).toContainText('Резервные коды');
+  await page.getByRole('button', { name: 'Я сохранил(а) коды' }).click();
+  await page.waitForURL(/\/(onboarding|cabinet\/projects)/);
+}
+
+/** The numbers of the e2e administrators of this browser project: A, B and C (scripts/e2e-api.sh). */
+export function adminIds(info: { project: { name: string } }): { a: string; b: string; c: string } {
+  return info.project.name.startsWith('mobile') ? { a: '700000000021', b: '700000000022', c: '700000000023' } : { a: '700000000011', b: '700000000012', c: '700000000013' };
 }

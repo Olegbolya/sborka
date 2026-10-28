@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { ModerationNotice } from '../../../../components/admin/ModerationNotice';
 
 type Tab = 'responses' | 'access' | 'settings' | 'export' | 'operator';
 
@@ -103,6 +104,7 @@ const STATUS_PROJECT: Record<string, string> = {
   DRAFT: 'Черновик',
   PUBLISHED: 'Опубликована',
   CLOSED: 'Закрыта',
+  BLOCKED: 'Заблокирована',
 };
 
 const s = {
@@ -872,6 +874,8 @@ export default function ProjectDetailPage() {
         {' · '}Открытий: {project.starts}
         {' · '}Прохождений: {project.completions}
       </p>
+
+      <ModerationNotice projectId={projectId} />
 
       {error && <div style={s.error}>{error}</div>}
 

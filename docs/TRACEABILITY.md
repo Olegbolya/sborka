@@ -423,3 +423,9 @@
 | TS-12 | P5.6 | `apps/web/lib/play/out.ts`, `apps/web/app/out/page.tsx` | `apps/web/test/play-out.test.ts`, `e2e/play-safety.spec.ts` |
 | AD-01 | P2.6 | `apps/api/src/auth/admin-mfa.service.ts`, `apps/api/src/auth/oauth.service.ts`, `apps/api/src/auth/oauth.controller.ts`, `apps/api/src/config.ts`, `apps/web/app/login/2fa/SecondFactor.tsx` | `apps/api/test/admin-login.test.ts`, `e2e/admin-login.spec.ts` |
 | SC-05 | P5.7 | `packages/engine/src/runtime/runtime.ts`, `apps/web/lib/play/passage-session.ts` | `e2e/perf/player-budget.spec.ts` |
+| AD-03 | P9.3 | `apps/api/src/admin/moderation.service.ts`, `apps/api/src/reports/reports.service.ts`, `apps/web/app/admin/queue/page.tsx`, `apps/web/app/admin/cases/[id]/page.tsx` | `apps/api/test/moderation.test.ts`, `e2e/admin-moderation.spec.ts` |
+| AD-04 | P9.3 | `apps/api/src/admin/legal-logs.service.ts`, `apps/web/app/admin/legal/page.tsx` | `apps/api/test/moderation.test.ts` |
+| AD-07 | P9.3 | `apps/api/src/admin/feature-flags.service.ts`, `apps/web/app/admin/flags/page.tsx` | `apps/api/test/moderation.test.ts` |
+| AD-09 | P9.3 | `apps/api/src/admin/system.service.ts`, `apps/web/app/admin/system/page.tsx` | `apps/api/test/moderation.test.ts` |
+| AD-11 | P9.3 | `apps/api/src/admin/system-content.service.ts`, `apps/web/app/admin/content/page.tsx` | `apps/api/test/moderation.test.ts`, `e2e/admin-moderation.spec.ts` |
+| AD-02 | P9.3 | `apps/api/src/admin/admin-users.service.ts`, `apps/web/app/admin/users/[id]/page.tsx` | `apps/api/test/moderation.test.ts` |

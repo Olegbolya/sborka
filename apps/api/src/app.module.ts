@@ -34,6 +34,7 @@ import { MediaModule } from './media/media.module.js';
 import { ThemesModule } from './themes/themes.module.js';
 import { PlayModule } from './play/play.module.js';
 import { ReportsModule } from './reports/reports.module.js';
+import { AdminModule } from './admin/admin.module.js';
 import type { IMediaQueue } from './media/media-jobs.js';
 import { ProjectsModule } from './projects/projects.module.js';
 
@@ -58,9 +59,12 @@ export interface AppDeps {
 export class AppModule {
   static register(config: ApiConfig, deps: AppDeps): DynamicModule {
     const production = process.env.NODE_ENV === 'production';
+    // A-03: in production a real mail service is required; until the owner picks one (00-OWNER-DECISIONS §8) there is
+    // none, and confirming an address answers «почта не подключена» instead of crashing the API at start.
+    const emailSender: EmailSender | null = deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender();
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AuthModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config)],
+      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes }), AuthModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config)],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),
@@ -85,9 +89,7 @@ export class AppModule {
         { provide: ALERTS, useValue: deps.alerts },
         { provide: HEALTH_PROBES, useValue: deps.probes },
         ...(config.phoneLogin ? [{ provide: OTP_SENDER, useValue: deps.otpSender }, { provide: CAPTCHA_VERIFIER, useValue: deps.captchaVerifier }] : []),
-        // A-03: in production a real mail service is required; until the owner picks one (00-OWNER-DECISIONS §8) there is
-        // none, and confirming an address answers «почта не подключена» instead of crashing the API at start.
-        { provide: EMAIL_SENDER, useValue: deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender() },
+        { provide: EMAIL_SENDER, useValue: emailSender },
         { provide: OAUTH_STATE_STORE, useValue: new InMemoryOAuthStateStore() },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         // Global guards: CSRF → Auth → Roles (order matters).

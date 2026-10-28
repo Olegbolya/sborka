@@ -1,5 +1,6 @@
 import { createHash, randomInt } from 'node:crypto';
-import { HttpException, Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
+import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import {
@@ -49,10 +50,13 @@ export class PlaySessionsService {
   constructor(
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   /** The session id is the participant's capability: unguessable, kept by the browser. */
   private async load(sessionId: string): Promise<Loaded> {
+    // AD-07: with the player off no passage goes on.
+    if (this.flags && !(await this.flags.isEnabled('PLAYER_ENABLED'))) throw gone();
     if (!SESSION_ID.test(sessionId)) throw gone();
     const [row] = await this.db
       .select({ session: schema.participantSessions, document: schema.projectVersions.document, ownerId: schema.projects.ownerId, status: schema.projects.status, moderation: schema.projects.moderationStatus, deletedAt: schema.projects.deletedAt })

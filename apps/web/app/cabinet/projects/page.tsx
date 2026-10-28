@@ -1,8 +1,9 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Notifications } from '../../../components/admin/Notifications';
 
-type ProjectStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
+type ProjectStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'BLOCKED';
 
 interface Project {
   id: string;
@@ -19,12 +20,14 @@ const STATUS_LABEL: Record<ProjectStatus, string> = {
   DRAFT: 'Черновик',
   PUBLISHED: 'Опубликована',
   CLOSED: 'Закрыта',
+  BLOCKED: 'Заблокирована',
 };
 
 const STATUS_COLOR: Record<ProjectStatus, string> = {
   DRAFT: 'var(--muted)',
   PUBLISHED: '#16a34a',
   CLOSED: '#dc2626',
+  BLOCKED: '#dc2626',
 };
 
 const CSRF = { 'X-Blokum-CSRF': '1', 'Content-Type': 'application/json' };
@@ -145,6 +148,7 @@ export default function ProjectsPage() {
         <Link href="/app/themes" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Мои темы</Link>
       </nav>
       <h1 style={s.heading}>Мои сборки</h1>
+      <Notifications />
 
       {error && <div style={s.error}>{error}</div>}
 

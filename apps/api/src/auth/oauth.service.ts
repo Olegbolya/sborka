@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Optional } from '@nestjs/common';
+import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { and, eq } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import type { ApiConfig } from '../config.js';
@@ -56,6 +57,7 @@ export class OAuthService {
     private readonly sessions: SessionService,
     private readonly mfa: AdminMfaService,
     private readonly audit: AuditLogService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   /** A-01: builds the authorization URL and stores state+PKCE for the callback. */
@@ -208,6 +210,8 @@ export class OAuthService {
       return { id: u.id, role: u.role, status: u.status, displayName: u.displayName, phoneE164: u.phoneE164 };
     }
 
+    // AD-07: the first administrators (ADMIN_ACCOUNTS) can always get in; for others the door is shut while registration is off.
+    if (!listed) await this.flags?.require('REGISTRATION_ENABLED', 'Регистрация новых пользователей временно закрыта. Попробуйте позже.');
     const id = generateId();
     const role = listed ? 'ADMIN' : 'USER';
     await this.db.insert(schema.users).values({ id, displayName, role, status: 'ACTIVE' });

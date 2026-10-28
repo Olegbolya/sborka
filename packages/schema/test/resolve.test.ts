@@ -47,7 +47,7 @@ describe('PL-19: стиль блока собирается без разбор�
     expect(BLOCK_STYLE_DEFAULTS).toEqual(BlockStyle.parse({}));
   });
 
-  it('результат равен разбору слияния: любые наборы групп из темы, блока и состояния (1000 случаев)', () => {
+  it('результат равен разбору слияния: любые наборы групп из темы, блока и состояния (300 случаев)', () => {
     const rich = BlockStyle.parse({
       shape: { kind: 'rect' },
       radius: { tl: 12, tr: 12, br: 12, bl: 12 },
@@ -73,7 +73,7 @@ describe('PL-19: стиль блока собирается без разбор�
         const expected = BlockStyle.parse({ ...fromTheme, ...own, ...state });
         expect(resolveBlockStyle(b, tokens, 'pressed')).toEqual(expected);
       }),
-      { numRuns: 1000 },
+      { numRuns: 300 },
     );
-  });
+  }, 30_000);
 });

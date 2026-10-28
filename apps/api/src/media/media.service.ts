@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { appendFile, mkdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
-import { BadRequestException, HttpException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { and, eq, isNull, sql, sum } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createId } from '@blokum/schema';
@@ -40,10 +41,12 @@ export class MediaService {
     @Inject(DB) private readonly db: Db,
     @Inject(MEDIA_QUEUE) private readonly queue: IMediaQueue,
     private readonly storage: LocalStorageService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   /** P4.1/B-02…B-07: Direct upload from buffer (multer memoryStorage). */
   async uploadBuffer(ownerId: string, buffer: Buffer): Promise<UploadedMediaDto> {
+    await this.flags?.require('UPLOADS_ENABLED', 'Загрузка файлов временно отключена.');
     const result = await checkSignature(buffer).catch((e: unknown) => {
       if (e instanceof SignatureError) throw makeError(e.code, e.message);
       throw e;
@@ -73,6 +76,7 @@ export class MediaService {
 
   /** P4.1: Start a chunked upload session. Returns sessionId. */
   async startSession(ownerId: string, totalBytes: number): Promise<string> {
+    await this.flags?.require('UPLOADS_ENABLED', 'Загрузка файлов временно отключена.');
     // Validate against the maximum FREE-tier file limit (video 30 MB is biggest).
     if (totalBytes > 30 * 1024 * 1024) {
       throw makeError('FILE_TOO_LARGE', 'Файл превышает максимально допустимый размер для тарифа FREE (30 МБ)');

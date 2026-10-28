@@ -9,7 +9,8 @@ import {
 import { and, desc, eq, inArray, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createDocument, createId, createSlug, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
-import { Inject } from '@nestjs/common';
+import { Inject, Optional } from '@nestjs/common';
+import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { DB } from '../tokens.js';
 import { hashPassword } from '../play/secrets.js';
 
@@ -82,7 +83,10 @@ async function getCounters(db: Db, projectId: string): Promise<{ starts: number;
 
 @Injectable()
 export class ProjectsService {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    @Optional() private readonly flags?: FeatureFlagsService,
+  ) {}
 
   async createProject(userId: string, title = 'Новая сборка'): Promise<ProjectDetail> {
     const projectId = createId();
@@ -339,6 +343,7 @@ export class ProjectsService {
    * the next publication.
    */
   private async publish(row: { id: string; operatorInfo: Record<string, unknown> | null; dpaAcceptedAt: Date | null }): Promise<void> {
+    await this.flags?.require('PUBLISHING_ENABLED', 'Публикация сборок временно отключена.');
     const [project] = await this.db.select({ draftVersionId: schema.projects.draftVersionId }).from(schema.projects).where(eq(schema.projects.id, row.id));
     const [draft] = project?.draftVersionId
       ? await this.db.select({ document: schema.projectVersions.document }).from(schema.projectVersions).where(eq(schema.projectVersions.id, project.draftVersionId))

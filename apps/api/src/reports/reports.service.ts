@@ -1,4 +1,5 @@
-import { HttpException, Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
+import { ModerationService } from '../admin/moderation.service.js';
 import { createHash } from 'node:crypto';
 import { and, count, eq, gte, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
@@ -25,6 +26,7 @@ export class ReportsService {
   constructor(
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
+    @Optional() private readonly moderation?: ModerationService,
   ) {}
 
   async create(body: ReportInput, ip: string, now = new Date()): Promise<{ id: string; priority: string }> {
@@ -63,6 +65,8 @@ export class ReportsService {
         slaDueAt: new Date(now.getTime() + REPORT_SLA_HOURS[category.priority] * HOUR_MS),
       })
       .returning({ id: schema.reports.id });
+    // §4.2: a heavy complaint closes the project at once and tells the owner of the service.
+    await this.moderation?.onReport(row!.id, now);
     return { id: row!.id, priority: category.priority };
   }
 }

@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomInt } from 'node:crypto';
-import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, Optional, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { and, count, desc, eq, gt, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import type { ApiConfig } from '../config.js';
@@ -66,11 +67,13 @@ export class OtpService {
     private readonly sessions: SessionService,
     private readonly totp: TotpService,
     private readonly auditLog: AuditLogService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   /** A-01, TS-30: request an OTP code (normalises phone, checks captcha, enforces rate limits). */
   async requestCode(rawPhone: string, captchaToken: string, ip: string): Promise<void> {
     const phoneE164 = normalizePhone(rawPhone);
+    await this.flags?.require('SMS_ENABLED', 'Отправка СМС временно отключена. Войдите через VK ID или Яндекс ID.');
 
     const captchaOk = await this.captcha.verify(captchaToken, ip);
     if (!captchaOk) {
@@ -227,6 +230,8 @@ export class OtpService {
     const id = generateId();
     // AD-01: first login for the admin phone creates user with ADMIN role.
     const role = this.config.adminPhone && phoneE164 === this.config.adminPhone ? 'ADMIN' : 'USER';
+    // AD-07: the first administrator can always get in; for others the door is shut while registration is off.
+    if (role !== 'ADMIN') await this.flags?.require('REGISTRATION_ENABLED', 'Регистрация новых пользователей временно закрыта. Попробуйте позже.');
     await this.db.insert(schema.users).values({ id, phoneE164, displayName: phoneE164, role, status: 'ACTIVE' });
     if (role === 'ADMIN') {
       await this.auditLog.log({ actorId: id, action: 'ADMIN_ROLE_GRANTED', targetType: 'user', targetId: id });

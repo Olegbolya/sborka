@@ -1,4 +1,5 @@
-import { HttpException, Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
+import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { createHash } from 'node:crypto';
 import { and, count, eq, gt, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
@@ -86,9 +87,12 @@ export class PlayService {
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     private readonly storage: LocalStorageService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   private async published(by: { slug: string } | { projectId: string }) {
+    // AD-07: with the player off every project answers «Недоступно».
+    if (this.flags && !(await this.flags.isEnabled('PLAYER_ENABLED'))) throw unavailable();
     const [row] = await this.db
       .select({
         id: schema.projects.id,

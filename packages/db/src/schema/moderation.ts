@@ -1,6 +1,8 @@
 import { bigserial, boolean, index, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
+import { users } from './users.js';
 import { createdAt, id, ts } from './columns.js';
 import {
+  appealStatus,
   caseStatus,
   copyrightClaimStatus,
   dataRequestKind,
@@ -29,6 +31,8 @@ export const reports = pgTable(
     createdAt: createdAt(),
     resolvedAt: ts('resolved_at'),
     resolution: text('resolution'),
+    /** AD-03: the moderator who took the complaint. */
+    assigneeId: text('assignee_id'),
   },
   (t) => [index('reports_status_due_idx').on(t.status, t.slaDueAt), index('reports_project_idx').on(t.projectId)],
 );
@@ -81,6 +85,8 @@ export const moderationActions = pgTable(
     note: text('note').notNull(),
     actorId: text('actor_id').notNull(),
     reportId: text('report_id').references(() => reports.id, { onDelete: 'set null' }),
+    /** What the action changed (the state before it): `RESTORE` puts it back. */
+    details: jsonb('details').$type<Record<string, unknown>>().notNull().default({}),
     createdAt: createdAt(),
   },
   (t) => [index('moderation_actions_target_idx').on(t.targetType, t.targetId)],
@@ -128,3 +134,43 @@ export const featureFlags = pgTable('feature_flags', {
   updatedAt: ts('updated_at').notNull().defaultNow(),
   updatedById: text('updated_by_id'),
 });
+
+/** The creator's appeal against a moderation action (docs/06-TRUST-SAFETY.md §5); another moderator decides. */
+export const appeals = pgTable(
+  'appeals',
+  {
+    id: id(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    actionId: text('action_id')
+      .notNull()
+      .references(() => moderationActions.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    status: appealStatus('status').notNull().default('NEW'),
+    reviewerId: text('reviewer_id'),
+    decisionNote: text('decision_note'),
+    createdAt: createdAt(),
+    decidedAt: ts('decided_at'),
+  },
+  (t) => [index('appeals_status_idx').on(t.status, t.createdAt), index('appeals_user_idx').on(t.userId)],
+);
+
+/** A message to a user in the cabinet (and by mail when the address is confirmed): moderation decisions, appeal answers. */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    readAt: ts('read_at'),
+  },
+  (t) => [index('notifications_user_idx').on(t.userId, t.createdAt)],
+);
