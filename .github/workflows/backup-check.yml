@@ -51,12 +51,15 @@ jobs:
           pg_dump --version
       - name: База с тестовыми данными
         run: |
+          set -euo pipefail
+          trap 'echo "::error::строка $LINENO: $BASH_COMMAND"' ERR
           pnpm --filter "@blokum/db..." build
           pnpm db:migrate
           pnpm db:seed
       - name: Копия, восстановление, сверка
         run: |
           set -euo pipefail
+          trap 'echo "::error::строка $LINENO: $BASH_COMMAND"' ERR
           WORK="$(mktemp -d)"
           age-keygen -o "$WORK/key.txt" 2>/dev/null
           export AGE_RECIPIENT="$(grep 'public key' "$WORK/key.txt" | awk '{print $NF}')"
