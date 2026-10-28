@@ -24,6 +24,8 @@ export interface ApiConfig {
   phoneLogin: boolean;
   /** AD-01: phone that is automatically promoted to ADMIN role on first login. */
   adminPhone: string;
+  /** AD-01 · accounts promoted to ADMIN at sign-in through a provider: `vk:<id>`, `yandex:<id>` (ADR-033). */
+  adminAccounts?: string[];
   /** AD-01: AES-256-GCM key (64 hex chars = 32 bytes) for encrypting TOTP secrets. */
   totpSecretKey: string;
   /** TS-13 · limits of frequency on the public side, by the hash of the address. */
@@ -73,6 +75,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     webUrl: env.WEB_URL ?? 'http://localhost:3110',
     phoneLogin: env.PHONE_LOGIN === '1',
     adminPhone: env.ADMIN_PHONE ?? '',
+    adminAccounts: (env.ADMIN_ACCOUNTS ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean),
     totpSecretKey: env.TOTP_SECRET_KEY ?? 'a'.repeat(64),
     playLimits: { startsPerHourPerIp: Number(env.PLAY_STARTS_PER_HOUR_PER_IP ?? 120), answersPerMinutePerSession: Number(env.PLAY_ANSWERS_PER_MINUTE ?? 240), reportsPerHourPerIp: Number(env.REPORTS_PER_HOUR_PER_IP ?? 5) },
     mediaDir: env.MEDIA_DIR ?? (production ? '/srv/blokum/media' : `${env.DATA_ROOT ?? '/tmp'}/blokum-media`),

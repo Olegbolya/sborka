@@ -5,6 +5,8 @@ import { InMemoryOAuthStateStore } from '../src/auth/oauth-state.js';
 import vm from 'node:vm';
 import { DevOAuthController } from '../src/auth/dev-oauth.controller.js';
 import type { SessionService } from '../src/auth/session.service.js';
+import type { AdminMfaService } from '../src/auth/admin-mfa.service.js';
+import type { AuditLogService } from '../src/auth/audit-log.service.js';
 import type { Db } from '@blokum/db';
 import { schema } from '@blokum/db';
 import { loadApiConfig, type ApiConfig } from '../src/config.js';
@@ -57,6 +59,10 @@ function makeDb(): MockDb {
   return { db, selectChain, insertChain, deleteMock };
 }
 
+/** Second factor and audit are covered by admin-login.test.ts; here nobody is an administrator. */
+const makeMfa = (): AdminMfaService => ({ required: () => false, begin: () => 'pending' }) as unknown as AdminMfaService;
+const makeAudit = (): AuditLogService => ({ log: vi.fn().mockResolvedValue(undefined) }) as unknown as AuditLogService;
+
 function makeSessions(): SessionService {
   return { create: vi.fn().mockResolvedValue('tok-abc') } as unknown as SessionService;
 }
@@ -96,7 +102,7 @@ describe('A-01: OAuthService.initFlow', () => {
   it('returns vk authorization URL with PKCE and state params', async () => {
     const { db } = makeDb();
     const store = new InMemoryOAuthStateStore();
-    const svc = new OAuthService(db, baseConfig, store, makeSessions());
+    const svc = new OAuthService(db, baseConfig, store, makeSessions(), makeMfa(), makeAudit());
     const url = await svc.initFlow('vk');
     const parsed = new URL(url);
     expect(parsed.searchParams.get('client_id')).toBe('dev-vk');
@@ -109,7 +115,7 @@ describe('A-01: OAuthService.initFlow', () => {
   it('returns yandex authorization URL with correct scope', async () => {
     const { db } = makeDb();
     const store = new InMemoryOAuthStateStore();
-    const svc = new OAuthService(db, baseConfig, store, makeSessions());
+    const svc = new OAuthService(db, baseConfig, store, makeSessions(), makeMfa(), makeAudit());
     const url = await svc.initFlow('yandex');
     const parsed = new URL(url);
     expect(parsed.searchParams.get('client_id')).toBe('dev-yandex');
@@ -119,7 +125,7 @@ describe('A-01: OAuthService.initFlow', () => {
   it('stores state in the store', async () => {
     const { db } = makeDb();
     const store = new InMemoryOAuthStateStore();
-    const svc = new OAuthService(db, baseConfig, store, makeSessions());
+    const svc = new OAuthService(db, baseConfig, store, makeSessions(), makeMfa(), makeAudit());
     const url = await svc.initFlow('vk');
     const state = new URL(url).searchParams.get('state')!;
     const stored = await store.get(state);
@@ -133,7 +139,7 @@ describe('A-01: OAuthService.initFlow', () => {
 describe('A-01: OAuthService.processCallback — state validation', () => {
   it('throws INVALID_OAUTH_STATE when state is missing', async () => {
     const { db } = makeDb();
-    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions());
+    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
     await expect(svc.processCallback('vk', 'code', 'no-state', '1.2.3.4', 'ua'))
       .rejects.toThrow(BadRequestException);
   });
@@ -142,7 +148,7 @@ describe('A-01: OAuthService.processCallback — state validation', () => {
     const store = new InMemoryOAuthStateStore();
     await store.save('s', { provider: 'yandex', codeVerifier: 'cv', redirectUri: 'http://x' });
     const { db } = makeDb();
-    const svc = new OAuthService(db, baseConfig, store, makeSessions());
+    const svc = new OAuthService(db, baseConfig, store, makeSessions(), makeMfa(), makeAudit());
     await expect(svc.processCallback('vk', 'code', 's', '1.2.3.4', 'ua'))
       .rejects.toThrow(BadRequestException);
   });
@@ -151,7 +157,7 @@ describe('A-01: OAuthService.processCallback — state validation', () => {
     const store = new InMemoryOAuthStateStore();
     await store.save('s', { provider: 'vk', codeVerifier: 'cv', redirectUri: 'http://x' });
     const { db } = makeDb();
-    const svc = new OAuthService(db, baseConfig, store, makeSessions());
+    const svc = new OAuthService(db, baseConfig, store, makeSessions(), makeMfa(), makeAudit());
 
     global.fetch = vi.fn().mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({}) });
 
@@ -175,7 +181,7 @@ describe('A-01: OAuthService — findOrCreateUser', () => {
     await store.save('st', { provider: 'vk', codeVerifier: 'cv', redirectUri: 'http://x/callback' });
 
     const sessions = makeSessions();
-    const svc = new OAuthService(db, baseConfig, store, sessions);
+    const svc = new OAuthService(db, baseConfig, store, sessions, makeMfa(), makeAudit());
 
     global.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ access_token: 'tok' }) })
@@ -194,7 +200,7 @@ describe('A-01: OAuthService — findOrCreateUser', () => {
     await store.save('st2', { provider: 'yandex', codeVerifier: 'cv', redirectUri: 'http://x/callback' });
 
     const sessions = makeSessions();
-    const svc = new OAuthService(db, baseConfig, store, sessions);
+    const svc = new OAuthService(db, baseConfig, store, sessions, makeMfa(), makeAudit());
 
     global.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ access_token: 'tok' }) })
@@ -212,7 +218,7 @@ describe('A-01: linkIdentity and unlinkIdentity', () => {
   it('linkIdentity does nothing if identity already exists', async () => {
     const { db, selectChain } = makeDb();
     selectChain.limit.mockResolvedValueOnce([{ id: 'id1', userId: 'u1', provider: 'VK', providerUserId: '42' }]);
-    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions());
+    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
     await svc.linkIdentity('u1', 'vk', '42');
     expect((db as unknown as { insert: ReturnType<typeof vi.fn> }).insert).not.toHaveBeenCalled();
   });
@@ -220,7 +226,7 @@ describe('A-01: linkIdentity and unlinkIdentity', () => {
   it('linkIdentity inserts when no identity exists', async () => {
     const { db, selectChain } = makeDb();
     selectChain.limit.mockResolvedValueOnce([]);
-    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions());
+    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
     await svc.linkIdentity('u1', 'vk', '99');
     expect((db as unknown as { insert: ReturnType<typeof vi.fn> }).insert).toHaveBeenCalledWith(schema.authIdentities);
   });
@@ -231,7 +237,7 @@ describe('A-01: linkIdentity and unlinkIdentity', () => {
     selectMock.from.mockReturnValue(selectMock);
     selectMock.where.mockResolvedValue([{ id: 'id1', userId: 'u1', provider: 'VK', providerUserId: '42' }]);
     (db as unknown as { select: ReturnType<typeof vi.fn> }).select = vi.fn().mockReturnValue(selectMock);
-    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions());
+    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
     await expect(svc.unlinkIdentity('u1', 'vk')).rejects.toThrow(BadRequestException);
   });
 
@@ -245,7 +251,7 @@ describe('A-01: linkIdentity and unlinkIdentity', () => {
     ]);
     (db as unknown as { select: ReturnType<typeof vi.fn> }).select = vi.fn().mockReturnValue(selectMock);
     (db as unknown as { delete: ReturnType<typeof vi.fn> }).delete = vi.fn().mockReturnValue(deleteMock);
-    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions());
+    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
     await expect(svc.unlinkIdentity('u1', 'vk')).resolves.not.toThrow();
     expect((db as unknown as { delete: ReturnType<typeof vi.fn> }).delete).toHaveBeenCalledWith(schema.authIdentities);
   });
@@ -342,7 +348,7 @@ describe('A-01: OAuthController.callback', () => {
   const makeRes = () => ({ redirect: vi.fn(), setHeader: vi.fn() });
   const call = async (oauth: Partial<OAuthService>, req: Partial<Request>, res = makeRes()) => {
     const { OAuthController } = await import('../src/auth/oauth.controller.js');
-    const ctrl = new OAuthController(oauth as OAuthService, baseConfig);
+    const ctrl = new OAuthController(oauth as OAuthService, makeMfa(), baseConfig);
     await ctrl.callback('vk', 'c', 's', { headers: {}, socket: {}, ...req } as Request, res as unknown as Response);
     return res;
   };

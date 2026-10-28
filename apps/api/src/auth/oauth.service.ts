@@ -7,6 +7,8 @@ import { API_CONFIG, DB, OAUTH_STATE_STORE } from '../tokens.js';
 import type { OAuthStateStore } from './oauth-state.js';
 import type { RequestUser } from './session.service.js';
 import { SessionService } from './session.service.js';
+import { AdminMfaService } from './admin-mfa.service.js';
+import { AuditLogService } from './audit-log.service.js';
 
 /** A-01: supported OAuth providers. */
 export type OAuthProvider = 'vk' | 'yandex';
@@ -52,6 +54,8 @@ export class OAuthService {
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     @Inject(OAUTH_STATE_STORE) private readonly stateStore: OAuthStateStore,
     private readonly sessions: SessionService,
+    private readonly mfa: AdminMfaService,
+    private readonly audit: AuditLogService,
   ) {}
 
   /** A-01: builds the authorization URL and stores state+PKCE for the callback. */
@@ -77,7 +81,7 @@ export class OAuthService {
   }
 
   /** A-01: exchanges code for token, fetches profile, finds or creates user, returns session token. */
-  async processCallback(provider: OAuthProvider, code: string, state: string, ip: string, ua: string): Promise<{ token: string; user: RequestUser }> {
+  async processCallback(provider: OAuthProvider, code: string, state: string, ip: string, ua: string): Promise<{ token: string; user: RequestUser } | { mfa: string; user: RequestUser }> {
     const stateData = await this.stateStore.get(state);
     if (!stateData || stateData.provider !== provider) {
       throw new BadRequestException({ error: { code: 'INVALID_OAUTH_STATE', message: 'Неверный или устаревший параметр state' } });
@@ -114,6 +118,8 @@ export class OAuthService {
     const { providerUserId, displayName } = this.extractProfile(provider, profileBody);
 
     const user = await this.findOrCreateUser(provider, providerUserId, displayName);
+    // AD-01: an administrator or a moderator needs the second factor; no session before it.
+    if (user.status === 'ACTIVE' && this.mfa.required(user)) return { mfa: this.mfa.begin(user.id), user };
     const token = await this.sessions.create(user.id, { ip, ua });
     return { token, user };
   }
@@ -186,17 +192,27 @@ export class OAuthService {
       .select({ users: schema.users })
       .from(schema.authIdentities)
       .innerJoin(schema.users, eq(schema.authIdentities.userId, schema.users.id))
-      .where(eq(schema.authIdentities.providerUserId, providerUserId))
+      .where(and(eq(schema.authIdentities.providerUserId, providerUserId), eq(schema.authIdentities.provider, providerEnum)))
       .limit(1);
+
+    // AD-01: the first administrator is named by the account at the provider (ADMIN_ACCOUNTS), not by the person.
+    const listed = (this.config.adminAccounts ?? []).includes(`${provider}:${providerUserId}`.toLowerCase());
 
     if (existing[0]) {
       const u = existing[0].users;
+      if (listed && u.role === 'USER') {
+        await this.db.update(schema.users).set({ role: 'ADMIN' }).where(eq(schema.users.id, u.id));
+        await this.audit.log({ actorId: u.id, action: 'ROLE_ADMIN_BY_ACCOUNT', targetType: 'user', targetId: u.id });
+        return { id: u.id, role: 'ADMIN', status: u.status, displayName: u.displayName, phoneE164: u.phoneE164 };
+      }
       return { id: u.id, role: u.role, status: u.status, displayName: u.displayName, phoneE164: u.phoneE164 };
     }
 
     const id = generateId();
-    await this.db.insert(schema.users).values({ id, displayName, role: 'USER', status: 'ACTIVE' });
+    const role = listed ? 'ADMIN' : 'USER';
+    await this.db.insert(schema.users).values({ id, displayName, role, status: 'ACTIVE' });
     await this.db.insert(schema.authIdentities).values({ id: generateId(), userId: id, provider: providerEnum, providerUserId });
-    return { id, role: 'USER', status: 'ACTIVE', displayName, phoneE164: null };
+    if (listed) await this.audit.log({ actorId: id, action: 'ROLE_ADMIN_BY_ACCOUNT', targetType: 'user', targetId: id });
+    return { id, role, status: 'ACTIVE', displayName, phoneE164: null };
   }
 }

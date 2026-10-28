@@ -57,4 +57,10 @@ pnpm db:migrate
 export PLAY_STARTS_PER_HOUR_PER_IP="${PLAY_STARTS_PER_HOUR_PER_IP:-1000000}"
 # То же для жалоб (TS-11): их ограничение по адресу проверяет тест API.
 export REPORTS_PER_HOUR_PER_IP="${REPORTS_PER_HOUR_PER_IP:-1000000}"
+# Администраторы e2e (AD-01): эти номера в эмуляторе VK ID и Яндекс ID получают роль при входе; обычные тесты их не используют.
+export ADMIN_ACCOUNTS="${ADMIN_ACCOUNTS:-vk:700000000001,vk:700000000003,yandex:700000000002,yandex:700000000004}"
+# Настройку второго фактора тест проходит с нуля: администраторы прошлого запуска стираются (сборки и данные уходят вместе с ними).
+if command -v psql >/dev/null 2>&1; then
+  psql "$DATABASE_URL" -q -c "DELETE FROM users WHERE id IN (SELECT user_id FROM auth_identities WHERE provider_user_id LIKE '70000000000_')" >/dev/null 2>&1 || true
+fi
 exec pnpm --filter @blokum/api start
