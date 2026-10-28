@@ -434,3 +434,4 @@
 
 | PL-20 | P5.5 | `playwright.config.ts`, `.github/workflows/browsers.yml` | `e2e/browsers.spec.ts` |
 | N-06 | P9.4 | `scripts/check-foreign-services.mjs`, `apps/web/lib/security-headers.ts` | `apps/web/test/security-headers.test.ts` |
+| AD-07 | P9.6 | `apps/api/src/admin/feature-flags.service.ts`, `apps/web/app/admin/flags/page.tsx`, `apps/web/app/out/page.tsx` | `apps/api/test/moderation.test.ts` |
