@@ -55,10 +55,10 @@ export default defineConfig({
     { name: 'desktop-1440', testIgnore: 'perf/**', use: desktop },
     // Frame-rate budgets of the player (SC-05: «на среднем телефоне, эмуляция CPU ×4»): the phone profile, after
     // all other tests and one at a time, so nothing else competes for the processor while frames are counted (ADR-028).
-    // Safari on a phone: WebKit with the iPhone profile at the site's narrow width; Firefox on a desktop.
+    // Safari on a phone: WebKit with the iPhone profile at the site's narrow width (without touch: the gestures of the behaviour tests are sent as touch through CDP, which only Chromium has, so here they go by mouse); Firefox on a desktop.
     ...(allBrowsers
       ? [
-          { name: 'webkit-390', testMatch: WEBKIT_SPECS, use: { ...devices['iPhone 14'], viewport: { width: 390, height: 844 } } },
+          { name: 'webkit-390', testMatch: WEBKIT_SPECS, use: { ...devices['iPhone 14'], viewport: { width: 390, height: 844 }, hasTouch: false } },
           // The frame counts with the processor slowed down (P-01) go through CDP, which only Chromium has.
           { name: 'firefox-1440', testMatch: REFERENCE_SPECS, grepInvert: /P-01/, use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } } },
         ]
