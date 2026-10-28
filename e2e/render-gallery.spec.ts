@@ -33,7 +33,9 @@ test.describe('B-01…B-23 · S-15 · PL-21: галерея блоков', () =>
       expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(' | ')}`)).toEqual([]);
       expect(errors).toEqual([]);
       mkdirSync(SHOTS, { recursive: true });
-      await page.screenshot({ path: `${SHOTS}/render-gallery-${theme}-${info.project.name}.png`, fullPage: true });
+      // WebKit refuses a screenshot taller than 32767 pixels, and the gallery of 22 blocks × 9 states is taller on a phone: the first 16000.
+      const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, height: document.documentElement.scrollHeight }));
+      await page.screenshot({ path: `${SHOTS}/render-gallery-${theme}-${info.project.name}.png`, fullPage: true, clip: { x: 0, y: 0, width: size.width, height: Math.min(size.height, 16000) } });
     });
   }
 
@@ -58,6 +60,8 @@ test.describe('B-01…B-23 · S-15 · PL-21: галерея блоков', () =>
     await page.goto('/dev/render-gallery');
     const live = (type: string) => page.locator(`[data-block-id="zhivoi-${type}"]`);
     const field = live('textinput').getByRole('textbox', { name: 'Как зовут оленя' });
+    // A page made on the server takes input before React has hold of the field; what is typed then is lost: wait for the hold.
+    await expect.poll(() => field.evaluate((el) => Object.keys(el).some((k) => k.startsWith('__reactProps')))).toBe(true);
     await field.fill('Рудольф');
     await expect(field).toHaveValue('Рудольф');
     await live('scale').getByRole('radio', { name: '4 из 5' }).click();
