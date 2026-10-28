@@ -61,15 +61,17 @@ jobs:
           set -euo pipefail
           trap 'echo "::error::строка $LINENO: $BASH_COMMAND"' ERR
           WORK="$(mktemp -d)"
+          # Вывод скрипта попадает в сообщение об ошибке, если команда упала.
+          logged() { "$@" >"$WORK/last.txt" 2>&1 && cat "$WORK/last.txt" || { sed 's/^/::error::/' "$WORK/last.txt" | tail -30; return 1; }; }
           age-keygen -o "$WORK/key.txt" 2>/dev/null
           export AGE_RECIPIENT="$(grep 'public key' "$WORK/key.txt" | awk '{print $NF}')"
           export BACKUP_DIR="$WORK/backups"
           export AGE_IDENTITY_FILE="$WORK/key.txt"
 
-          bash infra/backup.sh
+          logged bash infra/backup.sh
           cat "$BACKUP_DIR"/*.counts
           grep -q '^users=[1-9]' "$BACKUP_DIR"/*.counts
-          bash infra/restore-check.sh
+          logged bash infra/restore-check.sh
 
           echo "::group::Повреждённая копия не проходит проверку"
           cp -r "$BACKUP_DIR" "$WORK/broken"
