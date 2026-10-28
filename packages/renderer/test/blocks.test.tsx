@@ -532,7 +532,9 @@ describe('B-08, B-09, B-18, B-21…B-23 и PL-21', () => {
 
   it('PL-21: фокус с клавиатуры виден — кольцо в цвете темы', () => {
     const host = render(<BlockView block={make('button')} />, { mode: 'player' });
-    expect(host.querySelector('style')?.textContent).toContain(`:focus-visible { outline: 3px solid ${DEV_THEMES.light.colors.primary}`);
+    // N-04: no `<style>` element (it would need the nonce of the page); the ring's colour is a variable of the artboard, the rules are in the site's style sheet.
+    expect(host.querySelector('style')).toBeNull();
+    expect((host.querySelector('.bk-artboard') as HTMLElement).style.getPropertyValue('--bk-focus')).toBe(DEV_THEMES.light.colors.primary);
   });
 });
 

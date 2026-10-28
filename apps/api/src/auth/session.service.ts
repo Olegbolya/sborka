@@ -121,11 +121,14 @@ export class SessionService {
   }
 
   /** Revokes a single session (ownership checked). */
-  async revoke(sessionId: string, userId: string): Promise<void> {
-    await this.db
+  /** Revokes one of the user's own sessions; `false` when there is no such session of theirs (somebody else's id is the same as none). */
+  async revoke(sessionId: string, userId: string): Promise<boolean> {
+    const rows = await this.db
       .update(schema.sessions)
       .set({ revokedAt: new Date() })
-      .where(and(eq(schema.sessions.id, sessionId), eq(schema.sessions.userId, userId)));
+      .where(and(eq(schema.sessions.id, sessionId), eq(schema.sessions.userId, userId)))
+      .returning({ id: schema.sessions.id });
+    return rows.length > 0;
   }
 
   /** Revokes all active sessions for a user; optionally keeps the current one. */

@@ -1,0 +1,33 @@
+name: Аудит зависимостей
+
+# P9.4 (N-04): известные уязвимости в том, что уходит в рабочую среду. На каждый пуш и раз в неделю — новые уязвимости находят и в старых версиях.
+on:
+  push:
+    branches: ['**']
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: pnpm audit --prod
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Установка зависимостей
+        run: pnpm install --frozen-lockfile
+      - name: Уязвимости уровня «высокая» и выше
+        run: pnpm audit --prod --audit-level=high

@@ -87,6 +87,7 @@ export function russianIssueMessage(issue: Issue): string {
   }
 }
 
-z.config({ localeError: russianIssueMessage });
+// `jitless`: zod does not probe whether `Function` works (it would be a violation of the CSP, N-04) and parses without generated code.
+z.config({ localeError: russianIssueMessage, jitless: true });
 
 export { z };

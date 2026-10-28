@@ -9,3 +9,9 @@ onlyBuiltDependencies:
   - '@prisma/engines'
   - prisma
   - embedded-postgres
+
+# P9.4: the patched versions of what other packages bring (pnpm audit --prod): body-parser of Express, uuid of exceljs.
+overrides:
+  body-parser: '>=2.4.0'
+  uuid: '>=11.1.1'
+  multer: '>=2.5.0'

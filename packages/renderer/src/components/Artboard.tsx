@@ -16,18 +16,12 @@ export interface ArtboardProps extends Partial<RenderContextValue> {
 }
 
 /**
- * Keyboard focus is always visible in the player (PL-21): pressable blocks, options and fields get a ring in
- * the theme's main colour. The ring is scoped to the artboard; the page also gets `PLAYER_PAGE_CSS`.
+ * Keyboard focus is always visible in the player (PL-21): pressable blocks, options and fields get a ring in the theme's main
+ * colour. The rules are in the style sheet of the site (`app/globals.css`) and read the colour from this variable; a `<style>`
+ * element of its own would need the nonce of the page (N-04, CSP). The same sheet keeps the player page from leaving by a
+ * horizontal swipe (BH-01, BH-03): the gesture past a block would be taken by the browser for «back».
  */
-export function focusCss(color: string): string {
-  return `.bk-artboard [tabindex="0"]:focus-visible, .bk-artboard button:focus-visible, .bk-artboard .bk-field:focus-visible, .bk-artboard a:focus-visible { outline: 3px solid ${color}; outline-offset: 2px; }${PLAYER_PAGE_CSS}`;
-}
-
-/**
- * The player page must not leave by a horizontal swipe: dragging a gift, scratching or a trackpad gesture that
- * runs past a block would otherwise be taken by the browser for «back» (BH-01, BH-03).
- */
-export const PLAYER_PAGE_CSS = 'html, body { overscroll-behavior-x: none; }';
+export const FOCUS_VAR = '--bk-focus';
 
 /** Fluid unit of the player: min(100vw, 480px) / 390. */
 export const PLAYER_UNIT = `calc(min(100vw, ${MAX_PLAYER_WIDTH}px) / ${ARTBOARD_WIDTH})`;
@@ -59,6 +53,7 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
     overflowX: 'hidden',
     backgroundColor: value.tokens.colors.background ?? '#FFFFFF',
   };
+  const focusBoard = { ...board, [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
   return (
     <RenderContext.Provider value={value}>
       <div className="bk-stage" style={stage}>
@@ -69,8 +64,7 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
             <video key={i} aria-hidden src={layer.src} autoPlay muted loop playsInline style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', ...layer.style }} />
           ),
         )}
-        <main className="bk-artboard" data-mode="player" style={board}>
-          <style>{focusCss(cssColor({ token: 'primary', alpha: 1 }, value.tokens))}</style>
+        <main className="bk-artboard" data-mode="player" style={focusBoard}>
           {children}
         </main>
       </div>

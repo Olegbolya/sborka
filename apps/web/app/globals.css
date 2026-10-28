@@ -26,3 +26,18 @@ body {
   color: var(--fg);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
+
+/* Player (PL-21, BH-01, BH-03): the ring of keyboard focus in the colour of the theme (`--bk-focus` is set by the artboard) and no «back» by a swipe. */
+.bk-artboard[data-mode='player'] [tabindex='0']:focus-visible,
+.bk-artboard[data-mode='player'] button:focus-visible,
+.bk-artboard[data-mode='player'] .bk-field:focus-visible,
+.bk-artboard[data-mode='player'] a:focus-visible {
+  outline: 3px solid var(--bk-focus, #e4572e);
+  outline-offset: 2px;
+}
+
+html:has(.bk-artboard[data-mode='player']),
+body:has(.bk-artboard[data-mode='player']) {
+  overscroll-behavior-x: none;
+}
+

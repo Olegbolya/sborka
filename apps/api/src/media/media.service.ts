@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { appendFile, mkdir, readFile, stat } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { BadRequestException, HttpException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
@@ -74,6 +74,15 @@ export class MediaService {
     return rowToDto(row);
   }
 
+  /**
+   * The temporary file of a chunked upload belongs to the user who started it: the path has their id, so another user who has
+   * learned the session id reaches nothing (N-04), and an id that is not one of ours cannot walk out of the folder.
+   */
+  private uploadPath(ownerId: string, sessionId: string): string {
+    if (!/^[A-Za-z0-9_-]{6,64}$/.test(sessionId) || !/^[A-Za-z0-9_-]{6,64}$/.test(ownerId)) throw makeError('NOT_FOUND', 'Сессия загрузки не найдена или истекла');
+    return this.storage.getPath(`tmp/${ownerId}/session_${sessionId}`);
+  }
+
   /** P4.1: Start a chunked upload session. Returns sessionId. */
   async startSession(ownerId: string, totalBytes: number): Promise<string> {
     await this.flags?.require('UPLOADS_ENABLED', 'Загрузка файлов временно отключена.');
@@ -83,14 +92,18 @@ export class MediaService {
     }
     await this.checkQuota(ownerId, totalBytes);
     const sessionId = createId();
-    const sessionPath = this.storage.getPath(`tmp/session_${sessionId}`);
+    const sessionPath = this.uploadPath(ownerId, sessionId);
     await mkdir(path.dirname(sessionPath), { recursive: true });
+    await writeFile(sessionPath, Buffer.alloc(0));
     return sessionId;
   }
 
   /** P4.1: Append a chunk to an existing upload session. */
-  async appendChunk(_ownerId: string, sessionId: string, chunk: Buffer): Promise<{ received: number }> {
-    const sessionPath = this.storage.getPath(`tmp/session_${sessionId}`);
+  async appendChunk(ownerId: string, sessionId: string, chunk: Buffer): Promise<{ received: number }> {
+    const sessionPath = this.uploadPath(ownerId, sessionId);
+    await stat(sessionPath).catch(() => {
+      throw makeError('NOT_FOUND', 'Сессия загрузки не найдена или истекла');
+    });
     await appendFile(sessionPath, chunk);
     const s = await stat(sessionPath);
     return { received: s.size };
@@ -98,9 +111,9 @@ export class MediaService {
 
   /** P4.1: Finalise a chunked upload — validate, create record, enqueue job. */
   async completeSession(ownerId: string, sessionId: string): Promise<UploadedMediaDto> {
-    const sessionPath = this.storage.getPath(`tmp/session_${sessionId}`);
+    const sessionPath = this.uploadPath(ownerId, sessionId);
     const buffer = await readFile(sessionPath).catch(() => {
-      throw makeError('SESSION_NOT_FOUND', 'Сессия загрузки не найдена или истекла');
+      throw makeError('NOT_FOUND', 'Сессия загрузки не найдена или истекла');
     });
 
     const result = await checkSignature(buffer).catch((e: unknown) => {

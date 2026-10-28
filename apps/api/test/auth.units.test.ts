@@ -225,12 +225,14 @@ describe('A-04 · SessionService', () => {
     expect(db.update).toHaveBeenCalled();
   });
 
-  it('revoke() вызывает update с revokedAt', async () => {
-    const updateWhere = vi.fn().mockResolvedValue([]);
+  it('revoke() вызывает update с revokedAt и говорит, был ли такой вход у этого пользователя', async () => {
+    const returning = vi.fn().mockResolvedValueOnce([{ id: 's1' }]).mockResolvedValueOnce([]);
+    const updateWhere = vi.fn(() => ({ returning }));
     const set = vi.fn(() => ({ where: updateWhere }));
     const db = { insert: vi.fn(), update: vi.fn(() => ({ set })), select: vi.fn() };
     const svc = new SessionService(db as never);
-    await svc.revoke('s1', 'u1');
+    expect(await svc.revoke('s1', 'u1')).toBe(true);
+    expect(await svc.revoke('s1', 'u2')).toBe(false);
     expect(db.update).toHaveBeenCalled();
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ revokedAt: expect.any(Date) }));
   });
@@ -321,7 +323,7 @@ describe('A-04 · AuthController', () => {
   });
 
   it('revokeSession отзывает конкретную сессию', async () => {
-    const sessions = { revoke: vi.fn().mockResolvedValue(undefined) } as unknown as SessionService;
+    const sessions = { revoke: vi.fn().mockResolvedValue(true) } as unknown as SessionService;
     const ctrl = new AuthController(sessions);
     const res = { setHeader: vi.fn() } as unknown as Response;
     const result = await ctrl.revokeSession('s2', mockUser, 's1', res);
@@ -330,8 +332,16 @@ describe('A-04 · AuthController', () => {
     expect(res.setHeader).not.toHaveBeenCalled(); // not current session
   });
 
+  it('N-04 · revokeSession: чужой или несуществующий вход — 404, ничего не отзывается', async () => {
+    const sessions = { revoke: vi.fn().mockResolvedValue(false) } as unknown as SessionService;
+    const ctrl = new AuthController(sessions);
+    const res = { setHeader: vi.fn() } as unknown as Response;
+    await expect(ctrl.revokeSession('s9', mockUser, 's1', res)).rejects.toMatchObject({ status: 404 });
+    expect(res.setHeader).not.toHaveBeenCalled();
+  });
+
   it('revokeSession сбрасывает cookie при отзыве текущей сессии', async () => {
-    const sessions = { revoke: vi.fn().mockResolvedValue(undefined) } as unknown as SessionService;
+    const sessions = { revoke: vi.fn().mockResolvedValue(true) } as unknown as SessionService;
     const ctrl = new AuthController(sessions);
     const res = { setHeader: vi.fn() } as unknown as Response;
     const result = await ctrl.revokeSession('s1', mockUser, 's1', res);

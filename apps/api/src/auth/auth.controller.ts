@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Param, Res } from '@nestjs/common';
+import { Controller, Delete, Get, NotFoundException, Param, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentSessionId, CurrentUser } from './decorators.js';
 import { SessionService, type SessionListItem, type RequestUser, clearSessionCookieHeader } from './session.service.js';
@@ -43,7 +43,7 @@ export class AuthController {
     @CurrentSessionId() sessionId: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ ok: true }> {
-    await this.sessions.revoke(id, user.id);
+    if (!(await this.sessions.revoke(id, user.id))) throw new NotFoundException({ error: { code: 'NOT_FOUND', message: 'Такого входа нет' } });
     if (id === sessionId) {
       res.setHeader('Set-Cookie', clearSessionCookieHeader(process.env.NODE_ENV === 'production'));
     }

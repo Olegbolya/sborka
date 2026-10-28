@@ -1,4 +1,7 @@
-export * from './locale.js';
+// `locale.js` (the Russian messages of zod) is imported by every module that makes schemas, not by the index: a page that reads only
+// plain values (the player) does not carry zod (P5.7).
+// Plain `zod` for those who need `z` next to the schemas; the messages are installed by whatever imports a schema.
+export { z } from 'zod';
 export * from './ids.js';
 export * from './color-roles.js';
 export * from './primitives.js';
