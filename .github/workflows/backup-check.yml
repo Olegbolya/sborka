@@ -46,9 +46,11 @@ jobs:
       - name: Установка зависимостей и программ
         run: |
           pnpm install --frozen-lockfile
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq age postgresql-client
-          pg_dump --version
+          # Программы копирования той же версии, что и сервер базы (16): новее — копия не восстановится на старом сервере.
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+          sudo apt-get install -y -qq age postgresql-client-16
+          echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
+          /usr/lib/postgresql/16/bin/pg_dump --version
       - name: База с тестовыми данными
         run: |
           set -euo pipefail
