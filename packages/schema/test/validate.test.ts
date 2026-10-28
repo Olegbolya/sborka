@@ -200,6 +200,32 @@ describe('SC-07: проверка сценариев перед публикац
   });
 });
 
+describe('AC-02 · значения свойств в «Изменить свойство»', () => {
+  const withValue = (property: 'style.effects' | 'frame.x' | 'textLayer' | 'props.media', value: unknown) => {
+    const s = createScreen('Экран');
+    const btn = createBlock('button');
+    btn.rules.push(createRule({ kind: 'tap', source: { kind: 'block', blockId: btn.id } }, [{ kind: 'setProperty', target: { kind: 'block', blockId: btn.id }, property, value, durationMs: 0 }]));
+    s.blocks = [btn];
+    return docWith([s, createScreen('Ф')]);
+  };
+
+  it('AC-02: подходящее значение (прозрачность, сдвиг, текст, пустое медиа) — без замечаний', () => {
+    expect(codes(withValue('style.effects', { opacity: 0.5 }))).not.toContain('INVALID_PROPERTY_VALUE');
+    expect(codes(withValue('frame.x', 40))).not.toContain('INVALID_PROPERTY_VALUE');
+    expect(codes(withValue('textLayer', textOf('Привет')))).not.toContain('INVALID_PROPERTY_VALUE');
+    expect(codes(withValue('props.media', null))).not.toContain('INVALID_PROPERTY_VALUE');
+  });
+
+  it('AC-02: неподходящее значение — ошибка публикации с русским пояснением', () => {
+    for (const [property, value] of [['style.effects', { opacity: 7 }], ['frame.x', 'влево'], ['textLayer', 'просто строка'], ['props.media', { kind: 'нет' }]] as const) {
+      const issues = validateDocument(withValue(property, value)).filter((i) => i.code === 'INVALID_PROPERTY_VALUE');
+      expect(issues, property).toHaveLength(1);
+      expect(issues[0]?.severity).toBe('error');
+      expect(issues[0]?.message).toContain(property);
+    }
+  });
+});
+
 describe('L-02 · L-05: ссылки на ответы и переменные', () => {
   it('L-02: ветка по ответу на вопрос с прошлого экрана — не ошибка', () => {
     const q = createBlock('singleChoice');

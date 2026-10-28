@@ -1,5 +1,6 @@
 import { z } from './locale.js';
 import { idSchema } from './ids.js';
+import { THEME_COLOR_ROLES } from './color-roles.js';
 
 export const Id = idSchema;
 export type Id = z.infer<typeof Id>;
@@ -13,7 +14,6 @@ export const HexColor = z
   .regex(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/, 'Цвет задаётся в формате #RRGGBB или #RRGGBBAA');
 
 /** Semantic colour roles every theme has (TH-01); themes may add any number of own colours. */
-export const THEME_COLOR_ROLES = ['background', 'surface', 'primary', 'accent', 'text', 'muted', 'success', 'error'] as const;
 export const ThemeColorRole = z.enum(THEME_COLOR_ROLES);
 
 export const ColorKey = z

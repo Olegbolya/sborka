@@ -422,3 +422,4 @@
 | TS-11 | P5.6 | `apps/api/src/reports/reports.service.ts`, `apps/api/src/reports/reports.controller.ts`, `packages/schema/src/report-categories.ts`, `apps/web/components/play/PlayFooter.tsx`, `packages/renderer/src/blocks/questions.tsx` | `apps/api/test/play-marks.test.ts`, `packages/renderer/test/blocks.test.tsx`, `e2e/play-safety.spec.ts` |
 | TS-12 | P5.6 | `apps/web/lib/play/out.ts`, `apps/web/app/out/page.tsx` | `apps/web/test/play-out.test.ts`, `e2e/play-safety.spec.ts` |
 | AD-01 | P2.6 | `apps/api/src/auth/admin-mfa.service.ts`, `apps/api/src/auth/oauth.service.ts`, `apps/api/src/auth/oauth.controller.ts`, `apps/api/src/config.ts`, `apps/web/app/login/2fa/SecondFactor.tsx` | `apps/api/test/admin-login.test.ts`, `e2e/admin-login.spec.ts` |
+| SC-05 | P5.7 | `packages/engine/src/runtime/runtime.ts`, `apps/web/lib/play/passage-session.ts` | `e2e/perf/player-budget.spec.ts` |

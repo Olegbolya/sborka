@@ -1,5 +1,6 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { BlockStyle, ThemeTokens, createBlock, ownStyleGroups, resetToTheme, resolveBlockStyle } from '../src/index.js';
+import { BLOCK_STYLE_DEFAULTS, BlockStyle, ThemeTokens, createBlock, ownStyleGroups, resetToTheme, resolveBlockStyle } from '../src/index.js';
 
 const theme = (radius: number, color: string) =>
   ThemeTokens.parse({ blockDefaults: { button: { radius: { tl: radius, tr: radius, br: radius, bl: radius }, fills: [{ kind: 'solid', color: { hex: color } }] } } });
@@ -38,5 +39,41 @@ describe('TH-06: тема и собственные правки блока', ()
     const b = createBlock('button', { style: { effects: { opacity: 0.9 } }, states: { pressed: { effects: { opacity: 0.5 } } } });
     expect(resolveBlockStyle(b, theme(28, '#E4572E'), 'pressed').effects.opacity).toBe(0.5);
     expect(resolveBlockStyle(b, theme(28, '#E4572E'), 'hover').effects.opacity).toBe(0.9);
+  });
+});
+
+describe('PL-19: стиль блока собирается без разбора схемой', () => {
+  it('BLOCK_STYLE_DEFAULTS равен разбору пустого стиля', () => {
+    expect(BLOCK_STYLE_DEFAULTS).toEqual(BlockStyle.parse({}));
+  });
+
+  it('результат равен разбору слияния: любые наборы групп из темы, блока и состояния (1000 случаев)', () => {
+    const rich = BlockStyle.parse({
+      shape: { kind: 'rect' },
+      radius: { tl: 12, tr: 12, br: 12, bl: 12 },
+      fills: [{ kind: 'solid', color: { hex: '#112233' } }],
+      stroke: { width: 3 },
+      shadows: [{ x: 1, y: 2, blur: 3, color: { hex: '#000000' } }],
+      effects: { opacity: 0.4 },
+      filters: { grayscale: 0.5 },
+      padding: { t: 4 },
+      text: { size: 30, weight: 700 },
+      media: { fit: 'contain' },
+      transform3d: { rotateX: 20 },
+      mask: { clipToShape: false },
+      layout: { mode: 'row', gap: 20 },
+      glow: { color: { hex: '#FFFFFF' }, size: 9 },
+    });
+    const groups = Object.keys(rich) as Array<keyof typeof rich>;
+    const subset = fc.subarray(groups).map((keys) => Object.fromEntries(keys.map((k) => [k, rich[k]])));
+    fc.assert(
+      fc.property(subset, subset, subset, (fromTheme, own, state) => {
+        const b = createBlock('button', { style: own, states: { pressed: state } });
+        const tokens = { blockDefaults: { button: fromTheme } } as never;
+        const expected = BlockStyle.parse({ ...fromTheme, ...own, ...state });
+        expect(resolveBlockStyle(b, tokens, 'pressed')).toEqual(expected);
+      }),
+      { numRuns: 1000 },
+    );
   });
 });

@@ -5,7 +5,7 @@ import { ThemeTokens } from '@blokum/schema';
  * the owner through the admin panel). Only system fonts, no assets.
  */
 export const DEV_THEMES = {
-  light: ThemeTokens.parse({
+  light: /*#__PURE__*/ ThemeTokens.parse({
     colors: { background: '#F6F4EF', surface: '#FFFFFF', primary: '#D9480F', accent: '#1971C2', text: '#1D1B18', muted: '#6B665D', success: '#2F9E44', error: '#C92A2A' },
     fonts: { heading: { kind: 'system', name: 'rounded' }, body: { kind: 'system', name: 'sans' } },
     blockDefaults: {
@@ -18,7 +18,7 @@ export const DEV_THEMES = {
       text: { text: { font: { kind: 'theme', role: 'body' }, size: 18 } },
     },
   }),
-  dark: ThemeTokens.parse({
+  dark: /*#__PURE__*/ ThemeTokens.parse({
     colors: { background: '#15171C', surface: '#22262E', primary: '#FF8A3D', accent: '#5CC8FF', text: '#F1F3F5', muted: '#A4ABB6', success: '#51CF66', error: '#FF6B6B' },
     fonts: { heading: { kind: 'system', name: 'rounded' }, body: { kind: 'system', name: 'sans' } },
     blockDefaults: {

@@ -1,5 +1,6 @@
 import { z } from './locale.js';
-import { type Block, Block as BlockSchema, walkBlocks } from './blocks.js';
+import { type Block, Block as BlockSchema } from './blocks.js';
+import { walkBlocks } from './walk.js';
 import { SCHEMA_VERSION } from './ids.js';
 import { Id, MediaRef, int, num } from './primitives.js';
 import { Condition, Rule, Variable } from './scenario.js';

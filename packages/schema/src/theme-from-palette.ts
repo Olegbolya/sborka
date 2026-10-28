@@ -1,5 +1,5 @@
 import { contrastRatio, fromHsl, luminance, mixHex, toHsl, withContrast } from './color-math.js';
-import { DEFAULT_COLORS } from './theme.js';
+import { DEFAULT_COLORS } from './color-roles.js';
 
 /** How many colours of a picture go into a theme (TH-02: 5–8). */
 export const PALETTE_MIN = 5;

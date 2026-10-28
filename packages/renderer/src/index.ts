@@ -3,6 +3,7 @@ export * from './context.js';
 export * from './theme/color.js';
 export * from './theme/fonts.js';
 export * from './theme/dev-themes.js';
+export * from './theme/default-tokens.js';
 export * from './style/style-to-css.js';
 export * from './style/apply-view.js';
 export * from './shape/outline.js';

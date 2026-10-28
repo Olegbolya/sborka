@@ -1,4 +1,4 @@
-import { type BlockInput, ProjectDocument, type RuleInput, type Variable, textOf } from '@blokum/schema';
+import { type BlockInput, ProjectDocument, parseSettableValue, type RuleInput, type Variable, textOf } from '@blokum/schema';
 import { type BlockView, type Runtime, type RuntimeEffect, type RuntimeEvent, type StepResult, type VariableValue, createRuntime } from '../src/index.js';
 
 type ActionInput = RuleInput['do'][number];
@@ -205,7 +205,7 @@ export function buildDoc(w: World): ProjectDocument {
 /** Builds the document, enters the first screen and plays the steps. */
 export function play(w: World, steps: Step[] = []): Outcome {
   const doc = buildDoc(w);
-  const rt = createRuntime(doc, { seed: w.seed ?? 1, ...(w.random !== undefined ? { randomSource: { next: () => w.random! } } : {}), ...(w.drawWheel ? { drawWheel: w.drawWheel } : {}) });
+  const rt = createRuntime(doc, { seed: w.seed ?? 1, parseValue: parseSettableValue, ...(w.random !== undefined ? { randomSource: { next: () => w.random! } } : {}), ...(w.drawWheel ? { drawWheel: w.drawWheel } : {}) });
   const results: StepResult[] = [rt.enterScreen('ekran1')];
   for (const s of steps) {
     if (typeof s === 'function') s(rt);

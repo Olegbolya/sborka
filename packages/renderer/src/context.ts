@@ -5,7 +5,7 @@ import { type AnswerValue, type BlockView as RuntimeView, type RuntimeEvent, typ
 import { type ReactNode, createContext, useContext } from 'react';
 import { type BlockCss, type MediaResolver } from './style/style-to-css.js';
 import { type SoundManager } from './sound/sound-manager.js';
-import { DEV_THEMES } from './theme/dev-themes.js';
+import { DEFAULT_RENDER_TOKENS } from './theme/default-tokens.js';
 
 /** Where blocks are drawn: the editor canvas, the participant's player or a static thumbnail. */
 export type RenderMode = 'editor' | 'player' | 'thumbnail';
@@ -52,7 +52,7 @@ const placeholder: TextRunValue = (run) => {
 
 export const defaultRenderContext: RenderContextValue = {
   mode: 'editor',
-  tokens: DEV_THEMES.light,
+  tokens: DEFAULT_RENDER_TOKENS,
   media: () => null,
   runText: placeholder,
   linkHref: (url) => url,

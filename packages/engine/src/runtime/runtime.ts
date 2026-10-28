@@ -1,20 +1,20 @@
 import {
   type Action,
   type Block,
-  BlockStyle,
+  type BlockStyle,
   type Condition,
   GESTURE_TRIGGERS,
-  MediaRef,
   type ProjectDocument,
-  RichText,
   type Rule,
   SCENARIO_LIMITS,
-  SafeHref,
   type Screen,
   type Source,
   type Target,
   type Trigger,
+  type ParsedValue,
   type Variable,
+  isSafeHref,
+  parseFrameValue,
   resolveBlockStyle,
   walkBlocks,
 } from '@blokum/schema';
@@ -44,7 +44,12 @@ export interface RuntimeOptions {
   drawWheel?: (blockId: string, sectorCount: number) => number | undefined;
   /** Wall-clock time of the start, ms since epoch — for B-08 timers «до даты». */
   startedAt?: number;
+  /** AC-02 · checker of values of `style.*`, `textLayer` and `props.media` (`parseSettableValue` of the schema); the player has none. */
+  parseValue?: ValueParser;
 }
+
+/** Checker of a value for a settable property (AC-02). */
+export type ValueParser = (property: SettableProperty, value: unknown) => ParsedValue;
 
 type ActionLeafOf<K extends Action['kind']> = Extract<Action, { kind: K }>;
 type SetVariable = ActionLeafOf<'setVariable'>;
@@ -148,26 +153,13 @@ const FRAME_SETTABLE: Partial<Record<SettableProperty, 'x' | 'y' | 'w' | 'h' | '
 /** Message shown in the debugger and at publishing when a rule runs away (SC-04). */
 export const LOOP_WARNING = 'Похоже на бесконечный цикл';
 
-/** Validates an AC-02 value for a property path; returns the parsed value or null. */
-function parseProperty(property: SettableProperty, value: unknown): { ok: true; value: unknown } | { ok: false } {
-  if (FRAME_SETTABLE[property]) {
-    if (typeof value !== 'number' || !Number.isFinite(value)) return { ok: false };
-    if ((property === 'frame.w' || property === 'frame.h') && value < 0) return { ok: false };
-    return { ok: true, value };
-  }
-  if (property === 'frame.flipX' || property === 'frame.flipY') return typeof value === 'boolean' ? { ok: true, value } : { ok: false };
-  if (property === 'textLayer') {
-    const r = RichText.safeParse(value);
-    return r.success ? { ok: true, value: r.data } : { ok: false };
-  }
-  if (property === 'props.media') {
-    if (value === null) return { ok: true, value: null };
-    const r = MediaRef.safeParse(value);
-    return r.success ? { ok: true, value: r.data } : { ok: false };
-  }
-  const key = property.slice('style.'.length) as keyof typeof BlockStyle.shape;
-  const r = BlockStyle.shape[key].safeParse(value);
-  return r.success ? { ok: true, value: r.data } : { ok: false };
+/**
+ * Checks an AC-02 value for a property path. Frame properties are checked here; every other one by the checker the host gives
+ * (`RuntimeOptions.parseValue`). Without one the value is taken as it is: the player runs published documents, whose values
+ * were checked at publishing (INVALID_PROPERTY_VALUE).
+ */
+function parseProperty(property: SettableProperty, value: unknown, parseValue: ValueParser | undefined): ParsedValue {
+  return parseFrameValue(property, value) ?? (parseValue ? parseValue(property, value) : { ok: true, value });
 }
 
 /** Current numeric value of an animatable property: animation → AC-02 override → the block's style. */
@@ -268,6 +260,7 @@ export class Runtime {
   private readonly rng: Rng;
   private readonly random: RandomSource;
   private readonly drawWheel: RuntimeOptions['drawWheel'];
+  private readonly parseValue: RuntimeOptions['parseValue'];
   private readonly startedAt: number;
   /** Time since the start of the passage, ms. */
   private time = 0;
@@ -311,6 +304,7 @@ export class Runtime {
     this.rng = createRng(options.seed);
     this.random = options.randomSource ?? createRng((options.seed ^ 0x9e3779b9) >>> 0);
     this.drawWheel = options.drawWheel;
+    this.parseValue = options.parseValue;
     this.startedAt = options.startedAt ?? 0;
     this.vars = Object.fromEntries(doc.variables.map((v) => [v.id, structuredClone(v.initial)]));
     this.variableDefs = new Map(doc.variables.map((v) => [v.id, v]));
@@ -926,7 +920,7 @@ export class Runtime {
         }
         return true;
       case 'setProperty': {
-        const parsed = parseProperty(a.property, a.value);
+        const parsed = parseProperty(a.property, a.value, this.parseValue);
         if (!parsed.ok) {
           this.warn(rule.id, `Недопустимое значение свойства ${a.property}`);
           return true;
@@ -1041,7 +1035,7 @@ export class Runtime {
           this.out.effects.push({ type: 'copyText', text: a.text });
           return true;
         }
-        if (!SafeHref.safeParse(a.url).success) this.warn(rule.id, 'Недопустимая ссылка: можно только https://, http://, mailto: и tel:');
+        if (!isSafeHref(a.url)) this.warn(rule.id, 'Недопустимая ссылка: можно только https://, http://, mailto: и tel:');
         else this.out.effects.push({ type: 'openLink', url: a.url });
         return true;
       }

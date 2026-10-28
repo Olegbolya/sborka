@@ -11,6 +11,21 @@ const e2eDatabaseUrl = process.env.DATABASE_URL ?? 'postgresql://blokum:blokum@1
 const mobile = { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true };
 const desktop = { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } };
 
+// PL-20 (P5.5): the same reference scenarios of the player in Firefox and WebKit (Safari), which CI's «Браузеры» workflow
+// runs with PW_BROWSERS=all. The main E2E job installs only Chromium, so these projects exist only when asked for.
+const allBrowsers = process.env.PW_BROWSERS === 'all';
+const REFERENCE_SPECS = [
+  'play.spec.ts',
+  'play-session.spec.ts',
+  'play-safety.spec.ts',
+  'behaviors.spec.ts',
+  'animations.spec.ts',
+  'shapes.spec.ts',
+  'matrix.spec.ts',
+  'render-gallery.spec.ts',
+  'artboard.spec.ts',
+].map((name) => `**/${name}`);
+
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
@@ -36,6 +51,13 @@ export default defineConfig({
     { name: 'desktop-1440', testIgnore: 'perf/**', use: desktop },
     // Frame-rate budgets of the player (SC-05: «на среднем телефоне, эмуляция CPU ×4»): the phone profile, after
     // all other tests and one at a time, so nothing else competes for the processor while frames are counted (ADR-028).
+    // Safari on a phone: WebKit with the iPhone profile at the site's narrow width; Firefox on a desktop.
+    ...(allBrowsers
+      ? [
+          { name: 'webkit-390', testMatch: REFERENCE_SPECS, use: { ...devices['iPhone 14'], viewport: { width: 390, height: 844 } } },
+          { name: 'firefox-1440', testMatch: REFERENCE_SPECS, use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } } },
+        ]
+      : []),
     { name: 'perf-390', testMatch: 'perf/**/*.spec.ts', dependencies: ['mobile-390', 'desktop-1440'], fullyParallel: false, use: mobile },
   ],
   webServer: [

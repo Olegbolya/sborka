@@ -14,7 +14,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/annotate-pure.mjs",
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
@@ -31,5 +31,6 @@
     "fast-check": "4.10.2",
     "typescript": "6.0.3",
     "vitest": "5.0.5"
-  }
+  },
+  "sideEffects": false
 }

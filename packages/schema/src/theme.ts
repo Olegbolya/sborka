@@ -1,20 +1,9 @@
 import { z } from './locale.js';
-import { ColorKey, HexColor, MediaRef, THEME_COLOR_ROLES } from './primitives.js';
+import { DEFAULT_COLORS, THEME_COLOR_ROLES } from './color-roles.js';
+import { ColorKey, HexColor, MediaRef } from './primitives.js';
 import { BLOCK_PROPS, type BlockType } from './blocks.js';
 import { FontRef, Fill, StyleOverride } from './style.js';
 import { ParticlesConfig, TransitionPreset } from './transitions.js';
-
-/** Default palette for new themes: neutral light. Every role exists in every theme. */
-export const DEFAULT_COLORS: Record<(typeof THEME_COLOR_ROLES)[number], string> = {
-  background: '#FBFAF7',
-  surface: '#FFFFFF',
-  primary: '#E4572E',
-  accent: '#2E86AB',
-  text: '#1D1B18',
-  muted: '#6B665D',
-  success: '#2F9E44',
-  error: '#D6336C',
-};
 
 const SystemScreen = z.strictObject({
   background: z.array(Fill).max(4).default([]),

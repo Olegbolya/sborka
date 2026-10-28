@@ -1,17 +1,10 @@
 import { z } from './locale.js';
+import { isSafeHref } from './href.js';
+import { plainText } from './plain-text.js';
 import { Id } from './primitives.js';
 
 /** Links in user text: only web, mail and phone links; they open through the safe-redirect page (PL-22). */
-export const SafeHref = z
-  .string()
-  .max(2000)
-  .refine((v) => {
-    try {
-      return ['https:', 'http:', 'mailto:', 'tel:'].includes(new URL(v).protocol);
-    } catch {
-      return false;
-    }
-  }, 'Ссылка должна начинаться с https://, http://, mailto: или tel:');
+export const SafeHref = z.string().max(2000).refine(isSafeHref, 'Ссылка должна начинаться с https://, http://, mailto: или tel:');
 
 /**
  * System placeholders for texts (L-04, VR-03): «{{баллы}}», «{{максимум}}», «{{результат}}» and the
@@ -60,11 +53,6 @@ export const RichText = z
   .strictObject({ paragraphs: z.array(Paragraph).max(200) })
   .refine((rt) => plainText(rt).length <= MAX_BLOCK_TEXT, `Текст блока — не больше ${MAX_BLOCK_TEXT} символов`);
 export type RichText = z.infer<typeof RichText>;
-
-/** Text without marks; variables count as one character each. */
-export function plainText(rt: { paragraphs: Array<{ runs: Array<{ t?: string } | TextRun> }> }): string {
-  return rt.paragraphs.map((p) => p.runs.map((r) => ('t' in r && typeof r.t === 'string' ? r.t : '•')).join('')).join('\n');
-}
 
 /** Helper for factories and tests: one paragraph of plain text. */
 export const textOf = (text: string): RichText => ({ paragraphs: [{ kind: 'p', runs: [{ t: text }] }] });

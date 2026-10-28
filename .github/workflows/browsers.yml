@@ -1,0 +1,62 @@
+name: Браузеры
+
+# PL-20 (P5.5, ADR-048): эталонные сценарии плеера проходят не только в Chromium, но и в Firefox и в WebKit (Safari).
+# Отдельный workflow, а не часть ci.yml: основной E2E ставит один Chromium и остаётся быстрым; здесь браузеры идут по одному.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browsers-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+  PW_BROWSERS: all
+
+jobs:
+  browsers:
+    name: ${{ matrix.title }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - title: Firefox (компьютер, 1440)
+            project: firefox-1440
+            browser: firefox
+          - title: WebKit / Safari (телефон, 390)
+            project: webkit-390
+            browser: webkit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Установка зависимостей
+        run: pnpm install --frozen-lockfile
+      - name: Браузер Playwright
+        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+      - name: Сборка
+        run: pnpm build
+      - name: Эталонные сценарии плеера
+        run: pnpm exec playwright test --project=${{ matrix.project }}
+      - name: Отчёт и снимки
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browsers-${{ matrix.project }}-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore

@@ -1,7 +1,10 @@
-import { type Block, walkBlocks } from './blocks.js';
+import { type Block } from './blocks.js';
+import { walkBlocks } from './walk.js';
 import { type BranchTarget, type ProjectDocument, type Screen } from './document.js';
-import { type Action, type Condition, GESTURE_TRIGGERS, type Rule, type Source, type Target, type Trigger } from './scenario.js';
-import { plainText } from './text.js';
+import { type Action, type Condition, type Rule, type Source, type Target, type Trigger } from './scenario.js';
+import { GESTURE_TRIGGERS } from './scenario-limits.js';
+import { plainText } from './plain-text.js';
+import { parseSettableValue } from './settable-values.js';
 
 /**
  * Pre-publish validation of logic (L-08) and scenarios (SC-07, TS-07). Errors block publishing,
@@ -19,7 +22,8 @@ export interface ValidationIssue {
     | 'BLOCK_ON_OTHER_SCREEN'
     | 'EMPTY_OPTION'
     | 'OPTION_NOT_CHILD'
-    | 'LINK_WITHOUT_GESTURE';
+    | 'LINK_WITHOUT_GESTURE'
+    | 'INVALID_PROPERTY_VALUE';
   severity: 'error' | 'warning';
   path: Array<string | number>;
   message: string;
@@ -292,6 +296,9 @@ export function validateDocument(doc: ProjectDocument): ValidationIssue[] {
         if (!optionIds.has(id)) err('MISSING_OPTION', p, `Ссылка на удалённый вариант ответа (${id})`);
       });
       for (const c of actionConditions(a)) checkCondition(c, p, screen);
+      if (a.kind === 'setProperty' && !parseSettableValue(a.property, a.value).ok) {
+        err('INVALID_PROPERTY_VALUE', p, `Значение для свойства «${a.property}» не подходит: проверьте, что оно записано так же, как в настройках блока`);
+      }
       if ((a.kind === 'openLink' || a.kind === 'copyText') && !gesture) {
         err(
           'LINK_WITHOUT_GESTURE',

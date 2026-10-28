@@ -58,9 +58,6 @@ export const Trigger = z.discriminatedUnion('kind', [
 export type Trigger = z.infer<typeof Trigger>;
 export type TriggerKind = Trigger['kind'];
 
-/** Triggers caused by a gesture of the participant: only they may open links or copy text (TS-07). */
-export const GESTURE_TRIGGERS: readonly TriggerKind[] = ['tap', 'doubleTap', 'longPress', 'hover', 'drag', 'drop', 'swipe', 'key'];
-
 // ── CN-01…CN-06 Conditions ────────────────────────────────────────────────────
 export const COMPARE_OPS = ['eq', 'ne', 'gt', 'lt', 'gte', 'lte', 'contains', 'empty'] as const;
 const Scalar = z.union([z.number(), z.string().max(1000), z.boolean()]);
@@ -234,8 +231,6 @@ export const Rule = z.strictObject({
 export type Rule = z.infer<typeof Rule>;
 export type RuleInput = z.input<typeof Rule>;
 
-/** SC-04: runtime limits of the scenario engine. */
-export const SCENARIO_LIMITS = { stepsPerSecond: 1000, nestingDepth: 20, maxCopies: 200, conditionDepth: 8 } as const;
 
 // ── BH-01…BH-08 Behaviors ─────────────────────────────────────────────────────
 export const Behavior = z.discriminatedUnion('kind', [

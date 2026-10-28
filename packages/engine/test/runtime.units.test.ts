@@ -99,6 +99,18 @@ describe('AC-02: значения свойств проверяются по с�
   });
 });
 
+describe('AC-02 · PL-19: проигрыватель без проверяющего значения', () => {
+  const doc = () => buildDoc({ blocks: [b('shape', 'knopka1')], rules: [rule(on.tap('knopka1'), [act.prop('knopka1', 'style.fills', [{ kind: 'solid', color: { hex: '#112233' } }]), act.prop('knopka1', 'frame.w', -5)])] });
+
+  it('значения стиля берутся как есть (опубликованная сборка уже проверена), размер проверяется всегда', () => {
+    const rt = createRuntime(doc(), { seed: 1 });
+    rt.enterScreen('ekran1');
+    const r = rt.dispatch(ev.tap('knopka1'));
+    expect(rt.view('knopka1')?.overrides['style.fills']).toEqual([{ kind: 'solid', color: { hex: '#112233' } }]);
+    expect(r.effects.flatMap((e) => (e.type === 'warning' ? [e.message] : []))).toEqual(['Недопустимое значение свойства frame.w']);
+  });
+});
+
 describe('AC-04: краевые случаи переменных', () => {
   const K = b('shape', 'knopka');
   const run = (vars: Parameters<typeof play>[0]['vars'], actions: Parameters<typeof rule>[1]) => play({ blocks: [K], vars, rules: [rule(on.tap('knopka'), actions)] }, [ev.tap('knopka')]);

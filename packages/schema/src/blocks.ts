@@ -185,11 +185,3 @@ export const Block: z.ZodType<Block, BlockInput> = z.lazy(
       BLOCK_TYPES.map((t) => member(t)) as unknown as [ReturnType<typeof member>, ...ReturnType<typeof member>[]],
     ) as unknown as z.ZodType<Block, BlockInput>,
 );
-
-/** All blocks of a tree, depth-first, children after their parent. */
-export function* walkBlocks(blocks: readonly Block[]): Generator<Block> {
-  for (const b of blocks) {
-    yield b;
-    yield* walkBlocks(b.children);
-  }
-}
