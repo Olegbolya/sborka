@@ -34,4 +34,11 @@ describe('N-04 · заголовки безопасности', () => {
     expect(atob(a).length).toBe(16);
     expect(securityHeaders('/', { nonce: a })['X-Content-Type-Options']).toBe('nosniff');
   });
+
+  it('N-06: страница не берёт ничего с чужих адресов — только свой сайт и, если задан, медиа-домен', () => {
+    const csp = contentSecurityPolicy({ nonce: 'a', mediaOrigin: 'https://media.blokum.ru' });
+    const hosts = csp.match(/https?:\/\/[^\s;]+/g) ?? [];
+    expect(hosts).toEqual(['https://media.blokum.ru', 'https://media.blokum.ru', 'https://media.blokum.ru', 'https://media.blokum.ru']);
+    expect(contentSecurityPolicy({ nonce: 'a' })).not.toMatch(/https?:\/\//);
+  });
 });

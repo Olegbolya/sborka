@@ -89,7 +89,7 @@ fi
 
 # ── 1. Каталоги ───────────────────────────────────────────────────────────────
 step "Каталоги"
-for d in "$APP_ROOT" "$APP_ROOT/releases" "$SHARED" "$DATA" "$DATA/media" "$DATA/exports" "$DATA/tmp" "$DATA/quarantine" "$LOGS"; do
+for d in "$APP_ROOT" "$APP_ROOT/releases" "$SHARED" "$DATA" "$DATA/media" "$DATA/exports" "$DATA/tmp" "$DATA/quarantine" "$DATA/backups" "$LOGS"; do
   if [ "$DRY_RUN" = 0 ] && [ -d "$d" ]; then skip "$d"; else
     run install -d -o "$DEPLOY_USER" -g "$DEPLOY_USER" -m 750 "$d"; done_ "$d"
   fi
@@ -98,9 +98,9 @@ run chmod 755 "$DATA" "$DATA/media"
 done_ "медиа ($DATA/media) доступны nginx на чтение, остальное — только $DEPLOY_USER"
 
 # ── 2. Системные пакеты ───────────────────────────────────────────────────────
-step "Пакеты: ffmpeg, ClamAV, certbot"
+step "Пакеты: ffmpeg, ClamAV, certbot, age"
 need_pkgs=()
-for p in ffmpeg clamav clamav-daemon certbot; do
+for p in ffmpeg clamav clamav-daemon certbot age; do
   if [ "$DRY_RUN" = 0 ] && dpkg -s "$p" >/dev/null 2>&1; then skip "$p"; else need_pkgs+=("$p"); fi
 done
 if [ "${#need_pkgs[@]}" -gt 0 ]; then
@@ -111,6 +111,18 @@ fi
 run systemctl enable --now clamav-freshclam
 run systemctl enable --now clamav-daemon
 done_ "антивирус ClamAV запущен (базы обновляются freshclam)"
+
+# ── 2а. Резервные копии базы (P9.5): раз в сутки, шифрованные age; ключ расшифровки — только у владельца ────────
+step "Резервные копии: ежедневно в 03:20, ${DATA}/backups"
+BACKUP_CRON="/etc/cron.d/blokum-backup"
+if [ "$DRY_RUN" = 1 ]; then
+  run "создать $BACKUP_CRON: infra/backup.sh от $DEPLOY_USER раз в сутки (нужен AGE_RECIPIENT в .env.prod)"
+else
+  printf '%s\n' "# P9.5: копия базы Блокума. Без AGE_RECIPIENT в .env.prod копия не делается (скрипт скажет об этом в журнале)." \
+    "20 3 * * * ${DEPLOY_USER} bash -c 'set -a; . ${SHARED}/.env.prod; set +a; BACKUP_DIR=${DATA}/backups bash ${APP_ROOT}/current/infra/backup.sh' >>${LOGS}/backup.log 2>&1" >"$BACKUP_CRON"
+  chmod 644 "$BACKUP_CRON"
+fi
+done_ "cron: $BACKUP_CRON (владельцу: создать ключ \`age-keygen\`, публичную часть записать в .env.prod как AGE_RECIPIENT, секретную хранить у себя)"
 
 # ── 3. Node.js 22 и pnpm для пользователя deploy (Node 20 у BST не трогаем) ───
 step "Node.js ${NODE_MAJOR} и pnpm ${PNPM_VERSION}"

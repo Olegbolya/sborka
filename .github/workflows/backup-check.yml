@@ -1,0 +1,96 @@
+name: Проверка резервных копий
+
+# P9.5 (N-03): скрипты копирования работают на настоящей базе — копия делается, шифруется, расшифровывается, восстанавливается
+# во временную базу и сверяется по числу строк ключевых таблиц; повреждённая копия и неверная сверка замечаются.
+# Раз в месяц тот же прогон запускается по расписанию (восстановление проверяется регулярно, docs/02-ARCHITECTURE.md §8 п. 9).
+on:
+  push:
+    branches: ['**']
+  schedule:
+    - cron: '41 4 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-check-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://blokum:blokum@127.0.0.1:5432/blokum_backup
+  ADMIN_DATABASE_URL: postgresql://blokum:blokum@127.0.0.1:5432/postgres
+
+jobs:
+  backup-check:
+    name: Копия → восстановление → сверка
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: blokum
+          POSTGRES_PASSWORD: blokum
+          POSTGRES_DB: blokum_backup
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U blokum" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Установка зависимостей и программ
+        run: |
+          pnpm install --frozen-lockfile
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age postgresql-client
+          pg_dump --version
+      - name: База с тестовыми данными
+        run: |
+          pnpm --filter @blokum/db build
+          pnpm db:migrate
+          pnpm db:seed
+      - name: Копия, восстановление, сверка
+        run: |
+          set -euo pipefail
+          WORK="$(mktemp -d)"
+          age-keygen -o "$WORK/key.txt" 2>/dev/null
+          export AGE_RECIPIENT="$(grep 'public key' "$WORK/key.txt" | awk '{print $NF}')"
+          export BACKUP_DIR="$WORK/backups"
+          export AGE_IDENTITY_FILE="$WORK/key.txt"
+
+          bash infra/backup.sh
+          cat "$BACKUP_DIR"/*.counts
+          grep -q '^users=[1-9]' "$BACKUP_DIR"/*.counts
+          bash infra/restore-check.sh
+
+          echo "::group::Повреждённая копия не проходит проверку"
+          cp -r "$BACKUP_DIR" "$WORK/broken"
+          printf 'x' >> "$WORK"/broken/*.dump.age
+          if BACKUP_DIR="$WORK/broken" bash infra/restore-check.sh; then echo "::error::повреждённая копия принята"; exit 1; fi
+          echo "::endgroup::"
+
+          echo "::group::Неверная сверка не проходит проверку"
+          cp -r "$BACKUP_DIR" "$WORK/wrong"
+          sed -i 's/^users=.*/users=999/' "$WORK"/wrong/*.counts
+          if BACKUP_DIR="$WORK/wrong" bash infra/restore-check.sh; then echo "::error::неверное число строк принято"; exit 1; fi
+          echo "::endgroup::"
+
+          echo "::group::Без ключа копия не делается"
+          if env -u AGE_RECIPIENT BACKUP_DIR="$WORK/nokey" bash infra/backup.sh; then echo "::error::копия сделана без шифрования"; exit 1; fi
+          echo "::endgroup::"
+
+          echo "::group::Хранятся только последние копии"
+          sleep 1; KEEP=2 bash infra/backup.sh >/dev/null
+          sleep 1; KEEP=2 bash infra/backup.sh >/dev/null
+          test "$(ls "$BACKUP_DIR"/blokum-*.dump.age | wc -l)" = 2
+          test "$(ls "$BACKUP_DIR"/*.counts | wc -l)" = 2
+          echo "::endgroup::"
+
+          bash infra/restore-check.sh
+          # Временные базы за собой убраны.
+          test "$(psql -qAtX "$ADMIN_DATABASE_URL" -c "select count(*) from pg_database where datname like 'blokum_restore_check%'")" = 0

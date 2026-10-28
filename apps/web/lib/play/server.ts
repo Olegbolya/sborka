@@ -18,3 +18,15 @@ export async function siteOrigin(): Promise<string> {
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') || host.startsWith('127.') ? 'http' : 'https');
   return `${proto}://${host}`;
 }
+
+/** AD-07 · whether the transitions to other sites are on now; if the API does not answer, they stay on (the switch is an emergency measure, not a dependency). */
+export async function externalLinksEnabled(): Promise<boolean> {
+  try {
+    const h = await headers();
+    const res = await apiFetch('/api/v1/flags/public', { requestId: h.get('x-request-id') });
+    if (!res.ok) return true;
+    return ((await res.json()) as { externalLinks?: boolean }).externalLinks !== false;
+  } catch {
+    return true;
+  }
+}

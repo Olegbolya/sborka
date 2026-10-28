@@ -283,6 +283,12 @@ describe('P9.3 · AD-02, AD-03, AD-04, AD-07, AD-09, AD-11 · админка м�
     await call(t, admin.cookie, 'put', '/admin/flags/PLAYER_ENABLED', { enabled: true, note: '' }).expect(200);
     await open(t, 'get', `/play/${p.slug}`).expect(200);
 
+    // Внешние ссылки: страница /out читает это значение (AD-07).
+    await call(t, admin.cookie, 'put', '/admin/flags/EXTERNAL_LINKS_ENABLED', { enabled: false, note: 'Волна фишинга' }).expect(200);
+    expect(((await open(t, 'get', '/flags/public').expect(200)).body as { externalLinks: boolean }).externalLinks).toBe(false);
+    await call(t, admin.cookie, 'put', '/admin/flags/EXTERNAL_LINKS_ENABLED', { enabled: true, note: '' }).expect(200);
+    expect(((await open(t, 'get', '/flags/public').expect(200)).body as { externalLinks: boolean }).externalLinks).toBe(true);
+
     await call(t, admin.cookie, 'put', '/admin/flags/PUBLISHING_ENABLED', { enabled: false, note: 'Волна спама' }).expect(200);
     expect((await call(t, owner.cookie, 'post', `/projects/${p.id}/publish`).expect(503)).body.error.code).toBe('FEATURE_DISABLED');
     await call(t, admin.cookie, 'put', '/admin/flags/PUBLISHING_ENABLED', { enabled: true, note: '' }).expect(200);

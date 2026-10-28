@@ -24,6 +24,7 @@ const REFERENCE_SPECS = [
   'matrix.spec.ts',
   'render-gallery.spec.ts',
   'artboard.spec.ts',
+  'browsers.spec.ts',
 ].map((name) => `**/${name}`);
 // The gallery of animations (dozens of blocks animated through Motion and nine particle fields on one page) does not run in the
 // WebKit that Playwright ships for Linux: the values of the animated variables stay put and the page is never «stable» (ADR-048).

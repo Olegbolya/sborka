@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { parseOutTarget } from '../../lib/play/out';
+import { externalLinksEnabled } from '../../lib/play/server';
 import { OutBack } from './OutBack';
 import './out.css';
 
@@ -13,6 +14,16 @@ export const metadata: Metadata = {
 export default async function OutPage({ searchParams }: { searchParams: Promise<{ u?: string }> }) {
   const { u } = await searchParams;
   const target = parseOutTarget(u);
+  // AD-07: while the switch of external links is off the page does not offer the way out.
+  if (target && !(await externalLinksEnabled())) {
+    return (
+      <main className="out" data-testid="out-page">
+        <h1>Переходы на другие сайты временно отключены</h1>
+        <p>Мы приостановили переходы по внешним ссылкам. Попробуйте позже.</p>
+        <OutBack />
+      </main>
+    );
+  }
   return (
     <main className="out" data-testid="out-page">
       {target ? (

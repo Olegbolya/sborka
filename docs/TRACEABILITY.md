@@ -430,4 +430,7 @@
 | AD-11 | P9.3 | `apps/api/src/admin/system-content.service.ts`, `apps/web/app/admin/content/page.tsx` | `apps/api/test/moderation.test.ts`, `e2e/admin-moderation.spec.ts` |
 | AD-02 | P9.3 | `apps/api/src/admin/admin-users.service.ts`, `apps/web/app/admin/users/[id]/page.tsx` | `apps/api/test/moderation.test.ts` |
 | N-04 | P9.4 | `apps/web/proxy.ts`, `apps/web/lib/security-headers.ts`, `apps/api/src/media/media.service.ts`, `apps/api/src/auth/session.service.ts`, `pnpm-workspace.yaml` | `apps/api/test/security.test.ts`, `e2e/security-headers.spec.ts`, `apps/web/test/security-headers.test.ts` |
-| N-06 | P9.4 | `scripts/check-foreign-services.mjs`, `apps/web/lib/security-headers.ts` | `scripts/check-foreign-services.mjs` (в `pnpm verify`) |
+| N-03 | P9.5 | `infra/backup.sh`, `infra/restore-check.sh`, `infra/server-setup.sh` | `.github/workflows/backup-check.yml` |
+
+| PL-20 | P5.5 | `playwright.config.ts`, `.github/workflows/browsers.yml` | `e2e/browsers.spec.ts` |
+| N-06 | P9.4 | `scripts/check-foreign-services.mjs`, `apps/web/lib/security-headers.ts` | `apps/web/test/security-headers.test.ts` |
