@@ -55,6 +55,8 @@ interface Answer {
   variableId: string | null;
   value: unknown;
   answeredAt: string;
+  /** RN-02: the value of a game was worked out on the participant's device. */
+  deviceReported?: boolean;
 }
 
 interface ResponseDetail extends ResponseSummary {
@@ -165,7 +167,7 @@ function ResponseCard({ detail }: { detail: ResponseDetail }) {
             {detail.answers.map((a) => (
               <tr key={a.id}>
                 <td style={{ ...s.td, fontFamily: 'monospace', fontSize: 12 }}>{a.blockId ?? a.variableId ?? '—'}</td>
-                <td style={{ ...s.td, maxWidth: 400, wordBreak: 'break-word' as const }}>{JSON.stringify(a.value)}</td>
+                <td style={{ ...s.td, maxWidth: 400, wordBreak: 'break-word' as const }}>{JSON.stringify(a.value)}{a.deviceReported ? <div style={{ fontSize: 11, color: 'var(--muted)' }} data-testid="device-reported">посчитано на устройстве участника</div> : null}</td>
                 <td style={{ ...s.td, whiteSpace: 'nowrap' as const, color: 'var(--muted)' }}>{formatDate(a.answeredAt)}</td>
               </tr>
             ))}

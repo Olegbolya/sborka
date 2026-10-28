@@ -42,6 +42,19 @@ describe('D-06: выгрузка ответов', () => {
     expect(row2).toContain(',ap1,');
   });
 
+  it('RN-02: колонка со значением, которое посчитало устройство участника, помечена в CSV', async () => {
+    const { svc } = makeService(
+      [{ items: [session('s1')], nextCursor: null }],
+      [
+        { sessionId: 's1', blockId: 'b1', variableId: null, value: 'да', deviceReported: false },
+        { sessionId: 's1', blockId: null, variableId: 'ochki', value: 120, deviceReported: true },
+      ],
+    );
+    const [header, row] = (await svc.exportCsv('u1', 'p1')).toString('utf8').slice(1).split('\r\n');
+    expect(header).toBe('id,статус,начало,завершение,длительность_мс,устройство,баллы,результат,источник,ответ_b1,ответ_ochki (посчитано на устройстве)');
+    expect(row).toMatch(/,120$/);
+  });
+
   it('постраничная загрузка: все страницы попадают в файл; без ответов запрос к базе не нужен', async () => {
     const { svc, listResponses } = makeService(
       [

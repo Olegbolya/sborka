@@ -58,6 +58,7 @@ export class ExportService {
               blockId: schema.answers.blockId,
               variableId: schema.answers.variableId,
               value: schema.answers.value,
+              deviceReported: schema.answers.deviceReported,
             })
             .from(schema.answers)
             .where(inArray(schema.answers.sessionId, sessionIds))
@@ -78,7 +79,8 @@ export class ExportService {
       const sessionAnswers = allAnswers.filter((a) => a.sessionId === s.id);
       for (const a of sessionAnswers) {
         const key = a.blockId ?? a.variableId ?? 'ответ';
-        base[`ответ_${key}`] = JSON.stringify(a.value);
+        // RN-02: a value of a game is worked out on the participant's device; the column says so.
+        base[`ответ_${key}${a.deviceReported ? DEVICE_NOTE : ''}`] = JSON.stringify(a.value);
       }
       return base;
     });
@@ -95,6 +97,9 @@ export class ExportService {
     return [...base, ...extra];
   }
 }
+
+/** RN-02 · the mark on a column whose values the device of the participant reported. */
+export const DEVICE_NOTE = ' (посчитано на устройстве)';
 
 function csvEscape(val: string): string {
   if (val.includes(',') || val.includes('"') || val.includes('\n')) {
