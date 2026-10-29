@@ -19,6 +19,9 @@ const KIND_TITLES: ReadonlyArray<readonly [Kind, string]> = [
   ['group', 'Несколько условий вместе'],
 ];
 
+/** The kinds the editor of conditions offers (CN-01…CN-06): the test compares them with the schema. */
+export const CONDITION_KINDS: readonly Kind[] = KIND_TITLES.map(([k]) => k);
+
 const OP_TITLES: Record<Op, string> = { eq: 'равно', ne: 'не равно', gt: 'больше', lt: 'меньше', gte: 'не меньше', lte: 'не больше', contains: 'содержит', empty: 'пусто' };
 const COUNT_OPS = COMPARE_OPS.filter((o) => o !== 'contains' && o !== 'empty');
 const opOptions = (ops: readonly Op[]) => ops.map((o) => [o, OP_TITLES[o]] as const);

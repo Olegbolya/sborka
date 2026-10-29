@@ -14,6 +14,7 @@ import {
 import { flipBlocks, patchBlocks, setFrame } from '../../lib/editor/commands';
 import { selectedBlocks } from '../../lib/editor/store';
 import { PropsInspector } from './PropsInspector';
+import { ScenarioEditor } from './ScenarioEditor';
 import { ScreenPanel } from './ScreenPanel';
 import { TextEditor } from './TextEditor';
 import { AnimationInspector, StyleInspector } from './StylePanels';
@@ -302,15 +303,26 @@ function Content({ blocks }: { blocks: Block[] }) {
   );
 }
 
-/** «Сценарии»: what is attached to the selected blocks (editing rules arrives with P3.8). */
+/** «Сценарии»: the rules of the selected block as a constructor (P3.8); with several blocks selected only the counts. */
 function Scenarios({ blocks }: { blocks: Block[] }) {
+  if (blocks.length === 1) {
+    const block = blocks[0]!;
+    return (
+      <>
+        <ScenarioEditor owner={{ kind: 'block', blockId: block.id }} rules={block.rules} title="Сценарии" />
+        <p className="ed-hint" data-testid="scenario-counts" style={{ padding: '0 12px' }}>
+          Правил: {block.rules.length}. Поведений: {block.behaviors.length}.
+        </p>
+      </>
+    );
+  }
   const rules = blocks.reduce((n, b) => n + b.rules.length, 0);
   const behaviors = blocks.reduce((n, b) => n + b.behaviors.length, 0);
   return (
     <div className="ed-section">
       <h2>Сценарии</h2>
       <p className="ed-hint" data-testid="scenario-counts">
-        Правил: {rules}. Поведений: {behaviors}.
+        Правил: {rules}. Поведений: {behaviors}. Выберите один блок, чтобы править его сценарии.
       </p>
     </div>
   );

@@ -3,6 +3,7 @@ import { type ReactNode, createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import { type EditorActions, type EditorState, type EditorStore } from '../../lib/editor/store';
 import { type MediaCatalog } from '../../lib/editor/media';
+import { type BlockPicker } from '../../lib/editor/picker';
 import { type Saver } from '../../lib/editor/saver';
 
 /** What the controls need: the store (gestures, values) and the files of the library. The theme editor provides only this. */
@@ -14,6 +15,8 @@ export interface ControlEnv {
 
 export interface EditorEnv extends ControlEnv {
   saver: Saver;
+  /** «Указать на холсте»: a field asks for a block, the canvas answers (SC-02). */
+  picker: BlockPicker;
   projectId: string;
   /** Shows a short message under the top bar. */
   flash: (message: string, kind?: 'ok' | 'error') => void;

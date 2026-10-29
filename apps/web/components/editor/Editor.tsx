@@ -8,6 +8,7 @@ import { applyTheme, duplicateBlocks, moveBlocksBy, removeBlocks } from '../../l
 import { findBlock } from '../../lib/editor/tree';
 import { MediaCatalog } from '../../lib/editor/media';
 import { IdbQueue, browserSaverDeps, loadProject } from '../../lib/editor/remote';
+import { BlockPicker } from '../../lib/editor/picker';
 import { Saver } from '../../lib/editor/saver';
 import { type EditorStore, createEditorStore } from '../../lib/editor/store';
 import { getTheme } from '../../lib/themes/api';
@@ -39,6 +40,7 @@ export function Editor({ projectId }: { projectId: string }) {
   const [dialog, setDialog] = useState<'preview' | 'history' | 'logic' | 'theme' | null>(null);
   const [message, setMessage] = useState<{ text: string; kind: 'ok' | 'error' } | null>(null);
   const suppress = useRef(false);
+  const picker = useMemo(() => new BlockPicker(), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,12 +204,13 @@ export function Editor({ projectId }: { projectId: string }) {
         e.preventDefault();
         s.apply(removeBlocks(unlocked), { label: 'Удалить блоки' });
       } else if (key === 'escape') {
-        s.select(s.selection.screenId, []);
+        if (picker.active) picker.cancel();
+        else s.select(s.selection.screenId, []);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [store, saver, flash]);
+  }, [store, saver, flash, picker]);
 
   useEffect(() => {
     if (!message) return;
@@ -224,7 +227,7 @@ export function Editor({ projectId }: { projectId: string }) {
     [store],
   );
 
-  const env: EditorEnv | null = useMemo(() => (store && saver && loaded ? { store, saver, media: loaded.media, projectId, flash, loadDocument } : null), [store, saver, loaded, projectId, flash, loadDocument]);
+  const env: EditorEnv | null = useMemo(() => (store && saver && loaded ? { store, saver, picker, media: loaded.media, projectId, flash, loadDocument } : null), [store, saver, picker, loaded, projectId, flash, loadDocument]);
 
   useEffect(() => {
     if (loaded?.restored) flash('Восстановлены несохранённые правки с прошлого раза — они сохраняются.', 'ok');

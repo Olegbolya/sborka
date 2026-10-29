@@ -42,7 +42,7 @@ const HANDLE_POS: Record<Handle, [string, string]> = {
  * `lib/editor/gestures.ts`; here are the views, the zoom and the panning.
  */
 export function Canvas() {
-  const { store, media } = useEnv();
+  const { store, media, picker } = useEnv();
   useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
   const doc = useEditor((s) => s.doc);
   const selection = useEditor((s) => s.selection);
@@ -227,6 +227,13 @@ export function Canvas() {
 
   const pick = (block: Block, e: ReactPointerEvent) => {
     claim(e);
+    // SC-02: a field of a rule asked for a block — this tap is the answer, the block is not selected or moved.
+    if (picker.active && e.button === 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      picker.resolve(block.id);
+      return;
+    }
     if (e.button === 1 || space.current) {
       e.preventDefault();
       startPan(e);
@@ -256,6 +263,10 @@ export function Canvas() {
 
   const onStageDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     claim(e);
+    if (picker.active) {
+      picker.cancel();
+      return;
+    }
     if (e.button === 1 || space.current) {
       e.preventDefault();
       startPan(e);

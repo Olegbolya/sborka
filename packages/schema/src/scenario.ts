@@ -62,7 +62,8 @@ export type TriggerKind = Trigger['kind'];
 export const COMPARE_OPS = ['eq', 'ne', 'gt', 'lt', 'gte', 'lte', 'contains', 'empty'] as const;
 const Scalar = z.union([z.number(), z.string().max(1000), z.boolean()]);
 
-const ConditionLeaf = z.discriminatedUnion('kind', [
+/** The conditions that are not groups; the editor of scenarios compares its list with these. */
+export const ConditionLeaf = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('variable'), variableId: Id, op: z.enum(COMPARE_OPS), value: Scalar.optional() }), // CN-01
   z.strictObject({
     kind: z.literal('answer'),
@@ -131,7 +132,8 @@ const Destination = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('by'), dx: num(-10000, 10000), dy: num(-10000, 10000) }),
 ]);
 
-const ActionLeaf = z.discriminatedUnion('kind', [
+/** The actions that are not control flow; the editor of scenarios compares its list with these. */
+export const ActionLeaf = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('visibility'), targets: z.array(Target).min(1).max(50), mode: z.enum(['show', 'hide', 'toggle']), animate: z.boolean().default(true) }), // AC-01
   z.strictObject({
     kind: z.literal('setProperty'),
