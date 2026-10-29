@@ -480,17 +480,17 @@
 | AC-19 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
 | AC-20 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
 | BH-01 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
-| BH-02 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts`, `e2e/scenarios.spec.ts` |
-| BH-03 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
-| BH-04 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
-| BH-05 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
-| BH-06 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
-| BH-07 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
-| BH-08 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
+| BH-02 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios.spec.ts` |
+| BH-03 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts` |
+| BH-04 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts` |
+| BH-05 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts` |
+| BH-06 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts` |
+| BH-07 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts` |
+| BH-08 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts` |
 | VR-01 | P3.8 | `apps/web/components/editor/VariablesPanel.tsx`, `apps/web/lib/editor/variables.ts` | `apps/web/test/editor-variables.test.ts`, `e2e/scenarios.spec.ts` |
 | VR-02 | P3.8 | `apps/web/components/editor/VariablesPanel.tsx`, `apps/web/lib/editor/variables.ts` | `apps/web/test/editor-variables.test.ts` |
 | VR-03 | P3.8 | `apps/web/components/editor/VariablesPanel.tsx`, `apps/web/lib/editor/variables.ts` | `apps/web/test/scenario-specs.test.ts` |
-| VR-04 | P3.8 | `apps/web/components/editor/VariablesPanel.tsx`, `apps/web/lib/editor/variables.ts` | `apps/web/test/editor-variables.test.ts`, `e2e/scenarios.spec.ts` |
+| VR-04 | P3.8 | `apps/web/components/editor/VariablesPanel.tsx`, `apps/web/lib/editor/variables.ts` | `apps/web/test/editor-variables.test.ts` |
 | SC-02 | P3.8 | `apps/web/components/editor/ScenarioEditor.tsx`, `apps/web/components/editor/ScenarioDialog.tsx`, `apps/web/lib/editor/rules.ts`, `apps/web/lib/editor/picker.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-rules.test.ts`, `e2e/scenarios.spec.ts` |
 | SC-03 | P3.8 | `packages/engine/src/runtime/runtime.ts`, `apps/web/components/editor/PreviewDialog.tsx`, `apps/web/lib/editor/debug-log.ts` | `packages/engine/test/debug.test.ts`, `apps/web/test/debug-log.test.ts`, `e2e/scenarios.spec.ts` |
 | SC-06 | P3.8 | `apps/web/lib/editor/clipboard.ts`, `apps/web/components/editor/PasteVariablesDialog.tsx` | `apps/web/test/clipboard-rules.test.ts`, `e2e/scenarios.spec.ts` |
