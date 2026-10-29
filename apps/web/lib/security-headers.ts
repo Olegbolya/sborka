@@ -1,3 +1,5 @@
+import { METRIKA_HOST } from './analytics';
+
 /**
  * N-04, docs/02-ARCHITECTURE.md §8 п. 2 · the security headers of every page the site sends: a strict CSP (no `unsafe-eval`;
  * a script runs only with the nonce of the request, an inline style attribute is the one thing that is let in), no sniffing of
@@ -7,11 +9,14 @@ export interface HeaderOptions {
   nonce: string;
   /** Address of the media domain, when files are served from another host (`MEDIA_ORIGIN`). */
   mediaOrigin?: string;
+  /** The counter of Yandex Metrika is on this page (P10.7): its host is let into the policy, nowhere else. */
+  analytics?: boolean;
   /** In development React needs `eval` to rebuild stacks; the production build never gets it. */
   development?: boolean;
 }
 
-export function contentSecurityPolicy({ nonce, mediaOrigin, development = false }: HeaderOptions): string {
+export function contentSecurityPolicy({ nonce, mediaOrigin, analytics = false, development = false }: HeaderOptions): string {
+  const counter = analytics ? ` ${METRIKA_HOST}` : '';
   const media = mediaOrigin ? ` ${mediaOrigin}` : '';
   const directives: Array<[string, string]> = [
     ['default-src', "'self'"],
@@ -20,10 +25,10 @@ export function contentSecurityPolicy({ nonce, mediaOrigin, development = false 
     ['style-src-elem', `'self' 'nonce-${nonce}'`],
     // The inline `style` of a block is how the renderer places it; it cannot carry a nonce.
     ['style-src-attr', "'unsafe-inline'"],
-    ['img-src', `'self' data: blob:${media}`],
+    ['img-src', `'self' data: blob:${media}${counter}`],
     ['media-src', `'self' blob:${media}`],
     ['font-src', `'self' data:${media}`],
-    ['connect-src', `'self'${media}${development ? ' ws:' : ''}`],
+    ['connect-src', `'self'${media}${counter}${development ? ' ws:' : ''}`],
     ['worker-src', "'self' blob:"],
     ['object-src', "'none'"],
     ['base-uri', "'self'"],

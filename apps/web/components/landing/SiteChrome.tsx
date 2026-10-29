@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { LEGAL_LINKS } from '../../lib/landing/content';
+import { CookieSettingsButton } from './CookieSettingsButton';
 import './landing.css';
 
 export function SiteHeader() {
@@ -46,6 +47,7 @@ export function SiteFooter() {
               {l.title}
             </a>
           ))}
+          <CookieSettingsButton />
         </nav>
       </div>
     </footer>

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { connection } from 'next/server';
+import { CookieBanner } from '../components/landing/CookieBanner';
+import { metrikaId } from '../lib/analytics';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -20,7 +22,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   await connection();
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <body>
+        {children}
+        <CookieBanner metrikaId={metrikaId(process.env.YANDEX_METRIKA_ID)} />
+      </body>
     </html>
   );
 }

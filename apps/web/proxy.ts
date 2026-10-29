@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { REQUEST_ID_HEADER, newRequestId, normalizeRequestId } from '@blokum/observability';
+import { analyticsAllowed, metrikaId } from './lib/analytics';
 import { newNonce, securityHeaders } from './lib/security-headers';
 
 /**
@@ -9,7 +10,7 @@ import { newNonce, securityHeaders } from './lib/security-headers';
 export function proxy(request: NextRequest): NextResponse {
   const id = normalizeRequestId(request.headers.get(REQUEST_ID_HEADER)) ?? newRequestId();
   const nonce = newNonce();
-  const security = securityHeaders(request.nextUrl.pathname, { nonce, ...(process.env.MEDIA_ORIGIN ? { mediaOrigin: process.env.MEDIA_ORIGIN } : {}), development: process.env.NODE_ENV !== 'production' });
+  const security = securityHeaders(request.nextUrl.pathname, { nonce, analytics: metrikaId(process.env.YANDEX_METRIKA_ID) !== null && analyticsAllowed(request.nextUrl.pathname), ...(process.env.MEDIA_ORIGIN ? { mediaOrigin: process.env.MEDIA_ORIGIN } : {}), development: process.env.NODE_ENV !== 'production' });
   const headers = new Headers(request.headers);
   headers.set(REQUEST_ID_HEADER, id);
   // Next.js reads the policy of the request to put the nonce on its own scripts.
