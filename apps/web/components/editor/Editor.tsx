@@ -26,6 +26,7 @@ import { LogicDialog } from './LogicDialog';
 import { ScenarioDialog } from './ScenarioDialog';
 import { ThemeDialog } from './ThemeDialog';
 import { PreviewDialog } from './PreviewDialog';
+import { LessonsPanel } from './LessonsPanel';
 import { TopBar } from './TopBar';
 
 type Loaded = { store: EditorStore; saver: Saver; media: MediaCatalog; status: 'DRAFT' | 'PUBLISHED' | 'CLOSED'; restored: boolean };
@@ -41,6 +42,7 @@ export function Editor({ projectId }: { projectId: string }) {
   const [failure, setFailure] = useState<string | null>(null);
   const [status, setStatus] = useState<Loaded['status']>('DRAFT');
   const [dialog, setDialog] = useState<'preview' | 'history' | 'logic' | 'scenarios' | 'theme' | null>(null);
+  const [lessons, setLessons] = useState(false);
   const [message, setMessage] = useState<{ text: string; kind: 'ok' | 'error' } | null>(null);
   const suppress = useRef(false);
   const picker = useMemo(() => new BlockPicker(), []);
@@ -275,7 +277,7 @@ export function Editor({ projectId }: { projectId: string }) {
   return (
     <EditorProvider value={env}>
       <div className="ed-root" data-testid="editor">
-        <TopBar status={status} onStatus={setStatus} onPreview={() => setDialog('preview')} onHistory={() => setDialog('history')} onLogic={() => setDialog('logic')} onScenarios={() => setDialog('scenarios')} onTheme={() => setDialog('theme')} />
+        <TopBar status={status} onStatus={setStatus} onPreview={() => setDialog('preview')} onHistory={() => setDialog('history')} onLogic={() => setDialog('logic')} onScenarios={() => setDialog('scenarios')} onTheme={() => setDialog('theme')} onLessons={() => setLessons((v) => !v)} />
         {pasting && (
           <PasteVariablesDialog
             payload={pasting.payload}
@@ -287,6 +289,7 @@ export function Editor({ projectId }: { projectId: string }) {
             }}
           />
         )}
+        {lessons && <LessonsPanel onClose={() => setLessons(false)} />}
         <Body message={message} dialog={dialog} setDialog={setDialog} saver={env.saver} store={env.store} />
       </div>
     </EditorProvider>

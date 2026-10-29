@@ -702,3 +702,13 @@
 .ed-link:disabled { cursor: default; text-decoration: none; }
 .ed-grip { cursor: grab; padding: 0 6px; color: var(--muted); user-select: none; touch-action: none; }
 .ed-grip:active { cursor: grabbing; }
+.ed-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ed-lesson { position: fixed; right: 12px; bottom: 12px; z-index: 40; width: min(340px, calc(100vw - 24px)); max-height: 55vh; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; border: 1px solid var(--border, #c9ced6); background: var(--surface, #fff); color: var(--text, #111); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22); }
+.ed-lesson-steps { margin: 0; padding-left: 4px; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.ed-lesson-steps li[data-done="true"] { color: var(--muted, #5b6470); }
+.ed-lesson-steps li[aria-current="step"] { font-weight: 700; }
+.ed-lesson-now { padding: 8px 10px; border-radius: 8px; background: var(--bg-soft, rgba(80, 120, 255, 0.1)); }
+.ed-lesson-now p { margin: 0 0 8px; }
+[data-lesson-glow] { outline: 3px solid #f59e0b !important; outline-offset: 2px; animation: ed-glow 1.4s ease-in-out infinite; }
+@keyframes ed-glow { 50% { outline-color: #fcd34d; } }
+@media (prefers-reduced-motion: reduce) { [data-lesson-glow] { animation: none; } }

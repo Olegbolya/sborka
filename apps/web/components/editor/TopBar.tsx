@@ -8,7 +8,7 @@ import { useEditor, useEnv } from './context';
 const STATUS_NAMES = { DRAFT: 'Черновик', PUBLISHED: 'Опубликована', CLOSED: 'Закрыта' } as const;
 
 /** E-16 · the top bar: title, save status, undo/redo, history, preview, publish. */
-export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScenarios, onTheme }: { status: keyof typeof STATUS_NAMES; onStatus: (s: keyof typeof STATUS_NAMES) => void; onPreview: () => void; onHistory: () => void; onLogic: () => void; onScenarios: () => void; onTheme: () => void }) {
+export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScenarios, onTheme, onLessons }: { status: keyof typeof STATUS_NAMES; onStatus: (s: keyof typeof STATUS_NAMES) => void; onPreview: () => void; onHistory: () => void; onLogic: () => void; onScenarios: () => void; onTheme: () => void; onLessons: () => void }) {
   const { saver, projectId, store, flash } = useEnv();
   const title = useEditor((s) => s.doc.meta.title);
   const apply = useEditor((s) => s.apply);
@@ -65,16 +65,19 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       <button type="button" className="ed-btn" onClick={onHistory}>
         История
       </button>
-      <button type="button" className="ed-btn" onClick={onTheme}>
+      <button type="button" className="ed-btn" data-lesson="theme" onClick={onTheme}>
         Тема
       </button>
-      <button type="button" className="ed-btn" onClick={onScenarios}>
+      <button type="button" className="ed-btn" data-lesson="scenarios" onClick={onScenarios}>
         Сценарии
       </button>
       <button type="button" className="ed-btn" onClick={onLogic}>
         Логика
       </button>
-      <button type="button" className="ed-btn" onClick={onPreview}>
+      <button type="button" className="ed-btn" onClick={onLessons}>
+        Уроки
+      </button>
+      <button type="button" className="ed-btn" data-lesson="preview" onClick={onPreview}>
         Предпросмотр
       </button>
       <span className="ed-hint" data-testid="project-status">
