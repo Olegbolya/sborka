@@ -27,7 +27,7 @@ import { type Box, SpatialGrid } from './grid.js';
 
 /** Width of the artboard in units (E-01): the screen area of moving and fleeing blocks. */
 const ARTBOARD_WIDTH = 390;
-import { type Animatable, type BlockView, type RuntimeEvent, type SettableProperty, type StepResult } from './types.js';
+import { type Animatable, type BlockView, type RuntimeDebug, type RuntimeEvent, type SettableProperty, type StepResult } from './types.js';
 
 /** What the runtime needs from a document: the public projection (PL-15) is enough. */
 export type RuntimeDocument = Pick<ProjectDocument, 'screens' | 'rules' | 'variables'> & { theme?: Pick<ProjectDocument['theme'], 'tokens'> };
@@ -44,6 +44,8 @@ export interface RuntimeOptions {
   drawWheel?: (blockId: string, sectorCount: number) => number | undefined;
   /** Wall-clock time of the start, ms since epoch — for B-08 timers «до даты». */
   startedAt?: number;
+  /** SC-03 · the debugger of the preview listens to the rules (nothing changes in the run itself). */
+  debug?: RuntimeDebug;
   /** AC-02 · checker of values of `style.*`, `textLayer` and `props.media` (`parseSettableValue` of the schema); the player has none. */
   parseValue?: ValueParser;
 }
@@ -275,6 +277,11 @@ export class Runtime {
   /** CN-04 counters and «один раз» flags live for the whole passage. */
   private readonly fireCounts = new Map<string, number>();
   private readonly firedOnce = new Set<string>();
+  private readonly debug: RuntimeDebug | undefined;
+  /** SC-03 · step mode: rules wait before each action; the debugger lets them go one by one. */
+  private stepMode = false;
+  private stepTicket = false;
+  private readonly paused: Job[] = [];
   private stopped = new Set<string>();
   private tweens: Tween[] = [];
   private scheduled: Scheduled[] = [];
@@ -305,6 +312,7 @@ export class Runtime {
     this.random = options.randomSource ?? createRng((options.seed ^ 0x9e3779b9) >>> 0);
     this.drawWheel = options.drawWheel;
     this.parseValue = options.parseValue;
+    this.debug = options.debug;
     this.startedAt = options.startedAt ?? 0;
     this.vars = Object.fromEntries(doc.variables.map((v) => [v.id, structuredClone(v.initial)]));
     this.variableDefs = new Map(doc.variables.map((v) => [v.id, v]));
@@ -320,6 +328,30 @@ export class Runtime {
   /** Current time of the passage, ms. */
   get now(): number {
     return this.time;
+  }
+
+  /** SC-03 · step mode of the debugger: with it on, each rule stops before every action; with it off, the waiting ones run on. */
+  setStepMode(on: boolean): StepResult {
+    this.begin();
+    this.stepMode = on;
+    if (!on) for (const job of this.paused.splice(0)) this.run(job);
+    return this.end();
+  }
+
+  /** How many rules wait for a step. */
+  get pausedRules(): number {
+    return this.paused.length;
+  }
+
+  /** SC-03 · lets one action of the oldest waiting rule run; null when nothing waits. */
+  stepOnce(): StepResult | null {
+    const job = this.paused.shift();
+    if (!job) return null;
+    this.begin();
+    this.stepTicket = true;
+    this.run(job);
+    this.stepTicket = false;
+    return this.end();
   }
 
   /** Variables of the passage (VR-01): a copy, the runtime owns the values. */
@@ -755,14 +787,22 @@ export class Runtime {
 
   private fire(entry: RuleEntry, self: string | undefined, gesture: boolean, depth: number): void {
     const { rule } = entry;
-    if (this.halted || this.stopped.has(rule.id) || (rule.once && this.firedOnce.has(rule.id))) return;
+    if (this.halted || this.stopped.has(rule.id)) return;
+    if (rule.once && this.firedOnce.has(rule.id)) {
+      this.debug?.onEvent({ type: 'rule', ruleId: rule.id, status: 'once', at: this.time, ...(self ? { self } : {}) });
+      return;
+    }
     if (depth > SCENARIO_LIMITS.nestingDepth) {
       this.stopRule(rule, `правила вызывают друг друга больше ${SCENARIO_LIMITS.nestingDepth} раз подряд`);
       return;
     }
     const count = (this.fireCounts.get(rule.id) ?? 0) + 1;
     this.fireCounts.set(rule.id, count);
-    if (rule.if && !this.evaluate(rule.if, count)) return;
+    if (rule.if && !this.evaluate(rule.if, count)) {
+      this.debug?.onEvent({ type: 'rule', ruleId: rule.id, status: 'condition', at: this.time, ...(self ? { self } : {}) });
+      return;
+    }
+    this.debug?.onEvent({ type: 'rule', ruleId: rule.id, status: 'fired', at: this.time, ...(self ? { self } : {}) });
     if (rule.once) this.firedOnce.add(rule.id);
     this.run({ entry, self, stack: [{ actions: rule.do, i: 0 }], gesture: gesture && GESTURE_TRIGGERS.includes(rule.when.kind), resumed: false, depth });
   }
@@ -864,7 +904,16 @@ export class Runtime {
         job.stack.pop();
         continue;
       }
+      if (this.stepMode) {
+        if (this.stepTicket) this.stepTicket = false;
+        else {
+          this.paused.push(job);
+          this.debug?.onEvent({ type: 'paused', ruleId: job.entry.rule.id, next: frame.actions[frame.i]!.kind, detail: frame.actions[frame.i]!, at: this.time, ...(job.self ? { self: job.self } : {}) });
+          return;
+        }
+      }
       const action = frame.actions[frame.i++]!;
+      this.debug?.onEvent({ type: 'action', ruleId: job.entry.rule.id, action: action.kind, detail: action, at: this.time, ...(job.self ? { self: job.self } : {}) });
       if (!this.consume()) {
         this.stopRule(job.entry.rule, `больше ${SCENARIO_LIMITS.stepsPerSecond} действий за секунду`);
         return;

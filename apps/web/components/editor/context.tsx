@@ -3,6 +3,7 @@ import { type ReactNode, createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import { type EditorActions, type EditorState, type EditorStore } from '../../lib/editor/store';
 import { type MediaCatalog } from '../../lib/editor/media';
+import { type InspectorFocus } from '../../lib/editor/focus';
 import { type BlockPicker } from '../../lib/editor/picker';
 import { type Saver } from '../../lib/editor/saver';
 
@@ -17,6 +18,8 @@ export interface EditorEnv extends ControlEnv {
   saver: Saver;
   /** «Указать на холсте»: a field asks for a block, the canvas answers (SC-02). */
   picker: BlockPicker;
+  /** «Перейти к ошибке» (SC-07): which tab, rule or panel to show. */
+  focus: InspectorFocus;
   projectId: string;
   /** Shows a short message under the top bar. */
   flash: (message: string, kind?: 'ok' | 'error') => void;

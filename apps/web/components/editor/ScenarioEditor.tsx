@@ -1,6 +1,6 @@
 'use client';
 import { type Rule, type Trigger } from '@blokum/schema';
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { describeAction, describeCondition, describeTrigger, namesOf } from '../../lib/editor/rule-text';
 import { type RuleOwner, addRule, duplicateRule, moveRule, removeRule, setRuleCondition, setRuleFields, setTrigger } from '../../lib/editor/rules';
 import { type MakeContext, TRIGGERS, specOf } from '../../lib/editor/scenario-specs';
@@ -14,9 +14,15 @@ export function ScenarioEditor({ owner, rules, title = 'Правила' }: { own
   const doc = useEditor((s) => s.doc);
   const apply = useEditor((s) => s.apply);
   const screenId = useEditor((s) => s.selection.screenId);
-  const { picker } = useEnv();
+  const { picker, focus } = useEnv();
+  const asked = useSyncExternalStore(focus.subscribe, focus.getSnapshot, focus.getSnapshot);
   const picking = useSyncExternalStore(picker.subscribe, picker.getSnapshot, picker.getSnapshot);
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(() => (asked.ruleId && rules.some((r) => r.id === asked.ruleId) ? asked.ruleId : null));
+  // SC-07: a rule the check named is opened.
+  useEffect(() => {
+    if (asked.ruleId && rules.some((r) => r.id === asked.ruleId)) setOpen(asked.ruleId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new request opens a rule; later edits of the list must not
+  }, [asked.seq]);
   const names = namesOf(doc);
   const selfId = owner.kind === 'block' ? owner.blockId : (doc.screens.find((s) => s.id === screenId)?.blocks[0]?.id ?? doc.screens[0]?.blocks[0]?.id ?? '');
   const ctx: MakeContext = { doc, self: selfId, screenId: owner.kind === 'screen' ? owner.screenId : screenId };

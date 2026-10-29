@@ -3,9 +3,10 @@ import { type BranchRule, type ProjectDocument, type ValidationIssue, analyzeScr
 import { useMemo, useState } from 'react';
 import { newBranch, resultScreens, setBranches, setResults, setSettings } from '../../lib/editor/logic';
 import { layoutGraph } from '../../lib/editor/graph';
+import { locateIssue } from '../../lib/editor/issue-location';
 import { ConditionEditor } from './ConditionEditor';
 import { NumberInput, SelectInput, TextInput, Toggle } from './controls';
-import { useEditor } from './context';
+import { useEditor, useEnv } from './context';
 import { Dialog } from './Dialog';
 
 type Tab = 'graph' | 'branches' | 'results' | 'issues';
@@ -283,23 +284,25 @@ function IssuesTab({ issues, errors, onClose, onTab }: { issues: ValidationIssue
   const select = useEditor((s) => s.select);
   const selectScreen = useEditor((s) => s.selectScreen);
 
-  /** Takes the person to the place the issue is about (the screen, the block, the branch or the result). */
+  const { focus } = useEnv();
+  /** Takes the person to the place the issue is about (SC-07): the block and its rule, the panel of a screen's rules, the branch, the result. */
   const show = (issue: ValidationIssue) => {
-    const [head, index, kind, id] = issue.path;
-    if (head === 'results') return onTab('results');
-    if (head === 'screens' && typeof index === 'number') {
-      const screen = doc.screens[index];
-      if (!screen) return;
-      if (kind === 'branches') return onTab('branches', screen.id);
-      if (kind === 'block' && typeof id === 'string') {
-        select(screen.id, [id]);
-        return onClose();
-      }
-      selectScreen(screen.id);
-      return onClose();
+    const place = locateIssue(doc, issue);
+    if (place.kind === 'result') return onTab('results');
+    if (place.kind === 'branch') return onTab('branches', place.screenId);
+    if (place.kind === 'screen-rule' || place.kind === 'doc-rule') {
+      onClose();
+      focus.request({ dialog: place.kind === 'doc-rule' ? { tab: 'doc' } : { tab: 'screen', ...(place.screenId ? { screenId: place.screenId } : {}) }, ...(place.ruleId ? { ruleId: place.ruleId } : {}) });
+      return;
     }
-    // Правила на уровне сборки не привязаны к экрану: остаёмся на первом.
-    selectScreen(doc.screens[0]!.id);
+    if (place.screenId && place.blockId) {
+      select(place.screenId, [place.blockId]);
+      onClose();
+      focus.request({ ...(place.tab ? { tab: place.tab } : {}), ...(place.ruleId ? { ruleId: place.ruleId } : {}) });
+      return;
+    }
+    if (place.screenId) selectScreen(place.screenId);
+    else selectScreen(doc.screens[0]!.id);
     onClose();
   };
 
@@ -313,6 +316,9 @@ function IssuesTab({ issues, errors, onClose, onTab }: { issues: ValidationIssue
           <li key={i} data-issue={issue.code} data-severity={issue.severity} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ flex: 1 }}>
               <strong>{issue.severity === 'error' ? 'Ошибка' : 'Предупреждение'}.</strong> {issue.message}
+              <small className="ed-hint" data-testid="issue-where" style={{ display: 'block' }}>
+                Где: {locateIssue(doc, issue).where}
+              </small>
             </span>
             <button type="button" className="ed-btn small" onClick={() => show(issue)}>
               Показать

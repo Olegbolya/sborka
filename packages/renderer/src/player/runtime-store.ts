@@ -88,6 +88,18 @@ export class RuntimeStore {
     return ok;
   }
 
+  /** SC-03: the debugger turns the step mode on and off; a rule that waited and was let go may change the screen. */
+  setStepMode(on: boolean): void {
+    this.publish(this.runtime.setStepMode(on), false);
+  }
+
+  /** SC-03: one action of the oldest waiting rule; false when none waits. */
+  stepOnce(): boolean {
+    const step = this.runtime.stepOnce();
+    if (step) this.publish(step, false);
+    return step !== null;
+  }
+
   /** Starts the frame loop (player and preview); idempotent. */
   start(): void {
     if (this.handle !== null) return;

@@ -1,7 +1,8 @@
 'use client';
 import { Artboard, PlayerScreen } from '@blokum/renderer';
 import { type ProjectDocument } from '@blokum/schema';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { DebugLog, describeEntry, ruleIndex } from '../../lib/editor/debug-log';
 import { PreviewSession } from '../../lib/editor/preview-session';
 import { Dialog } from './Dialog';
 import { useEnv } from './context';
@@ -12,6 +13,20 @@ const SIZES: Record<Frame, { w: number; h: number; unit: number }> = {
   // E-02: on a computer the player is a column of 480 px in the middle of the window.
   desktop: { w: 1024, h: 600, unit: 480 / 390 },
 };
+
+/** The block that started a rule, as a frame on the screen of the preview: its own place plus the places of the containers around it. */
+function sourceBox(session: PreviewSession, id: string, unit: number): { x: number; y: number; w: number; h: number } | null {
+  const views = session.store.views;
+  const v = views.get(id);
+  if (!v || !v.visible) return null;
+  let x = v.x;
+  let y = v.y;
+  for (let parent = v.parentId ? views.get(v.parentId) : undefined; parent; parent = parent.parentId ? views.get(parent.parentId) : undefined) {
+    x += parent.x;
+    y += parent.y;
+  }
+  return { x: x * unit, y: y * unit, w: v.w * unit, h: v.h * unit };
+}
 
 function VariableEditor({ session, id, name, type }: { session: PreviewSession; id: string; name: string; type: string }) {
   const value = session.runtime.variables[id];
@@ -69,11 +84,25 @@ function VariableEditor({ session, id, name, type }: { session: PreviewSession; 
 export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose: () => void }) {
   const { media } = useEnv();
   const [frame, setFrame] = useState<Frame>('phone');
-  const [session, setSession] = useState(() => new PreviewSession(doc));
+  const [log] = useState(() => new DebugLog());
+  const [session, setSession] = useState(() => new PreviewSession(doc, { debug: log }));
+  const [stepMode, setStepMode] = useState(false);
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const entries = useSyncExternalStore(log.subscribe, log.getSnapshot, log.getSnapshot);
+  const restart = () => {
+    log.clear();
+    setStepMode(false);
+    setFocusId(null);
+    setSession(new PreviewSession(doc, { debug: log }));
+  };
   useEffect(() => () => session.dispose(), [session]);
   const view = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   useSyncExternalStore(session.store.subscribe, session.store.getSnapshot, session.store.getSnapshot);
   const size = SIZES[frame];
+  const rules = useMemo(() => ruleIndex(doc), [doc]);
+  const last = entries[entries.length - 1];
+  const highlighted = focusId ?? last?.event.self ?? null;
+  const box = highlighted ? sourceBox(session, highlighted, size.unit) : null;
 
   return (
     <Dialog title="Предпросмотр" onClose={onClose} wide>
@@ -89,7 +118,7 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
         <button type="button" className="ed-btn small" onClick={() => session.back()} disabled={!view.canGoBack}>
           Назад
         </button>
-        <button type="button" className="ed-btn small" onClick={() => setSession(new PreviewSession(doc))}>
+        <button type="button" className="ed-btn small" onClick={restart}>
           Начать заново
         </button>
         <span className="ed-hint" data-testid="preview-badge">
@@ -105,6 +134,7 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
             style={{ width: size.w + 20, height: Math.min(size.h, 640) + 20 }}
           >
             <div style={{ width: size.w, height: Math.min(size.h, 640), overflow: 'auto', position: 'relative' }}>
+              {box && <div className="ed-hl" data-testid="debug-highlight" aria-hidden style={{ left: box.x, top: box.y, width: box.w, height: box.h }} />}
               {view.screen ? (
                 <Artboard mode="player" unit={size.unit} tokens={doc.theme.tokens} media={media.resolver} runText={session.textValue}>
                   <PlayerScreen key={`${view.screen.id}:${view.screenKey}`} screen={view.screen} store={session.store} {...(view.progress ? { progress: view.progress } : {})} />
@@ -136,6 +166,45 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
               Перезапустить экран
             </button>
           </div>
+          <div className="ed-field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <input
+              id="debug-step"
+              type="checkbox"
+              checked={stepMode}
+              onChange={(e) => {
+                setStepMode(e.target.checked);
+                session.store.setStepMode(e.target.checked);
+              }}
+            />
+            <label htmlFor="debug-step">Пошагово: правила ждут перед каждым действием</label>
+          </div>
+          {stepMode && (
+            <div className="ed-actions">
+              <button type="button" className="ed-btn small" disabled={session.runtime.pausedRules === 0} onClick={() => session.store.stepOnce()}>
+                Шаг
+              </button>
+              <span className="ed-hint" data-testid="debug-waiting">
+                Ждёт: {session.runtime.pausedRules}
+              </span>
+            </div>
+          )}
+          <h3 style={{ margin: '12px 0 6px', fontSize: 14 }}>Журнал правил</h3>
+          <ol className="ed-log" role="log" aria-label="Журнал правил" data-testid="debug-log">
+            {entries.length === 0 && <li className="ed-hint">Пока ничего не сработало.</li>}
+            {entries.map((entry) => {
+              const line = describeEntry(entry, doc, rules);
+              return (
+                <li key={entry.n} data-kind={line.kind} data-rule={entry.event.ruleId}>
+                  <button type="button" className="ed-link" disabled={!entry.event.self} onClick={() => setFocusId(entry.event.self ?? null)}>
+                    <time>{line.time}</time> {line.text}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+          <button type="button" className="ed-btn small" onClick={() => log.clear()} disabled={entries.length === 0}>
+            Очистить журнал
+          </button>
         </section>
       </div>
       <div className="row">

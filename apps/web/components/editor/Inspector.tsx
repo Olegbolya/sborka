@@ -1,6 +1,6 @@
 'use client';
 import { type Block } from '@blokum/schema';
-import { useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   type AlignMode,
   type OrderMode,
@@ -19,7 +19,7 @@ import { ScenarioEditor } from './ScenarioEditor';
 import { ScreenPanel } from './ScreenPanel';
 import { TextEditor } from './TextEditor';
 import { AnimationInspector, StyleInspector } from './StylePanels';
-import { useEditor } from './context';
+import { useEditor, useEnv } from './context';
 
 /** A field whose value is shown as «смешанно» when the selected blocks differ (E-15). */
 export function mixed<T>(values: readonly T[]): T | null {
@@ -340,6 +340,12 @@ const TABS: Array<[Tab, string]> = [
 /** E-15 · the right panel: «Оформление», «Содержимое», «Сценарии»; with several blocks selected — common values or «смешанно». */
 export function Inspector() {
   const [tab, setTab] = useState<Tab>('look');
+  const { focus } = useEnv();
+  const asked = useSyncExternalStore(focus.subscribe, focus.getSnapshot, focus.getSnapshot);
+  // SC-07: «Показать» in the check takes the inspector to the tab where the thing is.
+  useEffect(() => {
+    if (asked.tab) setTab(asked.tab);
+  }, [asked]);
   const doc = useEditor((s) => s.doc);
   const selection = useEditor((s) => s.selection);
   const blocks = selectedBlocks({ doc, selection });

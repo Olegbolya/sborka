@@ -2,6 +2,7 @@ import {
   type AnswerValue,
   FlowError,
   type FlowState,
+  type RuntimeDebug,
   type RuntimeEffect,
   type ValueParser,
   type ScoreTotals,
@@ -101,7 +102,7 @@ export class PassageSession {
 
   constructor(
     readonly doc: ProjectDocument,
-    options: { seed?: number; parseValue?: ValueParser; scheduler?: FrameScheduler; now?: () => number; scoring?: 'local' | 'server'; hooks?: PassageHooks; resume?: PassageResume } = {},
+    options: { seed?: number; parseValue?: ValueParser; scheduler?: FrameScheduler; now?: () => number; scoring?: 'local' | 'server'; hooks?: PassageHooks; resume?: PassageResume; debug?: RuntimeDebug } = {},
   ) {
     this.scoring = options.scoring ?? 'local';
     this.hooks = options.hooks ?? {};
@@ -110,7 +111,7 @@ export class PassageSession {
     const seed = options.seed ?? Math.floor(Math.random() * 2 ** 31);
     this.now = options.now ?? Date.now;
     this.rng = createRng(seed);
-    this.runtime = createRuntime(doc, { seed, ...(options.parseValue ? { parseValue: options.parseValue } : {}), randomSource: options.hooks?.random ? { next: options.hooks.random.next } : { next: () => Math.random() }, ...(options.hooks?.random ? { drawWheel: options.hooks.random.drawWheel } : {}), startedAt: this.now() });
+    this.runtime = createRuntime(doc, { seed, ...(options.parseValue ? { parseValue: options.parseValue } : {}), randomSource: options.hooks?.random ? { next: options.hooks.random.next } : { next: () => Math.random() }, ...(options.hooks?.random ? { drawWheel: options.hooks.random.drawWheel } : {}), startedAt: this.now(), ...(options.debug ? { debug: options.debug } : {}) });
     this.store = new RuntimeStore(this.runtime, (effects) => this.onEffects(effects), options.scheduler);
     this.flow = startFlow(doc, this.now());
     const resume = options.resume;

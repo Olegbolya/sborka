@@ -3,11 +3,13 @@ import { type ProjectDocument } from '@blokum/schema';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { isApiError, errorText } from '../../lib/api-browser';
 import { groupBlocks, orderBlocks, selectionIsGroup, ungroupBlocks } from '../../lib/editor/arrange';
-import { copyBlocks, pasteBlocks, readClipboard, writeClipboard } from '../../lib/editor/clipboard';
+import { type ClipboardPayload, type PasteChoice, type PastePlan, copyBlocks, pasteBlocks, planPaste, readClipboard, writeClipboard } from '../../lib/editor/clipboard';
+import { PasteVariablesDialog } from './PasteVariablesDialog';
 import { applyTheme, duplicateBlocks, moveBlocksBy, removeBlocks } from '../../lib/editor/commands';
 import { findBlock } from '../../lib/editor/tree';
 import { MediaCatalog } from '../../lib/editor/media';
 import { IdbQueue, browserSaverDeps, loadProject } from '../../lib/editor/remote';
+import { InspectorFocus } from '../../lib/editor/focus';
 import { BlockPicker } from '../../lib/editor/picker';
 import { Saver } from '../../lib/editor/saver';
 import { type EditorStore, createEditorStore } from '../../lib/editor/store';
@@ -16,7 +18,7 @@ import { stableJson } from '../../lib/themes/stable';
 import './editor.css';
 import { Canvas } from './Canvas';
 import { ConflictDialog } from './ConflictDialog';
-import { EditorProvider, type EditorEnv } from './context';
+import { EditorProvider, type EditorEnv, useEnv } from './context';
 import { HistoryDialog } from './HistoryDialog';
 import { Inspector } from './Inspector';
 import { LeftPanel } from './LeftPanel';
@@ -42,6 +44,8 @@ export function Editor({ projectId }: { projectId: string }) {
   const [message, setMessage] = useState<{ text: string; kind: 'ok' | 'error' } | null>(null);
   const suppress = useRef(false);
   const picker = useMemo(() => new BlockPicker(), []);
+  const focus = useMemo(() => new InspectorFocus(), []);
+  const [pasting, setPasting] = useState<{ payload: ClipboardPayload; plan: PastePlan } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,6 +144,18 @@ export function Editor({ projectId }: { projectId: string }) {
     };
   }, [saver]);
 
+  const doPaste = useCallback(
+    (payload: ClipboardPayload, choices: Record<string, PasteChoice>) => {
+      if (!store) return;
+      const s = store.getState();
+      let created: string[] = [];
+      s.apply(pasteBlocks(payload, s.selection.screenId, 12, (made) => (created = made), choices), { label: 'Вставить' });
+      if (created.length) store.getState().select(s.selection.screenId, created);
+      else flash('Вставить не получилось: на экране уже 100 блоков или в сборке слишком много переменных.', 'error');
+    },
+    [store, flash],
+  );
+
   // E-11: keys. Text fields keep their own undo.
   useEffect(() => {
     if (!store || !saver) return;
@@ -183,10 +199,13 @@ export function Editor({ projectId }: { projectId: string }) {
         e.preventDefault();
         const payload = readClipboard();
         if (!payload) return;
-        let created: string[] = [];
-        s.apply(pasteBlocks(payload, s.selection.screenId, 12, (made) => (created = made)), { label: 'Вставить' });
-        if (created.length) store.getState().select(s.selection.screenId, created);
-        else flash('Вставить не получилось: на экране уже 100 блоков.', 'error');
+        // SC-06: names of variables taken in this assembly — the person chooses what to do before anything is pasted.
+        const plan = planPaste(s.doc, payload);
+        if (plan.conflicts.length > 0) {
+          setPasting({ payload, plan });
+          return;
+        }
+        doPaste(payload, {});
       } else if (mod && key === 'g' && ids.length > 0) {
         e.preventDefault();
         if (e.shiftKey) s.apply(ungroupBlocks(ids), { label: 'Разгруппировать' });
@@ -211,7 +230,7 @@ export function Editor({ projectId }: { projectId: string }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [store, saver, flash, picker]);
+  }, [store, saver, flash, picker, doPaste]);
 
   useEffect(() => {
     if (!message) return;
@@ -228,7 +247,7 @@ export function Editor({ projectId }: { projectId: string }) {
     [store],
   );
 
-  const env: EditorEnv | null = useMemo(() => (store && saver && loaded ? { store, saver, picker, media: loaded.media, projectId, flash, loadDocument } : null), [store, saver, picker, loaded, projectId, flash, loadDocument]);
+  const env: EditorEnv | null = useMemo(() => (store && saver && loaded ? { store, saver, picker, focus, media: loaded.media, projectId, flash, loadDocument } : null), [store, saver, picker, focus, loaded, projectId, flash, loadDocument]);
 
   useEffect(() => {
     if (loaded?.restored) flash('Восстановлены несохранённые правки с прошлого раза — они сохраняются.', 'ok');
@@ -257,6 +276,17 @@ export function Editor({ projectId }: { projectId: string }) {
     <EditorProvider value={env}>
       <div className="ed-root" data-testid="editor">
         <TopBar status={status} onStatus={setStatus} onPreview={() => setDialog('preview')} onHistory={() => setDialog('history')} onLogic={() => setDialog('logic')} onScenarios={() => setDialog('scenarios')} onTheme={() => setDialog('theme')} />
+        {pasting && (
+          <PasteVariablesDialog
+            payload={pasting.payload}
+            plan={pasting.plan}
+            onCancel={() => setPasting(null)}
+            onPaste={(choices) => {
+              doPaste(pasting.payload, choices);
+              setPasting(null);
+            }}
+          />
+        )}
         <Body message={message} dialog={dialog} setDialog={setDialog} saver={env.saver} store={env.store} />
       </div>
     </EditorProvider>
@@ -265,6 +295,12 @@ export function Editor({ projectId }: { projectId: string }) {
 
 function Body({ message, dialog, setDialog, saver, store }: { message: { text: string; kind: 'ok' | 'error' } | null; dialog: 'preview' | 'history' | 'logic' | 'scenarios' | 'theme' | null; setDialog: (d: 'preview' | 'history' | 'logic' | 'scenarios' | 'theme' | null) => void; saver: Saver; store: EditorStore }) {
   const save = useSyncExternalStore(saver.subscribe, () => saver.state, () => saver.state);
+  const { focus } = useEnv();
+  const asked = useSyncExternalStore(focus.subscribe, focus.getSnapshot, focus.getSnapshot);
+  // SC-07: the check asked for the panel of scenarios of a screen or of the assembly.
+  useEffect(() => {
+    if (asked.dialog) setDialog('scenarios');
+  }, [asked, setDialog]);
   const doc = useSyncExternalStore(store.subscribe, () => store.getState().doc, () => store.getState().doc);
   return (
     <>

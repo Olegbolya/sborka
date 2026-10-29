@@ -1,4 +1,4 @@
-import { type ANIMATABLE, type MediaOverlay, type MediaRef, type SETTABLE_PROPERTIES, type Transition } from '@blokum/schema';
+import { type Action, type ANIMATABLE, type MediaOverlay, type MediaRef, type SETTABLE_PROPERTIES, type Transition } from '@blokum/schema';
 import { type AnswerValue } from '../flow/answers.js';
 import { type VariableValue } from '../flow/conditions.js';
 
@@ -77,4 +77,16 @@ export interface BlockView {
   media: 'playing' | 'paused' | 'stopped' | null;
   /** BH-07: the card shows its back side. */
   flipped: boolean;
+}
+
+/** SC-03 · what the debugger of the preview is told: which rule fired and why not, which action ran, where a step stopped. */
+export type DebugEvent =
+  /** `fired` — the rule started; `condition` — its «Если» was false; `once` — it was marked «один раз» and has run. */
+  | { type: 'rule'; ruleId: string; status: 'fired' | 'condition' | 'once'; at: number; self?: string }
+  | { type: 'action'; ruleId: string; action: string; detail: Action; at: number; self?: string }
+  /** Step mode: the rule waits before this action until the debugger lets one action go. */
+  | { type: 'paused'; ruleId: string; next: string; detail: Action; at: number; self?: string };
+
+export interface RuntimeDebug {
+  onEvent: (event: DebugEvent) => void;
 }

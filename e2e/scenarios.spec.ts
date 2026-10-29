@@ -86,4 +86,138 @@ test.describe('P3.8 · конструктор правил', () => {
     await expect(dialog).toContainText('Сборка: 1');
     await expect(dialog).toContainText('Экран «Экран 1»: 1');
   });
+
+  test('SC-03 · отладчик: журнал правил, подсветка источника, правка переменной меняет блок «Значение», пошаговый режим', async ({ page }, info) => {
+    await loginAndOnboard(page, freshUser('Сценарист'));
+    const { id } = await seedProject(page, (d) => {
+      d.variables.push({ id: 'peremennaya_ochki', name: 'Очки', type: 'number', initial: 5, saveToAnswers: false });
+      d.screens[0]!.blocks.push(
+        { id: 'schet_1', type: 'value', name: 'Счёт', frame: { x: 95, y: 80, w: 200, h: 80 }, props: { variableId: 'peremennaya_ochki', format: 'number' } },
+        {
+          id: 'plyus_1',
+          type: 'button',
+          name: 'Плюс',
+          frame: { x: 95, y: 300, w: 200, h: 56 },
+          textLayer: { paragraphs: [{ kind: 'p', runs: [{ t: 'Плюс' }] }] },
+          rules: [{ id: 'plyus_pravilo', when: { kind: 'tap', source: { kind: 'block', blockId: 'plyus_1' } }, do: [{ kind: 'setVariable', variableId: 'peremennaya_ochki', op: 'add', value: 1 }, { kind: 'setVariable', variableId: 'peremennaya_ochki', op: 'add', value: 10 }] }],
+        },
+      );
+    });
+    await openEditor(page, id);
+    await page.getByRole('button', { name: 'Предпросмотр' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Предпросмотр' });
+    const frame = dialog.locator('[data-preview="true"]');
+    const log = dialog.getByTestId('debug-log');
+    await expect(frame.locator('.bk-player-screen[data-live="true"]')).toBeVisible();
+    await expect(log).toContainText('Пока ничего не сработало');
+    await expect(frame.getByText('5', { exact: true })).toBeVisible();
+
+    await frame.getByRole('button', { name: 'Плюс' }).click();
+    await expect(frame.getByText('16', { exact: true })).toBeVisible();
+    await expect(log).toContainText('Сработало правило «когда нажали на «Плюс»»');
+    await expect(log).toContainText('Действие: прибавить «Очки» (1)');
+    await expect(dialog.getByTestId('debug-highlight')).toBeVisible();
+    await page.screenshot({ path: `e2e/__screenshots__/debugger-${info.project.name}.png` });
+
+    // The debugger sets the variable by hand and the block of the screen shows it at once.
+    await dialog.getByLabel('Переменная «Очки»').fill('42');
+    await expect(frame.getByText('42', { exact: true })).toBeVisible();
+
+    // Step mode: the rule waits before each action.
+    await dialog.getByLabel('Пошагово: правила ждут перед каждым действием').check();
+    await frame.getByRole('button', { name: 'Плюс' }).click();
+    await expect(frame.getByText('42', { exact: true })).toBeVisible();
+    await expect(dialog.getByTestId('debug-waiting')).toHaveText('Ждёт: 1');
+    await expect(log).toContainText('ждёт шага');
+    await dialog.getByRole('button', { name: 'Шаг', exact: true }).click();
+    await expect(frame.getByText('43', { exact: true })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Шаг', exact: true }).click();
+    await expect(frame.getByText('53', { exact: true })).toBeVisible();
+    await expect(dialog.getByTestId('debug-waiting')).toHaveText('Ждёт: 0');
+    await dialog.getByRole('button', { name: 'Очистить журнал' }).click();
+    await expect(log).toContainText('Пока ничего не сработало');
+  });
+
+  test('SC-07 · проверка называет место ошибки и ведёт к правилу: блока — на вкладку «Сценарии», экрана — в общую панель', async ({ page }) => {
+    await loginAndOnboard(page, freshUser('Сценарист'));
+    const { id } = await seedProject(page, (d) => {
+      d.screens[0]!.blocks.push({
+        id: 'knopka_a',
+        type: 'button',
+        name: 'Кнопка',
+        frame: { x: 95, y: 300, w: 200, h: 56 },
+        textLayer: { paragraphs: [{ kind: 'p', runs: [{ t: 'Жми' }] }] },
+        rules: [{ id: 'pravilo_a', when: { kind: 'tap', source: { kind: 'block', blockId: 'knopka_a' } }, do: [{ kind: 'visibility', targets: [{ kind: 'block', blockId: 'udalyonnyj_blok' }], mode: 'hide' }] }],
+      });
+      (d.screens[0] as unknown as { rules: unknown[] }).rules = [{ id: 'pravilo_e', when: { kind: 'screen', phase: 'show' }, do: [{ kind: 'setVariable', variableId: 'udalyonnaya_peremennaya', op: 'add', value: 1 }] }];
+    });
+    await openEditor(page, id);
+    await page.getByRole('button', { name: 'Логика' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Логика сборки' });
+    await dialog.getByRole('tab', { name: /^Проверка/ }).click();
+    const missingBlock = dialog.locator('[data-issue="MISSING_BLOCK"]');
+    await expect(missingBlock.getByTestId('issue-where')).toHaveText('Где: Экран «Экран 1» · блок «Кнопка» · правило 1');
+    await missingBlock.getByRole('button', { name: 'Показать' }).click();
+    // The block is selected, the tab «Сценарии» is shown and the rule is open.
+    await expect(page.getByRole('tab', { name: 'Сценарии', selected: true })).toBeVisible();
+    await expect(page.locator('[data-rule="pravilo_a"]').getByRole('group', { name: 'Когда' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Логика' }).click();
+    await page.getByRole('dialog', { name: 'Логика сборки' }).getByRole('tab', { name: /^Проверка/ }).click();
+    const missingVariable = page.getByRole('dialog', { name: 'Логика сборки' }).locator('[data-issue="MISSING_VARIABLE"]');
+    await expect(missingVariable.getByTestId('issue-where')).toHaveText('Где: Экран «Экран 1» · правило 1');
+    await missingVariable.getByRole('button', { name: 'Показать' }).click();
+    const panel = page.getByRole('dialog', { name: 'Сценарии сборки' });
+    await expect(panel.getByRole('tab', { name: 'Правила экрана', selected: true })).toBeVisible();
+    await expect(panel.locator('[data-rule="pravilo_e"]').getByRole('group', { name: 'Когда' })).toBeVisible();
+  });
+
+  test('SC-06 · блок с правилом копируется в другую сборку: переменная создаётся, при занятом имени — связать или создать новую', async ({ page }) => {
+    await loginAndOnboard(page, freshUser('Сценарист'));
+    const withRule = {
+      id: 'knopka_a',
+      type: 'button',
+      name: 'Жми',
+      frame: { x: 95, y: 300, w: 200, h: 56 },
+      textLayer: { paragraphs: [{ kind: 'p', runs: [{ t: 'Жми' }] }] },
+      rules: [{ id: 'pravilo_a', when: { kind: 'tap', source: { kind: 'block', blockId: 'knopka_a' } }, do: [{ kind: 'setVariable', variableId: 'peremennaya_ochki', op: 'add', value: 1 }] }],
+    };
+    const a = await seedProject(page, (d) => {
+      d.variables.push({ id: 'peremennaya_ochki', name: 'Очки', type: 'number', initial: 0, saveToAnswers: false });
+      d.screens[0]!.blocks.push(withRule);
+    }, 'Источник');
+    const empty = await seedProject(page, () => undefined, 'Пустая');
+    const busy = await seedProject(page, (d) => void d.variables.push({ id: 'drugie_ochki', name: 'Очки', type: 'number', initial: 100, saveToAnswers: false }), 'С очками');
+
+    await openEditor(page, a.id);
+    await hit(page, 'Жми').click();
+    await page.keyboard.press('Control+c');
+
+    type Doc = { variables: Array<{ id: string; name: string }>; screens: Array<{ blocks: Array<{ name: string; rules: Array<{ do: Array<{ variableId?: string }> }> }> }> };
+    const docOf = async (project: string) => (await serverDraft(page, project)).doc as unknown as Doc;
+
+    // An empty assembly: the variable comes with the block.
+    await openEditor(page, empty.id);
+    await page.keyboard.press('Control+v');
+    await expect.poll(async () => (await docOf(empty.id)).variables.map((v) => v.name)).toEqual(['Очки']);
+    const pasted = await docOf(empty.id);
+    expect(pasted.screens[0]!.blocks.find((b) => b.name === 'Жми')!.rules.at(-1)!.do[0]!.variableId).toBe(pasted.variables[0]!.id);
+
+    // The name «Очки» is taken: the person chooses.
+    await openEditor(page, busy.id);
+    await page.keyboard.press('Control+v');
+    const dialog = page.getByRole('dialog', { name: 'Переменные с такими же именами' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel('Связать с переменной «Очки» этой сборки').check();
+    await dialog.getByRole('button', { name: 'Вставить' }).click();
+    await expect.poll(async () => (await docOf(busy.id)).screens[0]!.blocks.length).toBe(1);
+    const linked = await docOf(busy.id);
+    expect(linked.variables.map((v) => v.id)).toEqual(['drugie_ochki']);
+    expect(linked.screens[0]!.blocks[0]!.rules.at(-1)!.do[0]!.variableId).toBe('drugie_ochki');
+
+    await page.keyboard.press('Control+v');
+    await page.getByRole('dialog', { name: 'Переменные с такими же именами' }).getByLabel('Создать новую переменную под другим именем').check();
+    await page.getByRole('dialog', { name: 'Переменные с такими же именами' }).getByRole('button', { name: 'Вставить' }).click();
+    await expect.poll(async () => (await docOf(busy.id)).variables.map((v) => v.name)).toEqual(['Очки', 'Очки_копия']);
+  });
 });

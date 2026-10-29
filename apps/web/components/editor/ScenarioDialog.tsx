@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { allRules } from '../../lib/editor/rules';
 import { SelectInput } from './controls';
-import { useEditor } from './context';
+import { useEditor, useEnv } from './context';
 import { Dialog } from './Dialog';
 import { ScenarioEditor } from './ScenarioEditor';
 import { VariablesPanel } from './VariablesPanel';
@@ -20,8 +20,10 @@ export function ScenarioDialog({ onClose }: { onClose: () => void }) {
   const doc = useEditor((s) => s.doc);
   const current = useEditor((s) => s.selection.screenId);
   const select = useEditor((s) => s.select);
-  const [tab, setTab] = useState<Tab>('doc');
-  const [screenId, setScreenId] = useState(current);
+  const { focus } = useEnv();
+  const asked = useSyncExternalStore(focus.subscribe, focus.getSnapshot, focus.getSnapshot).dialog;
+  const [tab, setTab] = useState<Tab>(asked?.tab ?? 'doc');
+  const [screenId, setScreenId] = useState(asked?.screenId ?? current);
   const screen = doc.screens.find((s) => s.id === screenId) ?? doc.screens[0]!;
   const rules = allRules(doc);
   return (
