@@ -154,6 +154,9 @@ describe('A-03, A-05, D-10 · Аккаунт', () => {
     const profile = await request(t.http()).get(`/${API_PREFIX}/auth/account`).set('Cookie', cookie).expect(200);
     expect(profile.body.email).toBe('user5@example.ru');
     expect(profile.body.emailVerifiedAt).toBeTruthy();
+    // ASVS V2.2.3, V2.5.5: об изменении адреса человеку сообщают в кабинете.
+    const notes = (await request(t.http()).get(`/${API_PREFIX}/notifications`).set('Cookie', cookie).expect(200)).body as Array<{ kind: string; title: string }>;
+    expect(notes.find((n) => n.kind === 'AUTH_EMAIL_CHANGED')?.title).toBe('Адрес почты изменён');
   });
 
   it('A-03 · verify с недействительным токеном → 400', async () => {

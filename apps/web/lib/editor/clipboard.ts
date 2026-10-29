@@ -49,6 +49,16 @@ export function writeClipboard(payload: ClipboardPayload): void {
   }
 }
 
+/** ASVS V8.2.3: what the person copied in the editor does not stay in the browser after they sign out. */
+export function clearClipboard(): void {
+  memory = null;
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    // Nothing was kept.
+  }
+}
+
 export function readClipboard(): ClipboardPayload | null {
   let text: string | null = memory;
   try {

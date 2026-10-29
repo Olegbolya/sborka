@@ -5,6 +5,16 @@ import { type EmailSender } from '../auth/email-sender.js';
 import { DB, EMAIL_SENDER } from '../tokens.js';
 import { fail } from './errors.js';
 
+/** One line: control characters and line separators become spaces, runs of them one space. */
+function oneLine(text: string): string {
+  let out = '';
+  for (const ch of text) {
+    const code = ch.codePointAt(0) ?? 0;
+    out += code < 0x20 || code === 0x7f || code === 0x2028 || code === 0x2029 ? ' ' : ch;
+  }
+  return out.replace(/ {2,}/g, ' ').trim().slice(0, 200);
+}
+
 export interface NoticeInput {
   userId: string;
   kind: string;
@@ -22,6 +32,8 @@ export class NotificationsService {
   ) {}
 
   async notify(input: NoticeInput): Promise<string> {
+    // ASVS V5.2.3: the title becomes the subject of a letter and may hold the name of a project that somebody typed — one line, no line breaks.
+    input = { ...input, title: oneLine(input.title) };
     const [row] = await this.db
       .insert(schema.notifications)
       .values({ userId: input.userId, kind: input.kind, title: input.title, body: input.body, projectId: input.projectId ?? null })

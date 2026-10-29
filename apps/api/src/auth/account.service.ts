@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { and, desc, eq, gt, isNull, or } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { DB, EMAIL_SENDER } from '../tokens.js';
@@ -8,6 +8,7 @@ import { API_CONFIG } from '../tokens.js';
 import type { EmailSender } from './email-sender.js';
 import { TotpService } from './totp.service.js';
 import { AuditLogService } from './audit-log.service.js';
+import { NotificationsService } from '../admin/notifications.service.js';
 
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const DELETE_GRACE_DAYS = 30;
@@ -69,6 +70,7 @@ export class AccountService {
     @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender | null,
     private readonly totpSvc: TotpService,
     private readonly auditLog: AuditLogService,
+    @Optional() private readonly notices?: NotificationsService,
   ) {}
 
   /** A-03, D-10: return full user profile. */
@@ -147,6 +149,7 @@ export class AccountService {
     if (record.usedAt) throw new BadRequestException({ error: { code: 'TOKEN_USED', message: 'Ссылка уже использована' } });
     if (record.expiresAt < new Date()) throw new BadRequestException({ error: { code: 'TOKEN_EXPIRED', message: 'Ссылка истекла' } });
 
+    const [before] = await this.db.select({ email: schema.users.email, verifiedAt: schema.users.emailVerifiedAt }).from(schema.users).where(eq(schema.users.id, record.userId));
     await this.db.transaction(async (tx) => {
       await tx
         .update(schema.emailVerificationTokens)
@@ -157,6 +160,11 @@ export class AccountService {
         .set({ email: record.email, emailVerifiedAt: new Date() })
         .where(eq(schema.users.id, record.userId));
     });
+    // ASVS V2.2.3, V2.5.5: a change of the address used for sign-in notices is told to the person — in the cabinet and, when there
+    // was a confirmed address before, to that old address too (somebody else who changed it must not do it unseen).
+    const text = 'Адрес почты вашего аккаунта в Блокуме изменён. Если это были не вы, откройте «Аккаунт» → «Входы» и завершите чужие сеансы.';
+    await this.notices?.notify({ userId: record.userId, kind: 'AUTH_EMAIL_CHANGED', title: 'Адрес почты изменён', body: text });
+    if (before?.email && before.verifiedAt && before.email !== record.email) await this.emailSender?.sendNotice?.(before.email, 'Адрес почты изменён', text).catch(() => undefined);
   }
 
   /** D-10: list active sessions. */
@@ -329,6 +337,7 @@ export class AccountService {
     const pairs = this.totpSvc.generateBackupCodes();
     await this.totpSvc.storeBackupCodes(userId, pairs.map((p) => p.hash));
     await this.auditLog.log({ actorId: userId, action: 'TOTP_CONFIRMED', targetType: 'user', targetId: userId });
+    await this.notices?.notify({ userId, kind: 'AUTH_TOTP_ENABLED', title: 'Включён второй шаг входа', body: 'В вашем аккаунте включён код из приложения-аутентификатора. Если это были не вы, срочно завершите чужие сеансы в разделе «Аккаунт» → «Входы».' });
     return { backupCodes: pairs.map((p) => p.code) };
   }
 
@@ -340,5 +349,6 @@ export class AccountService {
     }
     await this.totpSvc.revokeTotp(userId);
     await this.auditLog.log({ actorId: userId, action: 'TOTP_DISABLED', targetType: 'user', targetId: userId, ip });
+    await this.notices?.notify({ userId, kind: 'AUTH_TOTP_DISABLED', title: 'Второй шаг входа выключен', body: 'В вашем аккаунте выключен код из приложения-аутентификатора. Если это были не вы, срочно завершите чужие сеансы в разделе «Аккаунт» → «Входы».' });
   }
 }

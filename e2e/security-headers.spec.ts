@@ -37,6 +37,9 @@ test.describe('P9.4 · заголовки безопасности и CSP', () =
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     expect(h['x-content-type-options']).toBe('nosniff');
+    // ASVS V8.2.1, V14.3.3: страница не кэшируется и не называет сервер.
+    expect(h['cache-control']).toContain('no-store');
+    expect(h['x-powered-by']).toBeUndefined();
     expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin');
     expect(h['permissions-policy']).toContain('camera=()');
     expect(h['permissions-policy']).toContain('accelerometer=()');

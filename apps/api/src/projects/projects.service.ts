@@ -14,6 +14,9 @@ import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { DB } from '../tokens.js';
 import { hashPassword } from '../play/secrets.js';
 
+/** The settings of access the cabinet may write (PL-06…PL-10); the password goes separately and is stored as a hash. */
+const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'singleAttempt', 'closedText'] as const;
+
 export interface ProjectSettings {
   /** PL-06 · at most so many started and/or completed passages. */
   maxStarts?: number;
@@ -484,8 +487,22 @@ export class ProjectsService {
 
   async updateAccessSettings(userId: string, projectId: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings> {
     const row = await this.assertOwner(userId, projectId);
-    const { password, hasPassword: _has, passwordHash: _hash, ...incoming } = settings;
-    const merged: ProjectSettings = { ...((row.settings ?? {}) as ProjectSettings), ...incoming };
+    const { password } = settings;
+    // ASVS V5.1.2: only the settings the cabinet offers are taken from the body; nothing else (the hash of the password, a key
+    // somebody invented) gets into the stored settings.
+    const incoming: Record<string, unknown> = {};
+    for (const key of ACCESS_SETTING_KEYS) if (key in settings) incoming[key] = (settings as Record<string, unknown>)[key];
+    const bad = () => new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Настройка указана неверно.' } });
+    for (const key of ['scheduledOpenAt', 'scheduledCloseAt'] as const) {
+      const v = incoming[key];
+      if (v !== undefined && v !== null && (typeof v !== 'string' || Number.isNaN(Date.parse(v)))) throw bad();
+    }
+    for (const key of ['age18', 'singleAttempt'] as const) {
+      const v = incoming[key];
+      if (v !== undefined && v !== null && typeof v !== 'boolean') throw bad();
+    }
+    if (incoming.closedText !== undefined && incoming.closedText !== null && (typeof incoming.closedText !== 'string' || incoming.closedText.length > 1000)) throw bad();
+    const merged: ProjectSettings = { ...((row.settings ?? {}) as ProjectSettings), ...(incoming as Partial<ProjectSettings>) };
     for (const key of ['maxStarts', 'maxCompletions'] as const) {
       const v = merged[key];
       if (v !== undefined && v !== null && (!Number.isInteger(v) || v < 1 || v > 10_000_000)) {

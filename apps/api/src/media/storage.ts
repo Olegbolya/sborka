@@ -22,7 +22,10 @@ export class LocalStorageService implements StorageService {
   constructor(private readonly baseDir: string) {}
 
   getPath(key: string): string {
-    return path.join(this.baseDir, key);
+    // ASVS V12.3.1, V5.3.9: a key never leaves the storage folder, whatever it is made of.
+    const full = path.resolve(this.baseDir, key);
+    if (full !== path.resolve(this.baseDir) && !full.startsWith(path.resolve(this.baseDir) + path.sep)) throw new Error('Путь вне хранилища');
+    return full;
   }
 
   async ensureDir(key: string): Promise<void> {

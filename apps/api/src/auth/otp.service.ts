@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomInt } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomInt } from 'node:crypto';
 import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, Optional, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { and, count, desc, eq, gt, isNull } from 'drizzle-orm';
@@ -50,7 +50,8 @@ function hashIp(ip: string): string {
 }
 
 function generateId(): string {
-  return createHash('sha256').update(Math.random().toString() + Date.now()).digest('hex').slice(0, 24);
+  // ASVS V6.3.1: an identifier that is part of access control comes from the CSPRNG, not from `Math.random`.
+  return randomBytes(12).toString('hex');
 }
 
 export type OtpVerifyResult =

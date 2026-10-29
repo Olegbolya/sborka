@@ -42,6 +42,27 @@ describe('A-04 · sessionCookieHeader', () => {
   });
 });
 
+describe('ASVS V3.4 · кука сеанса', () => {
+  it('V3.4.1–V3.4.4: по HTTPS — имя с префиксом __Host-, Secure, HttpOnly, SameSite, Path=/, без Domain', () => {
+    const h = sessionCookieHeader('tok123', true);
+    expect(h.startsWith('__Host-session=tok123;')).toBe(true);
+    for (const flag of ['Secure', 'HttpOnly', 'SameSite=Lax', 'Path=/']) expect(h).toContain(flag);
+    expect(h).not.toMatch(/Domain=/i);
+    expect(sessionCookieHeader('tok123', false)).not.toContain('__Host-');
+    expect(sessionCookieHeader('tok123', false)).not.toContain('Secure');
+  });
+
+  it('V3.3.1: сеанс читается из куки с любым из двух имён; выход по HTTPS стирает оба', () => {
+    expect(parseSessionCookie('a=1; __Host-session=abc; b=2')).toBe('abc');
+    expect(parseSessionCookie('session=xyz')).toBe('xyz');
+    expect(parseSessionCookie('mysession=xyz')).toBeNull();
+    const cleared = clearSessionCookieHeader(true) as string[];
+    expect(cleared).toHaveLength(2);
+    expect(cleared.every((c) => c.includes('Max-Age=0') && c.includes('Secure'))).toBe(true);
+    expect(cleared[0]!.startsWith('__Host-session=;')).toBe(true);
+  });
+});
+
 describe('A-04 · clearSessionCookieHeader', () => {
   it('устанавливает Max-Age=0 чтобы удалить cookie', () => {
     expect(clearSessionCookieHeader(false)).toContain('Max-Age=0');

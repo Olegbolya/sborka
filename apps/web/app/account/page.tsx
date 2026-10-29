@@ -1,4 +1,5 @@
 'use client';
+import { clearClipboard } from '../../lib/editor/clipboard';
 import { useCallback, useEffect, useState } from 'react';
 import { api, apiRaw, errorText, isApiError } from '../../lib/api-browser';
 
@@ -104,6 +105,7 @@ export default function AccountPage() {
     try {
       await run();
       if (after === 'login') {
+        clearClipboard();
         window.location.assign('/login');
         return;
       }

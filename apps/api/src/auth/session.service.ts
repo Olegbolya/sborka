@@ -26,7 +26,10 @@ export interface SessionListItem {
   isCurrent: boolean;
 }
 
-const SESSION_TTL_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
+/** ASVS V3.3.2 (L1): a session ends after 14 days without use and in any case 30 days after the sign-in — then the person signs in again. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SESSION_IDLE_MS = 14 * DAY_MS;
+const SESSION_MAX_MS = 30 * DAY_MS;
 
 /** HMAC-SHA256(IP, YYYY-MM-DD) — daily-rotating pseudonymisation per architecture §8.1. */
 function hashIp(ip: string): string {
@@ -43,25 +46,34 @@ function parseUaFamily(ua: string): string | null {
   return null;
 }
 
-/** Parses `Cookie` header and returns the value of the `session` cookie. */
+/**
+ * ASVS V3.4.4: over HTTPS the cookie carries the `__Host-` prefix (the browser then accepts it only with `Secure`, `Path=/` and
+ * no `Domain`, and sends it only to the host that set it). Without HTTPS (development, tests) the prefix cannot be used.
+ */
+export const SESSION_COOKIE = 'session';
+export const SESSION_COOKIE_SECURE = '__Host-session';
+
+/** Parses `Cookie` header and returns the value of the session cookie (either name). */
 export function parseSessionCookie(cookieHeader: string | undefined): string | null {
   if (!cookieHeader) return null;
   for (const part of cookieHeader.split(';')) {
     const [name, ...rest] = part.trim().split('=');
-    if (name?.trim() === 'session') return rest.join('=').trim() || null;
+    const n = name?.trim();
+    if (n === SESSION_COOKIE_SECURE || n === SESSION_COOKIE) return rest.join('=').trim() || null;
   }
   return null;
 }
 
 /** Formats a `Set-Cookie` header value for the session token (A-04). */
 export function sessionCookieHeader(token: string, secure: boolean): string {
-  const flags = `HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_MS / 1000}`;
-  return `session=${token}; ${flags}${secure ? '; Secure' : ''}`;
+  const flags = `HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_MAX_MS / 1000}`;
+  return `${secure ? SESSION_COOKIE_SECURE : SESSION_COOKIE}=${token}; ${flags}${secure ? '; Secure' : ''}`;
 }
 
-/** Clears the session cookie (used on logout). */
-export function clearSessionCookieHeader(secure: boolean): string {
-  return `session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure ? '; Secure' : ''}`;
+/** Clears the session cookie (used on logout); over HTTPS both the prefixed name and the old plain one. */
+export function clearSessionCookieHeader(secure: boolean): string | string[] {
+  const clear = (name: string) => `${name}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure ? '; Secure' : ''}`;
+  return secure ? [clear(SESSION_COOKIE_SECURE), clear(SESSION_COOKIE)] : clear(SESSION_COOKIE);
 }
 
 @Injectable()
@@ -72,7 +84,7 @@ export class SessionService {
   async create(userId: string, opts: { ip?: string; ua?: string } = {}): Promise<string> {
     const rawToken = randomBytes(32).toString('base64url');
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
-    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+    const expiresAt = new Date(Date.now() + SESSION_IDLE_MS);
     await this.db.insert(schema.sessions).values({
       userId,
       tokenHash,
@@ -83,7 +95,7 @@ export class SessionService {
     return rawToken;
   }
 
-  /** Validates token from cookie; extends expiry (sliding window). Returns null if invalid. */
+  /** Validates token from cookie; extends expiry (sliding window up to the absolute limit). Returns null if invalid. */
   async validate(token: string): Promise<ValidSession | null> {
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const now = new Date();
@@ -96,6 +108,7 @@ export class SessionService {
           eq(schema.sessions.tokenHash, tokenHash),
           isNull(schema.sessions.revokedAt),
           gt(schema.sessions.expiresAt, now),
+          gt(schema.sessions.createdAt, new Date(now.getTime() - SESSION_MAX_MS)),
           ne(schema.users.status, 'BLOCKED'),
         ),
       )
@@ -105,7 +118,8 @@ export class SessionService {
 
     await this.db
       .update(schema.sessions)
-      .set({ lastSeenAt: now, expiresAt: new Date(Date.now() + SESSION_TTL_MS) })
+      // Sliding window, but never past the absolute limit counted from the sign-in.
+      .set({ lastSeenAt: now, expiresAt: new Date(Math.min(now.getTime() + SESSION_IDLE_MS, row.session.createdAt.getTime() + SESSION_MAX_MS)) })
       .where(eq(schema.sessions.id, row.session.id));
 
     return {

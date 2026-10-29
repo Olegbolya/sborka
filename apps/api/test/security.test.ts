@@ -234,4 +234,63 @@ describe('P9.4 · N-04 · роли и доступ к чужим объекта�
     expect(await text('/notifications')).not.toContain('Личное');
     expect(await text('/media')).not.toContain(owner.id);
   });
+
+  it('ASVS V3.3.2 · сеанс заканчивается через 30 дней после входа, даже если им пользовались вчера; через 14 дней без использования — тоже', async () => {
+    const user = await login();
+    await call(user.cookie, 'get', '/auth/me').expect(200);
+    const day = 24 * 3_600_000;
+    // Вход 29 дней назад, пользовались вчера: ещё действует, но срок не уходит дальше 30-го дня.
+    await db.db.update(schema.sessions).set({ createdAt: new Date(Date.now() - 29 * day) }).where(eq(schema.sessions.userId, user.id));
+    await call(user.cookie, 'get', '/auth/me').expect(200);
+    const [row] = await db.db.select().from(schema.sessions).where(eq(schema.sessions.userId, user.id));
+    expect(row!.expiresAt.getTime()).toBeLessThanOrEqual(row!.createdAt.getTime() + 30 * day + 1000);
+    // Вход 31 день назад: сеанс недействителен, хотя срок «без использования» не вышел.
+    await db.db.update(schema.sessions).set({ createdAt: new Date(Date.now() - 31 * day), expiresAt: new Date(Date.now() + 10 * day) }).where(eq(schema.sessions.userId, user.id));
+    await call(user.cookie, 'get', '/auth/me').expect(401);
+    // Без использования 15 дней: срок «без использования» вышел.
+    const idle = await login();
+    await db.db.update(schema.sessions).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(schema.sessions.userId, idle.id));
+    await call(idle.cookie, 'get', '/auth/me').expect(401);
+  });
+
+  it('ASVS V8.1.1 · ответы API с личными данными не кэшируются; файлы называют свой срок сами', async () => {
+    const user = await login();
+    expect((await call(user.cookie, 'get', '/auth/me').expect(200)).headers['cache-control']).toBe('no-store');
+    expect((await call(null, 'get', '/flags/public').expect(200)).headers['cache-control']).toBe('no-store');
+    expect((await call(user.cookie, 'get', '/notifications').expect(200)).headers['cache-control']).toBe('no-store');
+  });
+
+  it('ASVS V14.3.3, V14.4.2 · ответ API не называет сервер и не показывается как документ; файлы называют своё', async () => {
+    const user = await login();
+    const res = await call(user.cookie, 'get', '/auth/me').expect(200);
+    expect(res.headers['x-powered-by']).toBeUndefined();
+    expect(res.headers['content-disposition']).toBe('attachment; filename="api.json"');
+    expect(res.headers['content-type']).toContain('application/json');
+  });
+
+  it('ASVS V5.2.3 · название сборки с переводами строк не попадает в тему письма как есть', async () => {
+    const owner = await login();
+    const sent: string[] = [];
+    const { NotificationsService } = await import('../src/admin/notifications.service.js');
+    const svc = new NotificationsService(db.db, { sendVerification: () => Promise.resolve(), sendNotice: (_to: string, subject: string) => (sent.push(subject), Promise.resolve()) });
+    await db.db.update(schema.users).set({ email: 'a@example.ru', emailVerifiedAt: new Date() }).where(eq(schema.users.id, owner.id));
+    await svc.notify({ userId: owner.id, kind: 'TEST', title: 'Сборка «Тема\r\nBcc: evil@example.ru» заблокирована', body: 'Текст' });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).not.toMatch(/[\r\n]/);
+    expect(sent[0]).toContain('Bcc: evil@example.ru');
+    const [row] = await db.db.select().from(schema.notifications).where(eq(schema.notifications.userId, owner.id));
+    expect(row!.title).not.toMatch(/[\r\n]/);
+  });
+
+  it('ASVS V5.1.2 · настройки доступа: лишние поля из тела не попадают в сохранённые, неверные типы — 400', async () => {
+    const owner = await login();
+    const id = ((await call(owner.cookie, 'post', '/projects', { title: 'Настройки' }).expect(200)).body as { id: string }).id;
+    await call(owner.cookie, 'patch', `/projects/${id}/access-settings`, { maxStarts: 5, passwordHash: 'подделка', chtoto: 'лишнее', unlockSalt: 'x', closedText: 'Закрыто' }).expect(200);
+    const [row] = await db.db.select({ settings: schema.projects.settings }).from(schema.projects).where(eq(schema.projects.id, id));
+    expect(row!.settings).toMatchObject({ maxStarts: 5, closedText: 'Закрыто' });
+    expect(Object.keys(row!.settings).sort()).toEqual(['closedText', 'maxStarts']);
+    await call(owner.cookie, 'patch', `/projects/${id}/access-settings`, { age18: 'да' }).expect(400);
+    await call(owner.cookie, 'patch', `/projects/${id}/access-settings`, { scheduledOpenAt: 'вчера' }).expect(400);
+    await call(owner.cookie, 'patch', `/projects/${id}/access-settings`, { closedText: 'я'.repeat(1001) }).expect(400);
+  });
 });
