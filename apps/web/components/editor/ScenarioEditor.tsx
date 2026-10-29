@@ -26,7 +26,8 @@ export function ScenarioEditor({ owner, rules, title = 'Правила' }: { own
   const names = namesOf(doc);
   const selfId = owner.kind === 'block' ? owner.blockId : (doc.screens.find((s) => s.id === screenId)?.blocks[0]?.id ?? doc.screens[0]?.blocks[0]?.id ?? '');
   const ctx: MakeContext = { doc, self: selfId, screenId: owner.kind === 'screen' ? owner.screenId : screenId };
-  const triggerList = owner.kind === 'block' ? TRIGGERS : TRIGGERS.filter((t) => !['tap', 'doubleTap', 'longPress', 'hover', 'drag', 'mediaEnd', 'scratched'].includes(t.kind));
+  // A rule of a screen or of the assembly can listen to any block too (the games count taps on copies of a block, for one).
+  const triggerList = TRIGGERS;
 
   const create = (kind: string) => {
     const spec = specOf(TRIGGERS, kind);

@@ -15,6 +15,8 @@ import { flipBlocks, patchBlocks, setFrame } from '../../lib/editor/commands';
 import { selectedBlocks } from '../../lib/editor/store';
 import { PropsInspector } from './PropsInspector';
 import { BehaviorsEditor } from './BehaviorsEditor';
+import { ConditionEditor, newCondition } from './ConditionEditor';
+import { Toggle } from './controls';
 import { ScenarioEditor } from './ScenarioEditor';
 import { ScreenPanel } from './ScreenPanel';
 import { TextEditor } from './TextEditor';
@@ -242,9 +244,41 @@ function Appearance({ blocks }: { blocks: Block[] }) {
           </button>
         </div>
       </div>
+      <VisibilitySection blocks={blocks} />
       <StyleInspector blocks={blocks} />
       <AnimationInspector blocks={blocks} />
     </>
+  );
+}
+
+/** S-16 · when the block is on the screen: from the start or only after a rule shows it, and only while a condition holds. */
+function VisibilitySection({ blocks }: { blocks: Block[] }) {
+  const apply = useEditor((s) => s.apply);
+  const ids = blocks.map((b) => b.id);
+  const single = blocks.length === 1 ? blocks[0]! : null;
+  const hidden = blocks.every((b) => b.initiallyHidden) ? true : blocks.every((b) => !b.initiallyHidden) ? false : null;
+  return (
+    <div className="ed-section" data-testid="visibility-section">
+      <h2>Видимость</h2>
+      <Toggle control="visibility:initially-hidden" label="Скрыт, пока правило его не покажет" value={hidden} onChange={(v) => apply(patchBlocks(ids, (b) => void (b.initiallyHidden = v)), { label: 'Скрыт в начале' })} />
+      {single && (
+        <>
+          <Toggle
+            control="visibility:condition"
+            label="Показывать по условию"
+            value={single.visibleIf !== undefined}
+            onChange={(on) => apply(patchBlocks(ids, (b) => (on ? void (b.visibleIf = newCondition('variable', { variableIds: [], questionIds: [], blockIds: [] })) : void (b.visibleIf = undefined))), { label: 'Условие показа' })}
+          />
+          {single.visibleIf && (
+            <ConditionEditor
+              label="Показывать, если"
+              value={single.visibleIf}
+              onChange={(c) => apply(patchBlocks(ids, (b) => void (b.visibleIf = c)), { label: 'Условие показа', mergeKey: `visible-if:${single.id}` })}
+            />
+          )}
+        </>
+      )}
+    </div>
   );
 }
 

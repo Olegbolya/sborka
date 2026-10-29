@@ -495,3 +495,15 @@
 | SC-03 | P3.8 | `packages/engine/src/runtime/runtime.ts`, `apps/web/components/editor/PreviewDialog.tsx`, `apps/web/lib/editor/debug-log.ts` | `packages/engine/test/debug.test.ts`, `apps/web/test/debug-log.test.ts`, `e2e/scenarios.spec.ts` |
 | SC-06 | P3.8 | `apps/web/lib/editor/clipboard.ts`, `apps/web/components/editor/PasteVariablesDialog.tsx` | `apps/web/test/clipboard-rules.test.ts`, `e2e/scenarios.spec.ts` |
 | SC-07 | P3.8 | `apps/web/lib/editor/issue-location.ts`, `apps/web/lib/editor/focus.ts`, `apps/web/components/editor/LogicDialog.tsx` | `apps/web/test/issue-location.test.ts`, `e2e/scenarios.spec.ts` |
+| RG-01 | P3.12 | `packages/themes/examples/rg-01.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts`, `e2e/reference-build.spec.ts` |
+| RG-02 | P3.12 | `packages/themes/examples/rg-02.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
+| RG-03 | P3.12 | `packages/themes/examples/rg-03.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
+| RG-04 | P3.12 | `packages/themes/examples/rg-04.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
+| RG-05 | P3.12 | `packages/themes/examples/rg-05.json`, `packages/engine/src/runtime/runtime.ts`, `packages/renderer/src/components/BlockView.tsx` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
+| RG-06 | P3.12 | `packages/themes/examples/rg-06.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts`, `e2e/reference-build.spec.ts` |
+| RG-07 | P3.12 | `packages/themes/examples/rg-07.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts`, `e2e/reference-build.spec.ts` |
+| RG-08 | P3.12 | `packages/themes/examples/rg-08.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
+| RG-09 | P3.12 | `packages/themes/examples/rg-09.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
+| RG-10 | P3.12 | `packages/themes/examples/rg-10.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
+| S-16 | P3.12 | `apps/web/components/editor/Inspector.tsx` | `e2e/reference-build.spec.ts` |
+| AC-20 | P3.12 | `packages/engine/src/runtime/runtime.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/engine/test/debug.test.ts`, `packages/renderer/test/flow-order.test.tsx` |
