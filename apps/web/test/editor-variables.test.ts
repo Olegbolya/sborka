@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Behavior, ProjectDocument, createBlock, createDocument } from '@blokum/schema';
+import { type Behavior, ProjectDocument, createBlock, createDocument } from '@blokum/schema';
 import { createEditorStore } from '../lib/editor/store';
 import { addBehavior, removeBehavior, setBehavior } from '../lib/editor/rules';
 import { addVariableOf, listToText, nameProblem, removeVariable, renameVariable, setVariableInitial, setVariableSave, setVariableType, textToList, variableUsage } from '../lib/editor/variables';
@@ -43,7 +43,7 @@ describe('P3.8 · VR-01…VR-04 · переменные сборки', () => {
     st().apply(setVariableType(id, 'text'), { label: 'Тип' });
     expect(st().doc.variables[0]).toMatchObject({ type: 'text', initial: '' });
     st().apply(setVariableType(id, 'list'), { label: 'Тип' });
-    st().apply(setVariableInitial(id, textToList('1, два, 3') as never), { label: 'Начальное' });
+    st().apply(setVariableInitial(id, textToList('1, два, 3')), { label: 'Начальное' });
     expect(st().doc.variables[0]!.initial).toEqual([1, 'два', 3]);
     expect(listToText([1, 'два', 3])).toBe('1, два, 3');
     expect(() => ProjectDocument.parse(st().doc)).not.toThrow();
