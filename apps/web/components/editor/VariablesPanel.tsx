@@ -1,20 +1,12 @@
 'use client';
 import { SYSTEM_VARIABLES, type Variable } from '@blokum/schema';
 import { useState } from 'react';
-import { addVariableOf, listToText, nameProblem, removeVariable, renameVariable, setVariableInitial, setVariableSave, setVariableType, textToList, variableUsage, type VariableType } from '../../lib/editor/variables';
+import { SYSTEM_TITLES, addVariableOf, listToText, nameProblem, removeVariable, renameVariable, setVariableInitial, setVariableSave, setVariableType, textToList, variableUsage, type VariableType } from '../../lib/editor/variables';
 import { VARIABLE_TYPES } from '../../lib/editor/scenario-specs';
 import { NumberInput, SelectInput, TextInput, Toggle } from './controls';
 import { useEditor } from './context';
 
 const TYPE_OPTIONS = VARIABLE_TYPES.map((t) => [t.type, t.title] as const);
-const SYSTEM_TITLES: Record<(typeof SYSTEM_VARIABLES)[number], string> = {
-  время_прохождения: 'сколько времени идёт прохождение',
-  время_на_экране: 'сколько участник на этом экране',
-  номер_экрана: 'номер текущего экрана',
-  баллы: 'набранные баллы',
-  имя_участника: 'имя участника, если он назвался',
-};
-
 function ValueInput({ variable, onChange }: { variable: Variable; onChange: (v: Variable['initial']) => void }) {
   const label = `Начальное значение «${variable.name}»`;
   if (variable.type === 'number') return <NumberInput control={`var:${variable.id}:initial`} label={label} value={variable.initial as number} min={-1000000} max={1000000} onChange={onChange} />;

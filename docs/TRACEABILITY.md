@@ -437,3 +437,61 @@
 | AD-07 | P9.6 | `apps/api/src/admin/feature-flags.service.ts`, `apps/web/app/admin/flags/page.tsx`, `apps/web/app/out/page.tsx` | `apps/api/test/moderation.test.ts` |
 | 05-LEGAL §2.2 | P10.7 | `apps/web/lib/analytics.ts`, `apps/web/components/landing/CookieBanner.tsx`, `apps/web/lib/security-headers.ts`, `apps/web/proxy.ts` | `e2e/analytics.spec.ts`, `apps/web/test/analytics.test.ts` |
 | D8 | P10.7 | `legal/cookies.md`, `apps/web/components/landing/CookieSettingsButton.tsx` | `e2e/analytics.spec.ts`, `apps/web/test/analytics.test.ts` |
+| TR-01 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-02 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-03 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx`, `packages/renderer/src/components/useLongPress.ts` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts`, `packages/renderer/test/long-press.test.tsx` |
+| TR-04 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-05 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-06 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-07 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-08 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx`, `packages/renderer/src/player/swipe.ts` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts`, `packages/renderer/test/swipe-motion-player.test.tsx` |
+| TR-09 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-10 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-11 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-12 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-13 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-14 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| TR-15 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx`, `packages/renderer/src/player/motion.ts` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts`, `packages/renderer/test/motion.test.ts` |
+| TR-16 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
+| CN-01 | P3.8 | `apps/web/components/editor/ConditionEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| CN-02 | P3.8 | `apps/web/components/editor/ConditionEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| CN-03 | P3.8 | `apps/web/components/editor/ConditionEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| CN-04 | P3.8 | `apps/web/components/editor/ConditionEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| CN-05 | P3.8 | `apps/web/components/editor/ConditionEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| CN-06 | P3.8 | `apps/web/components/editor/ConditionEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-01 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-02 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-03 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-04 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-05 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-06 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-07 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-08 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-09 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-10 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-11 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-12 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-13 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-14 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-15 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-16 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-17 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-18 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-19 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| AC-20 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts` |
+| BH-01 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
+| BH-02 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts`, `e2e/scenarios.spec.ts` |
+| BH-03 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
+| BH-04 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
+| BH-05 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
+| BH-06 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
+| BH-07 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
+| BH-08 | P3.8 | `apps/web/components/editor/BehaviorsEditor.tsx`, `apps/web/lib/editor/scenario-specs.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-variables.test.ts` |
+| VR-01 | P3.8 | `apps/web/components/editor/VariablesPanel.tsx`, `apps/web/lib/editor/variables.ts` | `apps/web/test/editor-variables.test.ts`, `e2e/scenarios.spec.ts` |
+| VR-02 | P3.8 | `apps/web/components/editor/VariablesPanel.tsx`, `apps/web/lib/editor/variables.ts` | `apps/web/test/editor-variables.test.ts` |
+| VR-03 | P3.8 | `apps/web/components/editor/VariablesPanel.tsx`, `apps/web/lib/editor/variables.ts` | `apps/web/test/scenario-specs.test.ts` |
+| VR-04 | P3.8 | `apps/web/components/editor/VariablesPanel.tsx`, `apps/web/lib/editor/variables.ts` | `apps/web/test/editor-variables.test.ts`, `e2e/scenarios.spec.ts` |
+| SC-02 | P3.8 | `apps/web/components/editor/ScenarioEditor.tsx`, `apps/web/components/editor/ScenarioDialog.tsx`, `apps/web/lib/editor/rules.ts`, `apps/web/lib/editor/picker.ts` | `apps/web/test/scenario-specs.test.ts`, `apps/web/test/editor-rules.test.ts`, `e2e/scenarios.spec.ts` |
+| SC-03 | P3.8 | `packages/engine/src/runtime/runtime.ts`, `apps/web/components/editor/PreviewDialog.tsx`, `apps/web/lib/editor/debug-log.ts` | `packages/engine/test/debug.test.ts`, `apps/web/test/debug-log.test.ts`, `e2e/scenarios.spec.ts` |
+| SC-06 | P3.8 | `apps/web/lib/editor/clipboard.ts`, `apps/web/components/editor/PasteVariablesDialog.tsx` | `apps/web/test/clipboard-rules.test.ts`, `e2e/scenarios.spec.ts` |
+| SC-07 | P3.8 | `apps/web/lib/editor/issue-location.ts`, `apps/web/lib/editor/focus.ts`, `apps/web/components/editor/LogicDialog.tsx` | `apps/web/test/issue-location.test.ts`, `e2e/scenarios.spec.ts` |

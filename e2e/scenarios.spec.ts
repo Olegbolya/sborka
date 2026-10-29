@@ -10,7 +10,7 @@ const rulesOf = async (page: Page, id: string, blockId: string): Promise<Rule[]>
 };
 
 test.describe('P3.8 · конструктор правил', () => {
-  test('SC-02 · правило «Нажали → скрыть блок» собирается в интерфейсе; блок выбирается кликом по холсту', async ({ page }, info) => {
+  test('SC-02 · правило «Нажали → скрыть блок» собирается в интерфейсе; блок выбирается кликом по холсту', async ({ page, isMobile }, info) => {
     await loginAndOnboard(page, freshUser('Сценарист'));
     const { id } = await seedProject(page, (d) => {
       d.screens[0]!.blocks.push(
@@ -30,7 +30,9 @@ test.describe('P3.8 · конструктор правил', () => {
     // The target is chosen by a tap on the canvas.
     await rule.getByRole('button', { name: /Какие блоки, 1: блок: указать на холсте|Какие блоки, 1.*указать на холсте/ }).click();
     await expect(page.getByTestId('picker-hint')).toBeVisible();
-    await hit(page, 'Коробка').click();
+    // On a phone the answer is a touch of the finger.
+    if (isMobile) await hit(page, 'Коробка').tap();
+    else await hit(page, 'Коробка').click();
     await expect(page.getByTestId('picker-hint')).toHaveCount(0);
     await expect.poll(async () => (await rulesOf(page, id, 'knopka_a'))[0]?.do[0]).toMatchObject({ kind: 'visibility', mode: 'hide', targets: [{ kind: 'block', blockId: 'korobka_1' }] });
     expect((await rulesOf(page, id, 'knopka_a'))[0]!.when).toMatchObject({ kind: 'tap', source: { kind: 'block', blockId: 'knopka_a' } });
@@ -219,5 +221,31 @@ test.describe('P3.8 · конструктор правил', () => {
     await page.getByRole('dialog', { name: 'Переменные с такими же именами' }).getByLabel('Создать новую переменную под другим именем').check();
     await page.getByRole('dialog', { name: 'Переменные с такими же именами' }).getByRole('button', { name: 'Вставить' }).click();
     await expect.poll(async () => (await docOf(busy.id)).variables.map((v) => v.name)).toEqual(['Очки', 'Очки_копия']);
+  });
+
+  test('SC-02 · быстрое действие делает правило одним нажатием; порядок действий меняется перетаскиванием и стрелками', async ({ page, isMobile }) => {
+    await loginAndOnboard(page, freshUser('Сценарист'));
+    const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(textBlock('knopka_a', 'Кнопка', 95, 300, 200, 56), textBlock('korobka_1', 'Коробка', 20, 60, 160, 48)));
+    await openEditor(page, id);
+    await hit(page, 'Кнопка').click();
+    await page.getByRole('tab', { name: 'Сценарии' }).click();
+    await page.getByLabel('Быстрое действие').selectOption({ label: 'По нажатию — скрыть блок' });
+    const rule = page.locator('[data-rule]').first();
+    await expect(rule).toContainText('Когда нажали на «Кнопка» → скрыть «Коробка»');
+    await page.getByLabel('Быстрое действие').selectOption({ label: 'Сделать перетаскиваемым' });
+    await expect(page.locator('[data-behavior="drag"]')).toHaveCount(1);
+
+    // Two more actions, then the order is changed.
+    await rule.getByLabel('Сделать: добавить действие').selectOption({ label: 'Подождать' });
+    await rule.getByLabel('Сделать: добавить действие').selectOption({ label: 'Эффект' });
+    const kinds = async () => (await rulesOf(page, id, 'knopka_a'))[0]?.do.map((a) => a.kind) ?? [];
+    await expect.poll(kinds).toEqual(['visibility', 'wait', 'effect']);
+    await rule.getByRole('button', { name: 'Действие 3: выше' }).click();
+    await expect.poll(kinds).toEqual(['visibility', 'effect', 'wait']);
+    if (!isMobile) {
+      // A mouse drags the row by its handle: the last goes to the top.
+      await rule.getByLabel('Действие 3: потяните, чтобы переставить').dragTo(rule.locator('[data-action]').first());
+      await expect.poll(kinds).toEqual(['wait', 'visibility', 'effect']);
+    }
   });
 });

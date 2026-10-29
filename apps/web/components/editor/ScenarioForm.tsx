@@ -1,6 +1,6 @@
 'use client';
 import { BlockStyle, type Color, type MediaRef, TRANSITION_KINDS, type Action, textOf, plainText } from '@blokum/schema';
-import { useState, useSyncExternalStore } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import { type ListPath, addAction, moveAction, removeAction, setAction, type RuleOwner } from '../../lib/editor/rules';
 import { describeAction, namesOf } from '../../lib/editor/rule-text';
 import { ACTIONS, PROPERTY_TITLES, type MakeContext, type PartSpec, type SField, allBlocks } from '../../lib/editor/scenario-specs';
@@ -538,7 +538,7 @@ export function PartForm({ spec, value, onChange, place, ctx }: { spec: PartSpec
   return (
     <div className="ed-layer-fields" data-part={spec.kind}>
       {spec.fields.filter(visible).map((f) => (
-        <Field key={f.key} field={f} value={value} onChange={onChange} place={place} ctx={ctx} />
+        <Field key={f.key} field={f} value={value} onChange={(v) => onChange(spec.normalize ? spec.normalize(v, ctx) : v)} place={place} ctx={ctx} />
       ))}
     </div>
   );
@@ -551,6 +551,8 @@ export function ActionList({ label, owner, ruleId, path, actions }: { label: str
   const screenId = useEditor((s) => s.selection.screenId);
   const selfId = useEditor((s) => (owner.kind === 'block' ? owner.blockId : (s.selection.blockIds[0] ?? s.doc.screens[0]?.blocks[0]?.id ?? '')));
   const [open, setOpen] = useState<number | null>(null);
+  // The order of actions is changed by dragging a row by its handle (and by the arrows, which also work with a finger).
+  const dragFrom = useRef<number | null>(null);
   const names = namesOf(doc);
   const ctx: MakeContext = { doc, self: selfId, screenId };
   const lastOfRule = path.length === 0 || path[path.length - 1] === 'do';
@@ -562,8 +564,35 @@ export function ActionList({ label, owner, ruleId, path, actions }: { label: str
         const spec = ACTIONS.find((s) => s.kind === action.kind)!;
         const isOpen = open === index;
         return (
-          <div key={index} className="ed-layer" data-action={action.kind}>
+          <div
+            key={index}
+            className="ed-layer"
+            data-action={action.kind}
+            onDragOver={(e) => dragFrom.current !== null && e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const from = dragFrom.current;
+              dragFrom.current = null;
+              if (from !== null && from !== index) apply(moveAction(owner, ruleId, path, from, index), { label: 'Порядок действий' });
+            }}
+          >
             <div className="ed-layerhead">
+              <span
+                className="ed-grip"
+                role="img"
+                aria-label={`Действие ${index + 1}: потяните, чтобы переставить`}
+                draggable
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  dragFrom.current = index;
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', String(index));
+                }}
+                onDragEnd={() => (dragFrom.current = null)}
+              >
+                ⋮⋮
+              </span>
               <button type="button" className="ed-link" aria-expanded={isOpen} aria-label={`Действие ${index + 1}: ${spec.title}`} onClick={() => setOpen(isOpen ? null : index)}>
                 {index + 1}. {describeAction(action, names)}
               </button>

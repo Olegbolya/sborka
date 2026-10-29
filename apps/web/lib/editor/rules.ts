@@ -164,3 +164,53 @@ export const removeBehavior = (blockId: string, index: number): Recipe => (doc) 
   const block = loc?.siblings[loc.index];
   if (block && index >= 0 && index < block.behaviors.length) block.behaviors.splice(index, 1);
 };
+
+// ── Quick actions (SC-02): the rules and behaviours people make most often, in one press ──────────────────────────────
+export interface QuickAction {
+  id: string;
+  title: string;
+  hint: string;
+}
+
+export const QUICK_ACTIONS: readonly QuickAction[] = [
+  { id: 'next', title: 'По нажатию — на следующий экран', hint: 'Блок работает как кнопка «Дальше»' },
+  { id: 'hide', title: 'По нажатию — скрыть блок', hint: 'Нажали — и выбранный блок исчез' },
+  { id: 'show', title: 'По нажатию — показать блок', hint: 'Скрытый блок появляется' },
+  { id: 'score', title: 'По нажатию — прибавить очко', hint: 'К переменной «Очки» (она создаётся, если её нет)' },
+  { id: 'confetti', title: 'По нажатию — конфетти', hint: 'Праздничный эффект' },
+  { id: 'drag', title: 'Сделать перетаскиваемым', hint: 'Участник может тащить блок' },
+];
+
+/**
+ * One quick action as a recipe: a rule «по нажатию» with the action filled in (the target is the first other block of the screen; the
+ * person changes it in the rule), or the behaviour «перетаскивается». `onCreated` gets the id of a new rule, to open it.
+ */
+export const applyQuickAction =
+  (blockId: string, id: string, onCreated?: (ruleId: string) => void): Recipe =>
+  (doc) => {
+    const loc = findBlock(doc, blockId);
+    const block = loc?.siblings[loc.index];
+    if (!loc || !block) return;
+    if (id === 'drag') {
+      if (!block.behaviors.some((b) => b.kind === 'drag') && block.behaviors.length < MAX_BEHAVIORS) block.behaviors.push({ kind: 'drag', axis: 'both', snapToZones: [], returnIfMissed: true, onePerZone: false });
+      return;
+    }
+    if (block.rules.length >= MAX_RULES) return;
+    const other = loc.siblings.find((b) => b.id !== blockId) ?? block;
+    const tap: Trigger = { kind: 'tap', source: { kind: 'block', blockId } };
+    let action: Action;
+    if (id === 'next') action = { kind: 'goTo', to: 'next' };
+    else if (id === 'hide' || id === 'show') action = { kind: 'visibility', targets: [{ kind: 'block', blockId: other.id }], mode: id, animate: true };
+    else if (id === 'confetti') action = { kind: 'effect', effect: 'confetti', intensity: 1 };
+    else if (id === 'score') {
+      let score = doc.variables.find((v) => v.name === 'Очки' && v.type === 'number');
+      if (!score) {
+        score = { id: createId(), name: 'Очки', type: 'number', initial: 0, saveToAnswers: false };
+        doc.variables.push(score);
+      }
+      action = { kind: 'setVariable', variableId: score.id, op: 'add', value: 1 };
+    } else return;
+    const rule: Rule = { id: createId(), enabled: true, once: false, priority: 50, when: tap, do: [action] };
+    block.rules.push(rule);
+    onCreated?.(rule.id);
+  };

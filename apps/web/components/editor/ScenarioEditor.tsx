@@ -2,7 +2,7 @@
 import { type Rule, type Trigger } from '@blokum/schema';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { describeAction, describeCondition, describeTrigger, namesOf } from '../../lib/editor/rule-text';
-import { type RuleOwner, addRule, duplicateRule, moveRule, removeRule, setRuleCondition, setRuleFields, setTrigger } from '../../lib/editor/rules';
+import { QUICK_ACTIONS, type RuleOwner, addRule, applyQuickAction, duplicateRule, moveRule, removeRule, setRuleCondition, setRuleFields, setTrigger } from '../../lib/editor/rules';
 import { type MakeContext, TRIGGERS, specOf } from '../../lib/editor/scenario-specs';
 import { ConditionEditor, newCondition } from './ConditionEditor';
 import { NumberInput, SelectInput, TextInput, Toggle } from './controls';
@@ -108,6 +108,20 @@ export function ScenarioEditor({ owner, rules, title = 'Правила' }: { own
           </div>
         );
       })}
+      {owner.kind === 'block' && (
+        <SelectInput<string>
+          control="quick-action"
+          label="Быстрое действие"
+          value=""
+          options={[['', 'Быстрое действие…'], ...QUICK_ACTIONS.map((q) => [q.id, q.title] as const)]}
+          onChange={(quick) => {
+            if (quick === '') return;
+            let made = '';
+            apply(applyQuickAction(owner.blockId, quick, (rid) => (made = rid)), { label: QUICK_ACTIONS.find((q) => q.id === quick)!.title });
+            if (made) setOpen(made);
+          }}
+        />
+      )}
       <SelectInput<string>
         control="add-rule"
         label="Добавить правило: когда"

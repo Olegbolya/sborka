@@ -15,6 +15,7 @@ import { blockContent } from '../blocks/content.js';
 import { mergeHandlers } from '../behaviors/pointer.js';
 import { useDrag } from '../behaviors/useDrag.js';
 import { useScratch } from '../behaviors/useScratch.js';
+import { useLongPress } from './useLongPress.js';
 
 /**
  * S-18 «наклон за пальцем/курсором»: the block turns towards the pointer by up to `strength` degrees.
@@ -243,6 +244,8 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const press = animated && block.animation?.press !== undefined;
   const setHover = (hover: boolean) => trackHover && setPointer((p) => (p.hover === hover ? p : { ...p, hover }));
   const setPressed = (pressed: boolean) => trackPress && setPointer((p) => (p.pressed === pressed ? p : { ...p, pressed }));
+  // TR-03: how long the block is held (rules choose by the time themselves).
+  const hold = useLongPress({ enabled: Boolean(interactive), instanceId, dispatch: ctx.dispatch });
   const pressStart = () => {
     if (press) onPressStart();
     setPressed(true);
@@ -288,7 +291,22 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
             : {}),
         }
       : {}),
-    ...(press || trackPress ? { onPointerDown: pressStart, onPointerUp: pressEnd, onPointerCancel: pressEnd } : {}),
+    ...(interactive || press || trackPress
+      ? {
+          onPointerDown: (e: PointerEvent<HTMLDivElement>) => {
+            pressStart();
+            hold.down(e);
+          },
+          onPointerUp: (e: PointerEvent<HTMLDivElement>) => {
+            pressEnd();
+            hold.up(e);
+          },
+          onPointerCancel: () => {
+            pressEnd();
+            hold.cancel();
+          },
+        }
+      : {}),
     ...(interactive || tilt || press || trackHover || trackPress
       ? {
           onPointerMove: tilt ? (e: PointerEvent<HTMLDivElement>) => tiltTowards(e, tilt) : undefined,
@@ -301,6 +319,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
           onPointerLeave: (e: PointerEvent<HTMLDivElement>) => {
             if (tilt) resetTilt(e.currentTarget);
             if (press) onPressEnd();
+            hold.cancel();
             setHover(false);
             setPressed(false);
             if (interactive && e.pointerType === 'mouse') ctx.dispatch!({ type: 'hover', blockId: instanceId, phase: 'leave' });

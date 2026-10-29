@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type Rule, ProjectDocument, createBlock, createDocument, createVariable } from '@blokum/schema';
 import { createEditorStore } from '../lib/editor/store';
-import { addAction, addRule, duplicateRule, listAt, moveAction, moveRule, removeAction, removeRule, setAction, setRuleCondition, setRuleFields, setTrigger, type RuleOwner } from '../lib/editor/rules';
+import { QUICK_ACTIONS, addAction, addRule, applyQuickAction, duplicateRule, listAt, moveAction, moveRule, removeAction, removeRule, setAction, setRuleCondition, setRuleFields, setTrigger, type RuleOwner } from '../lib/editor/rules';
 import { describeAction, describeCondition, describeTrigger, namesOf } from '../lib/editor/rule-text';
 
 function setup() {
@@ -126,5 +126,31 @@ describe('P3.8 · SC-02 · правило простым русским', () => 
     const n = namesOf(st().doc);
     expect(describeTrigger({ kind: 'tap', source: { kind: 'block', blockId: 'udalyon' } }, n)).toBe('нажали на «блок удалён»');
     expect(describeAction({ kind: 'setVariable', variableId: 'udalyon', op: 'set', value: 0 }, n)).toContain('«переменная удалена»');
+  });
+});
+
+describe('P3.8 · SC-02 · быстрые действия', () => {
+  it('SC-02 · каждое быстрое действие даёт правило или поведение, которое проходит схему; «Очки» создаются один раз', () => {
+    const { st, button, box } = setup();
+    for (const q of QUICK_ACTIONS) st().apply(applyQuickAction(button.id, q.id), { label: q.title });
+    const doc = st().doc;
+    const b = doc.screens[0]!.blocks[0]!;
+    expect(b.rules.map((r) => r.do[0]!.kind)).toEqual(['goTo', 'visibility', 'visibility', 'setVariable', 'effect']);
+    expect(b.rules.every((r) => r.when.kind === 'tap')).toBe(true);
+    expect(b.behaviors.map((x) => x.kind)).toEqual(['drag']);
+    expect(doc.variables.filter((v) => v.name === 'Очки')).toHaveLength(1);
+    expect(b.rules[1]!.do[0]).toMatchObject({ mode: 'hide', targets: [{ kind: 'block', blockId: box.id }] });
+    expect(() => ProjectDocument.parse(doc)).not.toThrow();
+    st().apply(applyQuickAction(button.id, 'score'), { label: 'Ещё очко' });
+    st().apply(applyQuickAction(button.id, 'drag'), { label: 'Ещё перетаскивание' });
+    expect(st().doc.variables.filter((v) => v.name === 'Очки')).toHaveLength(1);
+    expect(st().doc.screens[0]!.blocks[0]!.behaviors).toHaveLength(1);
+  });
+
+  it('SC-02 · быстрое действие на блоке, которого нет, ничего не меняет', () => {
+    const { st } = setup();
+    const before = st().doc;
+    st().apply(applyQuickAction('net_takogo', 'next'), { label: 'x' });
+    expect(st().doc).toBe(before);
   });
 });

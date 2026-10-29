@@ -9,6 +9,8 @@ import { RenderContext, useRenderContext } from '../context.js';
 import { type EffectsHandle, EffectsLayer, ParticleLayer } from '../particles/ParticleLayer.js';
 import { cssColor } from '../theme/color.js';
 import { ARTBOARD_WIDTH } from '../units.js';
+import { MotionDetector } from './motion.js';
+import { classifySwipe } from './swipe.js';
 import { type RuntimeStore } from './runtime-store.js';
 
 /**
@@ -78,6 +80,33 @@ export function PlayerScreen({ screen, store, progress }: { screen: Screen; stor
     };
   }, [store]);
 
+  // TR-15 · the sensors are switched on only when a rule of this screen waits for them. iOS asks for permission, and only after a gesture.
+  useEffect(() => {
+    if (!live || !store.runtime.listensTo('deviceMotion') || typeof window === 'undefined') return;
+    const detector = new MotionDetector((motion) => store.dispatch({ type: 'deviceMotion', motion }));
+    const onMotion = (e: DeviceMotionEvent) => {
+      const free = e.acceleration;
+      if (free && free.x !== null) detector.onMotion({ x: free.x, y: free.y, z: free.z }, false);
+      else if (e.accelerationIncludingGravity) detector.onMotion({ x: e.accelerationIncludingGravity.x, y: e.accelerationIncludingGravity.y, z: e.accelerationIncludingGravity.z }, true);
+    };
+    const onOrientation = (e: DeviceOrientationEvent) => detector.onOrientation(e.beta, e.gamma);
+    // Listening costs nothing and an event that comes before the permission is simply absent; so the listeners are always on,
+    // and where the browser asks for permission (iOS), the first gesture of the participant asks it.
+    window.addEventListener('devicemotion', onMotion);
+    window.addEventListener('deviceorientation', onOrientation);
+    const ask = (DeviceMotionEvent as unknown as { requestPermission?: () => Promise<'granted' | 'denied'> }).requestPermission;
+    const onGesture = () => {
+      window.removeEventListener('pointerdown', onGesture);
+      void ask?.call(DeviceMotionEvent)?.catch(() => undefined);
+    };
+    if (typeof ask === 'function') window.addEventListener('pointerdown', onGesture);
+    return () => {
+      window.removeEventListener('pointerdown', onGesture);
+      window.removeEventListener('devicemotion', onMotion);
+      window.removeEventListener('deviceorientation', onOrientation);
+    };
+  }, [live, screen.id, store]);
+
   const tapSound = ctx.tokens.sounds.tap;
   const dispatch: typeof store.dispatch = (event) => {
     if (event.type === 'tap') sound.current?.play(tapSound, 0.6);
@@ -89,6 +118,23 @@ export function PlayerScreen({ screen, store, progress }: { screen: Screen; stor
     const r = e.currentTarget.getBoundingClientRect();
     const unit = r.width / ARTBOARD_WIDTH || 1;
     store.dispatch({ type: 'pointer', x: (e.clientX - r.left) / unit, y: (e.clientY - r.top) / unit });
+  };
+  // TR-08 · a quick move in one direction is a swipe: of the screen, and of the block it began on (a block being dragged or scratched is not swiped).
+  const swipeFrom = useRef<{ x: number; y: number; at: number; id: string | undefined } | null>(null);
+  const swipeDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (!store.runtime.listensTo('swipe') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const id = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-block-id]')?.dataset.blockId;
+    const proto = id ? (store.views.get(id)?.protoId ?? id) : undefined;
+    const own = proto ? [...walkBlocks(screen.blocks)].find((b) => b.id === proto) : undefined;
+    if (own?.behaviors.some((b) => b.kind === 'drag' || b.kind === 'scratch' || b.kind === 'follow')) return;
+    swipeFrom.current = { x: e.clientX, y: e.clientY, at: performance.now(), id };
+  };
+  const swipeUp = (e: PointerEvent<HTMLDivElement>) => {
+    const from = swipeFrom.current;
+    swipeFrom.current = null;
+    if (!from) return;
+    const direction = classifySwipe(e.clientX - from.x, e.clientY - from.y, performance.now() - from.at);
+    if (direction) store.dispatch({ type: 'swipe', direction, ...(from.id ? { blockId: from.id } : {}) });
   };
   const particles = screen.particles ?? ctx.tokens.particles ?? null;
   const colors = ['primary', 'accent', 'success'].map((token) => cssColor({ token, alpha: 1 }, ctx.tokens));
@@ -114,7 +160,11 @@ export function PlayerScreen({ screen, store, progress }: { screen: Screen; stor
         ref={shakeTarget}
         className="bk-player-screen"
         data-live={live ? 'true' : undefined}
-        style={{ position: 'relative' }}
+        // A screen that waits for a swipe keeps the browser from taking the gesture for scrolling.
+        style={{ position: 'relative', ...(live && store.runtime.listensTo('swipe') ? { touchAction: 'none' } : {}) }}
+        onPointerDownCapture={swipeDown}
+        onPointerUp={swipeUp}
+        onPointerCancel={() => (swipeFrom.current = null)}
         {...(watchPointer
           ? {
               // BH-02, BH-08: where the finger or cursor is on the screen, in units (also on touch-down).

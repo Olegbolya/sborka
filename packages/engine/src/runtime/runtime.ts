@@ -330,6 +330,11 @@ export class Runtime {
     return this.time;
   }
 
+  /** Does any rule of the screen (or of the assembly) wait for this trigger? The host switches the sensors on only when it does. */
+  listensTo(kind: Trigger['kind']): boolean {
+    return (this.byTrigger.get(kind)?.length ?? 0) > 0;
+  }
+
   /** SC-03 · step mode of the debugger: with it on, each rule stops before every action; with it off, the waiting ones run on. */
   setStepMode(on: boolean): StepResult {
     this.begin();

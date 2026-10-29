@@ -1,7 +1,7 @@
 'use client';
 import { Artboard, PlayerScreen } from '@blokum/renderer';
 import { type ProjectDocument } from '@blokum/schema';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { DebugLog, describeEntry, ruleIndex } from '../../lib/editor/debug-log';
 import { PreviewSession } from '../../lib/editor/preview-session';
 import { Dialog } from './Dialog';
@@ -98,7 +98,21 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
   useEffect(() => () => session.dispose(), [session]);
   const view = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   useSyncExternalStore(session.store.subscribe, session.store.getSnapshot, session.store.getSnapshot);
-  const size = SIZES[frame];
+  // On a phone the window is narrower than the frame of a phone: the whole preview is shrunk to fit (the unit of the artboard is a number, not a transform).
+  const wrap = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(10_000);
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setRoom(el.clientWidth));
+    ro.observe(el);
+    setRoom(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+  const base = SIZES[frame];
+  // The phone frame must fit in the width of the window; the computer frame keeps its size (the window scrolls), as the column of 480 is the point of it (E-02).
+  const fit = frame === 'phone' ? Math.min(1, Math.max(0.4, (room - 24) / base.w)) : 1;
+  const size = { w: base.w * fit, h: base.h * fit, unit: base.unit * fit };
   const rules = useMemo(() => ruleIndex(doc), [doc]);
   const last = entries[entries.length - 1];
   const highlighted = focusId ?? last?.event.self ?? null;
@@ -125,7 +139,7 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
           Предпросмотр: ответы никуда не отправляются
         </span>
       </div>
-      <div className="ed-preview-wrap">
+      <div ref={wrap} className="ed-preview-wrap">
         <div>
           <div
             className={`ed-frame ${frame === 'phone' ? 'ed-phone' : 'ed-desktop'}`}

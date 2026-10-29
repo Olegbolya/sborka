@@ -1,4 +1,4 @@
-import { type ProjectDocument, type Variable, VariableName, createVariable } from '@blokum/schema';
+import { type SYSTEM_VARIABLES, type ProjectDocument, type Variable, VariableName, createVariable } from '@blokum/schema';
 import { type Recipe } from './commands';
 
 /** P3.8 · VR-01…VR-04 · the variables of the assembly: their list, names, types, starting values and the mark «записывать в ответы». */
@@ -89,3 +89,13 @@ export const textToList = (text: string): Array<number | string> =>
     .filter((x) => x !== '')
     .slice(0, 500)
     .map((x) => (Number.isFinite(Number(x)) ? Number(x) : x.slice(0, 200)));
+
+/** VR-03 · what the panel says about each built-in variable; typed by the schema's list, so a new one must be described. */
+export const SYSTEM_TITLES: Record<(typeof SYSTEM_VARIABLES)[number], string> = {
+  время_прохождения: 'сколько времени идёт прохождение',
+  время_на_экране: 'сколько участник на этом экране',
+  номер_экрана: 'номер текущего экрана',
+  баллы: 'набранные баллы',
+  имя_участника: 'имя участника, если он назвался',
+};
+

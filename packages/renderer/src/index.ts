@@ -29,3 +29,6 @@ export * from './blocks/display.js';
 export * from './behaviors/pointer.js';
 export * from './behaviors/useDrag.js';
 export * from './behaviors/useScratch.js';
+export * from './player/motion.js';
+export * from './components/useLongPress.js';
+export * from './player/swipe.js';

@@ -60,6 +60,8 @@ export interface PartSpec {
   group?: string;
   fields: SField[];
   make: (ctx: MakeContext) => Record<string, unknown>;
+  /** Puts a value changed in the form in order (fields that depend on each other); the value of a chosen kind stays as it is otherwise. */
+  normalize?: (value: Record<string, unknown>, ctx: MakeContext) => Record<string, unknown>;
 }
 
 const own = (ctx: MakeContext) => ({ kind: 'block', blockId: ctx.self });
@@ -159,10 +161,15 @@ export const TRIGGERS: readonly PartSpec[] = [
     hint: 'Через время, каждые несколько секунд или когда закончился таймер',
     fields: [
       { t: 'select', key: 'mode', label: 'Как', options: [['after', 'один раз через'], ['every', 'каждые'], ['timerEnd', 'когда закончился таймер']] },
-      { t: 'num', key: 'seconds', label: 'Секунд', min: 0.05, max: 3600, step: 0.5, optional: true },
-      { t: 'block', key: 'timerBlockId', label: 'Какой таймер', types: ['timer'], optional: true },
+      { t: 'num', key: 'seconds', label: 'Секунд', min: 0.05, max: 3600, step: 0.5 },
+      { t: 'block', key: 'timerBlockId', label: 'Какой таймер', types: ['timer'] },
     ],
     make: () => ({ kind: 'timer', mode: 'after', seconds: 3 }),
+    // «Через» and «каждые» need seconds, «когда закончился таймер» needs a timer block; the form keeps exactly what the mode needs.
+    normalize: (v, c) => {
+      const { seconds, timerBlockId, ...rest } = v as { mode?: string; seconds?: number; timerBlockId?: string };
+      return rest.mode === 'timerEnd' ? { ...rest, timerBlockId: timerBlockId ?? firstOfType(c, ['timer']) } : { ...rest, seconds: seconds ?? 3 };
+    },
   },
   { kind: 'variableChange', title: 'Изменилась переменная', hint: 'Значение переменной стало другим', fields: [{ t: 'variable', key: 'variableId', label: 'Какая переменная' }], make: (c) => ({ kind: 'variableChange', variableId: firstVariable(c) }) },
   { kind: 'answer', title: 'Ответили на вопрос', hint: 'Участник выбрал или ввёл ответ', fields: [{ t: 'block', key: 'questionBlockId', label: 'На какой вопрос', types: ['singleChoice', 'multiChoice', 'textInput', 'scale', 'swipe', 'ranking', 'date', 'contacts'] }], make: (c) => ({ kind: 'answer', questionBlockId: firstOfType(c, ['singleChoice', 'multiChoice', 'textInput', 'scale', 'swipe', 'ranking', 'date', 'contacts']) }) },
@@ -341,6 +348,8 @@ export const ACTIONS: readonly PartSpec[] = [
     hint: 'Несколько раз или пока выполняется условие',
     fields: [{ t: 'num', key: 'times', label: 'Сколько раз', min: 1, max: 10000, optional: true }, { t: 'condition', key: 'while', label: 'Пока выполняется', optional: true }, { t: 'actions', key: 'do', label: 'Что повторять' }],
     make: () => ({ kind: 'repeat', times: 3, do: [{ kind: 'wait', ms: 100 }] }),
+    // «Повторить» needs a number of times or a condition: with neither, three times.
+    normalize: (v) => (v.times === undefined && v.while === undefined ? { ...v, times: 3 } : v),
   },
 ];
 
