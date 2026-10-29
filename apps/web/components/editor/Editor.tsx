@@ -21,6 +21,7 @@ import { HistoryDialog } from './HistoryDialog';
 import { Inspector } from './Inspector';
 import { LeftPanel } from './LeftPanel';
 import { LogicDialog } from './LogicDialog';
+import { ScenarioDialog } from './ScenarioDialog';
 import { ThemeDialog } from './ThemeDialog';
 import { PreviewDialog } from './PreviewDialog';
 import { TopBar } from './TopBar';
@@ -37,7 +38,7 @@ export function Editor({ projectId }: { projectId: string }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [status, setStatus] = useState<Loaded['status']>('DRAFT');
-  const [dialog, setDialog] = useState<'preview' | 'history' | 'logic' | 'theme' | null>(null);
+  const [dialog, setDialog] = useState<'preview' | 'history' | 'logic' | 'scenarios' | 'theme' | null>(null);
   const [message, setMessage] = useState<{ text: string; kind: 'ok' | 'error' } | null>(null);
   const suppress = useRef(false);
   const picker = useMemo(() => new BlockPicker(), []);
@@ -255,14 +256,14 @@ export function Editor({ projectId }: { projectId: string }) {
   return (
     <EditorProvider value={env}>
       <div className="ed-root" data-testid="editor">
-        <TopBar status={status} onStatus={setStatus} onPreview={() => setDialog('preview')} onHistory={() => setDialog('history')} onLogic={() => setDialog('logic')} onTheme={() => setDialog('theme')} />
+        <TopBar status={status} onStatus={setStatus} onPreview={() => setDialog('preview')} onHistory={() => setDialog('history')} onLogic={() => setDialog('logic')} onScenarios={() => setDialog('scenarios')} onTheme={() => setDialog('theme')} />
         <Body message={message} dialog={dialog} setDialog={setDialog} saver={env.saver} store={env.store} />
       </div>
     </EditorProvider>
   );
 }
 
-function Body({ message, dialog, setDialog, saver, store }: { message: { text: string; kind: 'ok' | 'error' } | null; dialog: 'preview' | 'history' | 'logic' | 'theme' | null; setDialog: (d: 'preview' | 'history' | 'logic' | 'theme' | null) => void; saver: Saver; store: EditorStore }) {
+function Body({ message, dialog, setDialog, saver, store }: { message: { text: string; kind: 'ok' | 'error' } | null; dialog: 'preview' | 'history' | 'logic' | 'scenarios' | 'theme' | null; setDialog: (d: 'preview' | 'history' | 'logic' | 'scenarios' | 'theme' | null) => void; saver: Saver; store: EditorStore }) {
   const save = useSyncExternalStore(saver.subscribe, () => saver.state, () => saver.state);
   const doc = useSyncExternalStore(store.subscribe, () => store.getState().doc, () => store.getState().doc);
   return (
@@ -280,6 +281,7 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
       {save.status === 'conflict' && <ConflictDialog />}
       {dialog === 'history' && <HistoryDialog onClose={() => setDialog(null)} />}
       {dialog === 'logic' && <LogicDialog onClose={() => setDialog(null)} />}
+      {dialog === 'scenarios' && <ScenarioDialog onClose={() => setDialog(null)} />}
       {dialog === 'theme' && <ThemeDialog onClose={() => setDialog(null)} />}
       {dialog === 'preview' && <PreviewDialog doc={doc} onClose={() => setDialog(null)} />}
     </>

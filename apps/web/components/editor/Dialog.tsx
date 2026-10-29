@@ -1,5 +1,9 @@
 'use client';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, createContext, useContext, useEffect, useRef } from 'react';
+
+/** Inside a window the canvas is covered: a field cannot ask it for a block there (SC-02). */
+const InDialog = createContext(false);
+export const useInDialog = (): boolean => useContext(InDialog);
 
 /** A modal window: closes with Escape (when allowed), keeps the keyboard inside, gives the focus back on close. */
 export function Dialog({ title, onClose, children, wide }: { title: string; onClose?: () => void; children: ReactNode; wide?: boolean }) {
@@ -37,7 +41,7 @@ export function Dialog({ title, onClose, children, wide }: { title: string; onCl
     <div className="ed-backdrop">
       <div ref={ref} className="ed-dialog" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} style={wide ? { width: 'min(1000px, 100%)' } : { width: 'min(460px, 100%)' }}>
         <h2>{title}</h2>
-        {children}
+        <InDialog.Provider value>{children}</InDialog.Provider>
       </div>
     </div>
   );

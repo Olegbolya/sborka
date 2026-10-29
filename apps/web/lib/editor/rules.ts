@@ -1,4 +1,4 @@
-import { type Action, type Block, type Condition, type ProjectDocument, type Rule, type Trigger, createId } from '@blokum/schema';
+import { type Action, type Behavior, type Block, type Condition, type ProjectDocument, type Rule, type Trigger, createId } from '@blokum/schema';
 import { type Recipe } from './commands';
 import { findBlock } from './tree';
 
@@ -143,3 +143,24 @@ export function allRules(doc: ProjectDocument): Array<{ screenId: string; screen
   for (const s of doc.screens) walk(s.id, s.name, s.blocks);
   return out;
 }
+
+// ── Behaviours (BH-01…BH-08) ──────────────────────────────────────────────────
+export const MAX_BEHAVIORS = 8;
+
+export const addBehavior = (blockId: string, behavior: Behavior): Recipe => (doc) => {
+  const loc = findBlock(doc, blockId);
+  const block = loc?.siblings[loc.index];
+  if (block && block.behaviors.length < MAX_BEHAVIORS && !block.behaviors.some((b) => b.kind === behavior.kind)) block.behaviors.push(behavior);
+};
+
+export const setBehavior = (blockId: string, index: number, behavior: Behavior): Recipe => (doc) => {
+  const loc = findBlock(doc, blockId);
+  const block = loc?.siblings[loc.index];
+  if (block && index >= 0 && index < block.behaviors.length) block.behaviors[index] = behavior;
+};
+
+export const removeBehavior = (blockId: string, index: number): Recipe => (doc) => {
+  const loc = findBlock(doc, blockId);
+  const block = loc?.siblings[loc.index];
+  if (block && index >= 0 && index < block.behaviors.length) block.behaviors.splice(index, 1);
+};

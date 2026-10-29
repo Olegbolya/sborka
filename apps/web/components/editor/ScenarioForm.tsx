@@ -7,6 +7,7 @@ import { ACTIONS, PROPERTY_TITLES, type MakeContext, type PartSpec, type SField,
 import { ConditionEditor, newCondition } from './ConditionEditor';
 import { ColorInput, NumberInput, SelectInput, TextInput, Toggle } from './controls';
 import { useEditor, useEnv } from './context';
+import { useInDialog } from './Dialog';
 import { MediaPicker } from './MediaPicker';
 import { ScreenField, TransitionPresetField, VariableField } from './PropsFields';
 
@@ -30,6 +31,7 @@ const asRecord = (v: unknown): Value => (v && typeof v === 'object' ? (v as Valu
 export function BlockPick({ label, value, onChange, types, optional }: { label: string; value: string | null; onChange: (id: string) => void; types?: readonly string[]; optional?: boolean }) {
   const doc = useEditor((s) => s.doc);
   const { picker } = useEnv();
+  const inDialog = useInDialog();
   const state = useSyncExternalStore(picker.subscribe, picker.getSnapshot, picker.getSnapshot);
   const blocks = allBlocks(doc).filter(({ block }) => !types || types.includes(block.type) || block.id === value);
   const known = value !== null && blocks.some(({ block }) => block.id === value);
@@ -43,9 +45,11 @@ export function BlockPick({ label, value, onChange, types, optional }: { label: 
         options={[[NONE, value && !known ? 'Блок удалён — выберите другой' : optional ? 'Не выбран' : 'Выберите блок'], ...blocks.map(({ block, screenName }) => [block.id, many ? `${screenName} · ${block.name}` : block.name] as const)]}
         onChange={(id) => id !== NONE && onChange(id)}
       />
+      {!inDialog && (
       <button type="button" className="ed-btn small" aria-label={`${label}: указать на холсте`} aria-pressed={state.active} onClick={() => (state.active ? picker.cancel() : picker.request(`Нажмите на блок на холсте — «${label}»`, onChange))}>
         {state.active ? 'Отмена' : 'Указать на холсте'}
       </button>
+      )}
     </div>
   );
 }

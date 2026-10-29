@@ -14,6 +14,7 @@ import {
 import { flipBlocks, patchBlocks, setFrame } from '../../lib/editor/commands';
 import { selectedBlocks } from '../../lib/editor/store';
 import { PropsInspector } from './PropsInspector';
+import { BehaviorsEditor } from './BehaviorsEditor';
 import { ScenarioEditor } from './ScenarioEditor';
 import { ScreenPanel } from './ScreenPanel';
 import { TextEditor } from './TextEditor';
@@ -309,7 +310,8 @@ function Scenarios({ blocks }: { blocks: Block[] }) {
     const block = blocks[0]!;
     return (
       <>
-        <ScenarioEditor owner={{ kind: 'block', blockId: block.id }} rules={block.rules} title="Сценарии" />
+        <BehaviorsEditor blockId={block.id} behaviors={block.behaviors} />
+        <ScenarioEditor owner={{ kind: 'block', blockId: block.id }} rules={block.rules} title="Правила" />
         <p className="ed-hint" data-testid="scenario-counts" style={{ padding: '0 12px' }}>
           Правил: {block.rules.length}. Поведений: {block.behaviors.length}.
         </p>
