@@ -1,0 +1,567 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Угадай по размытому фото"
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "rg10_igra",
+      "name": "Загадка",
+      "kind": "question",
+      "rules": [
+        {
+          "id": "rg10_chetko",
+          "when": {
+            "kind": "screen",
+            "phase": "show"
+          },
+          "do": [
+            {
+              "kind": "animateProperty",
+              "target": {
+                "kind": "block",
+                "blockId": "rg10_foto"
+              },
+              "property": "blur",
+              "to": 0,
+              "durationMs": 6000,
+              "easing": {
+                "kind": "preset",
+                "name": "linear"
+              }
+            }
+          ]
+        }
+      ],
+      "blocks": [
+        {
+          "id": "rg10_zagolovok",
+          "type": "text",
+          "name": "Кто это?",
+          "frame": {
+            "x": 20,
+            "y": 40,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Кто это?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg10_foto",
+          "type": "shape",
+          "name": "Фото",
+          "frame": {
+            "x": 45,
+            "y": 150,
+            "w": 300,
+            "h": 260
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 24,
+              "tr": 24,
+              "br": 24,
+              "bl": 24
+            },
+            "fills": [
+              {
+                "kind": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": {
+                      "token": "accent"
+                    }
+                  },
+                  {
+                    "offset": 1,
+                    "color": {
+                      "token": "primary"
+                    }
+                  }
+                ]
+              }
+            ],
+            "effects": {
+              "blur": 22
+            },
+            "text": {
+              "size": 120,
+              "align": "center",
+              "verticalAlign": "middle"
+            }
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "🐘"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "rg10_vopros",
+          "type": "singleChoice",
+          "name": "Ответ",
+          "frame": {
+            "x": 45,
+            "y": 450,
+            "w": 300,
+            "h": 180
+          },
+          "props": {
+            "required": true,
+            "options": [
+              {
+                "id": "rg10_o0",
+                "blockId": "rg10_v0",
+                "correct": true,
+                "score": 10
+              },
+              {
+                "id": "rg10_o1",
+                "blockId": "rg10_v1",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "rg10_o2",
+                "blockId": "rg10_v2",
+                "correct": false,
+                "score": 0
+              }
+            ]
+          },
+          "children": [
+            {
+              "id": "rg10_v0",
+              "type": "shape",
+              "name": "Слон",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Слон"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "rg10_v1",
+              "type": "shape",
+              "name": "Жираф",
+              "frame": {
+                "x": 0,
+                "y": 62,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Жираф"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "rg10_v2",
+              "type": "shape",
+              "name": "Зебра",
+              "frame": {
+                "x": 0,
+                "y": 124,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Зебра"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "rg10_dalshe",
+          "type": "button",
+          "name": "Ответить",
+          "frame": {
+            "x": 95,
+            "y": 680,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Ответить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg10_dalshe_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg10_dalshe"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "rg10_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rg10_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg10_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg10_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg10_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg10_podpis",
+          "type": "text",
+          "name": "Итог",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Баллов: "
+                  },
+                  {
+                    "sys": "баллы"
+                  },
+                  {
+                    "t": " из "
+                  },
+                  {
+                    "sys": "максимум"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 24,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

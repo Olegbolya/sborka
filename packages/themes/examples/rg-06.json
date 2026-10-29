@@ -1,0 +1,452 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Поймай объект"
+  },
+  "variables": [
+    {
+      "id": "rg06_poimano",
+      "name": "Поймано",
+      "type": "number",
+      "initial": 0,
+      "saveToAnswers": true
+    },
+    {
+      "id": "rg06_upalo",
+      "name": "Упало",
+      "type": "number",
+      "initial": 0,
+      "saveToAnswers": false
+    }
+  ],
+  "screens": [
+    {
+      "id": "rg06_igra",
+      "name": "Игра",
+      "blocks": [
+        {
+          "id": "rg06_zvezda",
+          "type": "shape",
+          "name": "Звезда",
+          "frame": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "initiallyHidden": true,
+          "style": {
+            "text": {
+              "size": 34,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "⭐"
+                  }
+                ]
+              }
+            ]
+          },
+          "behaviors": [
+            {
+              "kind": "move",
+              "angle": 90,
+              "speed": 160,
+              "spread": 20,
+              "edge": "destroy"
+            }
+          ]
+        },
+        {
+          "id": "rg06_generator",
+          "type": "shape",
+          "name": "Генератор",
+          "frame": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          },
+          "behaviors": [
+            {
+              "kind": "spawner",
+              "prototypeId": "rg06_zvezda",
+              "everyMs": 500,
+              "area": {
+                "x": 10,
+                "y": 0,
+                "w": 330,
+                "h": 20
+              },
+              "max": 12
+            }
+          ]
+        },
+        {
+          "id": "rg06_zemlya",
+          "type": "zone",
+          "name": "Земля",
+          "frame": {
+            "x": 0,
+            "y": 700,
+            "w": 390,
+            "h": 40
+          },
+          "props": {
+            "visible": true
+          }
+        },
+        {
+          "id": "rg06_taimer",
+          "type": "timer",
+          "name": "Таймер",
+          "frame": {
+            "x": 20,
+            "y": 20,
+            "w": 120,
+            "h": 40
+          },
+          "props": {
+            "mode": "duration",
+            "seconds": 8,
+            "format": "seconds",
+            "autoStart": true
+          },
+          "style": {
+            "text": {
+              "size": 22,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg06_schet",
+          "type": "value",
+          "name": "Поймано",
+          "frame": {
+            "x": 230,
+            "y": 20,
+            "w": 140,
+            "h": 40
+          },
+          "style": {
+            "text": {
+              "size": 22,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "a11y": {
+            "label": "Поймано"
+          },
+          "props": {
+            "variableId": "rg06_poimano",
+            "format": "number"
+          }
+        },
+        {
+          "id": "rg06_podskazka",
+          "type": "text",
+          "name": "Лови звёзды, пока идёт время",
+          "frame": {
+            "x": 30,
+            "y": 760,
+            "w": 330,
+            "h": 40
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Лови звёзды, пока идёт время"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "rules": [
+        {
+          "id": "rg06_poimal",
+          "when": {
+            "kind": "tap",
+            "source": {
+              "kind": "copiesOf",
+              "blockId": "rg06_zvezda"
+            }
+          },
+          "do": [
+            {
+              "kind": "setVariable",
+              "variableId": "rg06_poimano",
+              "op": "add",
+              "value": 1
+            },
+            {
+              "kind": "destroy",
+              "target": {
+                "kind": "self"
+              }
+            }
+          ]
+        },
+        {
+          "id": "rg06_upala",
+          "when": {
+            "kind": "collide",
+            "source": {
+              "kind": "copiesOf",
+              "blockId": "rg06_zvezda"
+            },
+            "target": {
+              "kind": "block",
+              "blockId": "rg06_zemlya"
+            },
+            "phase": "start"
+          },
+          "do": [
+            {
+              "kind": "setVariable",
+              "variableId": "rg06_upalo",
+              "op": "add",
+              "value": 1
+            },
+            {
+              "kind": "destroy",
+              "target": {
+                "kind": "self"
+              }
+            }
+          ]
+        },
+        {
+          "id": "rg06_vremya",
+          "when": {
+            "kind": "timer",
+            "mode": "timerEnd",
+            "timerBlockId": "rg06_taimer"
+          },
+          "do": [
+            {
+              "kind": "record",
+              "label": "Поймано",
+              "value": {
+                "variableId": "rg06_poimano"
+              }
+            },
+            {
+              "kind": "goTo",
+              "to": "next"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rg06_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rg06_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg06_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg06_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg06_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg06_podpis",
+          "type": "text",
+          "name": "Итог",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 120
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Поймано звёзд: "
+                  },
+                  {
+                    "v": "rg06_poimano"
+                  },
+                  {
+                    "t": ", упало: "
+                  },
+                  {
+                    "v": "rg06_upalo"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 22,
+              "weight": 600,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

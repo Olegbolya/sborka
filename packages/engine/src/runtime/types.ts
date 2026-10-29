@@ -77,6 +77,8 @@ export interface BlockView {
   media: 'playing' | 'paused' | 'stopped' | null;
   /** BH-07: the card shows its back side. */
   flipped: boolean;
+  /** AC-20: the place of a block of a row, column or grid after «Перемешать» (absent — the place of the document). */
+  order?: number;
 }
 
 /** SC-03 · what the debugger of the preview is told: which rule fired and why not, which action ran, where a step stopped. */

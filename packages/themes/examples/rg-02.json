@@ -1,0 +1,428 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Коробка-сюрприз"
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "rg02_korobka",
+      "name": "Коробка",
+      "blocks": [
+        {
+          "id": "rg02_zagolovok",
+          "type": "text",
+          "name": "Что внутри?",
+          "frame": {
+            "x": 20,
+            "y": 100,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Что внутри?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg02_box",
+          "type": "shape",
+          "name": "🎁",
+          "frame": {
+            "x": 120,
+            "y": 260,
+            "w": 150,
+            "h": 150
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "🎁"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 24,
+              "tr": 24,
+              "br": 24,
+              "bl": 24
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "accent",
+                  "alpha": 0.25
+                }
+              }
+            ],
+            "text": {
+              "size": 72,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "animation": {
+            "loop": {
+              "kind": "shake",
+              "speed": 1,
+              "amplitude": 1,
+              "pauseMs": 900
+            }
+          },
+          "rules": [
+            {
+              "id": "rg02_box_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg02_box"
+                }
+              },
+              "do": [
+                {
+                  "kind": "effect",
+                  "effect": "shake",
+                  "intensity": 1.5
+                },
+                {
+                  "kind": "wait",
+                  "ms": 600
+                },
+                {
+                  "kind": "visibility",
+                  "targets": [
+                    {
+                      "kind": "block",
+                      "blockId": "rg02_box"
+                    }
+                  ],
+                  "mode": "hide",
+                  "animate": true
+                },
+                {
+                  "kind": "visibility",
+                  "targets": [
+                    {
+                      "kind": "block",
+                      "blockId": "rg02_priz"
+                    },
+                    {
+                      "kind": "block",
+                      "blockId": "rg02_dalshe"
+                    }
+                  ],
+                  "mode": "show",
+                  "animate": true
+                },
+                {
+                  "kind": "effect",
+                  "effect": "confetti",
+                  "intensity": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg02_priz",
+          "type": "text",
+          "name": "Приз",
+          "frame": {
+            "x": 20,
+            "y": 300,
+            "w": 350,
+            "h": 120
+          },
+          "initiallyHidden": true,
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "🎄 Вам подарок: тёплый плед!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg02_dalshe",
+          "type": "button",
+          "name": "Дальше",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Дальше"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg02_dalshe_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg02_dalshe"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "initiallyHidden": true
+        }
+      ]
+    },
+    {
+      "id": "rg02_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rg02_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg02_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg02_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg02_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg02_podpis",
+          "type": "text",
+          "name": "Коробка открыта.",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Коробка открыта."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

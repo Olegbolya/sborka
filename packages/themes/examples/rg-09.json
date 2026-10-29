@@ -1,0 +1,373 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Кликер на время"
+  },
+  "variables": [
+    {
+      "id": "rg09_klikov",
+      "name": "Клики",
+      "type": "number",
+      "initial": 0,
+      "saveToAnswers": true
+    }
+  ],
+  "screens": [
+    {
+      "id": "rg09_igra",
+      "name": "Игра",
+      "blocks": [
+        {
+          "id": "rg09_zagolovok",
+          "type": "text",
+          "name": "Жми как можно быстрее!",
+          "frame": {
+            "x": 20,
+            "y": 60,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Жми как можно быстрее!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg09_schet",
+          "type": "value",
+          "name": "Счёт",
+          "frame": {
+            "x": 95,
+            "y": 180,
+            "w": 200,
+            "h": 100
+          },
+          "style": {
+            "text": {
+              "size": 72,
+              "weight": 900,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "a11y": {
+            "label": "Счёт"
+          },
+          "props": {
+            "variableId": "rg09_klikov",
+            "format": "number"
+          }
+        },
+        {
+          "id": "rg09_zhmi",
+          "type": "button",
+          "name": "Жми!",
+          "frame": {
+            "x": 70,
+            "y": 340,
+            "w": 250,
+            "h": 120
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Жми!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 60,
+              "tr": 60,
+              "br": 60,
+              "bl": 60
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "accent",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 36,
+              "weight": 900,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg09_zhmi_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg09_zhmi"
+                }
+              },
+              "do": [
+                {
+                  "kind": "setVariable",
+                  "variableId": "rg09_klikov",
+                  "op": "add",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg09_taimer",
+          "type": "timer",
+          "name": "Осталось",
+          "frame": {
+            "x": 125,
+            "y": 520,
+            "w": 140,
+            "h": 50
+          },
+          "props": {
+            "mode": "duration",
+            "seconds": 5,
+            "format": "seconds",
+            "autoStart": true
+          },
+          "style": {
+            "text": {
+              "size": 26,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "rules": [
+        {
+          "id": "rg09_vremya",
+          "when": {
+            "kind": "timer",
+            "mode": "after",
+            "seconds": 5
+          },
+          "do": [
+            {
+              "kind": "record",
+              "label": "Кликов за 5 секунд",
+              "value": {
+                "variableId": "rg09_klikov"
+              }
+            },
+            {
+              "kind": "goTo",
+              "to": "next"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rg09_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rg09_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg09_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg09_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg09_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg09_podpis",
+          "type": "text",
+          "name": "Итог",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Кликов за 5 секунд: "
+                  },
+                  {
+                    "v": "rg09_klikov"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 24,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

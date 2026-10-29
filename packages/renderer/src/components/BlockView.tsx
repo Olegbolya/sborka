@@ -214,7 +214,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const root: CSSProperties = {
     // The place from the document stays in left/top; movement by scenarios and behaviors is a `translate`, which
     // the browser composes without layout and repaint (SC-05: 50 moving blocks at ≥ 50 fps on a slow phone).
-    ...(inFlow ? { position: 'relative', flex: 'none' } : { position: 'absolute', left: u(block.frame.x), top: u(block.frame.y) }),
+    ...(inFlow ? { position: 'relative', flex: 'none', ...(view?.order !== undefined ? { order: view.order } : {}) } : { position: 'absolute', left: u(block.frame.x), top: u(block.frame.y) }),
     ...(x !== block.frame.x || y !== block.frame.y ? { translate: `${u(x - block.frame.x)} ${u(y - block.frame.y)}` } : {}),
     ...(view && (view.copy || block.behaviors.some((b) => MOVING.has(b.kind))) ? { willChange: 'translate' } : {}),
     width: u(w),

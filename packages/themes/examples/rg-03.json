@@ -1,0 +1,451 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Скретч-карта"
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "rg03_karta",
+      "name": "Карта",
+      "blocks": [
+        {
+          "id": "rg03_zagolovok",
+          "type": "text",
+          "name": "Сотри слой — узнай приз",
+          "frame": {
+            "x": 20,
+            "y": 80,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Сотри слой — узнай приз"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg03_priz",
+          "type": "shape",
+          "name": "🎁 Скидка 10%",
+          "frame": {
+            "x": 45,
+            "y": 220,
+            "w": 300,
+            "h": 180
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "🎁 Скидка 10%"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 20,
+              "tr": 20,
+              "br": 20,
+              "bl": 20
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "accent",
+                  "alpha": 0.25
+                }
+              }
+            ],
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg03_sloj",
+          "type": "shape",
+          "name": "Стираемый слой",
+          "frame": {
+            "x": 45,
+            "y": 220,
+            "w": 300,
+            "h": 180
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 20,
+              "tr": 20,
+              "br": 20,
+              "bl": 20
+            },
+            "fills": [
+              {
+                "kind": "linear",
+                "angle": 120,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": {
+                      "hex": "#B8BEC6"
+                    }
+                  },
+                  {
+                    "offset": 0.5,
+                    "color": {
+                      "hex": "#E8EBEF"
+                    }
+                  },
+                  {
+                    "offset": 1,
+                    "color": {
+                      "hex": "#9AA1AB"
+                    }
+                  }
+                ]
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "hex": "#1D1B18"
+                }
+              }
+            }
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Сотри меня"
+                  }
+                ]
+              }
+            ]
+          },
+          "behaviors": [
+            {
+              "kind": "scratch",
+              "brush": 40,
+              "threshold": 60
+            }
+          ],
+          "rules": [
+            {
+              "id": "rg03_stert",
+              "when": {
+                "kind": "scratched",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg03_sloj"
+                },
+                "percent": 60
+              },
+              "do": [
+                {
+                  "kind": "effect",
+                  "effect": "confetti",
+                  "intensity": 1
+                },
+                {
+                  "kind": "mediaOverlay",
+                  "overlay": {
+                    "media": {
+                      "source": "media",
+                      "id": "memfile_zamenite_01"
+                    },
+                    "seconds": 1.5,
+                    "caption": {
+                      "text": "Приз твой!",
+                      "position": "bottom"
+                    },
+                    "skippable": true
+                  }
+                },
+                {
+                  "kind": "visibility",
+                  "targets": [
+                    {
+                      "kind": "block",
+                      "blockId": "rg03_dalshe"
+                    }
+                  ],
+                  "mode": "show",
+                  "animate": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg03_dalshe",
+          "type": "button",
+          "name": "Дальше",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Дальше"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg03_dalshe_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg03_dalshe"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "initiallyHidden": true
+        }
+      ]
+    },
+    {
+      "id": "rg03_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rg03_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg03_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg03_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg03_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg03_podpis",
+          "type": "text",
+          "name": "Приз открыт.",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Приз открыт."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

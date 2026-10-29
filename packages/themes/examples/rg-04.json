@@ -1,0 +1,680 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Колесо фортуны"
+  },
+  "variables": [
+    {
+      "id": "rg04_popytki",
+      "name": "Попытки",
+      "type": "number",
+      "initial": 0,
+      "saveToAnswers": true
+    }
+  ],
+  "screens": [
+    {
+      "id": "rg04_ekran",
+      "name": "Колесо",
+      "blocks": [
+        {
+          "id": "rg04_zagolovok",
+          "type": "text",
+          "name": "Крути колесо",
+          "frame": {
+            "x": 20,
+            "y": 50,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Крути колесо"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg04_strelka",
+          "type": "shape",
+          "name": "Указатель",
+          "frame": {
+            "x": 180,
+            "y": 150,
+            "w": 30,
+            "h": 30,
+            "rotation": 180
+          },
+          "style": {
+            "shape": {
+              "kind": "polygon",
+              "sides": 3
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "text",
+                  "alpha": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "rg04_koleso",
+          "type": "container",
+          "name": "Колесо",
+          "frame": {
+            "x": 65,
+            "y": 190,
+            "w": 260,
+            "h": 260
+          },
+          "style": {
+            "shape": {
+              "kind": "ellipse"
+            },
+            "fills": [
+              {
+                "kind": "conic",
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": {
+                      "token": "primary",
+                      "alpha": 0.85
+                    }
+                  },
+                  {
+                    "offset": 0.19990000000000002,
+                    "color": {
+                      "token": "primary",
+                      "alpha": 0.85
+                    }
+                  },
+                  {
+                    "offset": 0.2,
+                    "color": {
+                      "token": "accent",
+                      "alpha": 0.85
+                    }
+                  },
+                  {
+                    "offset": 0.39990000000000003,
+                    "color": {
+                      "token": "accent",
+                      "alpha": 0.85
+                    }
+                  },
+                  {
+                    "offset": 0.4,
+                    "color": {
+                      "token": "success",
+                      "alpha": 0.85
+                    }
+                  },
+                  {
+                    "offset": 0.5999,
+                    "color": {
+                      "token": "success",
+                      "alpha": 0.85
+                    }
+                  },
+                  {
+                    "offset": 0.6,
+                    "color": {
+                      "token": "error",
+                      "alpha": 0.85
+                    }
+                  },
+                  {
+                    "offset": 0.7999,
+                    "color": {
+                      "token": "error",
+                      "alpha": 0.85
+                    }
+                  },
+                  {
+                    "offset": 0.8,
+                    "color": {
+                      "token": "muted",
+                      "alpha": 0.85
+                    }
+                  },
+                  {
+                    "offset": 0.9999,
+                    "color": {
+                      "token": "muted",
+                      "alpha": 0.85
+                    }
+                  }
+                ]
+              }
+            ],
+            "stroke": {
+              "width": 4,
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "children": [
+            {
+              "id": "rg04_sektor_0",
+              "type": "shape",
+              "name": "Сектор 1",
+              "frame": {
+                "x": 157.9617464448602,
+                "y": 39.23355547812946,
+                "w": 44,
+                "h": 44,
+                "rotation": 36
+              },
+              "style": {
+                "text": {
+                  "size": 26,
+                  "align": "center",
+                  "verticalAlign": "middle"
+                }
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "🎁"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "rg04_sektor_1",
+              "type": "shape",
+              "name": "Сектор 2",
+              "frame": {
+                "x": 188.83980388508806,
+                "y": 134.26644452187054,
+                "w": 44,
+                "h": 44,
+                "rotation": 108
+              },
+              "style": {
+                "text": {
+                  "size": 26,
+                  "align": "center",
+                  "verticalAlign": "middle"
+                }
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "⛄"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "rg04_sektor_2",
+              "type": "shape",
+              "name": "Сектор 3",
+              "frame": {
+                "x": 108,
+                "y": 193,
+                "w": 44,
+                "h": 44,
+                "rotation": 180
+              },
+              "style": {
+                "text": {
+                  "size": 26,
+                  "align": "center",
+                  "verticalAlign": "middle"
+                }
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "🎄"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "rg04_sektor_3",
+              "type": "shape",
+              "name": "Сектор 4",
+              "frame": {
+                "x": 27.160196114911955,
+                "y": 134.26644452187054,
+                "w": 44,
+                "h": 44,
+                "rotation": 252
+              },
+              "style": {
+                "text": {
+                  "size": 26,
+                  "align": "center",
+                  "verticalAlign": "middle"
+                }
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "🦌"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "rg04_sektor_4",
+              "type": "shape",
+              "name": "Сектор 5",
+              "frame": {
+                "x": 58.03825355513976,
+                "y": 39.233555478129475,
+                "w": 44,
+                "h": 44,
+                "rotation": 324
+              },
+              "style": {
+                "text": {
+                  "size": 26,
+                  "align": "center",
+                  "verticalAlign": "middle"
+                }
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "🍊"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "behaviors": [
+            {
+              "kind": "wheel",
+              "spinMs": 2000,
+              "sectors": [
+                {
+                  "blockId": "rg04_sektor_0",
+                  "weight": 1
+                },
+                {
+                  "blockId": "rg04_sektor_1",
+                  "weight": 1
+                },
+                {
+                  "blockId": "rg04_sektor_2",
+                  "weight": 1
+                },
+                {
+                  "blockId": "rg04_sektor_3",
+                  "weight": 1
+                },
+                {
+                  "blockId": "rg04_sektor_4",
+                  "weight": 1
+                }
+              ]
+            }
+          ],
+          "rules": [
+            {
+              "id": "rg04_stop",
+              "when": {
+                "kind": "mediaEnd",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg04_koleso"
+                }
+              },
+              "do": [
+                {
+                  "kind": "setVariable",
+                  "variableId": "rg04_popytki",
+                  "op": "add",
+                  "value": 1
+                },
+                {
+                  "kind": "record",
+                  "label": "Крутил колесо",
+                  "value": {
+                    "variableId": "rg04_popytki"
+                  }
+                },
+                {
+                  "kind": "effect",
+                  "effect": "confetti",
+                  "intensity": 1
+                },
+                {
+                  "kind": "visibility",
+                  "targets": [
+                    {
+                      "kind": "block",
+                      "blockId": "rg04_dalshe"
+                    }
+                  ],
+                  "mode": "show",
+                  "animate": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg04_podskazka",
+          "type": "text",
+          "name": "Нажми на колесо",
+          "frame": {
+            "x": 30,
+            "y": 470,
+            "w": 330,
+            "h": 40
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Нажми на колесо"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg04_dalshe",
+          "type": "button",
+          "name": "Дальше",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Дальше"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg04_dalshe_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg04_dalshe"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "initiallyHidden": true
+        }
+      ]
+    },
+    {
+      "id": "rg04_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rg04_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg04_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg04_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg04_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg04_podpis",
+          "type": "text",
+          "name": "Попытки",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Вы крутили колесо раз: "
+                  },
+                  {
+                    "v": "rg04_popytki"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 20,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

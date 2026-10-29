@@ -80,3 +80,35 @@ describe('P3.8 · SC-03 · отладчик в движке: журнал пра
     expect(rt.variables).toEqual(plain.variables);
   });
 });
+
+describe('P3.12 · AC-20 · «Перемешать» блоки сетки меняет их порядок, а не координаты', () => {
+  const grid = () =>
+    b('container', 'setka01', {
+      frame: { x: 0, y: 0, w: 300, h: 300 },
+      style: { layout: { mode: 'grid', columns: 2, gap: 8 } },
+      children: ['kartaa', 'kartab', 'kartac', 'kartad'].map((id) => b('shape', id)),
+    });
+
+  it('AC-20 · блоки в сетке получают новый порядок — перестановку исходного; свободные блоки по-прежнему меняются местами', () => {
+    const free = [b('shape', 'svobodn1', { frame: { x: 0, y: 400, w: 20, h: 20 } }), b('shape', 'svobodn2', { frame: { x: 100, y: 400, w: 20, h: 20 } })];
+    const orders = new Set<string>();
+    for (let seed = 1; seed <= 6; seed++) {
+      const rt = createRuntime(buildDoc({ blocks: [grid(), ...free], rules: [rule(on.show(), [act.shuffle('kartaa', 'kartab', 'kartac', 'kartad'), act.shuffle('svobodn1', 'svobodn2')])] }), { seed });
+      rt.enterScreen('ekran1');
+      const order = ['kartaa', 'kartab', 'kartac', 'kartad'].map((id) => rt.view(id)!.order);
+      expect(order.every((o) => o !== undefined)).toBe(true);
+      expect([...(order as number[])].sort()).toEqual([0, 1, 2, 3]);
+      // The frame of a card in a grid is not touched: the layout decides where it stands.
+      expect(rt.view('kartaa')).toMatchObject({ x: 0, y: 0 });
+      expect([rt.view('svobodn1')!.x, rt.view('svobodn2')!.x].sort((p, q) => p - q)).toEqual([0, 100]);
+      orders.add(order.join());
+    }
+    expect(orders.size).toBeGreaterThan(1);
+  });
+
+  it('AC-20 · без «Перемешать» порядок не задан — блоки стоят, как в документе', () => {
+    const rt = createRuntime(buildDoc({ blocks: [grid()] }), { seed: 1 });
+    rt.enterScreen('ekran1');
+    expect(rt.view('kartaa')!.order).toBeUndefined();
+  });
+});

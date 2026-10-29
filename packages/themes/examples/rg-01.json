@@ -1,0 +1,422 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Убегающая кнопка «Нет»"
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "rg01_vopros",
+      "name": "Вопрос",
+      "blocks": [
+        {
+          "id": "rg01_zagolovok",
+          "type": "text",
+          "name": "Ты придёшь на ёлку?",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Ты придёшь на ёлку?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg01_da",
+          "type": "button",
+          "name": "Да",
+          "frame": {
+            "x": 40,
+            "y": 300,
+            "w": 140,
+            "h": 64
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Да"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 32,
+              "tr": 32,
+              "br": 32,
+              "bl": 32
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "success",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 22,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg01_da_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg01_da"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg01_net",
+          "type": "button",
+          "name": "Нет",
+          "frame": {
+            "x": 210,
+            "y": 300,
+            "w": 140,
+            "h": 64
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Нет"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 32,
+              "tr": 32,
+              "br": 32,
+              "bl": 32
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "error",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 22,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg01_net_1",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg01_net"
+                }
+              },
+              "do": [
+                {
+                  "kind": "setProperty",
+                  "target": {
+                    "kind": "self"
+                  },
+                  "property": "textLayer",
+                  "value": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "Точно нет?"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "if": {
+                "kind": "ruleCount",
+                "op": "lt",
+                "value": 2
+              }
+            },
+            {
+              "id": "rg01_net_2",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg01_net"
+                }
+              },
+              "do": [
+                {
+                  "kind": "setProperty",
+                  "target": {
+                    "kind": "self"
+                  },
+                  "property": "textLayer",
+                  "value": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "Да!"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "kind": "effect",
+                  "effect": "confetti",
+                  "intensity": 1
+                },
+                {
+                  "kind": "wait",
+                  "ms": 700
+                },
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ],
+              "if": {
+                "kind": "ruleCount",
+                "op": "gte",
+                "value": 2
+              }
+            }
+          ],
+          "behaviors": [
+            {
+              "kind": "flee",
+              "distance": 70,
+              "speed": 1.5,
+              "times": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rg01_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rg01_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg01_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg01_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg01_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg01_podpis",
+          "type": "text",
+          "name": "Я знал! Ждём тебя на ёлке.",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Я знал! Ждём тебя на ёлке."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

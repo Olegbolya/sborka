@@ -1,0 +1,3395 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Мемори «найди пары»"
+  },
+  "variables": [
+    {
+      "id": "rg05_pary",
+      "name": "Пары",
+      "type": "number",
+      "initial": 0,
+      "saveToAnswers": false
+    },
+    {
+      "id": "rg05_pervaya",
+      "name": "Открыта_первая",
+      "type": "number",
+      "initial": 0,
+      "saveToAnswers": false
+    },
+    {
+      "id": "rg05_pervaya_karta",
+      "name": "Номер_первой_карты",
+      "type": "number",
+      "initial": 0,
+      "saveToAnswers": false
+    },
+    {
+      "id": "rg05_zanyato",
+      "name": "Занято",
+      "type": "bool",
+      "initial": false,
+      "saveToAnswers": false
+    }
+  ],
+  "screens": [
+    {
+      "id": "rg05_pole",
+      "name": "Поле",
+      "rules": [
+        {
+          "id": "rg05_peremeshat",
+          "when": {
+            "kind": "screen",
+            "phase": "show"
+          },
+          "do": [
+            {
+              "kind": "shuffle",
+              "blockIds": [
+                "rg05_k00",
+                "rg05_k01",
+                "rg05_k10",
+                "rg05_k11",
+                "rg05_k20",
+                "rg05_k21"
+              ]
+            }
+          ]
+        }
+      ],
+      "blocks": [
+        {
+          "id": "rg05_zagolovok",
+          "type": "text",
+          "name": "Найди пары",
+          "frame": {
+            "x": 20,
+            "y": 60,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Найди пары"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg05_setka",
+          "type": "container",
+          "name": "Сетка",
+          "frame": {
+            "x": 25,
+            "y": 180,
+            "w": 340,
+            "h": 300
+          },
+          "style": {
+            "layout": {
+              "mode": "grid",
+              "columns": 3,
+              "gap": 10,
+              "align": "stretch",
+              "justify": "start",
+              "wrap": false,
+              "scroll": false
+            }
+          },
+          "children": [
+            {
+              "id": "rg05_k00",
+              "type": "container",
+              "name": "Карточка 🎄",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 100,
+                "h": 140
+              },
+              "children": [
+                {
+                  "id": "rg05_k00_l",
+                  "type": "shape",
+                  "name": "Рубашка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "primary",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 40,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "?"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "rg05_k00_o",
+                  "type": "shape",
+                  "name": "Картинка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 48,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "text"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "🎄"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "behaviors": [
+                {
+                  "kind": "flip",
+                  "frontId": "rg05_k00_l",
+                  "backId": "rg05_k00_o",
+                  "on": "action",
+                  "durationMs": 300
+                }
+              ],
+              "rules": [
+                {
+                  "id": "rg05_k00_p",
+                  "when": {
+                    "kind": "tap",
+                    "source": {
+                      "kind": "block",
+                      "blockId": "rg05_k00"
+                    }
+                  },
+                  "do": [
+                    {
+                      "kind": "if",
+                      "if": {
+                        "kind": "variable",
+                        "variableId": "rg05_zanyato",
+                        "op": "eq",
+                        "value": false
+                      },
+                      "then": [
+                        {
+                          "kind": "media",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k00"
+                          },
+                          "command": "play"
+                        },
+                        {
+                          "kind": "interaction",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k00"
+                          },
+                          "enabled": false
+                        },
+                        {
+                          "kind": "if",
+                          "if": {
+                            "kind": "variable",
+                            "variableId": "rg05_pervaya",
+                            "op": "eq",
+                            "value": 0
+                          },
+                          "then": [
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya",
+                              "op": "set",
+                              "value": 1
+                            },
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya_karta",
+                              "op": "set",
+                              "value": 1
+                            }
+                          ],
+                          "else": [
+                            {
+                              "kind": "if",
+                              "if": {
+                                "kind": "variable",
+                                "variableId": "rg05_pervaya",
+                                "op": "eq",
+                                "value": 1
+                              },
+                              "then": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pary",
+                                  "op": "add",
+                                  "value": 1
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                }
+                              ],
+                              "else": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": true
+                                },
+                                {
+                                  "kind": "wait",
+                                  "ms": 700
+                                },
+                                {
+                                  "kind": "media",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k00"
+                                  },
+                                  "command": "play"
+                                },
+                                {
+                                  "kind": "interaction",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k00"
+                                  },
+                                  "enabled": true
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": false
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "else": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "rg05_k01",
+              "type": "container",
+              "name": "Карточка 🎄",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 100,
+                "h": 140
+              },
+              "children": [
+                {
+                  "id": "rg05_k01_l",
+                  "type": "shape",
+                  "name": "Рубашка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "primary",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 40,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "?"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "rg05_k01_o",
+                  "type": "shape",
+                  "name": "Картинка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 48,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "text"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "🎄"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "behaviors": [
+                {
+                  "kind": "flip",
+                  "frontId": "rg05_k01_l",
+                  "backId": "rg05_k01_o",
+                  "on": "action",
+                  "durationMs": 300
+                }
+              ],
+              "rules": [
+                {
+                  "id": "rg05_k01_p",
+                  "when": {
+                    "kind": "tap",
+                    "source": {
+                      "kind": "block",
+                      "blockId": "rg05_k01"
+                    }
+                  },
+                  "do": [
+                    {
+                      "kind": "if",
+                      "if": {
+                        "kind": "variable",
+                        "variableId": "rg05_zanyato",
+                        "op": "eq",
+                        "value": false
+                      },
+                      "then": [
+                        {
+                          "kind": "media",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k01"
+                          },
+                          "command": "play"
+                        },
+                        {
+                          "kind": "interaction",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k01"
+                          },
+                          "enabled": false
+                        },
+                        {
+                          "kind": "if",
+                          "if": {
+                            "kind": "variable",
+                            "variableId": "rg05_pervaya",
+                            "op": "eq",
+                            "value": 0
+                          },
+                          "then": [
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya",
+                              "op": "set",
+                              "value": 1
+                            },
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya_karta",
+                              "op": "set",
+                              "value": 2
+                            }
+                          ],
+                          "else": [
+                            {
+                              "kind": "if",
+                              "if": {
+                                "kind": "variable",
+                                "variableId": "rg05_pervaya",
+                                "op": "eq",
+                                "value": 1
+                              },
+                              "then": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pary",
+                                  "op": "add",
+                                  "value": 1
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                }
+                              ],
+                              "else": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": true
+                                },
+                                {
+                                  "kind": "wait",
+                                  "ms": 700
+                                },
+                                {
+                                  "kind": "media",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k01"
+                                  },
+                                  "command": "play"
+                                },
+                                {
+                                  "kind": "interaction",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k01"
+                                  },
+                                  "enabled": true
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": false
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "else": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "rg05_k10",
+              "type": "container",
+              "name": "Карточка ⛄",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 100,
+                "h": 140
+              },
+              "children": [
+                {
+                  "id": "rg05_k10_l",
+                  "type": "shape",
+                  "name": "Рубашка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "primary",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 40,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "?"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "rg05_k10_o",
+                  "type": "shape",
+                  "name": "Картинка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 48,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "text"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "⛄"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "behaviors": [
+                {
+                  "kind": "flip",
+                  "frontId": "rg05_k10_l",
+                  "backId": "rg05_k10_o",
+                  "on": "action",
+                  "durationMs": 300
+                }
+              ],
+              "rules": [
+                {
+                  "id": "rg05_k10_p",
+                  "when": {
+                    "kind": "tap",
+                    "source": {
+                      "kind": "block",
+                      "blockId": "rg05_k10"
+                    }
+                  },
+                  "do": [
+                    {
+                      "kind": "if",
+                      "if": {
+                        "kind": "variable",
+                        "variableId": "rg05_zanyato",
+                        "op": "eq",
+                        "value": false
+                      },
+                      "then": [
+                        {
+                          "kind": "media",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k10"
+                          },
+                          "command": "play"
+                        },
+                        {
+                          "kind": "interaction",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k10"
+                          },
+                          "enabled": false
+                        },
+                        {
+                          "kind": "if",
+                          "if": {
+                            "kind": "variable",
+                            "variableId": "rg05_pervaya",
+                            "op": "eq",
+                            "value": 0
+                          },
+                          "then": [
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya",
+                              "op": "set",
+                              "value": 2
+                            },
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya_karta",
+                              "op": "set",
+                              "value": 3
+                            }
+                          ],
+                          "else": [
+                            {
+                              "kind": "if",
+                              "if": {
+                                "kind": "variable",
+                                "variableId": "rg05_pervaya",
+                                "op": "eq",
+                                "value": 2
+                              },
+                              "then": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pary",
+                                  "op": "add",
+                                  "value": 1
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                }
+                              ],
+                              "else": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": true
+                                },
+                                {
+                                  "kind": "wait",
+                                  "ms": 700
+                                },
+                                {
+                                  "kind": "media",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k10"
+                                  },
+                                  "command": "play"
+                                },
+                                {
+                                  "kind": "interaction",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k10"
+                                  },
+                                  "enabled": true
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": false
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "else": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "rg05_k11",
+              "type": "container",
+              "name": "Карточка ⛄",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 100,
+                "h": 140
+              },
+              "children": [
+                {
+                  "id": "rg05_k11_l",
+                  "type": "shape",
+                  "name": "Рубашка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "primary",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 40,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "?"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "rg05_k11_o",
+                  "type": "shape",
+                  "name": "Картинка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 48,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "text"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "⛄"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "behaviors": [
+                {
+                  "kind": "flip",
+                  "frontId": "rg05_k11_l",
+                  "backId": "rg05_k11_o",
+                  "on": "action",
+                  "durationMs": 300
+                }
+              ],
+              "rules": [
+                {
+                  "id": "rg05_k11_p",
+                  "when": {
+                    "kind": "tap",
+                    "source": {
+                      "kind": "block",
+                      "blockId": "rg05_k11"
+                    }
+                  },
+                  "do": [
+                    {
+                      "kind": "if",
+                      "if": {
+                        "kind": "variable",
+                        "variableId": "rg05_zanyato",
+                        "op": "eq",
+                        "value": false
+                      },
+                      "then": [
+                        {
+                          "kind": "media",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k11"
+                          },
+                          "command": "play"
+                        },
+                        {
+                          "kind": "interaction",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k11"
+                          },
+                          "enabled": false
+                        },
+                        {
+                          "kind": "if",
+                          "if": {
+                            "kind": "variable",
+                            "variableId": "rg05_pervaya",
+                            "op": "eq",
+                            "value": 0
+                          },
+                          "then": [
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya",
+                              "op": "set",
+                              "value": 2
+                            },
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya_karta",
+                              "op": "set",
+                              "value": 4
+                            }
+                          ],
+                          "else": [
+                            {
+                              "kind": "if",
+                              "if": {
+                                "kind": "variable",
+                                "variableId": "rg05_pervaya",
+                                "op": "eq",
+                                "value": 2
+                              },
+                              "then": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pary",
+                                  "op": "add",
+                                  "value": 1
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                }
+                              ],
+                              "else": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": true
+                                },
+                                {
+                                  "kind": "wait",
+                                  "ms": 700
+                                },
+                                {
+                                  "kind": "media",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k11"
+                                  },
+                                  "command": "play"
+                                },
+                                {
+                                  "kind": "interaction",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k11"
+                                  },
+                                  "enabled": true
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": false
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "else": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "rg05_k20",
+              "type": "container",
+              "name": "Карточка 🎁",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 100,
+                "h": 140
+              },
+              "children": [
+                {
+                  "id": "rg05_k20_l",
+                  "type": "shape",
+                  "name": "Рубашка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "primary",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 40,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "?"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "rg05_k20_o",
+                  "type": "shape",
+                  "name": "Картинка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 48,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "text"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "🎁"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "behaviors": [
+                {
+                  "kind": "flip",
+                  "frontId": "rg05_k20_l",
+                  "backId": "rg05_k20_o",
+                  "on": "action",
+                  "durationMs": 300
+                }
+              ],
+              "rules": [
+                {
+                  "id": "rg05_k20_p",
+                  "when": {
+                    "kind": "tap",
+                    "source": {
+                      "kind": "block",
+                      "blockId": "rg05_k20"
+                    }
+                  },
+                  "do": [
+                    {
+                      "kind": "if",
+                      "if": {
+                        "kind": "variable",
+                        "variableId": "rg05_zanyato",
+                        "op": "eq",
+                        "value": false
+                      },
+                      "then": [
+                        {
+                          "kind": "media",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k20"
+                          },
+                          "command": "play"
+                        },
+                        {
+                          "kind": "interaction",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k20"
+                          },
+                          "enabled": false
+                        },
+                        {
+                          "kind": "if",
+                          "if": {
+                            "kind": "variable",
+                            "variableId": "rg05_pervaya",
+                            "op": "eq",
+                            "value": 0
+                          },
+                          "then": [
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya",
+                              "op": "set",
+                              "value": 3
+                            },
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya_karta",
+                              "op": "set",
+                              "value": 5
+                            }
+                          ],
+                          "else": [
+                            {
+                              "kind": "if",
+                              "if": {
+                                "kind": "variable",
+                                "variableId": "rg05_pervaya",
+                                "op": "eq",
+                                "value": 3
+                              },
+                              "then": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pary",
+                                  "op": "add",
+                                  "value": 1
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                }
+                              ],
+                              "else": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": true
+                                },
+                                {
+                                  "kind": "wait",
+                                  "ms": 700
+                                },
+                                {
+                                  "kind": "media",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k20"
+                                  },
+                                  "command": "play"
+                                },
+                                {
+                                  "kind": "interaction",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k20"
+                                  },
+                                  "enabled": true
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": false
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "else": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "rg05_k21",
+              "type": "container",
+              "name": "Карточка 🎁",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 100,
+                "h": 140
+              },
+              "children": [
+                {
+                  "id": "rg05_k21_l",
+                  "type": "shape",
+                  "name": "Рубашка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "primary",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 40,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "?"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "rg05_k21_o",
+                  "type": "shape",
+                  "name": "Картинка",
+                  "frame": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 100,
+                    "h": 140
+                  },
+                  "style": {
+                    "radius": {
+                      "unit": "u",
+                      "tl": 14,
+                      "tr": 14,
+                      "br": 14,
+                      "bl": 14
+                    },
+                    "fills": [
+                      {
+                        "kind": "solid",
+                        "color": {
+                          "token": "surface",
+                          "alpha": 1
+                        }
+                      }
+                    ],
+                    "text": {
+                      "size": 48,
+                      "weight": 700,
+                      "align": "center",
+                      "verticalAlign": "middle",
+                      "paint": {
+                        "kind": "solid",
+                        "color": {
+                          "token": "text"
+                        }
+                      }
+                    }
+                  },
+                  "textLayer": {
+                    "paragraphs": [
+                      {
+                        "kind": "p",
+                        "runs": [
+                          {
+                            "t": "🎁"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "behaviors": [
+                {
+                  "kind": "flip",
+                  "frontId": "rg05_k21_l",
+                  "backId": "rg05_k21_o",
+                  "on": "action",
+                  "durationMs": 300
+                }
+              ],
+              "rules": [
+                {
+                  "id": "rg05_k21_p",
+                  "when": {
+                    "kind": "tap",
+                    "source": {
+                      "kind": "block",
+                      "blockId": "rg05_k21"
+                    }
+                  },
+                  "do": [
+                    {
+                      "kind": "if",
+                      "if": {
+                        "kind": "variable",
+                        "variableId": "rg05_zanyato",
+                        "op": "eq",
+                        "value": false
+                      },
+                      "then": [
+                        {
+                          "kind": "media",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k21"
+                          },
+                          "command": "play"
+                        },
+                        {
+                          "kind": "interaction",
+                          "target": {
+                            "kind": "block",
+                            "blockId": "rg05_k21"
+                          },
+                          "enabled": false
+                        },
+                        {
+                          "kind": "if",
+                          "if": {
+                            "kind": "variable",
+                            "variableId": "rg05_pervaya",
+                            "op": "eq",
+                            "value": 0
+                          },
+                          "then": [
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya",
+                              "op": "set",
+                              "value": 3
+                            },
+                            {
+                              "kind": "setVariable",
+                              "variableId": "rg05_pervaya_karta",
+                              "op": "set",
+                              "value": 6
+                            }
+                          ],
+                          "else": [
+                            {
+                              "kind": "if",
+                              "if": {
+                                "kind": "variable",
+                                "variableId": "rg05_pervaya",
+                                "op": "eq",
+                                "value": 3
+                              },
+                              "then": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pary",
+                                  "op": "add",
+                                  "value": 1
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                }
+                              ],
+                              "else": [
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": true
+                                },
+                                {
+                                  "kind": "wait",
+                                  "ms": 700
+                                },
+                                {
+                                  "kind": "media",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k21"
+                                  },
+                                  "command": "play"
+                                },
+                                {
+                                  "kind": "interaction",
+                                  "target": {
+                                    "kind": "block",
+                                    "blockId": "rg05_k21"
+                                  },
+                                  "enabled": true
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 1
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k00"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 2
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k01"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 3
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k10"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 4
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k11"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 5
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k20"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "media",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "command": "play"
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "if",
+                                  "if": {
+                                    "kind": "variable",
+                                    "variableId": "rg05_pervaya_karta",
+                                    "op": "eq",
+                                    "value": 6
+                                  },
+                                  "then": [
+                                    {
+                                      "kind": "interaction",
+                                      "target": {
+                                        "kind": "block",
+                                        "blockId": "rg05_k21"
+                                      },
+                                      "enabled": true
+                                    }
+                                  ],
+                                  "else": []
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_pervaya_karta",
+                                  "op": "set",
+                                  "value": 0
+                                },
+                                {
+                                  "kind": "setVariable",
+                                  "variableId": "rg05_zanyato",
+                                  "op": "set",
+                                  "value": false
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "else": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg05_schet",
+          "type": "value",
+          "name": "Найдено пар",
+          "frame": {
+            "x": 120,
+            "y": 520,
+            "w": 150,
+            "h": 50
+          },
+          "style": {
+            "text": {
+              "size": 24,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "a11y": {
+            "label": "Найдено пар"
+          },
+          "props": {
+            "variableId": "rg05_pary",
+            "format": "number"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rg05_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rg05_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg05_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg05_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg05_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg05_podpis",
+          "type": "text",
+          "name": "Все пары найдены!",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Все пары найдены!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "rg05_pobeda",
+      "when": {
+        "kind": "variableChange",
+        "variableId": "rg05_pary"
+      },
+      "do": [
+        {
+          "kind": "wait",
+          "ms": 600
+        },
+        {
+          "kind": "goTo",
+          "to": "next"
+        }
+      ],
+      "if": {
+        "kind": "variable",
+        "variableId": "rg05_pary",
+        "op": "gte",
+        "value": 3
+      }
+    }
+  ]
+}

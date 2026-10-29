@@ -1,0 +1,643 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Квест «Ключ от ёлки»"
+  },
+  "variables": [
+    {
+      "id": "rg08_veschi",
+      "name": "Вещи",
+      "type": "list",
+      "initial": [],
+      "saveToAnswers": true
+    }
+  ],
+  "screens": [
+    {
+      "id": "rg08_les",
+      "name": "Лес",
+      "blocks": [
+        {
+          "id": "rg08_les_t",
+          "type": "text",
+          "name": "Тропинка расходится. Куда пойдёшь?",
+          "frame": {
+            "x": 20,
+            "y": 90,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Тропинка расходится. Куда пойдёшь?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg08_vlevo",
+          "type": "button",
+          "name": "К избушке",
+          "frame": {
+            "x": 40,
+            "y": 320,
+            "w": 310,
+            "h": 64
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "К избушке"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg08_vlevo_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg08_vlevo"
+                }
+              },
+              "do": [
+                {
+                  "kind": "setVariable",
+                  "variableId": "rg08_veschi",
+                  "op": "append",
+                  "value": "ключ"
+                },
+                {
+                  "kind": "goTo",
+                  "to": "screen",
+                  "screenId": "rg08_dver"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg08_vpravo",
+          "type": "button",
+          "name": "К озеру",
+          "frame": {
+            "x": 40,
+            "y": 410,
+            "w": 310,
+            "h": 64
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "К озеру"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg08_vpravo_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg08_vpravo"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "screen",
+                  "screenId": "rg08_dver"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg08_inventar",
+          "type": "text",
+          "name": "Инвентарь",
+          "frame": {
+            "x": 30,
+            "y": 560,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "В рюкзаке: "
+                  },
+                  {
+                    "v": "rg08_veschi"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "rg08_dver",
+      "name": "Дверь",
+      "blocks": [
+        {
+          "id": "rg08_dver_t",
+          "type": "text",
+          "name": "Перед тобой запертая дверь ёлочного доми",
+          "frame": {
+            "x": 20,
+            "y": 90,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Перед тобой запертая дверь ёлочного домика."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg08_otkryt",
+          "type": "button",
+          "name": "Открыть дверь",
+          "frame": {
+            "x": 40,
+            "y": 320,
+            "w": 310,
+            "h": 64
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Открыть дверь"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg08_ok",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg08_otkryt"
+                }
+              },
+              "do": [
+                {
+                  "kind": "if",
+                  "if": {
+                    "kind": "variable",
+                    "variableId": "rg08_veschi",
+                    "op": "contains",
+                    "value": "ключ"
+                  },
+                  "then": [
+                    {
+                      "kind": "goTo",
+                      "to": "screen",
+                      "screenId": "rg08_pobeda"
+                    }
+                  ],
+                  "else": [
+                    {
+                      "kind": "goTo",
+                      "to": "screen",
+                      "screenId": "rg08_zakryto"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg08_inventar2",
+          "type": "value",
+          "name": "Вещей",
+          "frame": {
+            "x": 120,
+            "y": 560,
+            "w": 150,
+            "h": 50
+          },
+          "style": {
+            "text": {
+              "size": 24,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "a11y": {
+            "label": "Вещей в рюкзаке"
+          },
+          "props": {
+            "variableId": "rg08_veschi",
+            "format": "number"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rg08_pobeda",
+      "name": "Победа",
+      "blocks": [
+        {
+          "id": "rg08_p1",
+          "type": "text",
+          "name": "Дверь открылась! Ёлка ждёт.",
+          "frame": {
+            "x": 20,
+            "y": 140,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Дверь открылась! Ёлка ждёт."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg08_p2",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg08_p2_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg08_p2"
+                }
+              },
+              "do": [
+                {
+                  "kind": "finish",
+                  "resultKey": "pobeda"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rg08_zakryto",
+      "name": "Закрыто",
+      "blocks": [
+        {
+          "id": "rg08_z1",
+          "type": "text",
+          "name": "Заперто. Нужен был ключ из избушки.",
+          "frame": {
+            "x": 20,
+            "y": 140,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Заперто. Нужен был ключ из избушки."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg08_z2",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg08_z2_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg08_z2"
+                }
+              },
+              "do": [
+                {
+                  "kind": "finish",
+                  "resultKey": "zakryto"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

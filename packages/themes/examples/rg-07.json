@@ -1,0 +1,754 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Перетащи на место"
+  },
+  "variables": [
+    {
+      "id": "rg07_ochki",
+      "name": "Очки",
+      "type": "number",
+      "initial": 0,
+      "saveToAnswers": true
+    },
+    {
+      "id": "rg07_razlozheno",
+      "name": "Разложено",
+      "type": "number",
+      "initial": 0,
+      "saveToAnswers": false
+    }
+  ],
+  "screens": [
+    {
+      "id": "rg07_igra",
+      "name": "Игра",
+      "blocks": [
+        {
+          "id": "rg07_zagolovok",
+          "type": "text",
+          "name": "Разложи фрукты по подписям",
+          "frame": {
+            "x": 20,
+            "y": 40,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Разложи фрукты по подписям"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg07_f0",
+          "type": "shape",
+          "name": "🍎",
+          "frame": {
+            "x": 40,
+            "y": 160,
+            "w": 90,
+            "h": 90
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "🍎"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 18,
+              "tr": 18,
+              "br": 18,
+              "bl": 18
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "surface",
+                  "alpha": 1
+                }
+              }
+            ],
+            "shadows": [
+              {
+                "x": 0,
+                "y": 4,
+                "blur": 10,
+                "color": {
+                  "hex": "#00000026"
+                }
+              }
+            ],
+            "text": {
+              "size": 44,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "behaviors": [
+            {
+              "kind": "drag",
+              "axis": "both",
+              "snapToZones": [
+                "rg07_z0"
+              ],
+              "returnIfMissed": true,
+              "onePerZone": true
+            }
+          ]
+        },
+        {
+          "id": "rg07_f1",
+          "type": "shape",
+          "name": "🍌",
+          "frame": {
+            "x": 150,
+            "y": 160,
+            "w": 90,
+            "h": 90
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "🍌"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 18,
+              "tr": 18,
+              "br": 18,
+              "bl": 18
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "surface",
+                  "alpha": 1
+                }
+              }
+            ],
+            "shadows": [
+              {
+                "x": 0,
+                "y": 4,
+                "blur": 10,
+                "color": {
+                  "hex": "#00000026"
+                }
+              }
+            ],
+            "text": {
+              "size": 44,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "behaviors": [
+            {
+              "kind": "drag",
+              "axis": "both",
+              "snapToZones": [
+                "rg07_z1"
+              ],
+              "returnIfMissed": true,
+              "onePerZone": true
+            }
+          ]
+        },
+        {
+          "id": "rg07_f2",
+          "type": "shape",
+          "name": "🍇",
+          "frame": {
+            "x": 260,
+            "y": 160,
+            "w": 90,
+            "h": 90
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "🍇"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 18,
+              "tr": 18,
+              "br": 18,
+              "bl": 18
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "surface",
+                  "alpha": 1
+                }
+              }
+            ],
+            "shadows": [
+              {
+                "x": 0,
+                "y": 4,
+                "blur": 10,
+                "color": {
+                  "hex": "#00000026"
+                }
+              }
+            ],
+            "text": {
+              "size": 44,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "behaviors": [
+            {
+              "kind": "drag",
+              "axis": "both",
+              "snapToZones": [
+                "rg07_z2"
+              ],
+              "returnIfMissed": true,
+              "onePerZone": true
+            }
+          ]
+        },
+        {
+          "id": "rg07_z2",
+          "type": "zone",
+          "name": "Подпись Виноград",
+          "frame": {
+            "x": 40,
+            "y": 420,
+            "w": 90,
+            "h": 90
+          },
+          "props": {
+            "visible": true
+          }
+        },
+        {
+          "id": "rg07_t2",
+          "type": "text",
+          "name": "Виноград",
+          "frame": {
+            "x": 40,
+            "y": 520,
+            "w": 90,
+            "h": 30
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Виноград"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 16,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg07_z0",
+          "type": "zone",
+          "name": "Подпись Яблоко",
+          "frame": {
+            "x": 150,
+            "y": 420,
+            "w": 90,
+            "h": 90
+          },
+          "props": {
+            "visible": true
+          }
+        },
+        {
+          "id": "rg07_t0",
+          "type": "text",
+          "name": "Яблоко",
+          "frame": {
+            "x": 150,
+            "y": 520,
+            "w": 90,
+            "h": 30
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Яблоко"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 16,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg07_z1",
+          "type": "zone",
+          "name": "Подпись Банан",
+          "frame": {
+            "x": 260,
+            "y": 420,
+            "w": 90,
+            "h": 90
+          },
+          "props": {
+            "visible": true
+          }
+        },
+        {
+          "id": "rg07_t1",
+          "type": "text",
+          "name": "Банан",
+          "frame": {
+            "x": 260,
+            "y": 520,
+            "w": 90,
+            "h": 30
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Банан"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 16,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg07_ballyvalue",
+          "type": "value",
+          "name": "Баллы",
+          "frame": {
+            "x": 120,
+            "y": 600,
+            "w": 150,
+            "h": 50
+          },
+          "style": {
+            "text": {
+              "size": 26,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          },
+          "a11y": {
+            "label": "Баллы"
+          },
+          "props": {
+            "variableId": "rg07_ochki",
+            "format": "number"
+          }
+        }
+      ],
+      "rules": [
+        {
+          "id": "rg07_r0",
+          "when": {
+            "kind": "drop",
+            "source": {
+              "kind": "block",
+              "blockId": "rg07_f0"
+            },
+            "target": {
+              "kind": "block",
+              "blockId": "rg07_z0"
+            }
+          },
+          "do": [
+            {
+              "kind": "setVariable",
+              "variableId": "rg07_ochki",
+              "op": "add",
+              "value": 10
+            },
+            {
+              "kind": "setVariable",
+              "variableId": "rg07_razlozheno",
+              "op": "add",
+              "value": 1
+            },
+            {
+              "kind": "effect",
+              "effect": "confetti",
+              "intensity": 1
+            }
+          ]
+        },
+        {
+          "id": "rg07_r1",
+          "when": {
+            "kind": "drop",
+            "source": {
+              "kind": "block",
+              "blockId": "rg07_f1"
+            },
+            "target": {
+              "kind": "block",
+              "blockId": "rg07_z1"
+            }
+          },
+          "do": [
+            {
+              "kind": "setVariable",
+              "variableId": "rg07_ochki",
+              "op": "add",
+              "value": 10
+            },
+            {
+              "kind": "setVariable",
+              "variableId": "rg07_razlozheno",
+              "op": "add",
+              "value": 1
+            },
+            {
+              "kind": "effect",
+              "effect": "confetti",
+              "intensity": 1
+            }
+          ]
+        },
+        {
+          "id": "rg07_r2",
+          "when": {
+            "kind": "drop",
+            "source": {
+              "kind": "block",
+              "blockId": "rg07_f2"
+            },
+            "target": {
+              "kind": "block",
+              "blockId": "rg07_z2"
+            }
+          },
+          "do": [
+            {
+              "kind": "setVariable",
+              "variableId": "rg07_ochki",
+              "op": "add",
+              "value": 10
+            },
+            {
+              "kind": "setVariable",
+              "variableId": "rg07_razlozheno",
+              "op": "add",
+              "value": 1
+            },
+            {
+              "kind": "effect",
+              "effect": "confetti",
+              "intensity": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rg07_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rg07_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rg07_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rg07_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rg07_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rg07_podpis",
+          "type": "text",
+          "name": "Итог",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Баллов: "
+                  },
+                  {
+                    "v": "rg07_ochki"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 26,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "rg07_vse",
+      "when": {
+        "kind": "variableChange",
+        "variableId": "rg07_razlozheno"
+      },
+      "do": [
+        {
+          "kind": "wait",
+          "ms": 500
+        },
+        {
+          "kind": "goTo",
+          "to": "next"
+        }
+      ],
+      "if": {
+        "kind": "variable",
+        "variableId": "rg07_razlozheno",
+        "op": "gte",
+        "value": 3
+      }
+    }
+  ]
+}

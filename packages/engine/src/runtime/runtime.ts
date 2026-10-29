@@ -93,6 +93,8 @@ interface Instance {
   followTo: { x: number; y: number } | null;
   /** BH-07: the back side is shown. */
   flipped: boolean;
+  /** AC-20: the place among the blocks of a flow layout (row, column, grid) after a shuffle; null — the place of the document. */
+  order: number | null;
   /** BH-06: the wheel is spinning; the sector it stopped on. */
   spinning: boolean;
   winner: string | null;
@@ -656,6 +658,7 @@ export class Runtime {
       track: null,
       followTo: null,
       flipped: false,
+      order: null,
       spinning: false,
       winner: null,
     };
@@ -1105,8 +1108,17 @@ export class Runtime {
         return true;
       case 'shuffle': {
         const items = a.blockIds.map((id) => this.live(id)).filter((i): i is Instance => i !== undefined);
-        const places = this.rng.shuffle(items.map((i) => ({ x: i.x, y: i.y })));
-        items.forEach((inst, k) => {
+        // Blocks in a row, a column or a grid have no place of their own (the layout sets it): they swap their order.
+        const inFlow = (i: Instance) => (i.parentId ? (this.instances.get(i.parentId)?.base.layout.mode ?? 'free') !== 'free' : false);
+        const flowing = items.filter(inFlow);
+        const slots = this.rng.shuffle(flowing.map((i) => i.order ?? this.instances.get(i.parentId!)!.children.indexOf(i.id)));
+        flowing.forEach((inst, k) => {
+          inst.order = slots[k]!;
+          this.touch(inst);
+        });
+        const free = items.filter((i) => !inFlow(i));
+        const places = this.rng.shuffle(free.map((i) => ({ x: i.x, y: i.y })));
+        free.forEach((inst, k) => {
           this.cancelTween(inst, 'x');
           this.cancelTween(inst, 'y');
           inst.x = places[k]!.x;
@@ -1580,6 +1592,7 @@ export class Runtime {
       anim: i.anim,
       media: i.media,
       flipped: i.flipped,
+      ...(i.order !== null ? { order: i.order } : {}),
     };
   }
 }
