@@ -1,0 +1,28 @@
+.wz { width: min(640px, 100% - 32px); margin: 0 auto; padding: 24px 0 64px; }
+.wz-nav a, .wz-link { color: var(--muted); font-size: 14px; text-decoration: none; background: none; border: 0; padding: 8px 0; cursor: pointer; font-family: inherit; }
+.wz-steps { list-style: none; display: flex; gap: 4px; padding: 0; margin: 12px 0 28px; overflow-x: auto; font-size: 13px; color: var(--muted); }
+.wz-steps li { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
+.wz-steps li span { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid currentColor; font-size: 12px; }
+.wz-steps li.now { background: var(--fg); color: var(--bg); }
+.wz-steps li.done { color: var(--fg); }
+.wz h1 { margin: 0 0 12px; font-size: clamp(26px, 6vw, 38px); line-height: 1.1; letter-spacing: -0.03em; outline: none; }
+.wz-lead { margin: 0 0 20px; color: var(--muted); line-height: 1.5; }
+.wz-hint { color: var(--muted); font-size: 14px; }
+.wz-error { margin: 0 0 16px; padding: 12px 14px; border-radius: 10px; border: 1px solid #dc2626; color: #b91c1c; font-size: 14px; line-height: 1.5; }
+.wz-cards { list-style: none; margin: 0 0 20px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.wz-cards button { width: 100%; min-height: 76px; padding: 16px; border-radius: 16px; border: 2px solid var(--fg); background: var(--bg); color: var(--fg); font: inherit; font-weight: 700; font-size: 17px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+.wz-cards button:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
+.wz-cards small { font-weight: 400; font-size: 13px; opacity: 0.75; }
+.wz-field { display: grid; gap: 6px; margin: 0 0 16px; }
+.wz-field > span { font-size: 14px; font-weight: 600; }
+.wz-field input, .wz-field textarea { padding: 12px; border-radius: 10px; border: 1px solid var(--muted); background: transparent; color: inherit; font: inherit; font-size: 16px; }
+.wz-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 0; }
+.wz-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; border-radius: 12px; background: #c23d17; color: #fff; border: 2px solid #c23d17; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
+.wz-btn:disabled { opacity: 0.5; cursor: wait; }
+.wz-btn-ghost { background: transparent; color: var(--fg); border-color: var(--fg); }
+.wz-file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.wz-field .wz-btn { justify-self: start; }
+.wz-photo { max-width: 220px; max-height: 220px; border-radius: 12px; object-fit: cover; }
+.wz-link-box { padding: 14px; border-radius: 12px; border: 2px dashed var(--fg); word-break: break-all; font-weight: 600; }
+.wz-qr { display: block; margin: 20px 0; background: #fff; padding: 8px; border-radius: 12px; }
+.wz a:focus-visible, .wz button:focus-visible, .wz input:focus-visible, .wz textarea:focus-visible, .wz label:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }

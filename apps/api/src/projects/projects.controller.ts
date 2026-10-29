@@ -27,8 +27,8 @@ export class ProjectsController {
   /** D-01: Create a new project. */
   @Post()
   @HttpCode(200)
-  create(@Body() body: { title?: string }, @CurrentUser() user: RequestUser) {
-    return this.projects.createProject(user.id, body.title);
+  create(@Body() body: { title?: unknown; templateId?: unknown } | null, @CurrentUser() user: RequestUser) {
+    return this.projects.createProject(user.id, typeof body?.title === 'string' ? body.title : undefined, typeof body?.templateId === 'string' ? body.templateId : undefined);
   }
 
   /** D-01: Get a project with its current draft. */

@@ -23,7 +23,7 @@ const OWN_SESSION = new Set([
   'GET /auth/account/consents', 'DELETE /auth/account/consents/marketing', 'POST /auth/account/export', 'DELETE /auth/account', 'POST /auth/account/restore',
   'POST /auth/account/totp/setup', 'POST /auth/account/totp/confirm', 'DELETE /auth/account/totp',
   'GET /auth/me', 'GET /auth/sessions', 'DELETE /auth/sessions',
-  'GET /notifications', 'GET /media', 'POST /media', 'POST /media/sessions', 'GET /projects', 'POST /projects', 'GET /themes', 'POST /themes', 'POST /themes/from-image',
+  'GET /notifications', 'GET /media', 'POST /media', 'POST /media/sessions', 'GET /projects', 'POST /projects', 'GET /templates', 'GET /themes', 'POST /themes', 'POST /themes/from-image',
 ]);
 
 /** Not public, no role, and the route names an object by an id: another signed-in user must get neither it nor a change of it (IDOR). */

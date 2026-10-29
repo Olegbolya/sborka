@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, desc, eq, inArray, isNull, max } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createDocument, createId, createSlug, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
 import { Inject, Optional } from '@nestjs/common';
@@ -91,19 +91,50 @@ export class ProjectsService {
     @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
-  async createProject(userId: string, title = 'Новая сборка'): Promise<ProjectDetail> {
+  async createProject(userId: string, requestedTitle?: string, templateId?: string): Promise<ProjectDetail> {
     const projectId = createId();
     const slug = createSlug();
-    const doc = createDocument({ title });
-    // TH-03: a project starts with the theme its owner made the default.
-    const [theme] = await this.db
-      .select({ id: schema.themes.id, tokens: schema.themes.tokens })
-      .from(schema.themes)
-      .where(and(eq(schema.themes.ownerId, userId), eq(schema.themes.isDefault, true), isNull(schema.themes.deletedAt)));
+    const fromTemplate = templateId ? await this.templateDocument(templateId) : null;
+    const title = (requestedTitle ?? '').trim().slice(0, 120) || fromTemplate?.meta.title || 'Новая сборка';
+    // TPL-04: a project from a template is a whole copy of its document, independent of the template from then on.
+    const doc = fromTemplate ? ProjectDocument.parse({ ...structuredClone(fromTemplate), meta: { ...fromTemplate.meta, title } }) : createDocument({ title });
+    // TH-03: a project starts with the theme its owner made the default (a template brings its own theme).
+    const [theme] = fromTemplate ? [] : await this.ownerDefaultTheme(userId);
     if (theme) {
       const tokens = ThemeTokens.safeParse(theme.tokens);
       if (tokens.success) doc.theme = { themeId: theme.id, tokens: tokens.data };
     }
+    return this.insertProject(userId, projectId, slug, title, doc);
+  }
+
+  /** TPL-03 · the published system templates, by category and order set in the admin. */
+  async listSystemTemplates(): Promise<Array<{ id: string; name: string; category: string | null; coverMediaId: string | null }>> {
+    return this.db
+      .select({ id: schema.templates.id, name: schema.templates.name, category: schema.templates.category, coverMediaId: schema.templates.coverMediaId })
+      .from(schema.templates)
+      .where(and(eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt)))
+      .orderBy(asc(schema.templates.category), asc(schema.templates.sort), desc(schema.templates.createdAt));
+  }
+
+  /** TPL-03 · the document of a system template; an unknown, taken down or broken one is «не найден». */
+  private async templateDocument(templateId: string): Promise<ProjectDocument> {
+    const [row] = await this.db
+      .select({ document: schema.templates.document })
+      .from(schema.templates)
+      .where(and(eq(schema.templates.id, templateId), eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt)));
+    const parsed = row ? ProjectDocument.safeParse(row.document) : null;
+    if (!parsed?.success) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Такого шаблона нет.' } });
+    return parsed.data;
+  }
+
+  private ownerDefaultTheme(userId: string) {
+    return this.db
+      .select({ id: schema.themes.id, tokens: schema.themes.tokens })
+      .from(schema.themes)
+      .where(and(eq(schema.themes.ownerId, userId), eq(schema.themes.isDefault, true), isNull(schema.themes.deletedAt)));
+  }
+
+  private async insertProject(userId: string, projectId: string, slug: string, title: string, doc: ProjectDocument): Promise<ProjectDetail> {
     const docJson = doc as unknown as schema.ProjectDocumentJson;
     const versionId = createId();
 

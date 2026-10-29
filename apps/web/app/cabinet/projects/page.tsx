@@ -172,6 +172,9 @@ export default function ProjectsPage() {
           <option value="PUBLISHED">Опубликованные</option>
           <option value="CLOSED">Закрытые</option>
         </select>
+        <Link href="/app/new" style={{ ...s.btnSecondary, padding: '9px 18px', fontSize: 14, textDecoration: 'none' }}>
+          Мастер: за три минуты
+        </Link>
         <button style={s.btn} onClick={() => { void createProject(); }} disabled={creating}>
           {creating ? 'Создание...' : '+ Создать сборку'}
         </button>
@@ -180,7 +183,7 @@ export default function ProjectsPage() {
       {loading && <p style={s.empty}>Загрузка...</p>}
       {!loading && projects.length === 0 && (
         <p style={s.empty}>
-          {search || statusFilter ? 'Ничего не найдено' : 'Сборок нет — создайте первую!'}
+          {search || statusFilter ? 'Ничего не найдено' : 'Сборок нет — создайте первую в мастере или сразу в редакторе.'}
         </p>
       )}
 
