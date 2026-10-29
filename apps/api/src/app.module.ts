@@ -34,6 +34,7 @@ import { MediaModule } from './media/media.module.js';
 import { ThemesModule } from './themes/themes.module.js';
 import { PlayModule } from './play/play.module.js';
 import { ReportsModule } from './reports/reports.module.js';
+import { PlansController } from './plans/plans.controller.js';
 import { AdminModule } from './admin/admin.module.js';
 import type { IMediaQueue } from './media/media-jobs.js';
 import { ProjectsModule } from './projects/projects.module.js';
@@ -71,6 +72,7 @@ export class AppModule {
         OAuthController,
         ConsentController,
         LegalController,
+        PlansController,
         AccountController,
         ...(production ? [] : [DevOAuthController]),
         ...(deps.extraControllers ?? []),

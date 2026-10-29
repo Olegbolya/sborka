@@ -6,7 +6,8 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Блокум — собери что угодно из блоков',
   description: 'Конструктор интерактивных открыток, тестов, квизов и своих мини-игр. Поделись ссылкой или QR-кодом.',
-  robots: { index: false, follow: false },
+  // Closed from search until the launch; the owner opens it with SITE_INDEXABLE=1 (P10.1).
+  robots: process.env.SITE_INDEXABLE === '1' ? { index: true, follow: true } : { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

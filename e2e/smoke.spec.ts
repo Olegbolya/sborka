@@ -8,7 +8,7 @@ test.describe('смоук', () => {
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Блокум');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Собери что угодно');
     await expect(page).toHaveTitle(/Блокум/);
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
