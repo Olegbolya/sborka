@@ -1,0 +1,720 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Приглашение с ответом"
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "rsvpok_priglashenie",
+      "name": "Приглашение",
+      "blocks": [
+        {
+          "id": "rsvpok_zag",
+          "type": "text",
+          "name": "Приглашаю на день рождения",
+          "frame": {
+            "x": 20,
+            "y": 100,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Приглашаю на день рождения"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rsvpok_detali",
+          "type": "text",
+          "name": "Подробности",
+          "frame": {
+            "x": 30,
+            "y": 220,
+            "w": 330,
+            "h": 160
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Суббота, 14 декабря, 18:00. Кафе «Ёлочка», Садовая, 5. Будут торт, игры и подарки."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 20,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rsvpok_start",
+          "type": "button",
+          "name": "Ответить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Ответить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rsvpok_start_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rsvpok_start"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "rsvpok_otvet",
+      "name": "Ответ",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "rsvpok_q_t",
+          "type": "text",
+          "name": "Вы придёте?",
+          "frame": {
+            "x": 20,
+            "y": 60,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Вы придёте?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rsvpok_q",
+          "type": "singleChoice",
+          "name": "Ответ",
+          "frame": {
+            "x": 45,
+            "y": 170,
+            "w": 300,
+            "h": 186
+          },
+          "props": {
+            "required": true,
+            "options": [
+              {
+                "id": "rsvpok_q_o0",
+                "blockId": "rsvpok_q_v0",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "rsvpok_q_o1",
+                "blockId": "rsvpok_q_v1",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "rsvpok_q_o2",
+                "blockId": "rsvpok_q_v2",
+                "correct": false,
+                "score": 0
+              }
+            ]
+          },
+          "children": [
+            {
+              "id": "rsvpok_q_v0",
+              "type": "shape",
+              "name": "Приду",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Приду"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "rsvpok_q_v1",
+              "type": "shape",
+              "name": "Приду не один",
+              "frame": {
+                "x": 0,
+                "y": 62,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Приду не один"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "rsvpok_q_v2",
+              "type": "shape",
+              "name": "К сожалению, не смогу",
+              "frame": {
+                "x": 0,
+                "y": 124,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "К сожалению, не смогу"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "rsvpok_imya",
+          "type": "textInput",
+          "name": "Как вас записать",
+          "frame": {
+            "x": 30,
+            "y": 420,
+            "w": 330,
+            "h": 56
+          },
+          "props": {
+            "placeholder": "Ваше имя",
+            "required": true,
+            "maxLength": 500
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 14,
+              "tr": 14,
+              "br": 14,
+              "bl": 14
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "surface",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "left",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rsvpok_kolvo",
+          "type": "textInput",
+          "name": "Сколько человек",
+          "frame": {
+            "x": 30,
+            "y": 500,
+            "w": 330,
+            "h": 56
+          },
+          "props": {
+            "placeholder": "Сколько вас придёт (число)",
+            "required": false,
+            "maxLength": 500,
+            "mask": "number"
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 14,
+              "tr": 14,
+              "br": 14,
+              "bl": 14
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "surface",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "left",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rsvpok_send",
+          "type": "button",
+          "name": "Отправить ответ",
+          "frame": {
+            "x": 95,
+            "y": 680,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Отправить ответ"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rsvpok_send_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rsvpok_send"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "rsvpok_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "rsvpok_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "rsvpok_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "rsvpok_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "rsvpok_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rsvpok_podpis",
+          "type": "text",
+          "name": "Ответ получен. Спасибо, что откликнулись",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Ответ получен. Спасибо, что откликнулись!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

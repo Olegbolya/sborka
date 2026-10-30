@@ -57,7 +57,7 @@ export async function adminLogin(page: Page, user: { id: string; name: string })
   await page.waitForURL(/\/(onboarding|cabinet\/projects)/);
 }
 
-/** The numbers of the e2e administrators of this browser project: A, B and C (scripts/e2e-api.sh). */
-export function adminIds(info: { project: { name: string } }): { a: string; b: string; c: string } {
-  return info.project.name.startsWith('mobile') ? { a: '700000000021', b: '700000000022', c: '700000000023' } : { a: '700000000011', b: '700000000012', c: '700000000013' };
+/** The numbers of the e2e administrators of this browser project: A, B, C and D (scripts/e2e-api.sh). */
+export function adminIds(info: { project: { name: string } }): { a: string; b: string; c: string; d: string } {
+  return info.project.name.startsWith('mobile') ? { a: '700000000021', b: '700000000022', c: '700000000023', d: '700000000024' } : { a: '700000000011', b: '700000000012', c: '700000000013', d: '700000000014' };
 }

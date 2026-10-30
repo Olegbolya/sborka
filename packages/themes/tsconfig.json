@@ -1,5 +1,14 @@
 {
   "extends": "@blokum/config/tsconfig/node-lib.json",
-  "compilerOptions": { "rootDir": ".", "noEmit": true },
-  "include": ["src", "test", "vitest.config.ts"]
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src",
+    "test",
+    "examples/*.json",
+    "vitest.config.ts"
+  ]
 }

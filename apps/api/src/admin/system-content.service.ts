@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
+import { STARTER_TEMPLATES, STARTER_THEMES } from '@blokum/themes';
 import { AuditLogService } from '../auth/audit-log.service.js';
 import { type RequestUser } from '../auth/session.service.js';
 import { DB } from '../tokens.js';
@@ -131,5 +132,22 @@ export class SystemContentService {
     const rows = await this.db.update(schema.themes).set({ deletedAt: new Date() }).where(and(eq(schema.themes.id, id), eq(schema.themes.isSystem, true), isNull(schema.themes.deletedAt))).returning({ id: schema.themes.id });
     if (rows.length === 0) throw fail(404, 'NOT_FOUND', 'Системная тема не найдена');
     await this.audit.log({ actorId: actor.id, action: 'SYSTEM_THEME_REMOVED', targetType: 'THEME', targetId: id, ...(ip ? { ip } : {}) });
+  }
+
+  /**
+   * P10.3, P10.4 · the starter set (three themes, the templates of TPL-03 and RG-01…RG-10) becomes system content on the press of a
+   * button of the administrator. What is already there under the same name is left alone, so pressing twice adds nothing.
+   */
+  async publishStarterSet(actor: RequestUser, ip?: string): Promise<{ themes: { added: number; skipped: number }; templates: { added: number; skipped: number } }> {
+    const themeNames = new Set((await this.db.select({ name: schema.themes.name }).from(schema.themes).where(and(eq(schema.themes.isSystem, true), isNull(schema.themes.deletedAt)))).map((r) => r.name));
+    const templateNames = new Set((await this.db.select({ name: schema.templates.name }).from(schema.templates).where(and(eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt)))).map((r) => r.name));
+    const themes = STARTER_THEMES.filter((t) => !themeNames.has(t.name));
+    const templates = STARTER_TEMPLATES.filter((t) => !templateNames.has(t.name));
+    const now = new Date();
+    if (themes.length > 0) await this.db.insert(schema.themes).values(themes.map((t) => ({ ownerId: null, name: t.name, tokens: { ...t.tokens }, isSystem: true, publishedAt: now })));
+    if (templates.length > 0) await this.db.insert(schema.templates).values(templates.map((t) => ({ ownerId: null, name: t.name, category: t.category, document: t.document, isSystem: true, sort: t.sort, publishedAt: now })));
+    const result = { themes: { added: themes.length, skipped: STARTER_THEMES.length - themes.length }, templates: { added: templates.length, skipped: STARTER_TEMPLATES.length - templates.length } };
+    await this.audit.log({ actorId: actor.id, action: 'SYSTEM_STARTER_SET_PUBLISHED', targetType: 'TEMPLATE', targetId: 'starter-set', ...(ip ? { ip } : {}), meta: result });
+    return result;
   }
 }

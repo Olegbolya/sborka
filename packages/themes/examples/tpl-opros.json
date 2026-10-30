@@ -1,0 +1,991 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Анонимный опрос"
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "oprosn_ekran_start",
+      "name": "Начало",
+      "blocks": [
+        {
+          "id": "oprosn_zag",
+          "type": "text",
+          "name": "Короткий опрос",
+          "frame": {
+            "x": 20,
+            "y": 150,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Короткий опрос"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "oprosn_txt",
+          "type": "text",
+          "name": "Три вопроса, одна минута. Опрос анонимны",
+          "frame": {
+            "x": 30,
+            "y": 260,
+            "w": 330,
+            "h": 100
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Три вопроса, одна минута. Опрос анонимный: имя и контакты не спрашиваются."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "oprosn_start",
+          "type": "button",
+          "name": "Начать",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Начать"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "oprosn_start_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "oprosn_start"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "oprosn_ekran_q0",
+      "name": "Оценка",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "oprosn_q0_t",
+          "type": "text",
+          "name": "Как вам мероприятие?",
+          "frame": {
+            "x": 20,
+            "y": 80,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Как вам мероприятие?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "oprosn_ocenka",
+          "type": "scale",
+          "name": "Оценка",
+          "frame": {
+            "x": 45,
+            "y": 260,
+            "w": 300,
+            "h": 70
+          },
+          "props": {
+            "variant": "stars",
+            "min": 1,
+            "max": 5,
+            "step": 1,
+            "required": true,
+            "labels": {
+              "min": "Совсем не понравилось",
+              "max": "Очень понравилось"
+            }
+          }
+        },
+        {
+          "id": "oprosn_n0",
+          "type": "button",
+          "name": "Дальше",
+          "frame": {
+            "x": 95,
+            "y": 700,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Дальше"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "oprosn_n0_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "oprosn_n0"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "oprosn_ekran_q1",
+      "name": "Что понравилось",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "oprosn_q1_t",
+          "type": "text",
+          "name": "Что понравилось больше всего?",
+          "frame": {
+            "x": 20,
+            "y": 60,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Что понравилось больше всего?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "oprosn_q1",
+          "type": "singleChoice",
+          "name": "Что понравилось",
+          "frame": {
+            "x": 45,
+            "y": 220,
+            "w": 300,
+            "h": 248
+          },
+          "props": {
+            "required": true,
+            "options": [
+              {
+                "id": "oprosn_q1_o0",
+                "blockId": "oprosn_q1_v0",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "oprosn_q1_o1",
+                "blockId": "oprosn_q1_v1",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "oprosn_q1_o2",
+                "blockId": "oprosn_q1_v2",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "oprosn_q1_o3",
+                "blockId": "oprosn_q1_v3",
+                "correct": false,
+                "score": 0
+              }
+            ]
+          },
+          "children": [
+            {
+              "id": "oprosn_q1_v0",
+              "type": "shape",
+              "name": "Программа",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Программа"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "oprosn_q1_v1",
+              "type": "shape",
+              "name": "Площадка",
+              "frame": {
+                "x": 0,
+                "y": 62,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Площадка"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "oprosn_q1_v2",
+              "type": "shape",
+              "name": "Организация",
+              "frame": {
+                "x": 0,
+                "y": 124,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Организация"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "oprosn_q1_v3",
+              "type": "shape",
+              "name": "Другое",
+              "frame": {
+                "x": 0,
+                "y": 186,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Другое"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "oprosn_n1",
+          "type": "button",
+          "name": "Дальше",
+          "frame": {
+            "x": 95,
+            "y": 700,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Дальше"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "oprosn_n1_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "oprosn_n1"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "oprosn_ekran_q2",
+      "name": "Пожелания",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "oprosn_q2_t",
+          "type": "text",
+          "name": "Что можно улучшить?",
+          "frame": {
+            "x": 20,
+            "y": 80,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Что можно улучшить?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "oprosn_komment",
+          "type": "textInput",
+          "name": "Пожелания",
+          "frame": {
+            "x": 30,
+            "y": 220,
+            "w": 330,
+            "h": 200
+          },
+          "props": {
+            "multiline": true,
+            "placeholder": "Напишите, что бы вы изменили",
+            "required": false,
+            "maxLength": 1000
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 14,
+              "tr": 14,
+              "br": 14,
+              "bl": 14
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "surface",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "left",
+              "verticalAlign": "top",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "oprosn_n2",
+          "type": "button",
+          "name": "Отправить",
+          "frame": {
+            "x": 95,
+            "y": 680,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Отправить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "oprosn_n2_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "oprosn_n2"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "oprosn_final",
+      "name": "Итог",
+      "blocks": [
+        {
+          "id": "oprosn_itog",
+          "type": "text",
+          "name": "Готово!",
+          "frame": {
+            "x": 20,
+            "y": 120,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Готово!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "oprosn_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "oprosn_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "oprosn_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "oprosn_podpis",
+          "type": "text",
+          "name": "Спасибо, ваш ответ записан без имени.",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Спасибо, ваш ответ записан без имени."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

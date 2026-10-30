@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { schema } from '@blokum/db';
 import { and, eq } from 'drizzle-orm';
 import { createBlock, createScreen, type ProjectDocument } from '@blokum/schema';
+import { STARTER_TEMPLATES } from '@blokum/themes';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
@@ -332,6 +333,31 @@ describe('P9.3 · AD-02, AD-03, AD-04, AD-07, AD-09, AD-11 · админка м�
     expect(Object.keys(state.work)).toEqual(expect.arrayContaining(['P0', 'P1', 'P2', 'overdue', 'appeals', 'legalOverdue']));
     const work = (await call(t, admin.cookie, 'get', '/admin/work').expect(200)).body as { appeals: number };
     expect(typeof work.appeals).toBe('number');
+  });
+
+  it('TH-05 · TPL-03 · P10.3 · P10.4 · стартовый набор публикуется кнопкой администратора, повтор ничего не добавляет, из каждого шаблона создаётся рабочая сборка', async () => {
+    const owner = await login();
+    const admin = await login('ADMIN');
+    await call(t, owner.cookie, 'post', '/admin/starter-set').expect(403);
+    const first = (await call(t, admin.cookie, 'post', '/admin/starter-set').expect(201)).body as { themes: { added: number; skipped: number }; templates: { added: number; skipped: number } };
+    expect(first.themes.added + first.themes.skipped).toBe(3);
+    expect(first.templates.added + first.templates.skipped).toBe(14);
+    const again = (await call(t, admin.cookie, 'post', '/admin/starter-set').expect(201)).body as typeof first;
+    expect(again.themes.added).toBe(0);
+    expect(again.templates.added).toBe(0);
+
+    const templates = (await call(t, admin.cookie, 'get', '/admin/templates').expect(200)).body as Array<{ id: string; name: string; category: string }>;
+    expect(templates.map((x) => x.name)).toEqual(expect.arrayContaining(['Письмо Деду Морозу', 'Викторина с баллами', 'Анонимный опрос', 'Приглашение с ответом', 'Убегающая кнопка «Нет»', 'Угадай по размытому фото']));
+    expect(templates.filter((x) => x.category === 'Игры')).toHaveLength(10);
+    const themes = (await call(t, owner.cookie, 'get', '/themes?scope=system').expect(200)).body as Array<{ name: string }> | { items: Array<{ name: string }> };
+    expect((Array.isArray(themes) ? themes : themes.items).map((x) => x.name)).toEqual(expect.arrayContaining(['Новогодний уют', 'Светлая нейтральная', 'Тёмная нейтральная']));
+
+    // Из каждого шаблона создатель получает сборку, которую можно опубликовать: проверка перед публикацией не находит ошибок.
+    for (const tpl of templates.filter((x) => (STARTER_TEMPLATES as ReadonlyArray<{ name: string }>).some((s) => s.name === x.name))) {
+      const made = (await call(t, owner.cookie, 'post', '/projects', { templateId: tpl.id }).expect(200)).body as { id: string };
+      await call(t, owner.cookie, 'post', `/projects/${made.id}/publish`).expect(200);
+    }
+    expect((await audit('SYSTEM_STARTER_SET_PUBLISHED')).length).toBeGreaterThanOrEqual(2);
   });
 
   it('AD-11 · администратор публикует любую сборку как системный шаблон и тему — как системную, и снимает их; всё в аудите', async () => {

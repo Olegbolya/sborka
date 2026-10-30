@@ -59,7 +59,7 @@ export PLAY_STARTS_PER_HOUR_PER_IP="${PLAY_STARTS_PER_HOUR_PER_IP:-1000000}"
 export REPORTS_PER_HOUR_PER_IP="${REPORTS_PER_HOUR_PER_IP:-1000000}"
 # Администраторы e2e (AD-01): эти номера в эмуляторе VK ID и Яндекс ID получают роль при входе; обычные тесты их не используют.
 # 01–04 — вход администратора (A6); 11–13 и 21–23 — админка (P9.3): по три администратора на проект Playwright, они идут рядом.
-export ADMIN_ACCOUNTS="${ADMIN_ACCOUNTS:-vk:700000000001,vk:700000000003,yandex:700000000002,yandex:700000000004,vk:700000000011,vk:700000000012,vk:700000000013,vk:700000000021,vk:700000000022,vk:700000000023}"
+export ADMIN_ACCOUNTS="${ADMIN_ACCOUNTS:-vk:700000000001,vk:700000000003,yandex:700000000002,yandex:700000000004,vk:700000000011,vk:700000000012,vk:700000000013,vk:700000000014,vk:700000000021,vk:700000000022,vk:700000000023,vk:700000000024}"
 # Настройку второго фактора тест проходит с нуля: администраторы прошлого запуска стираются (сборки и данные уходят вместе с ними).
 if command -v psql >/dev/null 2>&1; then
   psql "$DATABASE_URL" -q -c "DELETE FROM users WHERE id IN (SELECT user_id FROM auth_identities WHERE provider_user_id LIKE '7000000000__')" >/dev/null 2>&1 || true

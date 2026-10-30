@@ -1,0 +1,618 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Письмо Деду Морозу"
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "dmoroz_privet",
+      "name": "Приветствие",
+      "particles": {
+        "preset": "snow",
+        "density": 0.5,
+        "speed": 1,
+        "size": 1,
+        "rotation": true,
+        "wind": 0.1,
+        "onlyAtStart": false,
+        "images": []
+      },
+      "blocks": [
+        {
+          "id": "dmoroz_zag",
+          "type": "text",
+          "name": "Письмо Деду Морозу",
+          "frame": {
+            "x": 20,
+            "y": 150,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Письмо Деду Морозу"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "dmoroz_txt",
+          "type": "text",
+          "name": "Расскажи, как прошёл год, и напиши, о чё",
+          "frame": {
+            "x": 30,
+            "y": 260,
+            "w": 330,
+            "h": 110
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Расскажи, как прошёл год, и напиши, о чём мечтаешь. Дед Мороз прочитает каждое письмо."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "dmoroz_start",
+          "type": "button",
+          "name": "Написать письмо",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Написать письмо"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "dmoroz_start_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "dmoroz_start"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "dmoroz_pismo",
+      "name": "Письмо",
+      "kind": "question",
+      "particles": {
+        "preset": "snow",
+        "density": 0.5,
+        "speed": 1,
+        "size": 1,
+        "rotation": true,
+        "wind": 0.1,
+        "onlyAtStart": false,
+        "images": []
+      },
+      "blocks": [
+        {
+          "id": "dmoroz_q0",
+          "type": "text",
+          "name": "Здравствуй, Дедушка Мороз!",
+          "frame": {
+            "x": 20,
+            "y": 40,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Здравствуй, Дедушка Мороз!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "dmoroz_imya",
+          "type": "textInput",
+          "name": "Как тебя зовут",
+          "frame": {
+            "x": 30,
+            "y": 150,
+            "w": 330,
+            "h": 56
+          },
+          "props": {
+            "placeholder": "Меня зовут…",
+            "required": true,
+            "maxLength": 500
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 14,
+              "tr": 14,
+              "br": 14,
+              "bl": 14
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "surface",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "left",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "dmoroz_god",
+          "type": "textInput",
+          "name": "Как прошёл год",
+          "frame": {
+            "x": 30,
+            "y": 230,
+            "w": 330,
+            "h": 56
+          },
+          "props": {
+            "placeholder": "В этом году я…",
+            "required": true,
+            "maxLength": 1000,
+            "multiline": true
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 14,
+              "tr": 14,
+              "br": 14,
+              "bl": 14
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "surface",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "left",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "dmoroz_mechta",
+          "type": "textInput",
+          "name": "О чём мечтаешь",
+          "frame": {
+            "x": 30,
+            "y": 340,
+            "w": 330,
+            "h": 56
+          },
+          "props": {
+            "placeholder": "Я мечтаю о…",
+            "required": true,
+            "maxLength": 1000,
+            "multiline": true
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 14,
+              "tr": 14,
+              "br": 14,
+              "bl": 14
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "surface",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "left",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "dmoroz_send",
+          "type": "button",
+          "name": "Отправить",
+          "frame": {
+            "x": 95,
+            "y": 680,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Отправить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "dmoroz_send_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "dmoroz_send"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "dmoroz_final",
+      "name": "Письмо отправлено",
+      "particles": {
+        "preset": "snow",
+        "density": 0.5,
+        "speed": 1,
+        "size": 1,
+        "rotation": true,
+        "wind": 0.1,
+        "onlyAtStart": false,
+        "images": []
+      },
+      "rules": [
+        {
+          "id": "dmoroz_salut",
+          "when": {
+            "kind": "screen",
+            "phase": "show"
+          },
+          "do": [
+            {
+              "kind": "effect",
+              "effect": "confetti",
+              "intensity": 1
+            }
+          ]
+        }
+      ],
+      "blocks": [
+        {
+          "id": "dmoroz_ok",
+          "type": "text",
+          "name": "Письмо отправлено!",
+          "frame": {
+            "x": 20,
+            "y": 200,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Письмо отправлено!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "dmoroz_ok2",
+          "type": "text",
+          "name": "Дед Мороз уже получил его и скоро ответи",
+          "frame": {
+            "x": 30,
+            "y": 310,
+            "w": 330,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Дед Мороз уже получил его и скоро ответит."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "dmoroz_konec",
+          "type": "button",
+          "name": "Закончить",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Закончить"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "dmoroz_konec_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "dmoroz_konec"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

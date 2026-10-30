@@ -507,3 +507,5 @@
 | RG-10 | P3.12 | `packages/themes/examples/rg-10.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
 | S-16 | P3.12 | `apps/web/components/editor/Inspector.tsx` | `e2e/reference-build.spec.ts` |
 | AC-20 | P3.12 | `packages/engine/src/runtime/runtime.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/engine/test/debug.test.ts`, `packages/renderer/test/flow-order.test.tsx` |
+| TH-05 | P10.3 | `packages/themes/src/starter.ts`, `apps/api/src/admin/system-content.service.ts`, `apps/web/app/admin/content/page.tsx` | `packages/themes/test/starter.test.ts`, `apps/api/test/moderation.test.ts`, `e2e/starter-set.spec.ts` |
+| TPL-03 | P10.4 | `packages/themes/src/starter.ts`, `packages/themes/examples/tpl-ded-moroz.json`, `packages/themes/examples/tpl-viktorina.json`, `packages/themes/examples/tpl-opros.json`, `packages/themes/examples/tpl-rsvp.json`, `apps/api/src/admin/system-content.service.ts` | `packages/themes/test/starter.test.ts`, `apps/web/test/starter-templates.test.ts`, `apps/api/test/moderation.test.ts`, `e2e/starter-set.spec.ts` |

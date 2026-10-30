@@ -83,10 +83,10 @@ test.describe('P3.12 · эталонные игры проходятся в пр
 
   test('RG-03 · Скретч-карта: стёрли слой — вставка с подписью и «Дальше»', async ({ page }) => {
     test.setTimeout(120_000);
-    // The insert uses a file of the library (`memfile_zamenite_01` in the document): a real picture is put in its place.
+    // The insert uses a file of the library (`media_unset` in the document): a real picture is put in its place.
     const g = await startGame(page, 'rg-03', async (json, p) => {
       const up = await p.request.post('/api/v1/media', { multipart: { file: { name: 'meme.png', mimeType: 'image/png', buffer: PNG } }, headers: { origin: new URL(p.url()).origin } });
-      return json.replaceAll('memfile_zamenite_01', ((await up.json()) as { id: string }).id);
+      return json.replaceAll('media_unset', ((await up.json()) as { id: string }).id);
     });
     const layer = g.blk('rg03_sloj');
     await layer.scrollIntoViewIfNeeded();

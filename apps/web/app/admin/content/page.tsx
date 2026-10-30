@@ -27,10 +27,33 @@ export default function ContentPage() {
   const [theme, setTheme] = useState({ source: 'themeId' as 'themeId' | 'projectId', id: '', name: '' });
   const tplAction = useAction(templates.reload);
   const themeAction = useAction(themes.reload);
+  const [summary, setSummary] = useState('');
+  const starter = useAction(() => {
+    templates.reload();
+    themes.reload();
+  });
 
   return (
     <main style={css.page}>
-      <h1 style={css.h1}>Системные шаблоны</h1>
+      <h1 style={css.h1}>Стартовый набор</h1>
+      <Notice error={starter.error} ok={starter.ok ? summary : ''} />
+      <div style={css.card}>
+        <p style={{ marginTop: 0 }}>Три темы («Новогодний уют», «Светлая нейтральная», «Тёмная нейтральная») и четырнадцать шаблонов: «Письмо Деду Морозу», «Викторина с баллами», «Анонимный опрос», «Приглашение с ответом» и десять игр. То, что уже есть под тем же названием, не трогается — повторное нажатие ничего не добавит.</p>
+        <button
+          type="button"
+          style={css.btn}
+          disabled={starter.busy}
+          onClick={() =>
+            void starter.run(async () => {
+              const r = await api<{ themes: { added: number; skipped: number }; templates: { added: number; skipped: number } }>('/admin/starter-set', { method: 'POST' });
+              setSummary(`Добавлено тем: ${r.themes.added}, шаблонов: ${r.templates.added}. Уже были и остались как есть: тем ${r.themes.skipped}, шаблонов ${r.templates.skipped}.`);
+            }, 'Готово')
+          }
+        >
+          Опубликовать стартовый набор
+        </button>
+      </div>
+      <h1 style={{ ...css.h1, marginTop: 36 }}>Системные шаблоны</h1>
       <Notice error={tplAction.error || templates.error} ok={tplAction.ok} />
       {templates.data?.length === 0 ? <p style={css.muted}>Системных шаблонов нет — галерея у создателей пуста.</p> : null}
       {templates.data?.map((t) => (

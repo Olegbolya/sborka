@@ -159,6 +159,13 @@ export class AdminController {
   }
 
   @Roles('ADMIN')
+  @Post('starter-set')
+  @HttpCode(201)
+  publishStarterSet(@CurrentUser() user: RequestUser, @Ip() ip: string) {
+    return this.content.publishStarterSet(user, ip);
+  }
+
+  @Roles('ADMIN')
   @Get('templates')
   templates() {
     return this.content.templates();

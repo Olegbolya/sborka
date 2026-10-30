@@ -1,0 +1,1509 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Викторина с баллами"
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "viktor_ekran_start",
+      "name": "Начало",
+      "blocks": [
+        {
+          "id": "viktor_zag",
+          "type": "text",
+          "name": "Викторина",
+          "frame": {
+            "x": 20,
+            "y": 150,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Викторина"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_txt",
+          "type": "text",
+          "name": "Три вопроса, за каждый правильный ответ ",
+          "frame": {
+            "x": 30,
+            "y": 260,
+            "w": 330,
+            "h": 110
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Три вопроса, за каждый правильный ответ — 10 баллов. Проверим, что ты знаешь!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_start",
+          "type": "button",
+          "name": "Начать",
+          "frame": {
+            "x": 95,
+            "y": 600,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Начать"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "viktor_start_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "viktor_start"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "viktor_ekran_q0",
+      "name": "Вопрос 1",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "viktor_q0_t",
+          "type": "text",
+          "name": "Сколько ног у паука?",
+          "frame": {
+            "x": 20,
+            "y": 60,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Сколько ног у паука?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_q0",
+          "type": "singleChoice",
+          "name": "Ответ",
+          "frame": {
+            "x": 45,
+            "y": 220,
+            "w": 300,
+            "h": 186
+          },
+          "props": {
+            "required": true,
+            "options": [
+              {
+                "id": "viktor_q0_o0",
+                "blockId": "viktor_q0_v0",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "viktor_q0_o1",
+                "blockId": "viktor_q0_v1",
+                "correct": true,
+                "score": 10
+              },
+              {
+                "id": "viktor_q0_o2",
+                "blockId": "viktor_q0_v2",
+                "correct": false,
+                "score": 0
+              }
+            ]
+          },
+          "children": [
+            {
+              "id": "viktor_q0_v0",
+              "type": "shape",
+              "name": "Шесть",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Шесть"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "viktor_q0_v1",
+              "type": "shape",
+              "name": "Восемь",
+              "frame": {
+                "x": 0,
+                "y": 62,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Восемь"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "viktor_q0_v2",
+              "type": "shape",
+              "name": "Десять",
+              "frame": {
+                "x": 0,
+                "y": 124,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Десять"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "viktor_n0",
+          "type": "button",
+          "name": "Дальше",
+          "frame": {
+            "x": 95,
+            "y": 700,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Дальше"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "viktor_n0_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "viktor_n0"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "viktor_ekran_q1",
+      "name": "Вопрос 2",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "viktor_q1_t",
+          "type": "text",
+          "name": "Какая планета ближе всех к Солнцу?",
+          "frame": {
+            "x": 20,
+            "y": 60,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Какая планета ближе всех к Солнцу?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_q1",
+          "type": "singleChoice",
+          "name": "Ответ",
+          "frame": {
+            "x": 45,
+            "y": 220,
+            "w": 300,
+            "h": 186
+          },
+          "props": {
+            "required": true,
+            "options": [
+              {
+                "id": "viktor_q1_o0",
+                "blockId": "viktor_q1_v0",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "viktor_q1_o1",
+                "blockId": "viktor_q1_v1",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "viktor_q1_o2",
+                "blockId": "viktor_q1_v2",
+                "correct": true,
+                "score": 10
+              }
+            ]
+          },
+          "children": [
+            {
+              "id": "viktor_q1_v0",
+              "type": "shape",
+              "name": "Венера",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Венера"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "viktor_q1_v1",
+              "type": "shape",
+              "name": "Земля",
+              "frame": {
+                "x": 0,
+                "y": 62,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Земля"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "viktor_q1_v2",
+              "type": "shape",
+              "name": "Меркурий",
+              "frame": {
+                "x": 0,
+                "y": 124,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Меркурий"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "viktor_n1",
+          "type": "button",
+          "name": "Дальше",
+          "frame": {
+            "x": 95,
+            "y": 700,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Дальше"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "viktor_n1_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "viktor_n1"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "viktor_ekran_q2",
+      "name": "Вопрос 3",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "viktor_q2_t",
+          "type": "text",
+          "name": "Столица России?",
+          "frame": {
+            "x": 20,
+            "y": 60,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Столица России?"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_q2",
+          "type": "singleChoice",
+          "name": "Ответ",
+          "frame": {
+            "x": 45,
+            "y": 220,
+            "w": 300,
+            "h": 186
+          },
+          "props": {
+            "required": true,
+            "options": [
+              {
+                "id": "viktor_q2_o0",
+                "blockId": "viktor_q2_v0",
+                "correct": true,
+                "score": 10
+              },
+              {
+                "id": "viktor_q2_o1",
+                "blockId": "viktor_q2_v1",
+                "correct": false,
+                "score": 0
+              },
+              {
+                "id": "viktor_q2_o2",
+                "blockId": "viktor_q2_v2",
+                "correct": false,
+                "score": 0
+              }
+            ]
+          },
+          "children": [
+            {
+              "id": "viktor_q2_v0",
+              "type": "shape",
+              "name": "Москва",
+              "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Москва"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "viktor_q2_v1",
+              "type": "shape",
+              "name": "Казань",
+              "frame": {
+                "x": 0,
+                "y": 62,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Казань"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "viktor_q2_v2",
+              "type": "shape",
+              "name": "Самара",
+              "frame": {
+                "x": 0,
+                "y": 124,
+                "w": 300,
+                "h": 54
+              },
+              "textLayer": {
+                "paragraphs": [
+                  {
+                    "kind": "p",
+                    "runs": [
+                      {
+                        "t": "Самара"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "style": {
+                "radius": {
+                  "unit": "u",
+                  "tl": 14,
+                  "tr": 14,
+                  "br": 14,
+                  "bl": 14
+                },
+                "fills": [
+                  {
+                    "kind": "solid",
+                    "color": {
+                      "token": "surface",
+                      "alpha": 1
+                    }
+                  }
+                ],
+                "text": {
+                  "size": 20,
+                  "weight": 700,
+                  "align": "center",
+                  "verticalAlign": "middle",
+                  "paint": {
+                    "kind": "solid",
+                    "color": {
+                      "token": "text"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "viktor_n2",
+          "type": "button",
+          "name": "Узнать результат",
+          "frame": {
+            "x": 95,
+            "y": 700,
+            "w": 200,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Узнать результат"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "radius": {
+              "unit": "u",
+              "tl": 16,
+              "tr": 16,
+              "br": 16,
+              "bl": 16
+            },
+            "fills": [
+              {
+                "kind": "solid",
+                "color": {
+                  "token": "primary",
+                  "alpha": 1
+                }
+              }
+            ],
+            "text": {
+              "size": 20,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "surface"
+                }
+              }
+            }
+          },
+          "rules": [
+            {
+              "id": "viktor_n2_p",
+              "when": {
+                "kind": "tap",
+                "source": {
+                  "kind": "block",
+                  "blockId": "viktor_n2"
+                }
+              },
+              "do": [
+                {
+                  "kind": "goTo",
+                  "to": "next"
+                }
+              ]
+            }
+          ],
+          "props": {
+            "requiresAnswers": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "viktor_r0",
+      "name": "Нужно потренироваться",
+      "kind": "result",
+      "blocks": [
+        {
+          "id": "viktor_r0_t",
+          "type": "text",
+          "name": "Нужно потренироваться",
+          "frame": {
+            "x": 20,
+            "y": 150,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Нужно потренироваться"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_r0_b",
+          "type": "text",
+          "name": "Баллы",
+          "frame": {
+            "x": 30,
+            "y": 250,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Баллов: "
+                  },
+                  {
+                    "sys": "баллы"
+                  },
+                  {
+                    "t": " из "
+                  },
+                  {
+                    "sys": "максимум"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 24,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_r0_n",
+          "type": "text",
+          "name": "Ты ответил верно меньше чем на два вопро",
+          "frame": {
+            "x": 30,
+            "y": 330,
+            "w": 330,
+            "h": 100
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Ты ответил верно меньше чем на два вопроса. Попробуй ещё раз!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "viktor_r1",
+      "name": "Хороший результат",
+      "kind": "result",
+      "blocks": [
+        {
+          "id": "viktor_r1_t",
+          "type": "text",
+          "name": "Хороший результат",
+          "frame": {
+            "x": 20,
+            "y": 150,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Хороший результат"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_r1_b",
+          "type": "text",
+          "name": "Баллы",
+          "frame": {
+            "x": 30,
+            "y": 250,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Баллов: "
+                  },
+                  {
+                    "sys": "баллы"
+                  },
+                  {
+                    "t": " из "
+                  },
+                  {
+                    "sys": "максимум"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 24,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_r1_n",
+          "type": "text",
+          "name": "Ты знаешь многое. Ещё чуть-чуть — и буде",
+          "frame": {
+            "x": 30,
+            "y": 330,
+            "w": 330,
+            "h": 100
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Ты знаешь многое. Ещё чуть-чуть — и будет максимум."
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "viktor_r2",
+      "name": "Отлично!",
+      "kind": "result",
+      "blocks": [
+        {
+          "id": "viktor_r2_t",
+          "type": "text",
+          "name": "Отлично!",
+          "frame": {
+            "x": 20,
+            "y": 150,
+            "w": 350,
+            "h": 80
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Отлично!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 28,
+              "weight": 800,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_r2_b",
+          "type": "text",
+          "name": "Баллы",
+          "frame": {
+            "x": 30,
+            "y": 250,
+            "w": 330,
+            "h": 60
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Баллов: "
+                  },
+                  {
+                    "sys": "баллы"
+                  },
+                  {
+                    "t": " из "
+                  },
+                  {
+                    "sys": "максимум"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 24,
+              "weight": 700,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "viktor_r2_n",
+          "type": "text",
+          "name": "Все ответы верные. Ты настоящий знаток!",
+          "frame": {
+            "x": 30,
+            "y": 330,
+            "w": 330,
+            "h": 100
+          },
+          "textLayer": {
+            "paragraphs": [
+              {
+                "kind": "p",
+                "runs": [
+                  {
+                    "t": "Все ответы верные. Ты настоящий знаток!"
+                  }
+                ]
+              }
+            ]
+          },
+          "style": {
+            "text": {
+              "size": 18,
+              "weight": 500,
+              "align": "center",
+              "verticalAlign": "middle",
+              "paint": {
+                "kind": "solid",
+                "color": {
+                  "token": "muted"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "kind": "scoreRange",
+      "id": "viktor_res0",
+      "key": "Мало",
+      "screenId": "viktor_r0",
+      "min": 0,
+      "max": 9
+    },
+    {
+      "kind": "scoreRange",
+      "id": "viktor_res1",
+      "key": "Хорошо",
+      "screenId": "viktor_r1",
+      "min": 10,
+      "max": 20
+    },
+    {
+      "kind": "scoreRange",
+      "id": "viktor_res2",
+      "key": "Отлично",
+      "screenId": "viktor_r2",
+      "min": 21,
+      "max": 30
+    }
+  ]
+}

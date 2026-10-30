@@ -197,7 +197,7 @@
                   "overlay": {
                     "media": {
                       "source": "media",
-                      "id": "memfile_zamenite_01"
+                      "id": "media_unset"
                     },
                     "seconds": 1.5,
                     "caption": {
