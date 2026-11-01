@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Письмо Деду Морозу",
+    "description": "Собрать и отправить письмо: имя, желание и обещание."
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "dm_privetstvie",
+      "name": "Привет",
+      "blocks": [
+        {
+          "id": "dm_zagolovok",
+          "type": "text",
+          "name": "Заголовок",
+          "frame": { "x": 20, "y": 100, "w": 350, "h": 80 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Письмо Деду Морозу" }] }]
+          },
+          "style": {
+            "text": { "size": 30, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "dm_vstup",
+          "type": "text",
+          "name": "Вступление",
+          "frame": { "x": 20, "y": 200, "w": 350, "h": 160 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Расскажите, что хотите в этом году. Три коротких вопроса — пишите по сердцу, волшебство любит честных." }] }]
+          },
+          "style": {
+            "text": { "size": 16, "weight": 400, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "muted" } } }
+          }
+        },
+        {
+          "id": "dm_nachat",
+          "type": "button",
+          "name": "Начать",
+          "frame": { "x": 90, "y": 420, "w": 210, "h": 60 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Начать" }] }]
+          },
+          "style": {
+            "radius": { "unit": "u", "tl": 16, "tr": 16, "br": 16, "bl": 16 },
+            "fills": [{ "kind": "solid", "color": { "token": "primary", "alpha": 1 } }],
+            "text": { "size": 20, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "surface" } } }
+          },
+          "rules": [
+            {
+              "id": "dm_n_tap",
+              "when": { "kind": "tap", "source": { "kind": "block", "blockId": "dm_nachat" } },
+              "do": [{ "kind": "goTo", "to": "next" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dm_voprosy",
+      "name": "Вопросы",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "dm_imya_label",
+          "type": "text",
+          "name": "Имя",
+          "frame": { "x": 20, "y": 60, "w": 350, "h": 36 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Как вас зовут?" }] }]
+          },
+          "style": {
+            "text": { "size": 18, "weight": 700, "align": "left", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "dm_imya",
+          "type": "textInput",
+          "name": "Имя",
+          "frame": { "x": 20, "y": 100, "w": 350, "h": 60 },
+          "props": { "placeholder": "Имя", "required": true, "maxLength": 60 }
+        },
+        {
+          "id": "dm_zhelanie_label",
+          "type": "text",
+          "name": "Желание",
+          "frame": { "x": 20, "y": 180, "w": 350, "h": 36 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Какое у вас желание?" }] }]
+          },
+          "style": {
+            "text": { "size": 18, "weight": 700, "align": "left", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "dm_zhelanie",
+          "type": "textInput",
+          "name": "Желание",
+          "frame": { "x": 20, "y": 220, "w": 350, "h": 140 },
+          "props": { "placeholder": "Напишите подробно", "required": true, "multiline": true, "maxLength": 500 }
+        },
+        {
+          "id": "dm_obeshchanie_label",
+          "type": "text",
+          "name": "Обещание",
+          "frame": { "x": 20, "y": 380, "w": 350, "h": 36 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Что вы обещаете сделать хорошего?" }] }]
+          },
+          "style": {
+            "text": { "size": 18, "weight": 700, "align": "left", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "dm_obeshchanie",
+          "type": "textInput",
+          "name": "Обещание",
+          "frame": { "x": 20, "y": 420, "w": 350, "h": 120 },
+          "props": { "placeholder": "Одно, зато настоящее", "required": true, "multiline": true, "maxLength": 300 }
+        },
+        {
+          "id": "dm_otpravit",
+          "type": "button",
+          "name": "Отправить",
+          "frame": { "x": 90, "y": 580, "w": 210, "h": 60 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Отправить" }] }]
+          },
+          "style": {
+            "radius": { "unit": "u", "tl": 16, "tr": 16, "br": 16, "bl": 16 },
+            "fills": [{ "kind": "solid", "color": { "token": "primary", "alpha": 1 } }],
+            "text": { "size": 20, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "surface" } } }
+          },
+          "props": { "requiresAnswers": true },
+          "rules": [
+            {
+              "id": "dm_otpr_p",
+              "when": { "kind": "tap", "source": { "kind": "block", "blockId": "dm_otpravit" } },
+              "do": [{ "kind": "goTo", "to": "next" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dm_spasibo",
+      "name": "Отправлено",
+      "kind": "result",
+      "blocks": [
+        {
+          "id": "dm_sp_zagolovok",
+          "type": "text",
+          "name": "Отправлено",
+          "frame": { "x": 20, "y": 200, "w": 350, "h": 80 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Письмо улетело на север!" }] }]
+          },
+          "style": {
+            "text": { "size": 30, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "dm_sp_tekst",
+          "type": "text",
+          "name": "Подпись",
+          "frame": { "x": 20, "y": 300, "w": 350, "h": 100 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Автор увидит ваш ответ в своём кабинете. Загадайте — и постарайтесь на себя чуть больше, чем обычно." }] }]
+          },
+          "style": {
+            "text": { "size": 16, "weight": 400, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "muted" } } }
+          }
+        }
+      ]
+    }
+  ]
+}

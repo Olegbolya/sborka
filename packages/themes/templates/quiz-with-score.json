@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Викторина с баллами",
+    "description": "Два вопроса с правильным ответом и итог по сумме баллов."
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "kv_vopr1",
+      "name": "Вопрос 1",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "kv_vopr1_zagolovok",
+          "type": "text",
+          "name": "Заголовок",
+          "frame": { "x": 20, "y": 80, "w": 350, "h": 90 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Столица России?" }] }]
+          },
+          "style": {
+            "text": { "size": 26, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "kv_vopr1_vopros",
+          "type": "singleChoice",
+          "name": "Варианты",
+          "frame": { "x": 20, "y": 220, "w": 350, "h": 220 },
+          "props": {
+            "required": true,
+            "autoAdvance": true,
+            "options": [
+              { "id": "kv_vopr1_o1", "blockId": "kv_vopr1_b1", "correct": true, "score": 1 },
+              { "id": "kv_vopr1_o2", "blockId": "kv_vopr1_b2", "correct": false, "score": 0 },
+              { "id": "kv_vopr1_o3", "blockId": "kv_vopr1_b3", "correct": false, "score": 0 }
+            ]
+          },
+          "children": [
+            {
+              "id": "kv_vopr1_b1",
+              "type": "shape",
+              "name": "Москва",
+              "frame": { "x": 0, "y": 0, "w": 350, "h": 60 },
+              "textLayer": { "paragraphs": [{ "kind": "p", "runs": [{ "t": "Москва" }] }] },
+              "style": {
+                "radius": { "unit": "u", "tl": 14, "tr": 14, "br": 14, "bl": 14 },
+                "fills": [{ "kind": "solid", "color": { "token": "surface", "alpha": 1 } }],
+                "text": { "size": 20, "weight": 700, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+              }
+            },
+            {
+              "id": "kv_vopr1_b2",
+              "type": "shape",
+              "name": "Санкт-Петербург",
+              "frame": { "x": 0, "y": 70, "w": 350, "h": 60 },
+              "textLayer": { "paragraphs": [{ "kind": "p", "runs": [{ "t": "Санкт-Петербург" }] }] },
+              "style": {
+                "radius": { "unit": "u", "tl": 14, "tr": 14, "br": 14, "bl": 14 },
+                "fills": [{ "kind": "solid", "color": { "token": "surface", "alpha": 1 } }],
+                "text": { "size": 20, "weight": 700, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+              }
+            },
+            {
+              "id": "kv_vopr1_b3",
+              "type": "shape",
+              "name": "Новосибирск",
+              "frame": { "x": 0, "y": 140, "w": 350, "h": 60 },
+              "textLayer": { "paragraphs": [{ "kind": "p", "runs": [{ "t": "Новосибирск" }] }] },
+              "style": {
+                "radius": { "unit": "u", "tl": 14, "tr": 14, "br": 14, "bl": 14 },
+                "fills": [{ "kind": "solid", "color": { "token": "surface", "alpha": 1 } }],
+                "text": { "size": 20, "weight": 700, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kv_vopr2",
+      "name": "Вопрос 2",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "kv_vopr2_zagolovok",
+          "type": "text",
+          "name": "Заголовок",
+          "frame": { "x": 20, "y": 80, "w": 350, "h": 90 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Самая большая планета Солнечной системы?" }] }]
+          },
+          "style": {
+            "text": { "size": 24, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "kv_vopr2_vopros",
+          "type": "singleChoice",
+          "name": "Варианты",
+          "frame": { "x": 20, "y": 220, "w": 350, "h": 220 },
+          "props": {
+            "required": true,
+            "autoAdvance": true,
+            "options": [
+              { "id": "kv_vopr2_o1", "blockId": "kv_vopr2_b1", "correct": false, "score": 0 },
+              { "id": "kv_vopr2_o2", "blockId": "kv_vopr2_b2", "correct": true, "score": 1 },
+              { "id": "kv_vopr2_o3", "blockId": "kv_vopr2_b3", "correct": false, "score": 0 }
+            ]
+          },
+          "children": [
+            {
+              "id": "kv_vopr2_b1",
+              "type": "shape",
+              "name": "Земля",
+              "frame": { "x": 0, "y": 0, "w": 350, "h": 60 },
+              "textLayer": { "paragraphs": [{ "kind": "p", "runs": [{ "t": "Земля" }] }] },
+              "style": {
+                "radius": { "unit": "u", "tl": 14, "tr": 14, "br": 14, "bl": 14 },
+                "fills": [{ "kind": "solid", "color": { "token": "surface", "alpha": 1 } }],
+                "text": { "size": 20, "weight": 700, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+              }
+            },
+            {
+              "id": "kv_vopr2_b2",
+              "type": "shape",
+              "name": "Юпитер",
+              "frame": { "x": 0, "y": 70, "w": 350, "h": 60 },
+              "textLayer": { "paragraphs": [{ "kind": "p", "runs": [{ "t": "Юпитер" }] }] },
+              "style": {
+                "radius": { "unit": "u", "tl": 14, "tr": 14, "br": 14, "bl": 14 },
+                "fills": [{ "kind": "solid", "color": { "token": "surface", "alpha": 1 } }],
+                "text": { "size": 20, "weight": 700, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+              }
+            },
+            {
+              "id": "kv_vopr2_b3",
+              "type": "shape",
+              "name": "Сатурн",
+              "frame": { "x": 0, "y": 140, "w": 350, "h": 60 },
+              "textLayer": { "paragraphs": [{ "kind": "p", "runs": [{ "t": "Сатурн" }] }] },
+              "style": {
+                "radius": { "unit": "u", "tl": 14, "tr": 14, "br": 14, "bl": 14 },
+                "fills": [{ "kind": "solid", "color": { "token": "surface", "alpha": 1 } }],
+                "text": { "size": 20, "weight": 700, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kv_otlichno",
+      "name": "Отлично",
+      "kind": "result",
+      "blocks": [
+        {
+          "id": "kv_ot_zagolovok",
+          "type": "text",
+          "name": "Отлично",
+          "frame": { "x": 20, "y": 220, "w": 350, "h": 80 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Отлично! Ни одной ошибки." }] }]
+          },
+          "style": {
+            "text": { "size": 28, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "kv_ot_text",
+          "type": "text",
+          "name": "Поздравление",
+          "frame": { "x": 20, "y": 320, "w": 350, "h": 100 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Автор увидит в кабинете, что вы ответили правильно на оба вопроса." }] }]
+          },
+          "style": {
+            "text": { "size": 16, "weight": 400, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "muted" } } }
+          }
+        }
+      ]
+    },
+    {
+      "id": "kv_horosho",
+      "name": "Хорошо",
+      "kind": "result",
+      "blocks": [
+        {
+          "id": "kv_hr_zagolovok",
+          "type": "text",
+          "name": "Хорошо",
+          "frame": { "x": 20, "y": 220, "w": 350, "h": 80 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Хорошо, но можно лучше." }] }]
+          },
+          "style": {
+            "text": { "size": 28, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "kv_hr_text",
+          "type": "text",
+          "name": "Текст",
+          "frame": { "x": 20, "y": 320, "w": 350, "h": 100 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Половина ответов верна. В следующий раз получится лучше." }] }]
+          },
+          "style": {
+            "text": { "size": 16, "weight": 400, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "muted" } } }
+          }
+        }
+      ]
+    },
+    {
+      "id": "kv_ploho",
+      "name": "Попробуйте ещё",
+      "kind": "result",
+      "blocks": [
+        {
+          "id": "kv_pl_zagolovok",
+          "type": "text",
+          "name": "Пробуйте",
+          "frame": { "x": 20, "y": 220, "w": 350, "h": 80 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Попробуйте ещё раз!" }] }]
+          },
+          "style": {
+            "text": { "size": 28, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "kv_pl_text",
+          "type": "text",
+          "name": "Текст",
+          "frame": { "x": 20, "y": 320, "w": 350, "h": 100 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Не всё удалось — викторина проверит ещё раз, если вернётесь по ссылке." }] }]
+          },
+          "style": {
+            "text": { "size": 16, "weight": 400, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "muted" } } }
+          }
+        }
+      ]
+    }
+  ],
+  "results": [
+    { "kind": "scoreRange", "id": "kv_r_otlich", "key": "Отлично", "screenId": "kv_otlichno", "min": 2, "max": 2 },
+    { "kind": "scoreRange", "id": "kv_r_horosho", "key": "Хорошо", "screenId": "kv_horosho", "min": 1, "max": 1 },
+    { "kind": "scoreRange", "id": "kv_r_ploho", "key": "Попробуйте ещё", "screenId": "kv_ploho", "min": 0, "max": 0 }
+  ]
+}

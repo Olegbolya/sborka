@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Анонимный опрос",
+    "description": "Короткий анонимный опрос по пятибалльной шкале."
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "op_vopros",
+      "name": "Вопрос",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "op_zagolovok",
+          "type": "text",
+          "name": "Заголовок",
+          "frame": { "x": 20, "y": 80, "w": 350, "h": 90 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Насколько вам понравилось занятие?" }] }]
+          },
+          "style": {
+            "text": { "size": 26, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "op_podskazka",
+          "type": "text",
+          "name": "Подсказка",
+          "frame": { "x": 20, "y": 180, "w": 350, "h": 40 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Ответ останется анонимным — автор увидит только обобщённую статистику." }] }]
+          },
+          "style": {
+            "text": { "size": 14, "weight": 400, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "muted" } } }
+          }
+        },
+        {
+          "id": "op_otsenka",
+          "type": "scale",
+          "name": "Оценка",
+          "frame": { "x": 20, "y": 240, "w": 350, "h": 120 },
+          "props": {
+            "variant": "stars",
+            "min": 1,
+            "max": 5,
+            "step": 1,
+            "required": true,
+            "labels": { "min": "Так себе", "max": "Отлично" }
+          }
+        },
+        {
+          "id": "op_kommentarii_label",
+          "type": "text",
+          "name": "Комментарии",
+          "frame": { "x": 20, "y": 380, "w": 350, "h": 32 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Что бы вы изменили? (по желанию)" }] }]
+          },
+          "style": {
+            "text": { "size": 16, "weight": 600, "align": "left", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "op_kommentarii",
+          "type": "textInput",
+          "name": "Комментарии",
+          "frame": { "x": 20, "y": 420, "w": 350, "h": 140 },
+          "props": { "placeholder": "Напишите мысль одной строкой", "required": false, "multiline": true, "maxLength": 500 }
+        },
+        {
+          "id": "op_dalee",
+          "type": "button",
+          "name": "Отправить",
+          "frame": { "x": 90, "y": 590, "w": 210, "h": 60 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Отправить" }] }]
+          },
+          "style": {
+            "radius": { "unit": "u", "tl": 16, "tr": 16, "br": 16, "bl": 16 },
+            "fills": [{ "kind": "solid", "color": { "token": "primary", "alpha": 1 } }],
+            "text": { "size": 20, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "surface" } } }
+          },
+          "props": { "requiresAnswers": true },
+          "rules": [
+            {
+              "id": "op_dalee_p",
+              "when": { "kind": "tap", "source": { "kind": "block", "blockId": "op_dalee" } },
+              "do": [{ "kind": "goTo", "to": "next" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "op_spasibo",
+      "name": "Спасибо",
+      "kind": "result",
+      "blocks": [
+        {
+          "id": "op_sp_zagolovok",
+          "type": "text",
+          "name": "Спасибо",
+          "frame": { "x": 20, "y": 180, "w": 350, "h": 80 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Спасибо за ответ!" }] }]
+          },
+          "style": {
+            "text": { "size": 32, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "op_sp_tekst",
+          "type": "text",
+          "name": "Текст",
+          "frame": { "x": 20, "y": 280, "w": 350, "h": 100 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Ответ учтён. Автор увидит обобщённую оценку, без имени и устройства." }] }]
+          },
+          "style": {
+            "text": { "size": 16, "weight": 400, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "muted" } } }
+          }
+        }
+      ]
+    }
+  ]
+}

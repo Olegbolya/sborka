@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Приглашение с ответом",
+    "description": "Короткое приглашение: придёте или нет."
+  },
+  "variables": [],
+  "screens": [
+    {
+      "id": "rsvp_prigl",
+      "name": "Приглашение",
+      "kind": "question",
+      "blocks": [
+        {
+          "id": "rsvp_zagolovok",
+          "type": "text",
+          "name": "Заголовок",
+          "frame": { "x": 20, "y": 80, "w": 350, "h": 90 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Приглашаем на встречу!" }] }]
+          },
+          "style": {
+            "text": { "size": 30, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "rsvp_detali",
+          "type": "text",
+          "name": "Детали",
+          "frame": { "x": 20, "y": 190, "w": 350, "h": 180 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Автор заменит эти строки на дату, место и повод. Нажмите «Приду» или «Не приду» — ответ сразу попадёт в кабинет." }] }]
+          },
+          "style": {
+            "text": { "size": 18, "weight": 400, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "muted" } } }
+          }
+        },
+        {
+          "id": "rsvp_otvet",
+          "type": "swipe",
+          "name": "Ответ",
+          "frame": { "x": 40, "y": 400, "w": 310, "h": 180 },
+          "props": {
+            "leftLabel": "Не приду",
+            "rightLabel": "Приду",
+            "buttons": true,
+            "required": true
+          }
+        }
+      ],
+      "rules": [
+        {
+          "id": "rsvp_dalee",
+          "when": { "kind": "answer", "questionBlockId": "rsvp_otvet" },
+          "do": [{ "kind": "goTo", "to": "next" }]
+        }
+      ]
+    },
+    {
+      "id": "rsvp_spasibo",
+      "name": "Спасибо",
+      "kind": "result",
+      "blocks": [
+        {
+          "id": "rsvp_sp_zagolovok",
+          "type": "text",
+          "name": "Спасибо",
+          "frame": { "x": 20, "y": 220, "w": 350, "h": 80 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Спасибо за ответ!" }] }]
+          },
+          "style": {
+            "text": { "size": 30, "weight": 800, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "text" } } }
+          }
+        },
+        {
+          "id": "rsvp_sp_tekst",
+          "type": "text",
+          "name": "Текст",
+          "frame": { "x": 20, "y": 320, "w": 350, "h": 100 },
+          "textLayer": {
+            "paragraphs": [{ "kind": "p", "runs": [{ "t": "Автор увидит ваш ответ в кабинете и сообщит детали ближе к дате." }] }]
+          },
+          "style": {
+            "text": { "size": 16, "weight": 400, "align": "center", "verticalAlign": "middle", "paint": { "kind": "solid", "color": { "token": "muted" } } }
+          }
+        }
+      ]
+    }
+  ]
+}
