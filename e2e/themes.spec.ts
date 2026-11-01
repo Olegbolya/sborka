@@ -148,7 +148,12 @@ test.describe('P3.10 · темы', () => {
   test('TH-03 · «Мои темы»: создать, копия, по умолчанию (новая сборка начинается с неё), удалить; лимит тарифа по-русски', async ({ page }) => {
     await page.goto('/app/themes');
     await expect(page.getByTestId('themes-empty')).toBeVisible();
-    await expect(page.getByTestId('system-themes-empty')).toBeVisible();
+    // TH-05 · три стартовые системные темы видны всегда (P10.3).
+    const systemThemes = page.getByRole('list', { name: 'Готовые темы' });
+    await expect(systemThemes).toBeVisible();
+    await expect(systemThemes).toContainText('Новогодний уют');
+    await expect(systemThemes).toContainText('Светлая нейтральная');
+    await expect(systemThemes).toContainText('Тёмная нейтральная');
     await page.getByLabel('Название новой темы').fill('Первая');
     await page.getByRole('button', { name: 'Новая тема' }).click();
     await page.waitForURL(/\/edit/);
