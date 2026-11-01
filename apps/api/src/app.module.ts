@@ -30,6 +30,7 @@ import type { CaptchaVerifier } from './auth/captcha.js';
 import type { OtpSender } from './auth/otp-sender.js';
 import type { EmailSender } from './auth/email-sender.js';
 import { DevEmailSender } from './auth/email-sender.js';
+import { MailModule } from './mail/mail.module.js';
 import { MediaModule } from './media/media.module.js';
 import { ThemesModule } from './themes/themes.module.js';
 import { PlayModule } from './play/play.module.js';
@@ -65,7 +66,7 @@ export class AppModule {
     const emailSender: EmailSender | null = deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender();
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes }), AuthModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config)],
+      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config)],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),
