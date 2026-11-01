@@ -330,8 +330,8 @@
 | D11 | P8.1 | `legal/contacts.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
 | D12 | P8.1 | `legal/participant-notice.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
 | AD-06 | P8.2 | `apps/api/src/auth/legal-document.service.ts#getVersions`, `apps/api/src/auth/consent.controller.ts` | `apps/api/test/legal.test.ts` |
-| PL-23 | P8.3 | `apps/api/src/projects/projects.service.ts` (setOperatorInfo, acceptDpa, getOperatorInfo, checkPdRequirements), `apps/api/src/projects/projects.controller.ts`, `packages/db/src/schema/projects.ts` (dpaAcceptedAt), `apps/web/app/cabinet/projects/[id]/page.tsx` (OperatorTab) | `apps/api/test/legal.test.ts` |
-| B-19 | P8.3 | `apps/api/src/projects/projects.service.ts#checkPdRequirements`, `@blokum/schema#walkBlocks` | `apps/api/test/legal.test.ts` |
+| PL-23 | P8.3 | `apps/api/src/projects/projects.service.ts#setOperatorInfo`; `apps/api/src/projects/projects.service.ts#acceptDpa`; `apps/api/src/projects/projects.service.ts#getOperatorInfo`; `apps/api/src/projects/projects.service.ts#checkPdRequirements`; `apps/api/src/projects/projects.controller.ts`; `packages/db/src/schema/projects.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/legal.test.ts` |
+| B-19 | P8.3 | `apps/api/src/projects/projects.service.ts#checkPdRequirements`; `packages/schema/src/walk.ts#walkBlocks` | `apps/api/test/legal.test.ts` |
 | B-20 | P8.3 | `legal/participant-consent-template.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
 | E-11 | P3.1 | `apps/web/lib/editor/store.ts`, `apps/web/lib/editor/commands.ts`, `apps/web/components/editor/Editor.tsx` | `apps/web/test/editor-store.test.ts`, `e2e/editor.spec.ts` |
 | E-17 | P3.2 | `apps/web/lib/editor/saver.ts`, `apps/web/lib/editor/remote.ts`, `apps/api/src/projects/drafts.service.ts` | `apps/web/test/editor-saver.test.ts`, `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
@@ -437,6 +437,8 @@
 | AD-07 | P9.6 | `apps/api/src/admin/feature-flags.service.ts`, `apps/web/app/admin/flags/page.tsx`, `apps/web/app/out/page.tsx` | `apps/api/test/moderation.test.ts` |
 | 05-LEGAL §2.2 | P10.7 | `apps/web/lib/analytics.ts`, `apps/web/components/landing/CookieBanner.tsx`, `apps/web/lib/security-headers.ts`, `apps/web/proxy.ts` | `e2e/analytics.spec.ts`, `apps/web/test/analytics.test.ts` |
 | D8 | P10.7 | `legal/cookies.md`, `apps/web/components/landing/CookieSettingsButton.tsx` | `e2e/analytics.spec.ts`, `apps/web/test/analytics.test.ts` |
+| TH-05 | P10.3 | `packages/themes/src/system-themes.ts`; `apps/api/src/themes/system-themes.service.ts`; `apps/api/src/themes/themes.module.ts` | `packages/themes/test/system-themes.test.ts`; `apps/api/test/system-themes.test.ts`; `apps/api/test/themes.test.ts` |
+| 05-LEGAL §2.10 | P10.3 | `packages/themes/src/system-themes.ts`; `scripts/check-licenses.mjs` | `packages/themes/test/system-themes.test.ts`; `packages/themes/test/licenses.test.ts` |
 | TR-01 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
 | TR-02 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts` |
 | TR-03 | P3.8 | `apps/web/lib/editor/scenario-specs.ts`, `apps/web/components/editor/ScenarioForm.tsx`, `apps/web/components/editor/ScenarioEditor.tsx`, `packages/renderer/src/components/useLongPress.ts` | `apps/web/test/scenario-specs.test.ts`, `e2e/scenarios-triggers.spec.ts`, `packages/renderer/test/long-press.test.tsx` |

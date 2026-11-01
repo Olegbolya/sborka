@@ -1,6 +1,7 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { type ApiConfig } from '../config.js';
 import { LocalStorageService } from '../media/storage.js';
+import { SystemThemesService } from './system-themes.service.js';
 import { ThemesController } from './themes.controller.js';
 import { ThemesService } from './themes.service.js';
 
@@ -10,8 +11,12 @@ export class ThemesModule {
     return {
       module: ThemesModule,
       controllers: [ThemesController],
-      providers: [ThemesService, { provide: LocalStorageService, useValue: new LocalStorageService(config.mediaDir) }],
-      exports: [ThemesService],
+      providers: [
+        ThemesService,
+        SystemThemesService,
+        { provide: LocalStorageService, useValue: new LocalStorageService(config.mediaDir) },
+      ],
+      exports: [ThemesService, SystemThemesService],
     };
   }
 }

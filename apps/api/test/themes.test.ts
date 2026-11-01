@@ -173,17 +173,20 @@ describe('TH-01…TH-03 · темы', () => {
     expect(after.theme.tokens.colors.primary).not.toBe('#0000FF');
   });
 
-  it('TH-05 · системные темы: пока их нет, список пуст; опубликованная системная доступна всем для копирования', async () => {
-    expect((await get(t, cookie, '/themes?scope=system').expect(200)).body).toEqual([]);
-    const [sys] = await db.db
+  it('TH-05 · три стартовые системные темы видны всем создателям; дополнительную тоже видно; обычный создатель не правит системные, но копирует', async () => {
+    const baseline = (await get(t, cookie, '/themes?scope=system').expect(200)).body as Array<{ id: string; name: string }>;
+    const names = baseline.map((x) => x.name);
+    expect(names).toEqual(expect.arrayContaining(['Новогодний уют', 'Светлая нейтральная', 'Тёмная нейтральная']));
+    expect(baseline.length).toBeGreaterThanOrEqual(3);
+    const [extra] = await db.db
       .insert(schema.themes)
-      .values({ id: 'sistemnaya_tema1', name: 'Светлая', tokens: ThemeTokens.parse({}), isSystem: true, publishedAt: new Date() })
+      .values({ id: 'sistemnaya_tema1', name: 'Добавленная', tokens: ThemeTokens.parse({}), isSystem: true, publishedAt: new Date() })
       .returning();
     const list = (await get(t, cookie, '/themes?scope=system').expect(200)).body as Array<{ id: string }>;
-    expect(list.map((x) => x.id)).toEqual([sys!.id]);
-    await get(t, cookie, `/themes/${sys!.id}`).expect(200);
-    await put(t, cookie, `/themes/${sys!.id}`, { name: 'Взлом' }).expect(404);
-    const copy = await post(t, cookie, `/themes/${sys!.id}/duplicate`).expect(201);
-    expect(copy.body).toMatchObject({ isSystem: false, name: 'Светлая (копия)' });
+    expect(list.map((x) => x.id)).toEqual(expect.arrayContaining([extra!.id, 'sys-theme-newyear', 'sys-theme-light', 'sys-theme-dark']));
+    await get(t, cookie, `/themes/${extra!.id}`).expect(200);
+    await put(t, cookie, `/themes/${extra!.id}`, { name: 'Взлом' }).expect(404);
+    const copy = await post(t, cookie, `/themes/${extra!.id}/duplicate`).expect(201);
+    expect(copy.body).toMatchObject({ isSystem: false, name: 'Добавленная (копия)' });
   });
 });

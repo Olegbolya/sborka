@@ -67,6 +67,9 @@ importers:
       '@blokum/schema':
         specifier: workspace:*
         version: link:../../packages/schema
+      '@blokum/themes':
+        specifier: workspace:*
+        version: link:../../packages/themes
       '@nestjs/common':
         specifier: 12.2.0
         version: 12.2.0(reflect-metadata@0.2.2)(rxjs@7.8.2)
