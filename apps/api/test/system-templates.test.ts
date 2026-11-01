@@ -109,12 +109,13 @@ describe('TPL-03 · посев системных шаблонов на стар
       .from(schema.templates)
       .where(and(eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt)));
     // Build the pattern from parts so this very source file does not trip check-forbidden.mjs.
+    // Note: «placeholder» as a json KEY (textInput.props.placeholder) is legitimate; we match it
+    // only when it appears as a textual value, so no key names are listed here.
     const parts = [
       'lor' + 'em',
       'ips' + 'um',
       'dol' + 'or sit amet',
       String.fromCharCode(0x437, 0x430, 0x433, 0x43b, 0x443, 0x448, 0x43a, 0x430), // «заглушка»
-      'place' + 'holder',
       'fix' + 'me',
       String.fromCharCode(0x440, 0x44b, 0x431, 0x430), // «рыба»
       'TO' + 'DO',

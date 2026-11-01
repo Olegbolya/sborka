@@ -66,9 +66,12 @@ describe('P10.2 · TPL-03/TPL-04 · сборка из системного ша�
   const get = (path: string) => request(t.http()).get(`/${API_PREFIX}${path}`).set('Cookie', cookie);
   const post = (path: string, body: object) => request(t.http()).post(`/${API_PREFIX}${path}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send(body);
 
-  it('P10.2 · при пустой галерее список шаблонов пуст, а сборка «с нуля» создаётся как обычно', async () => {
+  it('P10.2 · на старте галерея содержит 14 системных шаблонов TPL-03, а сборка «с нуля» создаётся как обычно', async () => {
+    // После P10.4 SystemTemplatesService засевает 14 стартовых шаблонов: 4 бытовых + RG-01…RG-10.
     const list = await get('/templates').expect(200);
-    expect((list.body as { templates: unknown[] }).templates).toEqual([]);
+    const starter = (list.body as { templates: Array<{ id: string }> }).templates;
+    expect(starter.length).toBe(14);
+    expect(starter.every((t) => t.id.startsWith('sys-tpl-'))).toBe(true);
     const made = await post('/projects', { title: 'С нуля' }).expect(200);
     const body = made.body as { title: string; document: { screens: unknown[] } };
     expect(body.title).toBe('С нуля');
@@ -82,8 +85,14 @@ describe('P10.2 · TPL-03/TPL-04 · сборка из системного ша�
     await db.db.insert(schema.templates).values({ name: 'Снятый', document: doc as never, isSystem: true, deletedAt: new Date() });
     await db.db.insert(schema.templates).values({ name: 'Личный', document: doc as never, isSystem: false });
     const list = await get('/templates').expect(200);
-    expect((list.body as { templates: Array<{ id: string; name: string }> }).templates.map((x) => x.name)).toEqual(['Поздравление']);
-    expect((list.body as { templates: Array<{ id: string }> }).templates[0]!.id).toBe(on!.id);
+    const names = (list.body as { templates: Array<{ id: string; name: string }> }).templates.map((x) => x.name);
+    // В галерее — новый «Поздравление» и 14 стартовых; снятый и личный не видны.
+    expect(names).toContain('Поздравление');
+    expect(names).not.toContain('Снятый');
+    expect(names).not.toContain('Личный');
+    expect(names.length).toBe(15);
+    const ids = (list.body as { templates: Array<{ id: string }> }).templates.map((x) => x.id);
+    expect(ids).toContain(on!.id);
   });
 
   it('P10.2 · TPL-04: сборка из шаблона — полная независимая копия; правка шаблона потом не меняет созданную сборку', async () => {
@@ -105,7 +114,8 @@ describe('P10.2 · TPL-03/TPL-04 · сборка из системного ша�
   it('P10.2 · неизвестный, снятый и личный шаблон — «не найден», сборка не создаётся', async () => {
     const before = ((await get('/projects').expect(200)).body as unknown[]).length;
     const rows = await db.db.select().from(schema.templates);
-    for (const r of [{ id: 'net-takogo' }, ...rows.filter((x) => x.name !== 'Поздравление')]) await post('/projects', { templateId: r.id }).expect(404);
+    const invalid = [{ id: 'net-takogo' }, ...rows.filter((x) => x.name === 'Снятый' || x.name === 'Личный')];
+    for (const r of invalid) await post('/projects', { templateId: r.id }).expect(404);
     expect(((await get('/projects').expect(200)).body as unknown[]).length).toBe(before);
   });
 });
