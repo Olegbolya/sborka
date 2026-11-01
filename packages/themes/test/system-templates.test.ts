@@ -76,8 +76,10 @@ describe('TPL-03 стартовые системные шаблоны', () => {
       expect(t.document.meta.description ?? '').not.toMatch(forbidden);
       for (const s of t.document.screens) {
         for (const b of s.blocks) {
-          const runs = b.textLayer?.paragraphs?.flatMap((p: { runs?: Array<{ t?: string }> }) => p.runs ?? []) ?? [];
-          for (const r of runs) if (r.t) expect(r.t).not.toMatch(forbidden);
+          const paragraphs = b.textLayer?.paragraphs ?? [];
+          for (const p of paragraphs) {
+            for (const r of p.runs) if ('t' in r && r.t) expect(r.t).not.toMatch(forbidden);
+          }
         }
       }
     }
