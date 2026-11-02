@@ -14,6 +14,8 @@
 
 ## Вопросы владельцу
 
+- **Вход на сайте (Яндекс ID):** создать приложение на oauth.yandex.ru (Redirect URI `https://blokker.ru/api/v1/auth/oauth/yandex/callback`, право «логин, имя и фамилия»), записать `YANDEX_CLIENT_ID=…` в `~/blokum/shared/.env.prod` на сервере и перезапустить `pm2 restart blokum-api` (ADR-037). Секретный ключ не нужен. VK ID — так же, когда будет ключ (`VK_CLIENT_ID`).
+- **После деплоя** с новым шаблоном nginx один раз: `sudo bash ~/blokum/setup/infra/server-setup.sh` (ссылки `/s/*`, `/q/*` открываются без пароля).
 - **A-записи `blokker.ru` (куплен 02.11) —** сделать у регистратора: `blokker.ru`, `www.blokker.ru`, `media.blokker.ru` → `95.105.7.135`; затем ещё раз `sudo bash ~/blokum/setup/infra/server-setup.sh` — он получит сертификат. Сейчас деплой показывает: DNS для `blokker.ru` не найден.
 - **Проверка отката (P0.5):** GitHub → Actions → «Деплой» → Run workflow → поставить флажок «Проверка отката» → Run. Сайт при этом не ломается: деплой сам вернёт прежнюю версию.
 - Удалить на GitHub тестовые ветки `ci-check-broken-test`, `ci-check-secret`, `check/p1.10-visual-break`, а также отработанные `wip/p1.9c` и `visual-baselines/p1.10` (Code → Branches → корзина): сессия не может удалять ветки.
