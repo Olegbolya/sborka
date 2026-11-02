@@ -48,6 +48,79 @@ async function makeAppWithAuth(): Promise<{ t: TestApp; db: TestDb; loginViaOtp:
 
 import { createBlock, createDocument, createScreen, textOf } from '@blokum/schema';
 
+describe('TPL-01/TPL-02 · свои шаблоны (сохранить, список, переименовать, удалить)', () => {
+  let t: TestApp;
+  let db: TestDb;
+  let cookie: string;
+
+  beforeAll(async () => {
+    let loginViaOtp: (phone?: string) => Promise<string>;
+    ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    cookie = await loginViaOtp();
+  });
+  afterAll(async () => {
+    await t.app.close();
+    await db.drop();
+  });
+
+  const get = (path: string) => request(t.http()).get(`/${API_PREFIX}${path}`).set('Cookie', cookie);
+  const post = (path: string, body: object) => request(t.http()).post(`/${API_PREFIX}${path}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send(body);
+  const patch = (path: string, body: object) => request(t.http()).patch(`/${API_PREFIX}${path}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send(body);
+  const del = (path: string) => request(t.http()).delete(`/${API_PREFIX}${path}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1');
+
+  let projectId: string;
+  let templateId: string;
+
+  it('подготовка — создать сборку с содержимым', async () => {
+    const res = await post('/projects', { title: 'Исходная сборка' }).expect(200);
+    projectId = (res.body as { id: string }).id;
+  });
+
+  it('TPL-01 · POST /templates — сохранить сборку как свой шаблон', async () => {
+    const res = await post('/templates', { projectId, name: 'Мой шаблон-тест' }).expect(200);
+    const body = res.body as { id: string };
+    expect(typeof body.id).toBe('string');
+    templateId = body.id;
+  });
+
+  it('TPL-02 · GET /templates/mine — свои шаблоны не попадают в системную галерею', async () => {
+    const own = await get('/templates/mine').expect(200);
+    const ownIds = (own.body as { templates: Array<{ id: string; isSystem: boolean }> }).templates;
+    expect(ownIds.some((t) => t.id === templateId)).toBe(true);
+    expect(ownIds.every((t) => t.isSystem === false)).toBe(true);
+    const gallery = await get('/templates').expect(200);
+    const galleryIds = (gallery.body as { templates: Array<{ id: string }> }).templates.map((t) => t.id);
+    expect(galleryIds).not.toContain(templateId);
+  });
+
+  it('TPL-02 · PATCH /templates/:id — переименовать свой шаблон', async () => {
+    await patch(`/templates/${templateId}`, { name: 'Переименованный' }).expect(200);
+    const res = await get('/templates/mine').expect(200);
+    const found = (res.body as { templates: Array<{ id: string; name: string }> }).templates.find((t) => t.id === templateId);
+    expect(found?.name).toBe('Переименованный');
+  });
+
+  it('TPL-04 · POST /projects с templateId своего шаблона — независимая копия', async () => {
+    const res = await post('/projects', { templateId }).expect(200);
+    const newId = (res.body as { id: string }).id;
+    expect(newId).not.toBe(projectId);
+    // шаблон ещё на месте
+    const mine = await get('/templates/mine').expect(200);
+    expect((mine.body as { templates: Array<{ id: string }> }).templates.some((t) => t.id === templateId)).toBe(true);
+  });
+
+  it('TPL-02 · DELETE /templates/:id — удалить свой шаблон', async () => {
+    await del(`/templates/${templateId}`).expect(204);
+    const res = await get('/templates/mine').expect(200);
+    expect((res.body as { templates: Array<{ id: string }> }).templates.some((t) => t.id === templateId)).toBe(false);
+  });
+
+  it('TPL-01 · аноним → 401', async () => {
+    await request(t.http()).post(`/${API_PREFIX}/templates`).set('X-Blokum-CSRF', '1').send({ projectId }).expect(401);
+    await request(t.http()).get(`/${API_PREFIX}/templates/mine`).expect(401);
+  });
+});
+
 describe('P10.2 · TPL-03/TPL-04 · сборка из системного шаблона и пустая галерея', () => {
   let t: TestApp;
   let db: TestDb;

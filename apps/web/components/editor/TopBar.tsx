@@ -16,6 +16,20 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
   const canRedo = useEditor((s) => s.future.length > 0 && s.gesture === null);
   const save = useSyncExternalStore(saver.subscribe, () => saver.state, () => saver.state);
   const [publishing, setPublishing] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  const saveAsTemplate = async () => {
+    setSavingTemplate(true);
+    try {
+      await saver.flush();
+      await api(`/templates`, { method: 'POST', body: { projectId } });
+      flash('Шаблон сохранён.', 'ok');
+    } catch (e) {
+      flash(errorText(e), 'error');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
 
   const publish = async () => {
     setPublishing(true);
@@ -76,6 +90,9 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       </button>
       <button type="button" className="ed-btn" onClick={onLessons}>
         Уроки
+      </button>
+      <button type="button" className="ed-btn" data-testid="tool-template-save" onClick={() => void saveAsTemplate()} disabled={savingTemplate}>
+        {savingTemplate ? 'Сохраняем…' : 'Шаблон'}
       </button>
       <button type="button" className="ed-btn" data-lesson="preview" onClick={onPreview}>
         Предпросмотр

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { loginViaOtp, createProject, openEditor } from './helpers';
+import { freshUser, loginAndOnboard } from './helpers/auth';
+import { openEditor, seedProject } from './helpers/editor';
 
 /**
  * E-21 · Перо, карандаш, редактирование узлов.
@@ -7,11 +8,11 @@ import { loginViaOtp, createProject, openEditor } from './helpers';
  */
 test.describe('E-21 · Перо и редактирование узлов', () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaOtp(page);
+    await loginAndOnboard(page, freshUser('Автор'));
   });
 
   test('E-21 · перо — замкнутая форма из 6 узлов, редактирование узла, заливка, обводка', async ({ page }) => {
-    const id = await createProject(page, 'Тест пера');
+    const { id } = await seedProject(page, undefined, 'Тест пера');
     await openEditor(page, id);
 
     // Click the pen tool

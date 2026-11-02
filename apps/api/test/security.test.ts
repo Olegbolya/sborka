@@ -27,6 +27,7 @@ const OWN_SESSION = new Set([
   'GET /fonts', 'POST /fonts',
   'GET /library/collections', 'GET /library/collections/:id/items',
   'POST /editor/svg-import',
+  'GET /templates/mine', 'POST /templates', 'GET /elements', 'POST /elements',
 ]);
 
 /** Not public, no role, and the route names an object by an id: another signed-in user must get neither it nor a change of it (IDOR). */
@@ -45,6 +46,7 @@ const BY_ID = new Set([
   'DELETE /projects/:projectId/access-points/:id', 'GET /projects/:projectId/access-points/:id/qr.png', 'GET /projects/:projectId/access-points/:id/qr.svg',
   'POST /themes/from-project/:projectId', 'GET /themes/:id', 'PUT /themes/:id', 'DELETE /themes/:id', 'POST /themes/:id/duplicate', 'POST /themes/:id/default',
   'DELETE /fonts/:id',
+  'PATCH /templates/:id', 'DELETE /templates/:id', 'GET /elements/:id', 'DELETE /elements/:id',
 ]);
 
 interface Route {

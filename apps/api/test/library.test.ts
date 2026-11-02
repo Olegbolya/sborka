@@ -283,4 +283,43 @@ describe('LB-01, LB-04, AD-10 · Библиотека платформы', () =>
       .expect(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
+
+  // ── LB-02 · поиск и теги ─────────────────────────────────────────────────
+
+  it('LB-02 · GET /library/collections/:id/items?search= — поиск по названию', async () => {
+    if (skip()) return;
+    const adminCookie = await loginAsAdmin();
+
+    const colRes = await request(t.http())
+      .post(`/${API_PREFIX}/admin/library/collections`)
+      .set('Cookie', adminCookie).set('X-Blokum-CSRF', '1')
+      .send({ kind: 'STICKERS', title: 'Коллекция-поиск-LB-02' }).expect(201);
+    const collectionId = (colRes.body as { id: string }).id;
+
+    const mediaId = createId();
+    const [admin] = await db.db.select({ id: schema.users.id }).from(schema.users).limit(1);
+    await db.db.insert(schema.media).values({ id: mediaId, ownerId: admin!.id, kind: 'IMAGE', status: 'READY', mime: 'image/png', bytes: 100, sha256: 'c'.repeat(64), variants: {} });
+
+    await request(t.http()).post(`/${API_PREFIX}/admin/library/items`).set('Cookie', adminCookie).set('X-Blokum-CSRF', '1')
+      .send({ collectionId, mediaId, title: 'Уникальный-ресурс-xyz', license: 'CC0', author: 'Авт', source: 'src', tags: ['тест-тег'] }).expect(201);
+
+    const userCookie = await loginViaOtp();
+    const res = await request(t.http()).get(`/${API_PREFIX}/library/collections/${collectionId}/items?search=уникальный-ресурс`).set('Cookie', userCookie).expect(200);
+    expect((res.body as { id: string; title: string }[]).some((i) => i.title === 'Уникальный-ресурс-xyz')).toBe(true);
+
+    const empty = await request(t.http()).get(`/${API_PREFIX}/library/collections/${collectionId}/items?search=несуществует`).set('Cookie', userCookie).expect(200);
+    expect((empty.body as unknown[]).length).toBe(0);
+  });
+
+  // ── LB-05 · ZIP-импорт ───────────────────────────────────────────────────
+
+  it('LB-05 · POST /admin/library/import — ZIP без CSV-манифеста → 422', async () => {
+    if (skip()) return;
+    const cookie = await loginAsAdmin();
+    const AdmZip = (await import('adm-zip')).default;
+    const zip = new AdmZip();
+    zip.addFile('test.png', Buffer.from('PNG'), '');
+    await request(t.http()).post(`/${API_PREFIX}/admin/library/import`).set('Cookie', cookie).set('X-Blokum-CSRF', '1')
+      .attach('file', zip.toBuffer(), { filename: 'import.zip', contentType: 'application/zip' }).expect(422);
+  });
 });

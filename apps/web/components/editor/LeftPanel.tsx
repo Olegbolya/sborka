@@ -1,7 +1,7 @@
 'use client';
 import { Artboard, ScreenView } from '@blokum/renderer';
 import { type Block, type Screen } from '@blokum/schema';
-import { type ReactNode, useState, useSyncExternalStore } from 'react';
+import { type ReactNode, useEffect, useState, useSyncExternalStore } from 'react';
 import { withGroupMates } from '../../lib/editor/arrange';
 import { stackOf } from '../../lib/editor/tree';
 import {
@@ -12,6 +12,7 @@ import {
   patchBlocks,
   renameScreen,
 } from '../../lib/editor/commands';
+import { api, errorText } from '../../lib/api-browser';
 import { AddPanel } from './AddPanel';
 import { useEditor, useEnv } from './context';
 
@@ -289,6 +290,114 @@ function LayersList() {
   );
 }
 
+interface TemplateItem { id: string; name: string; category: string | null; isSystem: boolean }
+
+/**
+ * TPL-02/TPL-03 · вкладка «Шаблоны»: системная галерея (категории, поиск, пустое состояние)
+ * и «Мои шаблоны». Создание сборки из шаблона — новая вкладка браузера (TPL-04).
+ */
+function TemplatesPanel() {
+  const { flash } = useEnv();
+  const [search, setSearch] = useState('');
+  const [system, setSystem] = useState<TemplateItem[]>([]);
+  const [mine, setMine] = useState<TemplateItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    Promise.all([
+      api<{ templates: TemplateItem[] }>('/templates'),
+      api<{ templates: TemplateItem[] }>('/templates/mine'),
+    ]).then(([s, m]) => {
+      if (!active) return;
+      setSystem(s.templates);
+      setMine(m.templates);
+    }).catch(() => {
+      if (active) flash('Не удалось загрузить шаблоны.', 'error');
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [flash]);
+
+  const createFrom = async (templateId: string) => {
+    setCreating(templateId);
+    try {
+      const res = await api<{ id: string }>('/projects', { method: 'POST', body: { templateId } });
+      window.open(`/app/projects/${res.id}/edit`, '_blank');
+    } catch (e) {
+      flash(errorText(e), 'error');
+    } finally {
+      setCreating(null);
+    }
+  };
+
+  const q = search.trim().toLowerCase();
+  const filteredSystem = q ? system.filter((t) => t.name.toLowerCase().includes(q)) : system;
+
+  const categories = Array.from(new Set(filteredSystem.map((t) => t.category).filter(Boolean)));
+  const uncategorized = filteredSystem.filter((t) => !t.category);
+
+  const TemplateButton = ({ t }: { t: TemplateItem }) => (
+    <button
+      key={t.id}
+      type="button"
+      className="ed-btn small"
+      data-testid={`template-item-${t.id}`}
+      disabled={creating === t.id}
+      onClick={() => void createFrom(t.id)}
+      title={`Создать сборку «${t.name}»`}
+    >
+      {t.name}
+    </button>
+  );
+
+  return (
+    <div className="ed-section" data-testid="templates-panel">
+      <input
+        type="search"
+        className="ed-title"
+        aria-label="Поиск шаблонов"
+        placeholder="Поиск шаблонов"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {loading ? (
+        <p className="ed-hint">Загрузка…</p>
+      ) : filteredSystem.length === 0 ? (
+        <div data-testid="template-empty-state">
+          <p className="ed-hint">Системных шаблонов пока нет.</p>
+          {mine.length > 0 && <p className="ed-hint">Ваши шаблоны — ниже.</p>}
+        </div>
+      ) : (
+        <>
+          {categories.map((cat) => (
+            <div key={cat as string}>
+              <p className="ed-hint" style={{ fontWeight: 600 }}>{cat}</p>
+              <div className="ed-actions">
+                {filteredSystem.filter((t) => t.category === cat).map((t) => <TemplateButton key={t.id} t={t} />)}
+              </div>
+            </div>
+          ))}
+          {uncategorized.length > 0 && (
+            <div className="ed-actions">
+              {uncategorized.map((t) => <TemplateButton key={t.id} t={t} />)}
+            </div>
+          )}
+        </>
+      )}
+      {mine.length > 0 && (
+        <div data-testid="templates-mine-section">
+          <p className="ed-hint" style={{ fontWeight: 600 }}>Мои шаблоны</p>
+          <div className="ed-actions">
+            {mine.map((t) => <TemplateButton key={t.id} t={t} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** LB-03 · вкладка «Библиотека»: пустое состояние — библиотека заполняется администратором. */
 function LibraryPanel() {
   return (
@@ -304,36 +413,27 @@ function LibraryPanel() {
 }
 
 export function LeftPanel() {
-  const [tab, setTab] = useState<'screens' | 'layers' | 'add' | 'library'>('screens');
+  const [tab, setTab] = useState<'screens' | 'layers' | 'add' | 'templates' | 'library'>('screens');
   return (
     <aside className="ed-panel left" aria-label="Экраны и слои">
       <div className="ed-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          className="ed-tab"
-          aria-selected={tab === 'screens'}
-          onClick={() => setTab('screens')}
-        >
+        <button type="button" role="tab" className="ed-tab" aria-selected={tab === 'screens'} onClick={() => setTab('screens')}>
           Экраны
         </button>
-        <button
-          type="button"
-          role="tab"
-          className="ed-tab"
-          aria-selected={tab === 'layers'}
-          onClick={() => setTab('layers')}
-        >
+        <button type="button" role="tab" className="ed-tab" aria-selected={tab === 'layers'} onClick={() => setTab('layers')}>
           Слои
         </button>
         <button type="button" role="tab" className="ed-tab" aria-selected={tab === 'add'} onClick={() => setTab('add')}>
           Добавить
         </button>
+        <button type="button" role="tab" className="ed-tab" data-testid="tab-templates" aria-selected={tab === 'templates'} onClick={() => setTab('templates')}>
+          Шаблоны
+        </button>
         <button type="button" role="tab" className="ed-tab" aria-selected={tab === 'library'} onClick={() => setTab('library')}>
           Библиотека
         </button>
       </div>
-      {tab === 'screens' ? <ScreensList /> : tab === 'layers' ? <LayersList /> : tab === 'add' ? <AddPanel /> : <LibraryPanel />}
+      {tab === 'screens' ? <ScreensList /> : tab === 'layers' ? <LayersList /> : tab === 'add' ? <AddPanel /> : tab === 'templates' ? <TemplatesPanel /> : <LibraryPanel />}
     </aside>
   );
 }

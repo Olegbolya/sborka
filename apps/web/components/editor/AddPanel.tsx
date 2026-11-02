@@ -1,10 +1,12 @@
 'use client';
 import { type BlockType, type MediaRef } from '@blokum/schema';
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { addBlock } from '../../lib/editor/commands';
+import { type ClipboardPayload, copyBlocks, pasteBlocks, planPaste } from '../../lib/editor/clipboard';
 import { type MediaKind } from '../../lib/editor/media';
 import { CATALOG, GROUP_TITLES, type CatalogEntry } from '../../lib/editor/props-specs';
 import { findBlock } from '../../lib/editor/tree';
+import { api, errorText } from '../../lib/api-browser';
 import { MediaPicker } from './MediaPicker';
 import { useEditor, useEnv } from './context';
 
@@ -108,6 +110,118 @@ export function AddPanel() {
           onPick={addMedia}
         />
       )}
+      <ElementsSection screenId={screen.id} selectedIds={selected} />
     </div>
+  );
+}
+
+interface ElementSummary { id: string; name: string }
+
+/** ME-01/ME-02 · «Мои элементы»: список сохранённых элементов и кнопка «Сохранить как элемент». */
+function ElementsSection({ screenId, selectedIds }: { screenId: string; selectedIds: readonly string[] }) {
+  const { flash } = useEnv();
+  const apply = useEditor((s) => s.apply);
+  const select = useEditor((s) => s.select);
+  const doc = useEditor((s) => s.doc);
+  const [elements, setElements] = useState<ElementSummary[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [namePrompt, setNamePrompt] = useState(false);
+  const [eName, setEName] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    api<{ elements: ElementSummary[] }>('/elements').then((r) => { if (active) setElements(r.elements); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  const saveElement = async () => {
+    if (!eName.trim()) return;
+    setSaving(true);
+    setNamePrompt(false);
+    try {
+      const payload = copyBlocks(doc, selectedIds);
+      if (!payload) { flash('Выберите блоки для сохранения.', 'error'); return; }
+      const res = await api<{ id: string }>('/elements', { method: 'POST', body: { name: eName.trim(), fragment: payload } });
+      setElements((prev) => [{ id: res.id, name: eName.trim() }, ...prev]);
+      flash('Элемент сохранён.', 'ok');
+      setEName('');
+    } catch (e) {
+      flash(errorText(e), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const insertElement = async (id: string) => {
+    try {
+      const data = await api<{ fragment: ClipboardPayload }>(`/elements/${id}`);
+      const payload = data.fragment;
+      const plan = planPaste(doc, payload);
+      const choices = Object.fromEntries(plan.conflicts.map((c) => [c.variable.id, 'link' as const]));
+      let created: string[] = [];
+      apply(pasteBlocks(payload, screenId, 12, (made) => (created = made), choices), { label: 'Вставить элемент' });
+      if (created.length) select(screenId, created);
+      else flash('Не удалось вставить — на экране уже 100 блоков.', 'error');
+    } catch (e) {
+      flash(errorText(e), 'error');
+    }
+  };
+
+  const deleteElement = async (id: string, name: string) => {
+    if (!confirm(`Удалить элемент «${name}»?`)) return;
+    try {
+      await api(`/elements/${id}`, { method: 'DELETE' });
+      setElements((prev) => prev.filter((e) => e.id !== id));
+    } catch (e) {
+      flash(errorText(e), 'error');
+    }
+  };
+
+  return (
+    <section aria-label="Мои элементы" data-testid="elements-panel">
+      <h3 className="ed-addgroup">Мои элементы</h3>
+      {selectedIds.length > 0 && !namePrompt && (
+        <div className="ed-actions">
+          <button type="button" className="ed-btn small" data-testid="element-save" disabled={saving} onClick={() => setNamePrompt(true)}>
+            Сохранить как элемент
+          </button>
+        </div>
+      )}
+      {namePrompt && (
+        <div className="ed-actions">
+          <input
+            className="ed-title"
+            aria-label="Название элемента"
+            placeholder="Название"
+            value={eName}
+            autoFocus
+            onChange={(e) => setEName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void saveElement(); if (e.key === 'Escape') setNamePrompt(false); }}
+          />
+          <button type="button" className="ed-btn small" onClick={() => void saveElement()} disabled={!eName.trim()}>
+            Сохранить
+          </button>
+          <button type="button" className="ed-btn small" onClick={() => setNamePrompt(false)}>
+            Отмена
+          </button>
+        </div>
+      )}
+      {elements.length === 0 ? (
+        <p className="ed-hint">Выделите блоки и нажмите «Сохранить как элемент».</p>
+      ) : (
+        <ul className="ed-list">
+          {elements.map((el) => (
+            <li key={el.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button type="button" className="ed-item" data-testid={`element-insert-${el.id}`} onClick={() => void insertElement(el.id)} title={`Вставить «${el.name}»`} style={{ flex: 1 }}>
+                <span className="name">{el.name}</span>
+              </button>
+              <button type="button" className="ed-btn small danger" onClick={() => void deleteElement(el.id, el.name)} aria-label={`Удалить «${el.name}»`}>
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

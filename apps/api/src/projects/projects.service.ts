@@ -94,7 +94,7 @@ export class ProjectsService {
   async createProject(userId: string, requestedTitle?: string, templateId?: string): Promise<ProjectDetail> {
     const projectId = createId();
     const slug = createSlug();
-    const fromTemplate = templateId ? await this.templateDocument(templateId) : null;
+    const fromTemplate = templateId ? await this.anyTemplateDocument(userId, templateId) : null;
     const title = (requestedTitle ?? '').trim().slice(0, 120) || fromTemplate?.meta.title || 'Новая сборка';
     // TPL-04: a project from a template is a whole copy of its document, independent of the template from then on.
     const doc = fromTemplate ? ProjectDocument.parse({ ...structuredClone(fromTemplate), meta: { ...fromTemplate.meta, title } }) : createDocument({ title });
@@ -108,23 +108,122 @@ export class ProjectsService {
   }
 
   /** TPL-03 · the published system templates, by category and order set in the admin. */
-  async listSystemTemplates(): Promise<Array<{ id: string; name: string; category: string | null; coverMediaId: string | null }>> {
-    return this.db
+  async listSystemTemplates(): Promise<Array<{ id: string; name: string; category: string | null; coverMediaId: string | null; isSystem: true }>> {
+    const rows = await this.db
       .select({ id: schema.templates.id, name: schema.templates.name, category: schema.templates.category, coverMediaId: schema.templates.coverMediaId })
       .from(schema.templates)
       .where(and(eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt)))
       .orderBy(asc(schema.templates.category), asc(schema.templates.sort), desc(schema.templates.createdAt));
+    return rows.map(r => ({ ...r, isSystem: true as const }));
   }
 
-  /** TPL-03 · the document of a system template; an unknown, taken down or broken one is «не найден». */
-  private async templateDocument(templateId: string): Promise<ProjectDocument> {
-    const [row] = await this.db
-      .select({ document: schema.templates.document })
+  /** TPL-02 · the creator's own saved templates. */
+  async listOwnTemplates(userId: string): Promise<Array<{ id: string; name: string; category: string | null; coverMediaId: string | null; isSystem: false }>> {
+    const rows = await this.db
+      .select({ id: schema.templates.id, name: schema.templates.name, category: schema.templates.category, coverMediaId: schema.templates.coverMediaId })
       .from(schema.templates)
-      .where(and(eq(schema.templates.id, templateId), eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt)));
-    const parsed = row ? ProjectDocument.safeParse(row.document) : null;
-    if (!parsed?.success) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Такого шаблона нет.' } });
+      .where(and(eq(schema.templates.ownerId, userId), eq(schema.templates.isSystem, false), isNull(schema.templates.deletedAt)))
+      .orderBy(desc(schema.templates.createdAt));
+    return rows.map(r => ({ ...r, isSystem: false as const }));
+  }
+
+  /** TPL-01 · save the current document of a project as the creator's own template. */
+  async saveProjectAsTemplate(userId: string, projectId: string, name?: string): Promise<{ id: string }> {
+    const [p] = await this.db
+      .select({ title: schema.projects.title, ownerId: schema.projects.ownerId, draftVersionId: schema.projects.draftVersionId, deletedAt: schema.projects.deletedAt })
+      .from(schema.projects)
+      .where(and(eq(schema.projects.id, projectId), isNull(schema.projects.deletedAt)));
+    if (!p) throw new NotFoundException();
+    if (p.ownerId !== userId) throw new ForbiddenException();
+    const versionId = p.draftVersionId;
+    const [v] = versionId
+      ? await this.db.select({ document: schema.projectVersions.document }).from(schema.projectVersions).where(eq(schema.projectVersions.id, versionId))
+      : [];
+    if (!v) throw new BadRequestException({ error: { code: 'NO_DOCUMENT', message: 'У сборки пока нет содержимого.' } });
+    const templateName = (name ?? '').trim().slice(0, 120) || p.title;
+    const [row] = await this.db
+      .insert(schema.templates)
+      .values({ ownerId: userId, name: templateName, document: v.document, sourceProjectId: projectId, isSystem: false })
+      .returning({ id: schema.templates.id });
+    return { id: row!.id };
+  }
+
+  /** TPL-02 · rename the creator's own template. */
+  async renameOwnTemplate(userId: string, templateId: string, name: string): Promise<void> {
+    const n = name.trim().slice(0, 120);
+    if (n.length < 1) throw new BadRequestException({ error: { code: 'NAME_REQUIRED', message: 'Нужно название.' } });
+    const rows = await this.db
+      .update(schema.templates)
+      .set({ name: n })
+      .where(and(eq(schema.templates.id, templateId), eq(schema.templates.ownerId, userId), eq(schema.templates.isSystem, false), isNull(schema.templates.deletedAt)))
+      .returning({ id: schema.templates.id });
+    if (rows.length === 0) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Шаблон не найден.' } });
+  }
+
+  /** TPL-02 · delete the creator's own template. */
+  async deleteOwnTemplate(userId: string, templateId: string): Promise<void> {
+    const rows = await this.db
+      .update(schema.templates)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(schema.templates.id, templateId), eq(schema.templates.ownerId, userId), eq(schema.templates.isSystem, false), isNull(schema.templates.deletedAt)))
+      .returning({ id: schema.templates.id });
+    if (rows.length === 0) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Шаблон не найден.' } });
+  }
+
+  /** TPL-03/04 · the document of any accessible template (system or own). */
+  private async anyTemplateDocument(userId: string, templateId: string): Promise<ProjectDocument> {
+    const [row] = await this.db
+      .select({ document: schema.templates.document, isSystem: schema.templates.isSystem, ownerId: schema.templates.ownerId })
+      .from(schema.templates)
+      .where(and(eq(schema.templates.id, templateId), isNull(schema.templates.deletedAt)));
+    if (!row) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Такого шаблона нет.' } });
+    if (!row.isSystem && row.ownerId !== userId)
+      throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Такого шаблона нет.' } });
+    const parsed = ProjectDocument.safeParse(row.document);
+    if (!parsed.success) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Такого шаблона нет.' } });
     return parsed.data;
+  }
+
+  // ── Elements (ME-01, ME-02) ──────────────────────────────────────────────────
+
+  /** ME-01 · save selected blocks (with their variables and rules) as a named element. */
+  async saveElement(userId: string, name: string, fragment: Record<string, unknown>): Promise<{ id: string }> {
+    const n = name.trim().slice(0, 120);
+    if (n.length < 1) throw new BadRequestException({ error: { code: 'NAME_REQUIRED', message: 'Нужно название.' } });
+    const [row] = await this.db
+      .insert(schema.savedElements)
+      .values({ ownerId: userId, name: n, fragment })
+      .returning({ id: schema.savedElements.id });
+    return { id: row!.id };
+  }
+
+  /** ME-01 · list the creator's own saved elements. */
+  async listElements(userId: string): Promise<Array<{ id: string; name: string; coverMediaId: string | null; createdAt: Date }>> {
+    return this.db
+      .select({ id: schema.savedElements.id, name: schema.savedElements.name, coverMediaId: schema.savedElements.coverMediaId, createdAt: schema.savedElements.createdAt })
+      .from(schema.savedElements)
+      .where(and(eq(schema.savedElements.ownerId, userId), isNull(schema.savedElements.deletedAt)))
+      .orderBy(desc(schema.savedElements.createdAt));
+  }
+
+  /** ME-01 · delete a saved element. */
+  async deleteElement(userId: string, elementId: string): Promise<void> {
+    const rows = await this.db
+      .update(schema.savedElements)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(schema.savedElements.id, elementId), eq(schema.savedElements.ownerId, userId), isNull(schema.savedElements.deletedAt)))
+      .returning({ id: schema.savedElements.id });
+    if (rows.length === 0) throw new NotFoundException({ error: { code: 'ELEMENT_NOT_FOUND', message: 'Элемент не найден.' } });
+  }
+
+  /** ME-02 · get the fragment (blocks + variables) of a saved element for insertion. */
+  async getElement(userId: string, elementId: string): Promise<{ id: string; name: string; fragment: Record<string, unknown> }> {
+    const [row] = await this.db
+      .select({ id: schema.savedElements.id, name: schema.savedElements.name, fragment: schema.savedElements.fragment })
+      .from(schema.savedElements)
+      .where(and(eq(schema.savedElements.id, elementId), eq(schema.savedElements.ownerId, userId), isNull(schema.savedElements.deletedAt)));
+    if (!row) throw new NotFoundException({ error: { code: 'ELEMENT_NOT_FOUND', message: 'Элемент не найден.' } });
+    return row;
   }
 
   private ownerDefaultTheme(userId: string) {

@@ -1,4 +1,4 @@
-import { Controller, Post, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { Controller, HttpCode, Post, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from '../auth/decorators.js';
@@ -14,6 +14,7 @@ export class EditorController {
    * scripts, foreignObject, use, style, image and all event handlers are silently ignored.
    */
   @Post('svg-import')
+  @HttpCode(200)
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 1_048_576 } }))
   importSvg(
     @CurrentUser() _user: { id: string },

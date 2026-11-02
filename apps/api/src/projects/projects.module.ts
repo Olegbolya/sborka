@@ -10,6 +10,7 @@ import { DraftsService } from './drafts.service.js';
 import { DraftsController } from './drafts.controller.js';
 import { SystemTemplatesService } from './system-templates.service.js';
 import { TemplatesController } from './templates.controller.js';
+import { ElementsController } from './elements.controller.js';
 import { WEB_URL } from './projects.tokens.js';
 
 export { WEB_URL };
@@ -28,7 +29,7 @@ export class ProjectsModule {
         SystemTemplatesService,
         { provide: WEB_URL, useValue: webUrl },
       ],
-      controllers: [ProjectsController, TemplatesController, DraftsController, ResponsesController, AccessPointsController],
+      controllers: [ProjectsController, TemplatesController, ElementsController, DraftsController, ResponsesController, AccessPointsController],
       exports: [ProjectsService, SystemTemplatesService],
     };
   }

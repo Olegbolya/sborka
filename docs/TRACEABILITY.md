@@ -516,10 +516,17 @@
 | TH-04 | P4.6 | `apps/api/src/fonts/fonts.controller.ts`; `apps/api/src/fonts/fonts.service.ts`; `apps/api/src/play/play.service.ts#fontsOf`; `apps/web/lib/fonts/api.ts`; `apps/web/lib/play/api.ts#fontFaceCSS`; `apps/web/app/s/[slug]/page.tsx` | `apps/api/test/fonts.test.ts` |
 | TS-26 | P4.6 | `apps/api/src/fonts/font-processor.ts`; `apps/api/src/fonts/fonts.service.ts` | `apps/api/test/fonts.test.ts` |
 | LB-01 | P4.7 | `apps/api/src/library/library.service.ts`; `apps/api/src/library/library.controller.ts`; `apps/api/src/library/library.module.ts` | `apps/api/test/library.test.ts` |
-| LB-02 | P4.7 | `apps/api/src/library/library.service.ts#listItems` (search, tags) | `apps/api/test/library.test.ts` |
+| LB-02 | P4.7 | `apps/api/src/library/library.service.ts#listItems` | `apps/api/test/library.test.ts` |
 | LB-03 | P4.7 | `apps/web/components/editor/LeftPanel.tsx#LibraryPanel` | `e2e/library.spec.ts` |
-| LB-04 | P4.7 | `apps/api/src/play/play.service.ts#mediaOf` (source:'library' → stub:'blocked'); `apps/api/src/admin/library-admin.service.ts#withdrawItem` | `apps/api/test/library.test.ts` |
-| LB-05 | P4.7 | `apps/api/src/admin/library-admin.service.ts#importZip` (ZIP+CSV); `apps/api/src/admin/admin.controller.ts` | `apps/api/test/library.test.ts` |
-| AD-10 | P4.7 | `apps/api/src/admin/library-admin.service.ts`; `apps/api/src/admin/admin.controller.ts` (library routes) | `apps/api/test/library.test.ts` |
-| E-21 | P3.9 | `apps/web/components/editor/PenTool.tsx` (PenOverlay, PencilOverlay, NodeEditor); `apps/web/components/editor/Canvas.tsx` (toolMode, pen/pencil buttons); `apps/web/lib/editor/style-specs.ts` (path variant + svg-import field); `apps/web/components/editor/StylePanels.tsx` (SvgImportField) | `e2e/pen-tool.spec.ts` |
-| TS-27 | P3.9 | `apps/api/src/editor/svg-import.service.ts` (строгий парсер SVG — только геометрия); `apps/api/src/editor/editor.controller.ts` (POST /editor/svg-import); `apps/api/src/editor/editor.module.ts` | `apps/api/test/svg-import.test.ts` |
+| LB-04 | P4.7 | `apps/api/src/play/play.service.ts#mediaOf`; `apps/api/src/admin/library-admin.service.ts#withdrawItem` | `apps/api/test/library.test.ts` |
+| LB-05 | P4.7 | `apps/api/src/admin/library-admin.service.ts#importZip`; `apps/api/src/admin/admin.controller.ts` | `apps/api/test/library.test.ts` |
+| AD-10 | P4.7 | `apps/api/src/admin/library-admin.service.ts`; `apps/api/src/admin/admin.controller.ts` | `apps/api/test/library.test.ts` |
+| E-21 | P3.9 | `apps/web/components/editor/PenTool.tsx`; `apps/web/components/editor/Canvas.tsx`; `apps/web/lib/editor/style-specs.ts`; `apps/web/components/editor/StylePanels.tsx` | `e2e/pen-tool.spec.ts` |
+| TS-27 | P3.9 | `apps/api/src/editor/svg-import.service.ts`; `apps/api/src/editor/editor.controller.ts`; `apps/api/src/editor/editor.module.ts` | `apps/api/test/svg-import.test.ts` |
+| TPL-01 | P3.11 | `apps/api/src/projects/templates.controller.ts`; `apps/api/src/projects/projects.service.ts#saveProjectAsTemplate` | `apps/api/test/templates.test.ts`; `e2e/templates.spec.ts` |
+| TPL-02 | P3.11 | `apps/api/src/projects/templates.controller.ts`; `apps/api/src/projects/projects.service.ts#listOwnTemplates`; `apps/web/components/editor/LeftPanel.tsx#TemplatesPanel`; `apps/web/components/editor/TopBar.tsx` | `apps/api/test/templates.test.ts`; `e2e/templates.spec.ts` |
+| TPL-03 | P3.11 | `apps/api/src/projects/templates.controller.ts`; `apps/api/src/projects/projects.service.ts#listSystemTemplates`; `apps/web/components/editor/LeftPanel.tsx#TemplatesPanel` | `apps/api/test/templates.test.ts`; `e2e/templates.spec.ts` |
+| TPL-04 | P3.11 | `apps/api/src/projects/projects.service.ts#anyTemplateDocument`; `apps/api/src/projects/projects.controller.ts` | `apps/api/test/templates.test.ts`; `e2e/templates.spec.ts` |
+| ME-01 | P3.11 | `apps/api/src/projects/elements.controller.ts`; `apps/api/src/projects/projects.service.ts#saveElement`; `apps/web/components/editor/AddPanel.tsx#ElementsSection` | `apps/api/test/elements.test.ts`; `e2e/templates.spec.ts` |
+| ME-02 | P3.11 | `apps/api/src/projects/elements.controller.ts`; `apps/api/src/projects/projects.service.ts#getElement`; `apps/web/components/editor/AddPanel.tsx#insertElement` | `apps/api/test/elements.test.ts`; `e2e/templates.spec.ts` |
+| SC-06 | P3.8 | `apps/web/lib/editor/clipboard.ts`; `apps/web/components/editor/PasteVariablesDialog.tsx` | `apps/web/test/clipboard-rules.test.ts`; `e2e/scenarios.spec.ts` |
