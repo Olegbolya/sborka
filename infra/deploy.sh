@@ -74,6 +74,22 @@ if grep -qE '^PRELAUNCH=1$' "$ENV_FILE"; then
   echo "→ режим «до запуска»: служебные галереи /dev включены"
 fi
 
+# Адреса сайта и медиа всегда берутся из infra/server.env: после смены домена старый адрес в .env.prod
+# (его server-setup.sh не перезаписывает) не должен остаться (ADR-038).
+SERVER_ENV="$APP_ROOT/setup/infra/server.env"
+if [ -f "$SERVER_ENV" ]; then
+  want_domain="$(sed -n 's/^DOMAIN=//p' "$SERVER_ENV" | head -1)"
+  want_media="$(sed -n 's/^MEDIA_DOMAIN=//p' "$SERVER_ENV" | head -1)"
+  if [ -n "$want_domain" ] && ! grep -qx "PUBLIC_URL=https://$want_domain" "$ENV_FILE"; then
+    sed -i '/^PUBLIC_URL=/d' "$ENV_FILE"; printf 'PUBLIC_URL=https://%s\n' "$want_domain" >> "$ENV_FILE"
+    echo "→ в .env.prod адрес сайта приведён к $want_domain"
+  fi
+  if [ -n "$want_media" ] && ! grep -qx "MEDIA_URL=https://$want_media" "$ENV_FILE"; then
+    sed -i '/^MEDIA_URL=/d' "$ENV_FILE"; printf 'MEDIA_URL=https://%s\n' "$want_media" >> "$ENV_FILE"
+    echo "→ в .env.prod адрес медиа приведён к $want_media"
+  fi
+fi
+
 # ── Node 22 (у BST по умолчанию Node 20 — его не меняем) ──────────────────────
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 if [ -s "$NVM_DIR/nvm.sh" ]; then
