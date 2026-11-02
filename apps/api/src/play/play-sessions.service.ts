@@ -1,7 +1,7 @@
 import { createHash, randomInt } from 'node:crypto';
 import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import {
   type AnswerValue,
@@ -22,7 +22,7 @@ import {
   scoreTotals,
   startFlow,
 } from '@blokum/engine';
-import { type Block, type ProjectDocument, walkBlocks } from '@blokum/schema';
+import { type Block, type ProjectDocument, plainText, walkBlocks } from '@blokum/schema';
 import { type ApiConfig } from '../config.js';
 import { API_CONFIG, DB } from '../tokens.js';
 
@@ -181,7 +181,7 @@ export class PlaySessionsService {
    */
   async complete(sessionId: string): Promise<{ score: number; max: number; correct: number; keyed: number; result: { key: string; screenId: string | null } | null; feedback: Array<{ blockId: string; correct: boolean | null; correctOptionIds: string[]; score: number }> }> {
     this.throttle(sessionId);
-    const { session, doc } = await this.load(sessionId);
+    const { session, doc, ownerId } = await this.load(sessionId);
     const answers = await this.answersOf(sessionId);
     const variables = ((session.runtimeState ?? {}) as { variables?: Record<string, never> }).variables ?? {};
     const seed = createHash('sha256').update(sessionId).digest().readUInt32BE(0);
@@ -194,6 +194,7 @@ export class PlaySessionsService {
     const state: FlowState = { ...base, answers, finished: true, result: result ? { ruleId: result.ruleId, key: result.key, screenId: result.screenId } : null };
     const feedback = finalFeedback(doc, state);
     const now = new Date();
+    let firstCompletion = false;
     if (session.status === 'IN_PROGRESS') {
       await this.db.transaction(async (tx) => {
         const done = await tx
@@ -202,13 +203,93 @@ export class PlaySessionsService {
           .where(and(eq(schema.participantSessions.id, sessionId), eq(schema.participantSessions.status, 'IN_PROGRESS')))
           .returning({ id: schema.participantSessions.id });
         if (done.length === 0) return;
+        firstCompletion = true;
         await tx
           .insert(schema.limitCounters)
           .values({ projectId: session.projectId, kind: 'COMPLETIONS', value: 1 })
           .onConflictDoUpdate({ target: [schema.limitCounters.projectId, schema.limitCounters.kind], set: { value: sql`${schema.limitCounters.value} + 1` } });
       });
     }
+    // D-07: the creator hears about a finished passage in the cabinet. It is an extra: its failure never fails the participant's end.
+    if (firstCompletion) await this.notifyOwner(session, doc, ownerId, answers, variables, result?.key ?? null).catch(() => undefined);
     return { score: totals.score, max: totals.max, correct: totals.correct, keyed: totals.keyed, result: result ? { key: result.key, screenId: result.screenId } : null, feedback };
+  }
+
+  /**
+   * D-07 · «о прохождении — сразу»: one message in the cabinet with the answers, the saved variables and the way through the screens.
+   * Contacts of a participant stay in the table of answers (D-04), not in the text of a message. A project that is passed very often
+   * does not bury the cabinet: after 50 unread messages of this project new ones are not added (the passages are all in the table).
+   * The project setting `notifications.passage` = 'off' (D-07) silences them.
+   */
+  private async notifyOwner(
+    session: typeof schema.participantSessions.$inferSelect,
+    doc: ProjectDocument,
+    ownerId: string,
+    answers: Answers,
+    variables: Record<string, unknown>,
+    resultKey: string | null,
+  ): Promise<void> {
+    const [project] = await this.db.select({ title: schema.projects.title, settings: schema.projects.settings }).from(schema.projects).where(eq(schema.projects.id, session.projectId));
+    if (!project) return;
+    const mode = ((project.settings as { notifications?: { passage?: unknown } }).notifications ?? {}).passage;
+    if (mode === 'off') return;
+    const [unread] = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.notifications)
+      .where(and(eq(schema.notifications.userId, ownerId), eq(schema.notifications.projectId, session.projectId), eq(schema.notifications.kind, 'passage'), isNull(schema.notifications.readAt)));
+    if ((unread?.n ?? 0) >= 50) return;
+
+    const clip = (t: string, n = 200): string => (t.length > n ? `${t.slice(0, n - 1)}…` : t).replace(/\s+/g, ' ').trim();
+    const blocks = new Map<string, Block>();
+    for (const sc of doc.screens) for (const b of walkBlocks(sc.blocks)) blocks.set(b.id, b);
+    const label = (b: Block): string => clip(b.name || (b.textLayer ? plainText(b.textLayer) : '') || 'Вопрос', 60);
+    const optionText = (b: Block, id: string): string => {
+      const o = blocks.get(id);
+      return o ? clip((o.textLayer ? plainText(o.textLayer) : '') || o.name, 80) : id;
+    };
+
+    const lines: string[] = [];
+    for (const [blockId, a] of Object.entries(answers)) {
+      const b = blocks.get(blockId);
+      if (!b) continue;
+      let value: string;
+      switch (a.kind) {
+        case 'choice': value = a.optionIds.map((id) => optionText(b, id)).join(', '); break;
+        case 'text': value = a.value; break;
+        case 'number': value = String(a.value); break;
+        case 'swipe': value = a.value === 'right' ? 'вправо' : 'влево'; break;
+        case 'ranking': value = a.order.map((id) => optionText(b, id)).join(' → '); break;
+        case 'consent': value = a.value ? 'да' : 'нет'; break;
+        case 'contacts': value = 'контакты — в таблице ответов'; break;
+      }
+      lines.push(`• ${label(b)}: ${clip(value)}`);
+      if (lines.length >= 20) break;
+    }
+    const saved: string[] = [];
+    for (const v of doc.variables) {
+      if (!v.saveToAnswers) continue;
+      const raw = variables[v.id];
+      const text = Array.isArray(raw) ? raw.join(', ') : typeof raw === 'boolean' ? (raw ? 'да' : 'нет') : typeof raw === 'number' || typeof raw === 'string' ? String(raw) : '';
+      saved.push(`• ${v.name}: ${clip(text)}`);
+      if (saved.length >= 20) break;
+    }
+    const history = ((session.runtimeState ?? {}) as { history?: unknown }).history;
+    const screenName = (id: string): string => clip(doc.screens.find((x) => x.id === id)?.name ?? '', 40);
+    const way = Array.isArray(history) ? history.filter((h): h is string => typeof h === 'string').map(screenName).filter(Boolean) : [];
+
+    const parts = [
+      lines.length > 0 ? `Ответы:\n${lines.join('\n')}` : 'Ответов на вопросы не было.',
+      ...(saved.length > 0 ? [`Сохранённые значения:\n${saved.join('\n')}`] : []),
+      ...(resultKey ? [`Результат: ${clip(resultKey, 80)}`] : []),
+      ...(way.length > 0 ? [`Путь: ${way.join(' → ')}`] : []),
+    ];
+    await this.db.insert(schema.notifications).values({
+      userId: ownerId,
+      kind: 'passage',
+      title: `Новое прохождение: «${clip(project.title, 80)}»`,
+      body: parts.join('\n\n'),
+      projectId: session.projectId,
+    });
   }
 
   /**

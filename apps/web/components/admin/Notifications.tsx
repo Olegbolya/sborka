@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { api } from '../../lib/api-browser';
 import { Badge, css, useLoad } from './ui';
 import { dateTime } from '../../lib/admin/format';
@@ -12,9 +13,14 @@ interface Note {
   read: boolean;
 }
 
-/** Messages of the moderators and about appeals: new ones are on top of the cabinet until they are read. */
+/** Messages to the creator (moderation, appeals, D-07 finished passages): new ones are on top of the cabinet until they are read; the list refreshes itself. */
 export function Notifications() {
   const { data, reload } = useLoad(() => api<Note[]>('/notifications'));
+  // A passage can finish while the cabinet is open: look again every half a minute.
+  useEffect(() => {
+    const timer = setInterval(reload, 30_000);
+    return () => clearInterval(timer);
+  }, [reload]);
   const fresh = (data ?? []).filter((n) => !n.read);
   if (fresh.length === 0) return null;
   return (

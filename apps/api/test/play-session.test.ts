@@ -412,5 +412,32 @@ describe('PL-11…PL-15 · прохождение на сервере', () => {
     }
     expect([...outcomes].sort()).toEqual(['Лиса', 'Сова']);
   }, 90_000);
-});
 
+  it('D-07 · о завершённом прохождении создателю приходит сообщение в кабинет с ответами и путём; повтор не дублирует; «выкл» молчит', async () => {
+    const z = await quiz('none');
+    const sid = await startSession(z.id);
+    await answer(sid, z.q1.id, { kind: 'choice', optionIds: [z.q1.optionIds[0]!] }).expect(200);
+    await answer(sid, z.text, { kind: 'text', value: 'Возьми две пачки' }).expect(200);
+    await open(t, 'post', `/play/sessions/${sid}/complete`).expect(200);
+    await open(t, 'post', `/play/sessions/${sid}/complete`).expect(200);
+    const notes = (await call(t, cookie, 'get', '/notifications').expect(200)).body as Array<{ kind: string; title: string; body: string; projectId: string | null; read: boolean }>;
+    const mine = notes.filter((n) => n.projectId === z.id);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ kind: 'passage', title: 'Новое прохождение: «Викторина»', read: false });
+    expect(mine[0]!.body).toContain('Ответы:');
+    expect(mine[0]!.body).toContain('Возьми две пачки');
+    expect(mine[0]!.body).toMatch(/Результат: (Эксперт|Новичок)/);
+
+    // Чужой создатель этого сообщения не видит.
+    const stranger = await loginViaOtp();
+    const theirs = (await call(t, stranger, 'get', '/notifications').expect(200)).body as Array<{ projectId: string | null }>;
+    expect(theirs.filter((n) => n.projectId === z.id)).toHaveLength(0);
+
+    // Настройка проекта «о прохождении: выкл» — сообщений нет, прохождения при этом считаются.
+    await db.db.update(schema.projects).set({ settings: { notifications: { passage: 'off' } } }).where(eq(schema.projects.id, z.id));
+    const quiet = await startSession(z.id);
+    await open(t, 'post', `/play/sessions/${quiet}/complete`).expect(200);
+    const after = (await call(t, cookie, 'get', '/notifications').expect(200)).body as Array<{ projectId: string | null }>;
+    expect(after.filter((n) => n.projectId === z.id)).toHaveLength(1);
+  });
+});
