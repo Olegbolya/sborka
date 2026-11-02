@@ -117,6 +117,22 @@ describe('B-02…B-05, B-07: медиаблоки', () => {
     }
   });
 
+  it('TS-24 · media stub «Проверяем файл» и «Файл недоступен» вместо изображения/видео/звука', () => {
+    const stubMedia: Parameters<typeof render>[1] = {
+      media: (ref) => ({ url: `/m/${ref.id}`, kind: 'image', stub: 'processing' as const }),
+    };
+    const blockedMedia: Parameters<typeof render>[1] = {
+      media: (ref) => ({ url: `/m/${ref.id}`, kind: 'image', stub: 'blocked' as const }),
+    };
+    for (const type of ['image', 'gif', 'video', 'audio', 'animation'] as const) {
+      const blk = make(type, { props: { media: { source: 'media', id: `media-${type}` } } });
+      const processing = render(<BlockView block={blk} />, stubMedia);
+      const blocked = render(<BlockView block={blk} />, blockedMedia);
+      expect(processing.querySelector('[data-stub="processing"]')?.textContent).toBe('Проверяем файл');
+      expect(blocked.querySelector('[data-stub="blocked"]')?.textContent).toBe('Файл недоступен');
+    }
+  });
+
   it('B-03: GIF хранится видео и всегда идёт по кругу без звука; GIF-картинка — тегом img', () => {
     const v = live([make('gif', { props: { media: { source: 'media', id: 'video-gif1' } }, style: { media: { loop: false, muted: false, speed: 3 } } })]);
     const video = v.host.querySelector('video')!;

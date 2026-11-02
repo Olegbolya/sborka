@@ -26,8 +26,11 @@ export interface PlayOpen {
   /** noindex by default (PL-05); a paid tariff may allow indexing. */
   indexable: boolean;
   document: PublicDocument;
-  /** Kinds of the media the document refers to, so the player draws a picture, a video or a sound as it should. */
-  media: Record<string, { kind: string; mime: string }>;
+  /**
+   * Kinds of the media the document refers to, so the player draws a picture, a video or a sound as it should.
+   * TS-24: entries with `stub` are not available to serve but need a placeholder in the player.
+   */
+  media: Record<string, { kind: string; mime: string; stub?: 'processing' | 'blocked' }>;
   /** PL-16 · the tariff of the creator asks for the mark «Сделано в Блокуме — создать свою». */
   watermark: boolean;
   /** PL-18 · an advertising project says so: who advertises and the erid. */
@@ -235,7 +238,13 @@ export class PlayService {
       .select({ id: schema.media.id, kind: schema.media.kind, mime: schema.media.mime, status: schema.media.status })
       .from(schema.media)
       .where(and(eq(schema.media.ownerId, ownerId), inArray(schema.media.id, [...ids]), isNull(schema.media.deletedAt)));
-    return Object.fromEntries(rows.filter((r) => r.status !== 'BLOCKED' && r.status !== 'REJECTED').map((r) => [r.id, { kind: r.kind, mime: r.mime }]));
+    // TS-24: include all referenced media but tag non-ready files with a stub marker.
+    return Object.fromEntries(rows.map((r) => {
+      const stub: 'processing' | 'blocked' | undefined =
+        r.status === 'BLOCKED' || r.status === 'REJECTED' ? 'blocked' :
+        r.status === 'UPLOADED' || r.status === 'PROCESSING' ? 'processing' : undefined;
+      return [r.id, stub ? { kind: r.kind, mime: r.mime, stub } : { kind: r.kind, mime: r.mime }];
+    }));
   }
 
   /**

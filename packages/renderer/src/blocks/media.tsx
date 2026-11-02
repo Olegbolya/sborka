@@ -21,6 +21,16 @@ function NoFile({ label }: { label: string }): ReactNode {
   );
 }
 
+/** TS-24: placeholder shown to participants when a media file is under review or unavailable. */
+function MediaStub({ stub }: { stub: 'processing' | 'blocked' }): ReactNode {
+  const label = stub === 'processing' ? 'Проверяем файл' : 'Файл недоступен';
+  return (
+    <div className="bk-media-stub" data-stub={stub} style={{ ...fill, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: u(12), padding: u(8), background: 'rgba(128,128,128,0.15)', color: 'currentColor', opacity: 0.7 }}>
+      {label}
+    </div>
+  );
+}
+
 /** Applies the runtime's «проиграть / пауза / стоп / сначала» (AC-06) to a media element. */
 function useMediaCommands(el: HTMLMediaElement | null, instanceId: string): void {
   const ctx = useRenderContext();
@@ -74,6 +84,7 @@ export function ImageContent({ block, css }: { block: Of<'image'>; css: BlockCss
   const ctx = useRenderContext();
   const src = block.props.media ? ctx.media(block.props.media) : null;
   if (!src) return <NoFile label="Добавьте изображение" />;
+  if (src.stub) return <MediaStub stub={src.stub} />;
   return (
     <>
       <div style={fill}>
@@ -94,6 +105,7 @@ export function VideoContent({ block, css, instanceId }: { block: Of<'gif'> | Of
   const src = block.props.media ? ctx.media(block.props.media) : null;
   const gif = block.type === 'gif';
   if (!src) return <NoFile label={gif ? 'Добавьте GIF' : 'Добавьте видео'} />;
+  if (src.stub) return <MediaStub stub={src.stub} />;
   const alt = block.a11y.alt ?? '';
   return <div style={fill}>{src.kind === 'image' ? <img className="bk-media" src={src.url} alt={alt} draggable={false} style={css.media} /> : <Video src={src} css={css} instanceId={instanceId} alt={alt} gif={gif} />}</div>;
 }
@@ -130,6 +142,7 @@ export function AudioContent({ block, css, instanceId }: { block: Of<'audio'>; c
     };
   }, [el, player, m.autoplay, ctx.sound]);
   if (!src) return <NoFile label="Добавьте звук" />;
+  if (src.stub) return <MediaStub stub={src.stub} />;
   return (
     <>
       <audio
@@ -194,6 +207,7 @@ export function AnimationContent({ block, css, instanceId }: { block: Of<'animat
   const ctx = useRenderContext();
   const src = block.props.media ? ctx.media(block.props.media) : null;
   if (!src) return <NoFile label="Добавьте анимацию" />;
+  if (src.stub) return <MediaStub stub={src.stub} />;
   const alt = block.a11y.alt ?? '';
   return (
     <div style={fill} role={alt ? 'img' : undefined} aria-label={alt || undefined}>

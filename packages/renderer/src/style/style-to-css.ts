@@ -13,6 +13,8 @@ export interface MediaSource {
   kind: 'image' | 'video' | 'audio' | 'lottie';
   /** Cover picture of a video (GIF and video are stored with a poster, B-03). */
   poster?: string;
+  /** TS-24: file is not yet ready — show a placeholder instead of the actual media. */
+  stub?: 'processing' | 'blocked';
 }
 
 /** Turns a media reference into a URL (the player and the editor know the media domain; tests pass a stub). */

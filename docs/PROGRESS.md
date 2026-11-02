@@ -86,7 +86,7 @@
 | P4.2 | Обработка | 🟨 | c64112f | MVP: ClamAV (TS-21), EXIF+WebP-варианты (TS-20), HEIC→JPEG, Lottie-очистка (TS-25) — 19 тестов воркера; Осталось после MVP: GIF→MP4/WebM+постер, видео 720p/1080p, палитра TH-02 (ADR-035) |
 | P4.3 | Хранение и раздача | ✅ | c64112f | LocalStorageService: неугадываемый ключ ownerId/mediaId, удаление при hard-delete; интерфейс Storage зарезервирован под S3 |
 | P4.4 | Медиатека | ✅ | c64112f | GET /media (курсор-пагинация), DELETE с проверкой использования (usages), IDOR: только свои файлы |
-| P4.5 | Подключение модерации медиа | ⬜ | | |
+| P4.5 | Подключение модерации медиа | 🟨 | | TS-22: NSFW через onnxruntime-node (Falconsai модель, путь NSFW_MODEL_PATH, skip если нет — как ClamAV); TS-23: pHash (dHash 9×8 sharp), таблица media_blocked_hashes (migration 0009), auto-block при совпадении ≤6 бит, стоп-лист пополняется при BLOCK_MEDIA; TS-24: MediaStub «Проверяем файл»/«Файл недоступен» в рендерере, play.service mediaOf() включает PROCESSING/BLOCKED с stub-маркером. Тесты: phash.test.ts (9), blocks.test.tsx TS-24, play.test.ts TS-24. CI ожидается. |
 | P4.6 | Свои шрифты | ⬜ | | |
 | P4.7 | Библиотека платформы | ⬜ | | |
 

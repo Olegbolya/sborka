@@ -510,3 +510,6 @@
 | RG-10 | P3.12 | `packages/themes/examples/rg-10.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
 | S-16 | P3.12 | `apps/web/components/editor/Inspector.tsx` | `e2e/reference-build.spec.ts` |
 | AC-20 | P3.12 | `packages/engine/src/runtime/runtime.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/engine/test/debug.test.ts`, `packages/renderer/test/flow-order.test.tsx` |
+| TS-22 | P4.5 | `apps/worker/src/media/nsfw.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/phash.test.ts` |
+| TS-23 | P4.5 | `apps/worker/src/media/phash.ts`; `apps/worker/src/media/processor.ts`; `packages/db/src/schema/moderation.ts#mediaBlockedHashes`; `apps/api/src/admin/moderation.service.ts` | `apps/worker/test/phash.test.ts` |
+| TS-24 | P4.5 | `packages/renderer/src/blocks/media.tsx#MediaStub`; `apps/api/src/play/play.service.ts#mediaOf`; `apps/web/lib/play/api.ts#playMediaResolver` | `packages/renderer/test/blocks.test.tsx`; `apps/api/test/play.test.ts` |

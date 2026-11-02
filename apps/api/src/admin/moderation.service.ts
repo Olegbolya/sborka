@@ -379,12 +379,18 @@ export class ModerationService {
     }
 
     if (targetType === 'MEDIA') {
-      const [m] = await tx.select({ id: schema.media.id, status: schema.media.status, ownerId: schema.media.ownerId }).from(schema.media).where(eq(schema.media.id, targetId));
+      const [m] = await tx.select({ id: schema.media.id, status: schema.media.status, ownerId: schema.media.ownerId, phash: schema.media.phash }).from(schema.media).where(eq(schema.media.id, targetId));
       if (!m) throw fail(404, 'NOT_FOUND', 'Файл не найден');
       const base = { ownerId: m.ownerId ?? undefined, projectTitle: null };
       if (action === 'BLOCK_MEDIA') {
         if (m.status === 'BLOCKED') throw fail(409, 'ALREADY', 'Файл уже заблокирован.');
         await tx.update(schema.media).set({ status: 'BLOCKED' }).where(eq(schema.media.id, m.id));
+        // TS-23: add pHash to stop-list so re-uploads of the same image are auto-blocked.
+        if (m.phash) {
+          await tx.insert(schema.mediaBlockedHashes)
+            .values({ phash: m.phash, reason: 'manual-block', addedById: actor.id })
+            .onConflictDoNothing();
+        }
         return { ...base, previous: { mediaStatus: m.status } };
       }
       const prev = await this.lastRestorable(tx, 'MEDIA', m.id);

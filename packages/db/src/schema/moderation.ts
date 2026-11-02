@@ -157,6 +157,23 @@ export const appeals = pgTable(
   (t) => [index('appeals_status_idx').on(t.status, t.createdAt), index('appeals_user_idx').on(t.userId)],
 );
 
+/**
+ * TS-23: stop-list of perceptual hashes of images blocked by moderators.
+ * When a moderator blocks a media item, its pHash is added here so that
+ * future uploads of the same (or perceptually identical) image are auto-blocked.
+ */
+export const mediaBlockedHashes = pgTable(
+  'media_blocked_hashes',
+  {
+    id: id(),
+    phash: text('phash').notNull().unique(),
+    reason: text('reason').notNull().default(''),
+    addedById: text('added_by_id'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('media_blocked_hashes_phash_idx').on(t.phash)],
+);
+
 /** A message to a user in the cabinet (and by mail when the address is confirmed): moderation decisions, appeal answers. */
 export const notifications = pgTable(
   'notifications',

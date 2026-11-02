@@ -12,7 +12,8 @@ export interface PlayOpen {
   ogImageId: string | null;
   indexable: boolean;
   document: PublicDocument;
-  media: Record<string, { kind: string; mime: string }>;
+  /** TS-24: entries with `stub` are not available but need a placeholder in the player. */
+  media: Record<string, { kind: string; mime: string; stub?: 'processing' | 'blocked' }>;
   /** PL-16 · the mark «Сделано в Блокуме — создать свою». */
   watermark: boolean;
   /** PL-18 · «Реклама», the advertiser and the erid. */
@@ -44,6 +45,8 @@ export function playMediaResolver(view: Pick<PlayOpen, 'slug' | 'media'>): (ref:
   return (ref) => {
     if (ref.source !== 'media') return null;
     const known = view.media[ref.id];
-    return known ? { url: playMediaUrl(view.slug, ref.id), kind: KIND[known.kind] ?? 'image' } : null;
+    if (!known) return null;
+    // TS-24: propagate stub marker so the renderer shows the appropriate placeholder.
+    return { url: playMediaUrl(view.slug, ref.id), kind: KIND[known.kind] ?? 'image', ...(known.stub ? { stub: known.stub } : {}) };
   };
 }

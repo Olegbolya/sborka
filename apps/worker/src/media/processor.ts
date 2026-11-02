@@ -10,6 +10,8 @@ import { scanFile, isClamAvailable } from './clamav.js';
 import { processImage } from './images.js';
 import { cleanLottie, LottieError } from './lottie.js';
 import { MEDIA_QUEUE_NAME, MEDIA_PROCESS_JOB, type MediaJobData } from './jobs.js';
+import { computePhash, phashDistance, PHASH_MAX_DISTANCE } from './phash.js';
+import { classifyNsfw, isNsfwModelAvailable } from './nsfw.js';
 
 export interface MediaProcessorOptions {
   connection: RedisOptions;
@@ -67,6 +69,8 @@ async function processJob(data: MediaJobData, opts: MediaProcessorOptions): Prom
     let width: number | null = null;
     let height: number | null = null;
     let mime = data.mime;
+    let phash: string | null = null;
+    const moderation: Record<string, unknown> = {};
 
     if (kind === 'IMAGE') {
       // TS-20: re-encode (strips payload) + EXIF removal + variants.
@@ -80,6 +84,49 @@ async function processJob(data: MediaJobData, opts: MediaProcessorOptions): Prom
       if (result.variants.original !== filePath) {
         const { unlink } = await import('node:fs/promises');
         try { await unlink(filePath); } catch { /* already gone */ }
+      }
+
+      const processedPath = result.variants.original;
+
+      // TS-23: compute pHash of the re-encoded image.
+      try {
+        phash = await computePhash(processedPath);
+      } catch (e) {
+        logger.warn({ mediaId, err: e }, 'TS-23 · pHash вычислить не удалось');
+      }
+
+      // TS-23: check against stop-list of blocked hashes.
+      if (phash) {
+        const stopList = await db.select({ phash: schema.mediaBlockedHashes.phash }).from(schema.mediaBlockedHashes);
+        const hit = stopList.find((row) => phashDistance(phash!, row.phash) <= PHASH_MAX_DISTANCE);
+        if (hit) {
+          await db.update(schema.media)
+            .set({ status: 'BLOCKED', phash, moderation: { blockedByStopList: true, matchedHash: hit.phash } })
+            .where(eq(schema.media.id, mediaId));
+          logger.warn({ mediaId, matchedHash: hit.phash }, 'TS-23 · медиафайл заблокирован (стоп-лист pHash)');
+          return;
+        }
+      }
+
+      // TS-22: NSFW classification.
+      if (isNsfwModelAvailable()) {
+        const nsfw = await classifyNsfw(processedPath);
+        if (nsfw) {
+          moderation.nsfw = { score: nsfw.score, topClass: nsfw.topClass, verdict: nsfw.verdict, scores: nsfw.scores };
+          if (nsfw.verdict === 'block') {
+            await db.update(schema.media)
+              .set({ status: 'BLOCKED', phash: phash ?? undefined, moderation })
+              .where(eq(schema.media.id, mediaId));
+            logger.warn({ mediaId, nsfwScore: nsfw.score, topClass: nsfw.topClass }, 'TS-22 · медиафайл заблокирован (NSFW выше порога)');
+            return;
+          }
+          if (nsfw.verdict === 'flag') {
+            moderation.flaggedForReview = true;
+            logger.info({ mediaId, nsfwScore: nsfw.score }, 'TS-22 · медиафайл помечен для проверки (NSFW средний порог)');
+          }
+        }
+      } else {
+        logger.warn({ mediaId }, `NSFW-модель недоступна — классификация пропущена (TS-22); путь: ${process.env.NSFW_MODEL_PATH ?? '~/blokum/models/nsfw.onnx'}`);
       }
     }
 
@@ -96,6 +143,8 @@ async function processJob(data: MediaJobData, opts: MediaProcessorOptions): Prom
       width: width ?? undefined,
       height: height ?? undefined,
       mime,
+      phash: phash ?? undefined,
+      moderation,
       variants,
     }).where(eq(schema.media.id, mediaId));
 

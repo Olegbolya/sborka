@@ -167,6 +167,31 @@ describe('PL-01…PL-05 · публикация и открытие плеера
     expect(view.media[other.body.id as string]).toBeUndefined();
   });
 
+  it('TS-24 · медиафайл на проверке — в view.media есть stub: processing; заблокированный — stub: blocked', async () => {
+    const png = await sharp({ create: { width: 4, height: 4, channels: 3, background: '#225588' } }).png().toBuffer();
+    const up = await request(t.http()).post(`/${API_PREFIX}/media`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').attach('file', png, { filename: 'c.png', contentType: 'image/png' }).expect(201);
+    const mediaId = up.body.id as string;
+    const p = await project((d) => {
+      d.meta.ogImage = { source: 'media', id: mediaId };
+    });
+    await call(t, cookie, 'post', `/projects/${p.id}/publish`).expect(200);
+
+    // Manually force the media to PROCESSING status (simulates that the worker hasn't finished yet).
+    await db.db.update(schema.media).set({ status: 'PROCESSING' }).where(eq(schema.media.id, mediaId));
+    const viewProcessing = (await pub(t, `/play/${p.slug}`).expect(200)).body;
+    expect(viewProcessing.media[mediaId]).toMatchObject({ stub: 'processing' });
+
+    // Manually force the media to BLOCKED status (simulates a moderator or NSFW block).
+    await db.db.update(schema.media).set({ status: 'BLOCKED' }).where(eq(schema.media.id, mediaId));
+    const viewBlocked = (await pub(t, `/play/${p.slug}`).expect(200)).body;
+    expect(viewBlocked.media[mediaId]).toMatchObject({ stub: 'blocked' });
+
+    // Restore to READY: stub disappears.
+    await db.db.update(schema.media).set({ status: 'READY' }).where(eq(schema.media.id, mediaId));
+    const viewReady = (await pub(t, `/play/${p.slug}`).expect(200)).body;
+    expect(viewReady.media[mediaId]?.stub).toBeUndefined();
+  });
+
   it('PL-02 · код QR ведёт на текущий адрес сборки, считает переход и переживает смену slug', async () => {
     const p = await project();
     await call(t, cookie, 'post', `/projects/${p.id}/publish`).expect(200);
