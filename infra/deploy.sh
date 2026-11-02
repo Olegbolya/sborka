@@ -66,6 +66,14 @@ ensure_secret() {
 }
 ensure_secret TOTP_SECRET_KEY
 
+# До запуска (PRELAUNCH=1: весь сайт закрыт паролем) служебные галереи /dev открыты владельцу для проверки;
+# после запуска флажок снимается сам.
+sed -i '/^BLOKUM_DEV_PAGES=/d' "$ENV_FILE"
+if grep -qE '^PRELAUNCH=1$' "$ENV_FILE"; then
+  printf 'BLOKUM_DEV_PAGES=1\n' >> "$ENV_FILE"
+  echo "→ режим «до запуска»: служебные галереи /dev включены"
+fi
+
 # ── Node 22 (у BST по умолчанию Node 20 — его не меняем) ──────────────────────
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 if [ -s "$NVM_DIR/nvm.sh" ]; then
