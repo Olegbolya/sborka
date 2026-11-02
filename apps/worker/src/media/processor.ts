@@ -5,13 +5,16 @@ import type { RedisOptions } from 'bullmq';
 import type { Db } from '@blokum/db';
 import { schema } from '@blokum/db';
 import { eq } from 'drizzle-orm';
+import sharp from 'sharp';
 import type { Logger } from '@blokum/observability';
+import { dominantColors, PALETTE_MAX } from '@blokum/schema';
 import { scanFile, isClamAvailable } from './clamav.js';
 import { processImage } from './images.js';
 import { cleanLottie, LottieError } from './lottie.js';
 import { MEDIA_QUEUE_NAME, MEDIA_PROCESS_JOB, type MediaJobData } from './jobs.js';
 import { computePhash, phashDistance, PHASH_MAX_DISTANCE } from './phash.js';
 import { classifyNsfw, isNsfwModelAvailable } from './nsfw.js';
+import { isFfmpegAvailable, processGif, processVideo } from './video.js';
 
 export interface MediaProcessorOptions {
   connection: RedisOptions;
@@ -68,8 +71,10 @@ async function processJob(data: MediaJobData, opts: MediaProcessorOptions): Prom
     let variants: Record<string, unknown> = {};
     let width: number | null = null;
     let height: number | null = null;
+    let durationMs: number | null = null;
     let mime = data.mime;
     let phash: string | null = null;
+    let palette: string[] | null = null;
     const moderation: Record<string, unknown> = {};
 
     if (kind === 'IMAGE') {
@@ -87,6 +92,18 @@ async function processJob(data: MediaJobData, opts: MediaProcessorOptions): Prom
       }
 
       const processedPath = result.variants.original;
+
+      // TH-02: извлекаем палитру доминирующих цветов из изображения.
+      try {
+        const pixels = await sharp(processedPath)
+          .resize(64, 64, { fit: 'inside' })
+          .removeAlpha()
+          .raw()
+          .toBuffer();
+        palette = dominantColors(pixels, PALETTE_MAX);
+      } catch (e) {
+        logger.warn({ mediaId, err: e }, 'TH-02 · палитра не извлечена');
+      }
 
       // TS-23: compute pHash of the re-encoded image.
       try {
@@ -130,6 +147,38 @@ async function processJob(data: MediaJobData, opts: MediaProcessorOptions): Prom
       }
     }
 
+    if (kind === 'GIF') {
+      // TS-20 · B-03: GIF → MP4 (faststart, yuv420p) + WebM + постер.
+      if (await isFfmpegAvailable()) {
+        const result = await processGif(filePath, mediaId);
+        width = result.width;
+        height = result.height;
+        durationMs = result.durationMs;
+        mime = 'video/mp4';
+        variants = result.variants;
+        logger.info({ mediaId }, 'TS-20 · GIF → MP4/WebM конвертирован');
+      } else {
+        logger.warn({ mediaId }, 'ffmpeg недоступен — GIF-конвертация пропущена (TS-20)');
+      }
+    }
+
+    if (kind === 'VIDEO') {
+      // TS-20: перекодирование видео в 720p H.264 MP4.
+      if (await isFfmpegAvailable()) {
+        const result = await processVideo(filePath, mediaId);
+        width = result.width;
+        height = result.height;
+        durationMs = result.durationMs;
+        mime = 'video/mp4';
+        variants = result.variants;
+        logger.info({ mediaId }, 'TS-20 · VIDEO → 720p MP4 перекодирован');
+      } else {
+        logger.warn({ mediaId }, 'ffmpeg недоступен — VIDEO-перекодирование пропущено (TS-20)');
+      }
+    }
+
+    // AUDIO: ClamAV проверен выше, без перекодирования (AAC/Opus — после MVP).
+
     if (kind === 'LOTTIE' && data.mime === 'application/json') {
       // TS-25: clean expressions + validate.
       const { readFile } = await import('node:fs/promises');
@@ -142,8 +191,10 @@ async function processJob(data: MediaJobData, opts: MediaProcessorOptions): Prom
       status: 'READY',
       width: width ?? undefined,
       height: height ?? undefined,
+      durationMs: durationMs ?? undefined,
       mime,
       phash: phash ?? undefined,
+      palette: palette ?? undefined,
       moderation,
       variants,
     }).where(eq(schema.media.id, mediaId));

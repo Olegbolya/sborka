@@ -116,9 +116,9 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
       .post(`/${API_PREFIX}/fonts`)
       .set('Cookie', cookie)
       .set('X-Blokum-CSRF', '1')
-      .attach('file', BIG_TTF, { filename: 'big.ttf', contentType: 'application/octet-stream' })
-      .expect(400);
-    expect(res.body.error?.code ?? res.status).toBeTruthy();
+      .attach('file', BIG_TTF, { filename: 'big.ttf', contentType: 'application/octet-stream' });
+    // NestJS FileInterceptor returns 413 (multer LIMIT_FILE_SIZE) or 400 (processFont check)
+    expect([400, 413]).toContain(res.status);
   });
 
   it('TH-04 · POST /fonts — отклоняет битый файл (TTF-заголовок, мусор внутри)', async () => {

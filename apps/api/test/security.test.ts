@@ -24,6 +24,7 @@ const OWN_SESSION = new Set([
   'POST /auth/account/totp/setup', 'POST /auth/account/totp/confirm', 'DELETE /auth/account/totp',
   'GET /auth/me', 'GET /auth/sessions', 'DELETE /auth/sessions',
   'GET /notifications', 'GET /media', 'POST /media', 'POST /media/sessions', 'GET /projects', 'POST /projects', 'GET /templates', 'GET /themes', 'POST /themes', 'POST /themes/from-image',
+  'GET /fonts', 'POST /fonts',
 ]);
 
 /** Not public, no role, and the route names an object by an id: another signed-in user must get neither it nor a change of it (IDOR). */
@@ -41,6 +42,7 @@ const BY_ID = new Set([
   'GET /projects/:projectId/access-points', 'POST /projects/:projectId/access-points', 'POST /projects/:projectId/access-points/:id/active',
   'DELETE /projects/:projectId/access-points/:id', 'GET /projects/:projectId/access-points/:id/qr.png', 'GET /projects/:projectId/access-points/:id/qr.svg',
   'POST /themes/from-project/:projectId', 'GET /themes/:id', 'PUT /themes/:id', 'DELETE /themes/:id', 'POST /themes/:id/duplicate', 'POST /themes/:id/default',
+  'DELETE /fonts/:id',
 ]);
 
 interface Route {

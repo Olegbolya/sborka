@@ -302,7 +302,7 @@
 | B-05 | P4.1 | `apps/api/src/media/signatures.ts#AUDIO`; `apps/api/src/media/media.service.ts`; `apps/api/src/media/entitlements.ts` | `apps/api/test/media.test.ts` |
 | B-07 | P4.1 | `apps/api/src/media/signatures.ts#LOTTIE`; `apps/api/src/media/media.service.ts` | `apps/api/test/media.test.ts` |
 | TS-01 | P4.1 | `apps/api/src/media/signatures.ts#FORBIDDEN_MIMES` | `apps/api/test/media.test.ts` |
-| TS-20 | P4.2 | `apps/worker/src/media/images.ts` (EXIF strip, WebP variants, HEIC→JPEG); `apps/worker/src/media/processor.ts` | `apps/worker/test/images.test.ts` |
+| TS-20 | P4.2 | `apps/worker/src/media/images.ts` (EXIF strip, WebP variants, HEIC→JPEG); `apps/worker/src/media/video.ts` (GIF→MP4/WebM+poster, VIDEO→720p); `apps/worker/src/media/processor.ts` | `apps/worker/test/images.test.ts`; `apps/worker/test/video.test.ts` |
 | TS-21 | P4.2 | `apps/worker/src/media/clamav.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/clamav.test.ts` |
 | TS-25 | P4.2 | `apps/worker/src/media/lottie.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/lottie.test.ts` |
 | D-08 | P4.4 | `apps/api/src/media/media.service.ts#checkUsage`; `apps/api/src/media/media.controller.ts` | `apps/api/test/media.test.ts` |
@@ -513,3 +513,5 @@
 | TS-22 | P4.5 | `apps/worker/src/media/nsfw.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/phash.test.ts` |
 | TS-23 | P4.5 | `apps/worker/src/media/phash.ts`; `apps/worker/src/media/processor.ts`; `packages/db/src/schema/moderation.ts#mediaBlockedHashes`; `apps/api/src/admin/moderation.service.ts` | `apps/worker/test/phash.test.ts` |
 | TS-24 | P4.5 | `packages/renderer/src/blocks/media.tsx#MediaStub`; `apps/api/src/play/play.service.ts#mediaOf`; `apps/web/lib/play/api.ts#playMediaResolver` | `packages/renderer/test/blocks.test.tsx`; `apps/api/test/play.test.ts` |
+| TH-04 | P4.6 | `apps/api/src/fonts/fonts.controller.ts`; `apps/api/src/fonts/fonts.service.ts`; `apps/api/src/play/play.service.ts#fontsOf`; `apps/web/lib/fonts/api.ts`; `apps/web/lib/play/api.ts#fontFaceCSS`; `apps/web/app/s/[slug]/page.tsx` | `apps/api/test/fonts.test.ts` |
+| TS-26 | P4.6 | `apps/api/src/fonts/font-processor.ts`; `apps/api/src/fonts/fonts.service.ts` | `apps/api/test/fonts.test.ts` |
