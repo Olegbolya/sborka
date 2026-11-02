@@ -64,6 +64,7 @@ describe('TS-27 · E-21 · SVG-импорт контуров', () => {
     const svg = Buffer.from('<svg><path d="M0 0 L100 100"/></svg>');
     await request(t.http())
       .post(`/${API_PREFIX}/editor/svg-import`)
+      .set('X-Blokum-CSRF', '1')
       .attach('file', svg, { filename: 'test.svg', contentType: 'image/svg+xml' })
       .expect(401);
   });
