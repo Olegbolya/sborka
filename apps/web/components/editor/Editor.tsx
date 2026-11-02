@@ -305,6 +305,14 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
     if (asked.dialog) setDialog('scenarios');
   }, [asked, setDialog]);
   const doc = useSyncExternalStore(store.subscribe, () => store.getState().doc, () => store.getState().doc);
+  // E-12: bottom sheet panel navigation on mobile (< 768 px).
+  const [mobilePanel, setMobilePanel] = useState<'left' | 'right'>('left');
+  const selLen = useSyncExternalStore(store.subscribe, () => store.getState().selection.blockIds.length, () => 0);
+  const prevSelLen = useRef(0);
+  useEffect(() => {
+    if (selLen > 0 && prevSelLen.current === 0) setMobilePanel('right');
+    prevSelLen.current = selLen;
+  }, [selLen]);
   return (
     <>
       {message && (
@@ -312,10 +320,18 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
           {message.text}
         </p>
       )}
-      <div className="ed-body">
+      <div className="ed-body" data-mobile-panel={mobilePanel}>
         <LeftPanel />
         <Canvas />
         <Inspector />
+        <nav className="ed-mobile-nav" aria-label="Панели редактора">
+          <button type="button" className="ed-mobile-nav-btn" aria-pressed={mobilePanel === 'left'} aria-label="Слои и экраны" data-testid="mobile-nav-left" onClick={() => setMobilePanel('left')}>
+            Слои
+          </button>
+          <button type="button" className="ed-mobile-nav-btn" aria-pressed={mobilePanel === 'right'} aria-label="Свойства блока" data-testid="mobile-nav-right" onClick={() => setMobilePanel('right')}>
+            Свойства
+          </button>
+        </nav>
       </div>
       {save.status === 'conflict' && <ConflictDialog />}
       {dialog === 'history' && <HistoryDialog onClose={() => setDialog(null)} />}

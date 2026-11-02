@@ -529,4 +529,5 @@
 | TPL-04 | P3.11 | `apps/api/src/projects/projects.service.ts#anyTemplateDocument`; `apps/api/src/projects/projects.controller.ts` | `apps/api/test/templates.test.ts`; `e2e/templates.spec.ts` |
 | ME-01 | P3.11 | `apps/api/src/projects/elements.controller.ts`; `apps/api/src/projects/projects.service.ts#saveElement`; `apps/web/components/editor/AddPanel.tsx#ElementsSection` | `apps/api/test/elements.test.ts`; `e2e/templates.spec.ts` |
 | ME-02 | P3.11 | `apps/api/src/projects/elements.controller.ts`; `apps/api/src/projects/projects.service.ts#getElement`; `apps/web/components/editor/AddPanel.tsx#insertElement` | `apps/api/test/elements.test.ts`; `e2e/templates.spec.ts` |
+| E-12 | P3.14 | `apps/web/components/editor/Editor.tsx#Body`; `apps/web/components/editor/editor.css` | `e2e/editor-mobile.spec.ts` |
 | SC-06 | P3.8 | `apps/web/lib/editor/clipboard.ts`; `apps/web/components/editor/PasteVariablesDialog.tsx` | `apps/web/test/clipboard-rules.test.ts`; `e2e/scenarios.spec.ts` |

@@ -712,3 +712,70 @@
 [data-lesson-glow] { outline: 3px solid #f59e0b !important; outline-offset: 2px; animation: ed-glow 1.4s ease-in-out infinite; }
 @keyframes ed-glow { 50% { outline-color: #fcd34d; } }
 @media (prefers-reduced-motion: reduce) { [data-lesson-glow] { animation: none; } }
+
+/* E-12 · мобильный редактор: нижние шторки при ширине < 768 px */
+@media (max-width: 767px) {
+  .ed-root { height: 100dvh; }
+  .ed-body {
+    display: block;
+    position: relative;
+    height: 100%;
+  }
+  .ed-center {
+    position: absolute;
+    inset: 0;
+    bottom: 48px;
+  }
+  .ed-panel.left,
+  .ed-panel.right {
+    position: fixed;
+    bottom: 48px;
+    left: 0;
+    right: 0;
+    max-height: 50dvh;
+    overflow: auto;
+    border-right: 0;
+    border-left: 0;
+    border-bottom: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 14px 14px 0 0;
+    z-index: 20;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  }
+  .ed-body[data-mobile-panel="left"] .ed-panel.left,
+  .ed-body[data-mobile-panel="right"] .ed-panel.right {
+    transform: translateY(0);
+  }
+  .ed-mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    height: 48px;
+    display: flex;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+  }
+  .ed-mobile-nav-btn {
+    flex: 1;
+    height: 100%;
+    min-width: 44px;
+    padding: 4px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    color: var(--fg);
+    font-size: 12px;
+  }
+  .ed-mobile-nav-btn[aria-pressed="true"] {
+    color: var(--accent);
+    font-weight: 700;
+  }
+}
+@media (min-width: 768px) {
+  .ed-mobile-nav { display: none; }
+}
