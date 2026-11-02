@@ -31,6 +31,11 @@ export interface PlayOpen {
    * TS-24: entries with `stub` are not available to serve but need a placeholder in the player.
    */
   media: Record<string, { kind: string; mime: string; stub?: 'processing' | 'blocked' }>;
+  /**
+   * TH-04: пользовательские шрифты, используемые в документе.
+   * fontId → { family: "bk-font-{fontId}", styles: { "400": mediaId, "700": mediaId2 } }
+   */
+  fonts: Record<string, { family: string; styles: Record<string, string> }>;
   /** PL-16 · the tariff of the creator asks for the mark «Сделано в Блоккере — создать свою». */
   watermark: boolean;
   /** PL-18 · an advertising project says so: who advertises and the erid. */
@@ -150,6 +155,14 @@ export class PlayService {
       .where(and(eq(schema.projectVersions.id, versionId), eq(schema.projects.id, projectId)));
     if (!row) throw unavailable();
     const doc = row.document as unknown as ProjectDocument;
+    const fontsMap = await this.fontsOf(row.ownerId, doc);
+    const media = await this.mediaOf(row.ownerId, doc);
+    // Добавляем WOFF2 медиафайлы шрифтов в карту media
+    for (const [, fontInfo] of Object.entries(fontsMap)) {
+      for (const [, mid] of Object.entries(fontInfo.styles)) {
+        media[mid] = { kind: 'FONT_SOURCE', mime: 'font/woff2' };
+      }
+    }
     return {
       state: 'ok',
       projectId,
@@ -160,7 +173,8 @@ export class PlayService {
       ogImageId: doc.meta.ogImage?.source === 'media' ? doc.meta.ogImage.id : null,
       indexable: false,
       document: toPublicDocument(doc),
-      media: await this.mediaOf(row.ownerId, doc),
+      media,
+      fonts: fontsMap,
       ...marks(row),
     };
   }
@@ -175,6 +189,13 @@ export class PlayService {
     if (!this.unlocked(p, ctx.unlock)) return blocked('password', p.doc.theme.tokens.systemScreens.password.text || 'Введите пароль, чтобы открыть');
     if (p.settings.age18 && !ctx.ageConfirmed) return blocked('age18', p.doc.theme.tokens.systemScreens.age18.text || 'Материал для тех, кому есть 18 лет');
     const media = await this.mediaOf(p.ownerId, p.doc);
+    const fontsMap = await this.fontsOf(p.ownerId, p.doc);
+    // Добавляем WOFF2 медиафайлы шрифтов в карту media
+    for (const [, fontInfo] of Object.entries(fontsMap)) {
+      for (const [, mid] of Object.entries(fontInfo.styles)) {
+        media[mid] = { kind: 'FONT_SOURCE', mime: 'font/woff2' };
+      }
+    }
     return {
       state: 'ok',
       projectId: p.id,
@@ -186,6 +207,7 @@ export class PlayService {
       indexable: false,
       document: toPublicDocument(p.doc),
       media,
+      fonts: fontsMap,
       ...marks(p),
     };
   }
@@ -212,13 +234,65 @@ export class PlayService {
   /** The file of a published version for participants: only media that the published document refers to. */
   async mediaFile(slug: string, mediaId: string): Promise<{ path: string; mime: string }> {
     const p = await this.published({ slug });
-    if (!JSON.stringify(p.doc).includes(`"${mediaId}"`)) throw unavailable();
+    // Проверяем, что mediaId упоминается в документе либо принадлежит шрифту этого проекта
+    const inDoc = JSON.stringify(p.doc).includes(`"${mediaId}"`);
+    if (!inDoc) {
+      // TH-04: также проверяем, является ли mediaId WOFF2-файлом шрифта владельца
+      const fontRows = await this.db
+        .select({ styles: schema.fonts.styles })
+        .from(schema.fonts)
+        .where(and(eq(schema.fonts.ownerId, p.ownerId), isNull(schema.fonts.deletedAt)));
+      const fontHasMedia = fontRows.some((row) =>
+        Object.values(row.styles as Record<string, { mediaId: string }>).some((s) => s.mediaId === mediaId),
+      );
+      if (!fontHasMedia) throw unavailable();
+    }
     const [m] = await this.db
       .select({ mime: schema.media.mime, status: schema.media.status })
       .from(schema.media)
       .where(and(eq(schema.media.id, mediaId), eq(schema.media.ownerId, p.ownerId), isNull(schema.media.deletedAt)));
     if (!m || m.status === 'BLOCKED' || m.status === 'REJECTED') throw unavailable();
     return { path: this.storage.getPath(`${p.ownerId}/${mediaId}`), mime: m.mime };
+  }
+
+  /**
+   * TH-04 · собирает карту пользовательских шрифтов документа.
+   * Рекурсивно обходит весь документ, ищет FontRef с kind:'font',
+   * дедуплицирует, запрашивает таблицу fonts.
+   */
+  async fontsOf(ownerId: string, doc: ProjectDocument): Promise<PlayOpen['fonts']> {
+    const fontIds = new Set<string>();
+    // Рекурсивный обход всего дерева — FontRef {kind:'font', id:...} встречается только
+    // в theme.tokens.fonts.* и в block.style.text.font, но проще обойти всё сразу.
+    const walk = (v: unknown): void => {
+      if (Array.isArray(v)) { v.forEach(walk); return; }
+      if (v && typeof v === 'object') {
+        const o = v as Record<string, unknown>;
+        if (o['kind'] === 'font' && typeof o['id'] === 'string') {
+          fontIds.add(o['id']);
+          return;
+        }
+        Object.values(o).forEach(walk);
+      }
+    };
+    walk(doc);
+    if (fontIds.size === 0) return {};
+    const rows = await this.db
+      .select({ id: schema.fonts.id, family: schema.fonts.family, styles: schema.fonts.styles })
+      .from(schema.fonts)
+      .where(and(eq(schema.fonts.ownerId, ownerId), inArray(schema.fonts.id, [...fontIds]), isNull(schema.fonts.deletedAt)));
+    return Object.fromEntries(
+      rows.map((row) => {
+        const styles = row.styles as Record<string, { mediaId: string }>;
+        return [
+          row.id,
+          {
+            family: `bk-font-${row.id}`,
+            styles: Object.fromEntries(Object.entries(styles).map(([key, val]) => [key, val.mediaId])),
+          },
+        ];
+      }),
+    );
   }
 
   /** Media of the owner that the document refers to (`{source:'media', id}` anywhere in it). */

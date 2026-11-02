@@ -14,6 +14,11 @@ export interface PlayOpen {
   document: PublicDocument;
   /** TS-24: entries with `stub` are not available but need a placeholder in the player. */
   media: Record<string, { kind: string; mime: string; stub?: 'processing' | 'blocked' }>;
+  /**
+   * TH-04: пользовательские шрифты документа.
+   * fontId → { family: "bk-font-{fontId}", styles: { "400": mediaId, ... } }
+   */
+  fonts: Record<string, { family: string; styles: Record<string, string> }>;
   /** PL-16 · the mark «Сделано в Блоккере — создать свою». */
   watermark: boolean;
   /** PL-18 · «Реклама», the advertiser and the erid. */
@@ -49,4 +54,23 @@ export function playMediaResolver(view: Pick<PlayOpen, 'slug' | 'media'>): (ref:
     // TS-24: propagate stub marker so the renderer shows the appropriate placeholder.
     return { url: playMediaUrl(view.slug, ref.id), kind: KIND[known.kind] ?? 'image', ...(known.stub ? { stub: known.stub } : {}) };
   };
+}
+
+/**
+ * TH-04 · генерирует CSS-строку с @font-face для всех пользовательских шрифтов документа.
+ * styleKey формат: "400" → weight=400 style=normal, "400i" → weight=400 style=italic.
+ */
+export function fontFaceCSS(view: Pick<PlayOpen, 'slug' | 'fonts'>): string {
+  const lines: string[] = [];
+  for (const [, fontInfo] of Object.entries(view.fonts)) {
+    for (const [styleKey, mediaId] of Object.entries(fontInfo.styles)) {
+      const isItalic = styleKey.endsWith('i');
+      const weight = isItalic ? styleKey.slice(0, -1) : styleKey;
+      const url = playMediaUrl(view.slug, mediaId);
+      lines.push(
+        `@font-face { font-family: "${fontInfo.family}"; src: url("${url}") format("woff2"); font-weight: ${weight}; font-style: ${isItalic ? 'italic' : 'normal'}; font-display: swap; }`,
+      );
+    }
+  }
+  return lines.join('\n');
 }

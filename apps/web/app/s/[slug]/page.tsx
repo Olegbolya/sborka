@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PlayApp } from '../../../components/play/PlayApp';
-import { playMediaUrl } from '../../../lib/play/api';
+import { fontFaceCSS, playMediaUrl } from '../../../lib/play/api';
 import { loadPlayView, siteOrigin } from '../../../lib/play/server';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -29,5 +29,12 @@ export default async function PlayPage({ params, searchParams }: { params: Promi
   const { p } = await searchParams;
   const view = await loadPlayView(slug);
   if (!view) notFound();
-  return <PlayApp initial={view} source={p ?? null} />;
+  // TH-04: инжектируем @font-face для пользовательских шрифтов
+  const fontCSS = view.state === 'ok' && Object.keys(view.fonts).length > 0 ? fontFaceCSS(view) : '';
+  return (
+    <>
+      {fontCSS && <style dangerouslySetInnerHTML={{ __html: fontCSS }} />}
+      <PlayApp initial={view} source={p ?? null} />
+    </>
+  );
 }
