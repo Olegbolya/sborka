@@ -521,3 +521,5 @@
 | LB-04 | P4.7 | `apps/api/src/play/play.service.ts#mediaOf` (source:'library' → stub:'blocked'); `apps/api/src/admin/library-admin.service.ts#withdrawItem` | `apps/api/test/library.test.ts` |
 | LB-05 | P4.7 | `apps/api/src/admin/library-admin.service.ts#importZip` (ZIP+CSV); `apps/api/src/admin/admin.controller.ts` | `apps/api/test/library.test.ts` |
 | AD-10 | P4.7 | `apps/api/src/admin/library-admin.service.ts`; `apps/api/src/admin/admin.controller.ts` (library routes) | `apps/api/test/library.test.ts` |
+| E-21 | P3.9 | `apps/web/components/editor/PenTool.tsx` (PenOverlay, PencilOverlay, NodeEditor); `apps/web/components/editor/Canvas.tsx` (toolMode, pen/pencil buttons); `apps/web/lib/editor/style-specs.ts` (path variant + svg-import field); `apps/web/components/editor/StylePanels.tsx` (SvgImportField) | `e2e/pen-tool.spec.ts` |
+| TS-27 | P3.9 | `apps/api/src/editor/svg-import.service.ts` (строгий парсер SVG — только геометрия); `apps/api/src/editor/editor.controller.ts` (POST /editor/svg-import); `apps/api/src/editor/editor.module.ts` | `apps/api/test/svg-import.test.ts` |

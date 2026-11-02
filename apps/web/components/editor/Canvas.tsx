@@ -7,6 +7,7 @@ import { type Handle, HANDLES, absoluteFrames, boundsOf, unionOf } from '../../l
 import { type GestureEnv, NO_TRANSIENT, type Transient, startMarquee, startMove, startResize, startRotate } from '../../lib/editor/gestures';
 import { drawOrder } from '../../lib/editor/tree';
 import { useEditor, useEnv } from './context';
+import { NodeEditor, PenOverlay, PencilOverlay } from './PenTool';
 
 const ARTBOARD = 390;
 export const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 3, 4] as const;
@@ -56,6 +57,10 @@ export function Canvas() {
   const [transient, setTransient] = useState<Transient>(NO_TRANSIENT);
   const [panning, setPanning] = useState(false);
   const space = useRef(false);
+  /** E-21 · active drawing tool. */
+  const [toolMode, setToolMode] = useState<'select' | 'pen' | 'pencil'>('select');
+  /** E-21 · block id being edited in node-edit mode (null = not editing). */
+  const [nodeEditId, setNodeEditId] = useState<string | null>(null);
 
   useEffect(() => {
     const el = wrap.current;
@@ -137,6 +142,12 @@ export function Canvas() {
         setPanning(true);
         if (e.target === document.body) e.preventDefault();
         return;
+      }
+      // E-21 · tool shortcuts (no modifier)
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.code === 'KeyP') { e.preventDefault(); setToolMode('pen'); setNodeEditId(null); return; }
+        if (e.code === 'KeyB') { e.preventDefault(); setToolMode('pencil'); setNodeEditId(null); return; }
+        if (e.code === 'KeyV' || e.code === 'Escape') { setToolMode('select'); setNodeEditId(null); return; }
       }
       if (!(e.ctrlKey || e.metaKey)) return;
       if (e.key === '+' || e.key === '=') {
@@ -321,6 +332,38 @@ export function Canvas() {
         <button type="button" className="ed-btn small" aria-pressed={snap} title="Прилипание (Alt при перетаскивании отключает)" onClick={() => setSnap((s) => !s)}>
           Прилипание
         </button>
+        {/* E-21 · drawing tools */}
+        <span className="ed-viewbar-sep" aria-hidden />
+        <button
+          type="button"
+          className="ed-btn small"
+          aria-pressed={toolMode === 'select' && !nodeEditId}
+          title="Выделение (V)"
+          data-testid="tool-select"
+          onClick={() => { setToolMode('select'); setNodeEditId(null); }}
+        >
+          Курсор
+        </button>
+        <button
+          type="button"
+          className="ed-btn small"
+          aria-pressed={toolMode === 'pen'}
+          title="Перо — клик добавляет узлы, Enter замыкает, ESC отменяет (P)"
+          data-testid="tool-pen"
+          onClick={() => { setToolMode('pen'); setNodeEditId(null); }}
+        >
+          Перо
+        </button>
+        <button
+          type="button"
+          className="ed-btn small"
+          aria-pressed={toolMode === 'pencil'}
+          title="Карандаш — рисование от руки (B)"
+          data-testid="tool-pencil"
+          onClick={() => { setToolMode('pencil'); setNodeEditId(null); }}
+        >
+          Карандаш
+        </button>
       </div>
       <div
         className="ed-canvas"
@@ -358,7 +401,8 @@ export function Canvas() {
               }}
             />
           )}
-          {hits.map((block) => {
+          {/* E-21: hit areas are hidden in pen/pencil mode so the overlay can capture all events */}
+          {toolMode === 'select' && hits.map((block) => {
             const f = frames.get(block.id)!;
             return (
               <button
@@ -372,6 +416,12 @@ export function Canvas() {
                 style={{ left: px(f.x), top: px(f.y), width: px(f.w), height: px(f.h), transform: f.rotation ? `rotate(${f.rotation}deg)` : undefined }}
                 onPointerDown={(e) => pick(block, e)}
                 onKeyDown={(e) => onKey(e, block)}
+                onDoubleClick={() => {
+                  // E-21: double-click on a path shape enters node editing mode
+                  if (block.type === 'shape' && block.style?.shape?.kind === 'path') {
+                    setNodeEditId(block.id);
+                  }
+                }}
               />
             );
           })}
@@ -446,6 +496,32 @@ export function Canvas() {
               className="ed-marquee"
               data-testid="marquee"
               style={{ left: px(transient.marquee.x), top: px(transient.marquee.y), width: px(transient.marquee.w), height: px(transient.marquee.h) }}
+            />
+          )}
+          {/* E-21 · drawing tool overlays */}
+          {toolMode === 'pen' && (
+            <PenOverlay
+              unit={unit}
+              stageRef={stageRef}
+              screenId={screen.id}
+              screenHeight={screen.height}
+            />
+          )}
+          {toolMode === 'pencil' && (
+            <PencilOverlay
+              unit={unit}
+              stageRef={stageRef}
+              screenId={screen.id}
+              screenHeight={screen.height}
+            />
+          )}
+          {toolMode === 'select' && nodeEditId && (
+            <NodeEditor
+              blockId={nodeEditId}
+              unit={unit}
+              stageRef={stageRef}
+              screenId={screen.id}
+              onDone={() => setNodeEditId(null)}
             />
           )}
         </div>

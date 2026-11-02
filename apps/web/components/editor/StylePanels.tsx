@@ -16,7 +16,7 @@ import {
 } from '../../lib/editor/style-edit';
 import { ANIMATION_SPEC, EDGES, type Field, GROUP_SPECS, MEDIA_TYPES } from '../../lib/editor/style-specs';
 import { ColorInput, NumberInput, Section, SelectInput, SliderInput, TextInput, Toggle } from './controls';
-import { useEditor } from './context';
+import { useEditor, useEnv } from './context';
 import { MediaField } from './MediaPicker';
 import { OptionsEditor, ScreenField, TransitionPresetField, VariableField } from './PropsFields';
 
@@ -130,6 +130,8 @@ export function FieldView({ field, level, prefix }: { field: Field; level: Level
           onChange={(v) => here.write(() => v)}
         />
       );
+    case 'svg-import':
+      return <SvgImportField label={field.label} onImport={(d) => here.write(() => d)} />;
     case 'point': {
       const keys = field.keys ?? null;
       const axes = (['x', 'y'] as const).map((axis, i) => {
@@ -512,6 +514,64 @@ function SizeSection({ blocks, state }: { blocks: Block[]; state: BlockState | n
       {flag('lockAspect', 'Сохранять пропорции')}
       {flag('autoHeight', 'Автовысота по содержимому')}
     </Section>
+  );
+}
+
+/**
+ * E-21 · TS-27 · Button that uploads an SVG file to the server and extracts normalised path data.
+ * Only the first path is used; the server strips scripts, foreignObject and all non-geometric content.
+ */
+function SvgImportField({ label, onImport }: { label: string; onImport: (d: string) => void }) {
+  const { flash } = useEnv();
+  const [busy, setBusy] = useState(false);
+
+  const pick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.svg,image/svg+xml';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      setBusy(true);
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch(`/api/v1/editor/svg-import`, {
+          method: 'POST',
+          headers: { 'X-Blokum-CSRF': '1' },
+          body: form,
+          credentials: 'same-origin',
+        });
+        if (!res.ok) {
+          const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+          flash(err?.error?.message ?? 'Ошибка импорта SVG', 'error');
+          return;
+        }
+        const data = (await res.json()) as { paths: Array<{ d: string }> };
+        if (data.paths[0]) onImport(data.paths[0].d);
+        else flash('SVG не содержит контуров', 'error');
+      } catch {
+        flash('Ошибка импорта SVG', 'error');
+      } finally {
+        setBusy(false);
+      }
+    };
+    input.click();
+  };
+
+  return (
+    <div className="ed-field" data-control="svg-import">
+      <span>{label}</span>
+      <button
+        type="button"
+        className="ed-btn small"
+        disabled={busy}
+        data-testid="svg-import-btn"
+        onClick={pick}
+      >
+        {busy ? 'Загрузка…' : 'Выбрать SVG'}
+      </button>
+    </div>
   );
 }
 

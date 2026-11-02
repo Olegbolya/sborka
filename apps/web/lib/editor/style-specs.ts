@@ -49,7 +49,9 @@ export type Field =
       key: string;
       label: string;
       variants: Record<string, { title: string; make: () => unknown; fields: Field[] }>;
-    };
+    }
+  /** E-21 · TS-27 · Import SVG path: button that uploads an SVG and writes the resulting `d` string. */
+  | { t: 'svg-import'; key: string; label: string };
 
 const SOLID = { kind: 'solid', color: { token: 'primary', alpha: 1 } };
 const STOPS = [
@@ -236,6 +238,7 @@ export const SHAPE_VARIANTS: Record<string, { title: string; make: () => unknown
     title: 'Свой контур',
     make: () => ({ kind: 'path', d: 'M 0 0 L 100 0 L 100 100 L 0 100 Z', closed: true }),
     fields: [
+      { t: 'svg-import', key: 'd', label: 'Импортировать из SVG' },
       { t: 'text', key: 'd', label: 'Контур (SVG)', max: 20000 },
       { t: 'bool', key: 'closed', label: 'Замкнутый' },
     ],
