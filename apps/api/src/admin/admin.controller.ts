@@ -1,9 +1,12 @@
-import { Body, Controller, Delete, Get, HttpCode, Ip, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Ip, Param, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { CurrentUser, Roles } from '../auth/decorators.js';
 import { type RequestUser } from '../auth/session.service.js';
 import { AdminUsersService } from './admin-users.service.js';
 import { FeatureFlagsService } from './feature-flags.service.js';
 import { LegalLogsService } from './legal-logs.service.js';
+import { LibraryAdminService } from './library-admin.service.js';
 import { type ActInput, ModerationService } from './moderation.service.js';
 import { SystemContentService } from './system-content.service.js';
 import { SystemService } from './system.service.js';
@@ -24,6 +27,7 @@ export class AdminController {
     private readonly flags: FeatureFlagsService,
     private readonly system: SystemService,
     private readonly content: SystemContentService,
+    private readonly libAdmin: LibraryAdminService,
   ) {}
 
   // ── Moderation ─────────────────────────────────────────────────────────────
@@ -203,5 +207,57 @@ export class AdminController {
   @HttpCode(204)
   async removeTheme(@Param('id') id: string, @CurrentUser() user: RequestUser, @Ip() ip: string) {
     await this.content.removeTheme(user, id, ip);
+  }
+
+  // ── Library (AD-10) ────────────────────────────────────────────────────────
+
+  @Roles('ADMIN')
+  @Get('library/collections')
+  libraryCollections() {
+    return this.libAdmin.listCollections();
+  }
+
+  @Roles('ADMIN')
+  @Post('library/collections')
+  @HttpCode(201)
+  createLibraryCollection(@Body() body: Body, @CurrentUser() user: RequestUser) {
+    return this.libAdmin.createCollection(body ?? {}, user.id);
+  }
+
+  @Roles('ADMIN')
+  @Delete('library/collections/:id')
+  @HttpCode(204)
+  async deleteLibraryCollection(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    await this.libAdmin.deleteCollection(id, user.id);
+  }
+
+  @Roles('ADMIN')
+  @Post('library/items')
+  @HttpCode(201)
+  createLibraryItem(@Body() body: Body, @CurrentUser() user: RequestUser) {
+    return this.libAdmin.addItem(body ?? {}, user.id);
+  }
+
+  @Roles('ADMIN')
+  @Post('library/import')
+  @HttpCode(200)
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } }))
+  importLibraryZip(@UploadedFile() file: Express.Multer.File | undefined, @CurrentUser() user: RequestUser) {
+    if (!file?.buffer?.length) throw new BadRequestException({ error: { code: 'FILE_MISSING', message: 'ZIP-файл не передан' } });
+    return this.libAdmin.importZip(file.buffer, user.id);
+  }
+
+  @Roles('ADMIN')
+  @Delete('library/items/:id')
+  @HttpCode(204)
+  async withdrawLibraryItem(@Param('id') id: string, @Body() body: Body, @CurrentUser() user: RequestUser) {
+    const reason = typeof body?.reason === 'string' ? body.reason.trim() : '';
+    await this.libAdmin.withdrawItem(id, reason, user.id);
+  }
+
+  @Roles('ADMIN')
+  @Get('library/licenses')
+  libraryLicenseManifest() {
+    return this.libAdmin.licenseManifest();
   }
 }

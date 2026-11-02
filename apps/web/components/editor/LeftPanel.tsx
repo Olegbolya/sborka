@@ -289,8 +289,22 @@ function LayersList() {
   );
 }
 
+/** LB-03 · вкладка «Библиотека»: пустое состояние — библиотека заполняется администратором. */
+function LibraryPanel() {
+  return (
+    <div className="ed-section" data-testid="library-panel">
+      <p className="ed-hint">Библиотека пополняется</p>
+      <div className="ed-actions">
+        <a href="/cabinet/media" className="ed-btn small">
+          Загрузить своё
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export function LeftPanel() {
-  const [tab, setTab] = useState<'screens' | 'layers' | 'add'>('screens');
+  const [tab, setTab] = useState<'screens' | 'layers' | 'add' | 'library'>('screens');
   return (
     <aside className="ed-panel left" aria-label="Экраны и слои">
       <div className="ed-tabs" role="tablist">
@@ -315,8 +329,11 @@ export function LeftPanel() {
         <button type="button" role="tab" className="ed-tab" aria-selected={tab === 'add'} onClick={() => setTab('add')}>
           Добавить
         </button>
+        <button type="button" role="tab" className="ed-tab" aria-selected={tab === 'library'} onClick={() => setTab('library')}>
+          Библиотека
+        </button>
       </div>
-      {tab === 'screens' ? <ScreensList /> : tab === 'layers' ? <LayersList /> : <AddPanel />}
+      {tab === 'screens' ? <ScreensList /> : tab === 'layers' ? <LayersList /> : tab === 'add' ? <AddPanel /> : <LibraryPanel />}
     </aside>
   );
 }

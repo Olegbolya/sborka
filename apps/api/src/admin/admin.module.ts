@@ -10,6 +10,7 @@ import { AdminUsersService } from './admin-users.service.js';
 import { CreatorModerationController } from './creator-moderation.controller.js';
 import { FeatureFlagsService } from './feature-flags.service.js';
 import { LegalLogsService } from './legal-logs.service.js';
+import { LibraryAdminService } from './library-admin.service.js';
 import { ModerationService } from './moderation.service.js';
 import { NotificationsService } from './notifications.service.js';
 import { SystemContentService } from './system-content.service.js';
@@ -39,6 +40,7 @@ export class AdminModule {
         LegalLogsService,
         SystemService,
         SystemContentService,
+        LibraryAdminService,
       ],
       exports: [FeatureFlagsService, ModerationService, NotificationsService, AuditLogService],
     };

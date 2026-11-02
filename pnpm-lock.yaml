@@ -79,6 +79,9 @@ importers:
       '@nestjs/platform-express':
         specifier: 12.2.0
         version: 12.2.0(@nestjs/common@12.2.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.2.0)
+      adm-zip:
+        specifier: ^0.6.1
+        version: 0.6.1
       bullmq:
         specifier: ^6.4.0
         version: 6.4.0(ioredis@5.11.1)(pg@8.23.1)
@@ -125,6 +128,9 @@ importers:
       '@swc/core':
         specifier: 1.16.18
         version: 1.16.18(@swc/helpers@0.5.23)
+      '@types/adm-zip':
+        specifier: ^0.6.0
+        version: 0.6.0
       '@types/express':
         specifier: 5.0.6
         version: 5.0.6
@@ -2174,6 +2180,10 @@ packages:
     resolution: {integrity: sha512-PgjBpLPW/WDsKzeBmNuw2QHtPxT/PtcloN3rHFTqVyMsqkLlyHVJbSusuhYoYFdi08lZ9Stryw66UOuPg/yW0w==}
     cpu: [arm64]
     os: [win32]
+
+  '@types/adm-zip@0.6.0':
+    resolution: {integrity: sha512-4BJwT30zsKqyYk+PgJS+LQzVrLh0bHragg9etHGg679uuBbNDbSaLsJy+DaJQZM8AvESHB+t3ruVzbrn6BUsMQ==}
+    deprecated: This is a stub types definition. adm-zip provides its own type definitions, so you do not need this installed.
 
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
@@ -6224,6 +6234,10 @@ snapshots:
 
   '@turbo/windows-arm64@2.11.9':
     optional: true
+
+  '@types/adm-zip@0.6.0':
+    dependencies:
+      adm-zip: 0.6.1
 
   '@types/body-parser@1.19.6':
     dependencies:

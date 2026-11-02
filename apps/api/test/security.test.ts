@@ -25,6 +25,7 @@ const OWN_SESSION = new Set([
   'GET /auth/me', 'GET /auth/sessions', 'DELETE /auth/sessions',
   'GET /notifications', 'GET /media', 'POST /media', 'POST /media/sessions', 'GET /projects', 'POST /projects', 'GET /templates', 'GET /themes', 'POST /themes', 'POST /themes/from-image',
   'GET /fonts', 'POST /fonts',
+  'GET /library/collections', 'GET /library/collections/:id/items',
 ]);
 
 /** Not public, no role, and the route names an object by an id: another signed-in user must get neither it nor a change of it (IDOR). */

@@ -40,6 +40,7 @@ import { AdminModule } from './admin/admin.module.js';
 import type { IMediaQueue } from './media/media-jobs.js';
 import { ProjectsModule } from './projects/projects.module.js';
 import { FontsModule } from './fonts/fonts.module.js';
+import { LibraryModule } from './library/library.module.js';
 
 export interface AppDeps {
   logger: Logger;
@@ -67,7 +68,7 @@ export class AppModule {
     const emailSender: EmailSender | null = deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender();
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config)],
+      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), LibraryModule],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),

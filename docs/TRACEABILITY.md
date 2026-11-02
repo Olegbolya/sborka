@@ -515,3 +515,9 @@
 | TS-24 | P4.5 | `packages/renderer/src/blocks/media.tsx#MediaStub`; `apps/api/src/play/play.service.ts#mediaOf`; `apps/web/lib/play/api.ts#playMediaResolver` | `packages/renderer/test/blocks.test.tsx`; `apps/api/test/play.test.ts` |
 | TH-04 | P4.6 | `apps/api/src/fonts/fonts.controller.ts`; `apps/api/src/fonts/fonts.service.ts`; `apps/api/src/play/play.service.ts#fontsOf`; `apps/web/lib/fonts/api.ts`; `apps/web/lib/play/api.ts#fontFaceCSS`; `apps/web/app/s/[slug]/page.tsx` | `apps/api/test/fonts.test.ts` |
 | TS-26 | P4.6 | `apps/api/src/fonts/font-processor.ts`; `apps/api/src/fonts/fonts.service.ts` | `apps/api/test/fonts.test.ts` |
+| LB-01 | P4.7 | `apps/api/src/library/library.service.ts`; `apps/api/src/library/library.controller.ts`; `apps/api/src/library/library.module.ts` | `apps/api/test/library.test.ts` |
+| LB-02 | P4.7 | `apps/api/src/library/library.service.ts#listItems` (search, tags) | `apps/api/test/library.test.ts` |
+| LB-03 | P4.7 | `apps/web/components/editor/LeftPanel.tsx#LibraryPanel` | `e2e/library.spec.ts` |
+| LB-04 | P4.7 | `apps/api/src/play/play.service.ts#mediaOf` (source:'library' → stub:'blocked'); `apps/api/src/admin/library-admin.service.ts#withdrawItem` | `apps/api/test/library.test.ts` |
+| LB-05 | P4.7 | `apps/api/src/admin/library-admin.service.ts#importZip` (ZIP+CSV); `apps/api/src/admin/admin.controller.ts` | `apps/api/test/library.test.ts` |
+| AD-10 | P4.7 | `apps/api/src/admin/library-admin.service.ts`; `apps/api/src/admin/admin.controller.ts` (library routes) | `apps/api/test/library.test.ts` |

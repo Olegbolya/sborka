@@ -295,30 +295,54 @@ export class PlayService {
     );
   }
 
-  /** Media of the owner that the document refers to (`{source:'media', id}` anywhere in it). */
+  /** Media the document refers to: owner media (`{source:'media', id}`) and library items (`{source:'library', id}`). */
   private async mediaOf(ownerId: string, doc: ProjectDocument): Promise<PlayOpen['media']> {
-    const ids = new Set<string>();
+    const ownIds = new Set<string>();
+    const libIds = new Set<string>();
     const walk = (v: unknown): void => {
       if (Array.isArray(v)) v.forEach(walk);
       else if (v && typeof v === 'object') {
         const o = v as Record<string, unknown>;
-        if (o.source === 'media' && typeof o.id === 'string') ids.add(o.id);
+        if (o.source === 'media' && typeof o.id === 'string') ownIds.add(o.id);
+        if (o.source === 'library' && typeof o.id === 'string') libIds.add(o.id);
         Object.values(o).forEach(walk);
       }
     };
     walk(doc);
-    if (ids.size === 0) return {};
-    const rows = await this.db
-      .select({ id: schema.media.id, kind: schema.media.kind, mime: schema.media.mime, status: schema.media.status })
-      .from(schema.media)
-      .where(and(eq(schema.media.ownerId, ownerId), inArray(schema.media.id, [...ids]), isNull(schema.media.deletedAt)));
-    // TS-24: include all referenced media but tag non-ready files with a stub marker.
-    return Object.fromEntries(rows.map((r) => {
-      const stub: 'processing' | 'blocked' | undefined =
-        r.status === 'BLOCKED' || r.status === 'REJECTED' ? 'blocked' :
-        r.status === 'UPLOADED' || r.status === 'PROCESSING' ? 'processing' : undefined;
-      return [r.id, stub ? { kind: r.kind, mime: r.mime, stub } : { kind: r.kind, mime: r.mime }];
-    }));
+
+    const result: PlayOpen['media'] = {};
+
+    if (ownIds.size > 0) {
+      const rows = await this.db
+        .select({ id: schema.media.id, kind: schema.media.kind, mime: schema.media.mime, status: schema.media.status })
+        .from(schema.media)
+        .where(and(eq(schema.media.ownerId, ownerId), inArray(schema.media.id, [...ownIds]), isNull(schema.media.deletedAt)));
+      // TS-24: include all referenced media but tag non-ready files with a stub marker.
+      for (const r of rows) {
+        const stub: 'processing' | 'blocked' | undefined =
+          r.status === 'BLOCKED' || r.status === 'REJECTED' ? 'blocked' :
+          r.status === 'UPLOADED' || r.status === 'PROCESSING' ? 'processing' : undefined;
+        result[r.id] = stub ? { kind: r.kind, mime: r.mime, stub } : { kind: r.kind, mime: r.mime };
+      }
+    }
+
+    // LB-04: library items — withdrawn items become stubs.
+    if (libIds.size > 0) {
+      const libRows = await this.db
+        .select({ id: schema.libraryItems.id, active: schema.libraryItems.active, mediaId: schema.libraryItems.mediaId, mime: schema.media.mime, kind: schema.media.kind })
+        .from(schema.libraryItems)
+        .leftJoin(schema.media, eq(schema.media.id, schema.libraryItems.mediaId))
+        .where(inArray(schema.libraryItems.id, [...libIds]));
+      for (const r of libRows) {
+        if (!r.active) {
+          result[r.id] = { kind: 'IMAGE', mime: 'image/png', stub: 'blocked' };
+        } else if (r.mime && r.kind) {
+          result[r.id] = { kind: r.kind, mime: r.mime };
+        }
+      }
+    }
+
+    return result;
   }
 
   /**
