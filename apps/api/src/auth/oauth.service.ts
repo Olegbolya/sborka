@@ -20,10 +20,16 @@ interface ProviderConfig {
   tokenUrl: string;
   profileUrl: string;
   scope: string;
+  /** What the provider's API expects before the token: Yandex ID wants «OAuth», the dev emulator «Bearer». */
+  authScheme: 'OAuth' | 'Bearer';
 }
 
 interface VkProfile {
   response: Array<{ id: number; first_name: string; last_name: string }>;
+}
+
+interface VkIdProfile {
+  user?: { user_id: string | number; first_name?: string; last_name?: string };
 }
 
 interface YandexProfile {
@@ -83,7 +89,7 @@ export class OAuthService {
   }
 
   /** A-01: exchanges code for token, fetches profile, finds or creates user, returns session token. */
-  async processCallback(provider: OAuthProvider, code: string, state: string, ip: string, ua: string): Promise<{ token: string; user: RequestUser } | { mfa: string; user: RequestUser }> {
+  async processCallback(provider: OAuthProvider, code: string, state: string, ip: string, ua: string, deviceId?: string): Promise<{ token: string; user: RequestUser } | { mfa: string; user: RequestUser }> {
     const stateData = await this.stateStore.get(state);
     if (!stateData || stateData.provider !== provider) {
       throw new BadRequestException({ error: { code: 'INVALID_OAUTH_STATE', message: 'Неверный или устаревший параметр state' } });
@@ -91,17 +97,35 @@ export class OAuthService {
     await this.stateStore.delete(state);
 
     const cfg = this.providerConfig(provider);
+    const live = this.config.oauthLive;
 
-    const tokenRes = await fetch(cfg.tokenUrl, {
+    // The provider's answer is read defensively: a network error or a slow provider is «the login failed», never a 500.
+    const call = async (url: string, init: RequestInit): Promise<Response> => {
+      try {
+        return await fetch(url, { ...init, signal: AbortSignal.timeout(10_000) });
+      } catch {
+        throw new BadRequestException({ error: { code: 'OAUTH_TOKEN_FAILED', message: 'Провайдер не ответил' } });
+      }
+    };
+    const form = (values: Record<string, string>): string => new URLSearchParams(values).toString();
+
+    const tokenParams: Record<string, string> = {
+      grant_type: 'authorization_code',
+      client_id: cfg.clientId,
+      code,
+      redirect_uri: stateData.redirectUri,
+      code_verifier: stateData.codeVerifier,
+    };
+    // VK ID wants the device and the state back; Yandex ID needs neither (PKCE replaces the secret key).
+    if (live && provider === 'vk') {
+      if (!deviceId) throw new BadRequestException({ error: { code: 'OAUTH_TOKEN_FAILED', message: 'VK ID не вернул device_id' } });
+      tokenParams.device_id = deviceId;
+      tokenParams.state = state;
+    }
+    const tokenRes = await call(cfg.tokenUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Blokum-CSRF': '1' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: cfg.clientId,
-        code,
-        redirect_uri: stateData.redirectUri,
-        code_verifier: stateData.codeVerifier,
-      }).toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...(live ? {} : { 'X-Blokum-CSRF': '1' }) },
+      body: form(tokenParams),
     });
     if (!tokenRes.ok) {
       throw new BadRequestException({ error: { code: 'OAUTH_TOKEN_FAILED', message: 'Не удалось получить токен от провайдера' } });
@@ -112,12 +136,17 @@ export class OAuthService {
       throw new BadRequestException({ error: { code: 'OAUTH_TOKEN_FAILED', message: 'Провайдер не вернул access_token' } });
     }
 
-    const profileRes = await fetch(cfg.profileUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const profileRes = live && provider === 'vk'
+      ? await call(cfg.profileUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form({ client_id: cfg.clientId, access_token: accessToken }) })
+      : await call(cfg.profileUrl, { headers: { Authorization: `${cfg.authScheme} ${accessToken}` } });
     if (!profileRes.ok) {
       throw new BadRequestException({ error: { code: 'OAUTH_PROFILE_FAILED', message: 'Не удалось получить профиль пользователя' } });
     }
     const profileBody = await profileRes.json();
     const { providerUserId, displayName } = this.extractProfile(provider, profileBody);
+    if (!providerUserId) {
+      throw new BadRequestException({ error: { code: 'OAUTH_PROFILE_FAILED', message: 'Провайдер не вернул идентификатор пользователя' } });
+    }
 
     const user = await this.findOrCreateUser(provider, providerUserId, displayName);
     // AD-01: an administrator or a moderator needs the second factor; no session before it.
@@ -158,7 +187,37 @@ export class OAuthService {
     return `${this.config.oauthBaseUrl}/auth/oauth/${provider}/callback`;
   }
 
+  /** Whether the login through this provider can be offered: in production only with the owner's keys. */
+  isEnabled(provider: OAuthProvider): boolean {
+    if (!this.config.oauthLive) return true;
+    return (provider === 'vk' ? this.config.vkClientId : this.config.yandexClientId) !== '';
+  }
+
   private providerConfig(provider: OAuthProvider): ProviderConfig {
+    if (!this.isEnabled(provider)) {
+      throw new BadRequestException({ error: { code: 'OAUTH_PROVIDER_DISABLED', message: 'Вход через этот сервис пока не подключён' } });
+    }
+    if (this.config.oauthLive) {
+      // Real services (the addresses are from the providers' own documentation).
+      if (provider === 'vk') {
+        return {
+          clientId: this.config.vkClientId,
+          authorizationUrl: 'https://id.vk.ru/authorize',
+          tokenUrl: 'https://id.vk.ru/oauth2/auth',
+          profileUrl: 'https://id.vk.ru/oauth2/user_info',
+          scope: 'vkid.personal_info',
+          authScheme: 'Bearer',
+        };
+      }
+      return {
+        clientId: this.config.yandexClientId,
+        authorizationUrl: 'https://oauth.yandex.ru/authorize',
+        tokenUrl: 'https://oauth.yandex.ru/token',
+        profileUrl: 'https://login.yandex.ru/info?format=json',
+        scope: 'login:info',
+        authScheme: 'OAuth',
+      };
+    }
     const base = this.config.oauthBaseUrl;
     if (provider === 'vk') {
       return {
@@ -167,6 +226,7 @@ export class OAuthService {
         tokenUrl: `${base}/dev/oauth/vk/token`,
         profileUrl: `${base}/dev/oauth/vk/me`,
         scope: 'email',
+        authScheme: 'Bearer',
       };
     }
     return {
@@ -175,17 +235,21 @@ export class OAuthService {
       tokenUrl: `${base}/dev/oauth/yandex/token`,
       profileUrl: `${base}/dev/oauth/yandex/me`,
       scope: 'login:email login:info',
+      authScheme: 'Bearer',
     };
   }
 
   private extractProfile(provider: OAuthProvider, body: unknown): { providerUserId: string; displayName: string } {
     if (provider === 'vk') {
-      const p = body as VkProfile;
-      const item = p.response?.[0];
-      return { providerUserId: String(item?.id ?? ''), displayName: `${item?.first_name ?? ''} ${item?.last_name ?? ''}`.trim() };
+      // The emulator answers `{ response: [..] }`, VK ID itself `{ user: { user_id, first_name, last_name } }`.
+      const real = (body as VkIdProfile).user;
+      const item = real ?? (body as VkProfile).response?.[0];
+      const id = real ? real.user_id : (item as { id?: number } | undefined)?.id;
+      const name = `${item?.first_name ?? ''} ${item?.last_name ?? ''}`.trim();
+      return { providerUserId: id === undefined || id === null ? '' : String(id), displayName: name || 'Пользователь' };
     }
     const p = body as YandexProfile;
-    return { providerUserId: p.id, displayName: p.display_name ?? p.login ?? p.id };
+    return { providerUserId: p.id ? String(p.id) : '', displayName: p.display_name ?? p.login ?? 'Пользователь' };
   }
 
   private async findOrCreateUser(provider: OAuthProvider, providerUserId: string, displayName: string): Promise<RequestUser> {

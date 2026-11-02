@@ -27,6 +27,27 @@ describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
 
   // ── init redirect ────────────────────────────────────────────────────────────
 
+  it('A-01 · GET /auth/oauth/providers — без входа; вне рабочей среды оба сервиса доступны', async () => {
+    if (skip()) return;
+    const res = await request(t.http()).get(`/${API_PREFIX}/auth/oauth/providers`).expect(200);
+    expect(res.body).toEqual({ vk: true, yandex: true });
+  });
+
+  it('A-01 · сервис без ключей: прямой переход ведёт на страницу входа с понятным сообщением', async () => {
+    if (skip()) return;
+    const off = await startTestApp({ db: db.db }, { oauthLive: true, vkClientId: '', yandexClientId: 'ya-key' });
+    try {
+      const list = await request(off.http()).get(`/${API_PREFIX}/auth/oauth/providers`).expect(200);
+      expect(list.body).toEqual({ vk: false, yandex: true });
+      const res = await request(off.http()).get(`/${API_PREFIX}/auth/oauth/vk/init`).redirects(0).expect(302);
+      expect(res.headers['location']).toBe('http://localhost:3110/login?error=provider');
+      const ya = await request(off.http()).get(`/${API_PREFIX}/auth/oauth/yandex/init`).redirects(0).expect(302);
+      expect(ya.headers['location']).toContain('https://oauth.yandex.ru/authorize?');
+    } finally {
+      await off.app.close();
+    }
+  });
+
   it('A-01 · GET /auth/oauth/vk/init → 302 redirect to dev emulator', async () => {
     if (skip()) return;
     const res = await request(t.http())

@@ -44,10 +44,10 @@ describe('ME-01/ME-02 · сохранённые элементы', () => {
 
   async function loginViaOtp(): Promise<string> {
     const p = `+7900${String(1000000 + ++phoneCounter).slice(-7)}`;
-    await request(t.http()).post(`/${API_PREFIX}/auth/otp/request`).set('X-Blokum-CSRF', '1').send({ phone: p, captchaToken: 'ok' }).expect(200);
+    await request(t.http()).post(`/${API_PREFIX}/auth/otp/request`).set('X-Blokum-CSRF', '1').set('X-Forwarded-For', `10.9.${phoneCounter % 250}.${phoneCounter % 200 + 1}`).send({ phone: p, captchaToken: 'ok' }).expect(200);
     const { code } = sentCodes[sentCodes.length - 1]!;
     sentCodes.length = 0;
-    const res = await request(t.http()).post(`/${API_PREFIX}/auth/otp/verify`).set('X-Blokum-CSRF', '1').send({ phone: p, code }).expect(200);
+    const res = await request(t.http()).post(`/${API_PREFIX}/auth/otp/verify`).set('X-Blokum-CSRF', '1').set('X-Forwarded-For', `10.9.${phoneCounter % 250}.${phoneCounter % 200 + 1}`).send({ phone: p, code }).expect(200);
     const cookies = (res.headers['set-cookie'] ?? []) as string[];
     return cookies.find((c) => c.startsWith('session='))!.split(';')[0]!;
   }

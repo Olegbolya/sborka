@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../lib/api-browser';
 
 const s = {
@@ -26,7 +26,15 @@ const s = {
 };
 
 /** A-01: sign-in is only through VK ID or Яндекс ID (ADR-033); both buttons start the server-side flow. */
-export function LoginView({ failed }: { failed: boolean }) {
+export function LoginView({ failed, notConnected = false }: { failed: boolean; notConnected?: boolean }) {
+  // Only the services that are connected (in production — those with the owner's keys) get a button.
+  const [providers, setProviders] = useState<{ vk: boolean; yandex: boolean } | null>(null);
+  useEffect(() => {
+    api<{ vk: boolean; yandex: boolean }>('/auth/oauth/providers')
+      .then(setProviders)
+      .catch(() => setProviders({ vk: true, yandex: true }));
+  }, []);
+
   useEffect(() => {
     // A person who is already signed in does not need this page.
     api('/auth/me')
@@ -44,12 +52,26 @@ export function LoginView({ failed }: { failed: boolean }) {
             Не получилось войти. Вход был отменён или устарел — попробуйте ещё раз.
           </p>
         )}
-        <a href="/api/v1/auth/oauth/vk/init" style={{ ...s.btn, ...s.vk }}>
-          Войти через VK ID
-        </a>
-        <a href="/api/v1/auth/oauth/yandex/init" style={{ ...s.btn, ...s.yandex }}>
-          Войти через Яндекс ID
-        </a>
+        {notConnected && (
+          <p role="alert" style={s.error}>
+            Вход через этот сервис пока не подключён.
+          </p>
+        )}
+        {providers?.vk && (
+          <a href="/api/v1/auth/oauth/vk/init" style={{ ...s.btn, ...s.vk }}>
+            Войти через VK ID
+          </a>
+        )}
+        {providers?.yandex && (
+          <a href="/api/v1/auth/oauth/yandex/init" style={{ ...s.btn, ...s.yandex }}>
+            Войти через Яндекс ID
+          </a>
+        )}
+        {providers && !providers.vk && !providers.yandex && (
+          <p role="status" style={s.sub}>
+            Вход пока не подключён: сервисы входа ещё настраиваются.
+          </p>
+        )}
         <p style={s.note}>
           Нажимая кнопку, вы переходите к сервису входа. Условия и согласия мы покажем на следующем шаге.
         </p>

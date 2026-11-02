@@ -150,14 +150,13 @@ export class ProjectsService {
 
   /** TPL-02 · rename the creator's own template. */
   async renameOwnTemplate(userId: string, templateId: string, name: string): Promise<void> {
+    // Ownership first: a stranger gets «not found» whatever he sends, never a hint about the validation.
+    const own = and(eq(schema.templates.id, templateId), eq(schema.templates.ownerId, userId), eq(schema.templates.isSystem, false), isNull(schema.templates.deletedAt));
+    const found = await this.db.select({ id: schema.templates.id }).from(schema.templates).where(own).limit(1);
+    if (found.length === 0) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Шаблон не найден.' } });
     const n = name.trim().slice(0, 120);
     if (n.length < 1) throw new BadRequestException({ error: { code: 'NAME_REQUIRED', message: 'Нужно название.' } });
-    const rows = await this.db
-      .update(schema.templates)
-      .set({ name: n })
-      .where(and(eq(schema.templates.id, templateId), eq(schema.templates.ownerId, userId), eq(schema.templates.isSystem, false), isNull(schema.templates.deletedAt)))
-      .returning({ id: schema.templates.id });
-    if (rows.length === 0) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Шаблон не найден.' } });
+    await this.db.update(schema.templates).set({ name: n }).where(own);
   }
 
   /** TPL-02 · delete the creator's own template. */

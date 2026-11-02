@@ -18,7 +18,7 @@ void (null as unknown as OAuthProvider);
 const baseConfig: ApiConfig = {
   port: 3100, host: '127.0.0.1', version: 'test', databaseUrl: '', redisUrl: '',
   dataRoot: '/', allowedOrigins: [], smsDailyBudget: 1000,
-  vkClientId: 'dev-vk', yandexClientId: 'dev-yandex',
+  oauthLive: false, vkClientId: 'dev-vk', yandexClientId: 'dev-yandex',
   oauthBaseUrl: 'http://127.0.0.1:3100/api/v1',
   webUrl: 'http://localhost:3110',
   phoneLogin: false,
@@ -356,7 +356,7 @@ describe('A-01: OAuthController.callback', () => {
   it('успех: сеанс в cookie, переход на онбординг; адрес берётся из первого элемента X-Forwarded-For', async () => {
     const processCallback = vi.fn().mockResolvedValue({ token: 'tok', user: {} });
     const res = await call({ processCallback }, { headers: { 'x-forwarded-for': ['1.1.1.1, 2.2.2.2'], 'user-agent': 'UA' } });
-    expect(processCallback).toHaveBeenCalledWith('vk', 'c', 's', '1.1.1.1', 'UA');
+    expect(processCallback).toHaveBeenCalledWith('vk', 'c', 's', '1.1.1.1', 'UA', undefined);
     expect(res.setHeader).toHaveBeenCalledWith('Set-Cookie', expect.stringContaining('session=tok'));
     expect(res.redirect).toHaveBeenCalledWith(302, 'http://localhost:3110/onboarding');
   });
@@ -364,7 +364,7 @@ describe('A-01: OAuthController.callback', () => {
   it('успех без заголовков: адрес берётся из сокета', async () => {
     const processCallback = vi.fn().mockResolvedValue({ token: 'tok', user: {} });
     await call({ processCallback }, { socket: { remoteAddress: '9.9.9.9' } as Request['socket'] });
-    expect(processCallback).toHaveBeenCalledWith('vk', 'c', 's', '9.9.9.9', '');
+    expect(processCallback).toHaveBeenCalledWith('vk', 'c', 's', '9.9.9.9', '', undefined);
   });
 
   it('отказ провайдера (BadRequest) → страница входа, cookie нет', async () => {
@@ -400,5 +400,114 @@ describe('A-01: эмулятор — запасные ветви', () => {
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as unknown as Response;
     ctrl.token('vk', undefined as unknown as string, { body: { code: 'dev-code-vk' } } as unknown as Request, res);
     expect((res as unknown as { json: ReturnType<typeof vi.fn> }).json).toHaveBeenCalledWith(expect.objectContaining({ access_token: expect.any(String) }));
+  });
+});
+
+// A-01: real VK ID / Yandex ID in production (ADR-037)
+describe('A-01: вход через настоящие VK ID и Яндекс ID (рабочая среда)', () => {
+  const live: ApiConfig = { ...baseConfig, oauthLive: true, vkClientId: 'vk-key', yandexClientId: 'ya-key', oauthBaseUrl: 'https://blokker.ru/api/v1' };
+
+  it('A-01: Яндекс ID — адрес входа настоящий, возврат на адрес сайта, PKCE', async () => {
+    const { db } = makeDb();
+    const svc = new OAuthService(db, live, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
+    const url = new URL(await svc.initFlow('yandex'));
+    expect(`${url.origin}${url.pathname}`).toBe('https://oauth.yandex.ru/authorize');
+    expect(url.searchParams.get('client_id')).toBe('ya-key');
+    expect(url.searchParams.get('redirect_uri')).toBe('https://blokker.ru/api/v1/auth/oauth/yandex/callback');
+    expect(url.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(url.searchParams.get('scope')).toBe('login:info');
+  });
+
+  it('A-01: VK ID — адрес входа настоящий', async () => {
+    const { db } = makeDb();
+    const svc = new OAuthService(db, live, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
+    const url = new URL(await svc.initFlow('vk'));
+    expect(`${url.origin}${url.pathname}`).toBe('https://id.vk.ru/authorize');
+    expect(url.searchParams.get('client_id')).toBe('vk-key');
+  });
+
+  it('A-01: сервис без ключей владельца не предлагается и не запускается', async () => {
+    const { db } = makeDb();
+    const svc = new OAuthService(db, { ...live, vkClientId: '' }, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
+    expect(svc.isEnabled('vk')).toBe(false);
+    expect(svc.isEnabled('yandex')).toBe(true);
+    await expect(svc.initFlow('vk')).rejects.toMatchObject({ response: { error: { code: 'OAUTH_PROVIDER_DISABLED' } } });
+  });
+
+  it('A-01: вне рабочей среды оба сервиса доступны (эмулятор)', () => {
+    const { db } = makeDb();
+    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
+    expect(svc.isEnabled('vk') && svc.isEnabled('yandex')).toBe(true);
+  });
+
+  it('A-01: Яндекс ID — обмен кода без секретного ключа (PKCE), профиль с заголовком OAuth', async () => {
+    const { db, selectChain } = makeDb();
+    selectChain.limit.mockResolvedValueOnce([]);
+    const store = new InMemoryOAuthStateStore();
+    await store.save('s1', { provider: 'yandex', codeVerifier: 'verifier', redirectUri: 'https://blokker.ru/api/v1/auth/oauth/yandex/callback' });
+    const svc = new OAuthService(db, live, store, makeSessions(), makeMfa(), makeAudit());
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ access_token: 'tok' }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ id: '555', login: 'oleg', display_name: 'Олег' }) });
+    global.fetch = fetchMock;
+
+    const result = await svc.processCallback('yandex', 'code', 's1', '1.2.3.4', 'ua');
+    expect(result.user.displayName).toBe('Олег');
+    const [tokenUrl, tokenInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(tokenUrl).toBe('https://oauth.yandex.ru/token');
+    const body = new URLSearchParams(tokenInit.body as string);
+    expect(body.get('code_verifier')).toBe('verifier');
+    expect(body.get('client_secret')).toBeNull();
+    expect(body.get('device_id')).toBeNull();
+    const [profileUrl, profileInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(profileUrl).toBe('https://login.yandex.ru/info?format=json');
+    expect((profileInit.headers as Record<string, string>).Authorization).toBe('OAuth tok');
+  });
+
+  it('A-01: VK ID — нужен device_id, он и state уходят при обмене кода; профиль запрашивается POST', async () => {
+    const { db, selectChain } = makeDb();
+    selectChain.limit.mockResolvedValueOnce([]);
+    const store = new InMemoryOAuthStateStore();
+    await store.save('s2', { provider: 'vk', codeVerifier: 'v2', redirectUri: 'https://blokker.ru/api/v1/auth/oauth/vk/callback' });
+    const svc = new OAuthService(db, live, store, makeSessions(), makeMfa(), makeAudit());
+    await expect(svc.processCallback('vk', 'code', 's2', 'ip', 'ua')).rejects.toBeInstanceOf(BadRequestException);
+
+    await store.save('s3', { provider: 'vk', codeVerifier: 'v3', redirectUri: 'https://blokker.ru/api/v1/auth/oauth/vk/callback' });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ access_token: 'vt', user_id: 7 }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ user: { user_id: '7', first_name: 'Олег', last_name: 'И.' } }) });
+    global.fetch = fetchMock;
+    const result = await svc.processCallback('vk', 'code', 's3', 'ip', 'ua', 'dev-1');
+    expect(result.user.displayName).toBe('Олег И.');
+    const [tokenUrl, tokenInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(tokenUrl).toBe('https://id.vk.ru/oauth2/auth');
+    const body = new URLSearchParams(tokenInit.body as string);
+    expect(body.get('device_id')).toBe('dev-1');
+    expect(body.get('state')).toBe('s3');
+    const [profileUrl, profileInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(profileUrl).toBe('https://id.vk.ru/oauth2/user_info');
+    expect(profileInit.method).toBe('POST');
+    expect(new URLSearchParams(profileInit.body as string).get('access_token')).toBe('vt');
+  });
+
+  it('A-01: провайдер не ответил — это «вход не удался», а не ошибка сервера', async () => {
+    const { db } = makeDb();
+    const store = new InMemoryOAuthStateStore();
+    await store.save('s4', { provider: 'yandex', codeVerifier: 'v', redirectUri: 'x' });
+    const svc = new OAuthService(db, live, store, makeSessions(), makeMfa(), makeAudit());
+    global.fetch = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
+    await expect(svc.processCallback('yandex', 'c', 's4', 'ip', 'ua')).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('A-01: в рабочей среде адреса сайта и возврата берутся из PUBLIC_URL, ключей нет — сервисы выключены', () => {
+    const cfg = loadApiConfig({
+      NODE_ENV: 'production', DATABASE_URL: 'postgresql://x', REDIS_URL: 'redis://x', TOTP_SECRET_KEY: 'a'.repeat(64), PUBLIC_URL: 'https://blokker.ru',
+    });
+    expect(cfg.oauthLive).toBe(true);
+    expect(cfg.webUrl).toBe('https://blokker.ru');
+    expect(cfg.oauthBaseUrl).toBe('https://blokker.ru/api/v1');
+    expect(cfg.allowedOrigins).toEqual(['https://blokker.ru', 'https://www.blokker.ru']);
+    expect(cfg.vkClientId).toBe('');
+    expect(cfg.yandexClientId).toBe('');
   });
 });

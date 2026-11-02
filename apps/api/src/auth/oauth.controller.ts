@@ -23,9 +23,19 @@ export class OAuthController {
     @Inject(API_CONFIG) private readonly config: ApiConfig,
   ) {}
 
+  /** The login page offers only the services that are connected (in production — those with the owner's keys). */
+  @Get('providers')
+  providers(): { vk: boolean; yandex: boolean } {
+    return { vk: this.oauth.isEnabled('vk'), yandex: this.oauth.isEnabled('yandex') };
+  }
+
   @Get(':provider/init')
   async init(@Param('provider') provider: string, @Res() res: Response): Promise<void> {
     const p = this.assertProvider(provider);
+    if (!this.oauth.isEnabled(p)) {
+      res.redirect(302, `${this.config.webUrl}/login?error=provider`);
+      return;
+    }
     const url = await this.oauth.initFlow(p);
     res.redirect(302, url);
   }
@@ -37,6 +47,7 @@ export class OAuthController {
     @Query('state') state: string,
     @Req() req: Request,
     @Res() res: Response,
+    @Query('device_id') deviceId?: string,
   ): Promise<void> {
     const p = this.assertProvider(provider);
     if (!code || !state) {
@@ -47,7 +58,7 @@ export class OAuthController {
     const { ip, ua } = clientOf(req);
     let result: Awaited<ReturnType<OAuthService['processCallback']>>;
     try {
-      result = await this.oauth.processCallback(p, code, state, ip, ua);
+      result = await this.oauth.processCallback(p, code, state, ip, ua, deviceId);
     } catch (e) {
       // The participant sees the login page with a Russian message, not a JSON error page.
       if (e instanceof BadRequestException) {

@@ -83,14 +83,52 @@ server {
         proxy_pass http://blokum_api;
     }
 
-    location /api/v1/auth/ {
-        limit_req zone=blokum_auth burst=5 nodelay;
+    # Публичное прохождение: ссылки на сборки (/s, /q), страница «выход», памятки участникам, статика сайта и
+    # API прохождения открыты без пароля даже в режиме «до запуска» — по ссылке сборку видят все. Кабинет,
+    # редактор, вход и всё остальное остаются закрытыми.
+    location ^~ /s/ {
+        auth_basic off;
+        limit_req zone=blokum_general burst=100 nodelay;
+        proxy_pass http://blokum_web;
+    }
+
+    location ^~ /q/ {
+        auth_basic off;
+        limit_req zone=blokum_general burst=100 nodelay;
+        proxy_pass http://blokum_web;
+    }
+
+    location = /out {
+        auth_basic off;
+        limit_req zone=blokum_general burst=100 nodelay;
+        proxy_pass http://blokum_web;
+    }
+
+    location ^~ /legal/ {
+        auth_basic off;
+        limit_req zone=blokum_general burst=100 nodelay;
+        proxy_pass http://blokum_web;
+    }
+
+    location ^~ /_next/ {
+        auth_basic off;
+        proxy_pass http://blokum_web;
+    }
+
+    location = /icon.svg {
+        auth_basic off;
+        proxy_pass http://blokum_web;
+    }
+
+    location ^~ /api/v1/play/ {
+        auth_basic off;
+        limit_req zone=blokum_play burst=60 nodelay;
         limit_req_status 429;
         proxy_pass http://blokum_api;
     }
 
-    location /api/v1/play/ {
-        limit_req zone=blokum_play burst=60 nodelay;
+    location /api/v1/auth/ {
+        limit_req zone=blokum_auth burst=5 nodelay;
         limit_req_status 429;
         proxy_pass http://blokum_api;
     }

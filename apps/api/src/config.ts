@@ -14,6 +14,8 @@ export interface ApiConfig {
   /** A-01: Яндекс ID OAuth client id (default for dev emulator). */
   yandexClientId: string;
   /** Base URL for OAuth provider endpoints; defaults to self for dev emulator. */
+  /** true in production: real VK ID / Yandex ID instead of the development emulator. */
+  oauthLive: boolean;
   oauthBaseUrl: string;
   /** Frontend URL for post-login redirect. */
   webUrl: string;
@@ -53,7 +55,9 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const redisUrl = env.REDIS_URL ?? (production ? undefined : DEV_REDIS_URL);
   if (!databaseUrl) throw new Error('Не задан DATABASE_URL (в рабочей среде он обязателен)');
   if (!redisUrl) throw new Error('Не задан REDIS_URL (в рабочей среде он обязателен)');
-  const rawOrigins = env.ALLOWED_ORIGINS ?? `http://localhost:3110`;
+  // In production the public address (PUBLIC_URL) is the single source: origins, login redirect and site address follow it.
+  const publicUrl = (env.PUBLIC_URL ?? '').replace(/\/+$/, '');
+  const rawOrigins = env.ALLOWED_ORIGINS ?? (publicUrl ? `${publicUrl},${publicUrl.replace('://', '://www.')}` : `http://localhost:3110`);
   const smsDailyBudget = env.SMS_DAILY_BUDGET ? Number(env.SMS_DAILY_BUDGET) : 1000;
   if (!Number.isInteger(smsDailyBudget) || smsDailyBudget < 0) {
     throw new Error(`Неверный суточный бюджет СМС: «${env.SMS_DAILY_BUDGET}»`);
@@ -71,10 +75,12 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     dataRoot: env.DATA_ROOT ?? '/',
     allowedOrigins: rawOrigins.split(',').map((s) => s.trim()).filter(Boolean),
     smsDailyBudget,
-    vkClientId: env.VK_CLIENT_ID ?? 'dev-vk',
-    yandexClientId: env.YANDEX_CLIENT_ID ?? 'dev-yandex',
-    oauthBaseUrl: env.OAUTH_BASE_URL ?? `${selfBaseUrl}/api/v1`,
-    webUrl: env.WEB_URL ?? 'http://localhost:3110',
+    // Production talks to the real VK ID / Yandex ID, and a service without the owner's keys is simply not offered.
+    oauthLive: production,
+    vkClientId: env.VK_CLIENT_ID ?? (production ? '' : 'dev-vk'),
+    yandexClientId: env.YANDEX_CLIENT_ID ?? (production ? '' : 'dev-yandex'),
+    oauthBaseUrl: env.OAUTH_BASE_URL ?? (publicUrl ? `${publicUrl}/api/v1` : `${selfBaseUrl}/api/v1`),
+    webUrl: env.WEB_URL ?? (publicUrl || 'http://localhost:3110'),
     phoneLogin: env.PHONE_LOGIN === '1',
     adminPhone: env.ADMIN_PHONE ?? '',
     adminAccounts: (env.ADMIN_ACCOUNTS ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean),
