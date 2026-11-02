@@ -83,11 +83,11 @@
 | ID | Задача | Статус | Коммит | Доказательство / заметки |
 |---|---|---|---|---|
 | P4.1 | Загрузка и лимиты | ✅ | c64112f, aadbe9f | `POST /media` прямая + chunked, проверка сигнатуры (15 тестов: B-02..B-07, TS-01, D-08); квота 200 МБ; лимиты FREE-тарифа; CI aadbe9f — success |
-| P4.2 | Обработка | 🟨 | c64112f | MVP: ClamAV (TS-21), EXIF+WebP-варианты (TS-20), HEIC→JPEG, Lottie-очистка (TS-25) — 19 тестов воркера; Осталось после MVP: GIF→MP4/WebM+постер, видео 720p/1080p, палитра TH-02 (ADR-035) |
+| P4.2 | Обработка | 🟨 | c64112f, f53b38d | MVP: ClamAV (TS-21), EXIF+WebP-варианты (TS-20), HEIC→JPEG, Lottie-очистка (TS-25) — 19 тестов воркера. Добавлено: GIF→MP4+WebM+постер (TS-20·B-03, ffmpeg, атомарная замена файла), VIDEO→720p H.264 (TS-20), палитра из изображения TH-02 (sharp+dominantColors→media.palette), тест video.test.ts (skipIf ffmpeg недоступен). Осталось: 1080p Про (ADR-035), аудио AAC/Opus |
 | P4.3 | Хранение и раздача | ✅ | c64112f | LocalStorageService: неугадываемый ключ ownerId/mediaId, удаление при hard-delete; интерфейс Storage зарезервирован под S3 |
 | P4.4 | Медиатека | ✅ | c64112f | GET /media (курсор-пагинация), DELETE с проверкой использования (usages), IDOR: только свои файлы |
 | P4.5 | Подключение модерации медиа | ✅ | caa7737, d1321c9 | TS-22: NSFW через onnxruntime-node (Falconsai/nsfw_image_detection ONNX, 5 классов, пороги 0.85/0.5, skip если нет модели — как ClamAV). TS-23: pHash dHash 9×8 через sharp, таблица media_blocked_hashes (migration 0009, 39 таблиц, 10 миграций), auto-block при расстоянии Хэмминга ≤6 бит, стоп-лист пополняется при BLOCK_MEDIA. TS-24: MediaStub «Проверяем файл»/«Файл недоступен» в рендерере (image/gif/video/audio/animation), play.service mediaOf() включает PROCESSING/BLOCKED с stub-маркером. Тесты: phash.test.ts (9), blocks.test.tsx TS-24, play.test.ts TS-24. CI 41402306935 success |
-| P4.6 | Свои шрифты | 🟨 | | |
+| P4.6 | Свои шрифты | 🟨 | f04d814, f53b38d | TH-04: POST/GET/DELETE /fonts, FontsModule, FontsService (группировка по family+ownerId), fontkit+subset-font — WOFF2 конвертация, hasCyrillic, OS/2 table (weight+italic). TS-26: font-processor.ts — проверка сигнатуры (TTF/OTF/WOFF/WOFF2), fontkit.create(), subset-font keepAllGlyphs, media FONT_SOURCE/READY/font/woff2. Плеер: fontsOf() в play.service, @font-face в /s/[slug]/page.tsx, fontFaceCSS helper. Фронт API: uploadFont/listFonts/deleteFont. Тесты: fonts.test.ts (6 тестов). Безопасность: POST/GET /fonts в OWN_SESSION, DELETE /fonts/:id в BY_ID. Ожидает CI 41409789246 |
 | P4.7 | Библиотека платформы | ⬜ | | |
 
 ### P5 · Плеер
