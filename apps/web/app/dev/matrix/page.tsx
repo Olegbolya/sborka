@@ -4,7 +4,7 @@ import { devPagesEnabled } from '../../../lib/dev/dev-pages';
 import { buildMatrixDocument } from '../../../lib/dev/matrix-gallery';
 import { DevMatrix } from './DevMatrix';
 
-export const metadata: Metadata = { title: 'Матрица свойств — Блокум' };
+export const metadata: Metadata = { title: 'Матрица свойств — Блоккер' };
 export const dynamic = 'force-dynamic';
 
 /** The document is built on the server: nested blocks get random ids, so the client must not rebuild it. */

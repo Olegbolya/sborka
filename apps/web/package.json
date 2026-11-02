@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Сайт, кабинет, редактор, плеер и админка Блокума (Next.js)",
+  "description": "Сайт, кабинет, редактор, плеер и админка Блоккера (Next.js)",
   "scripts": {
     "build": "node scripts/copy-vendor.mjs && next build",
     "dev": "node scripts/copy-vendor.mjs && next dev --port 3110",

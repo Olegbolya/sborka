@@ -7,18 +7,18 @@ import { loadPlayView, siteOrigin } from '../../../lib/play/server';
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const view = await loadPlayView(slug);
-  if (!view) return { title: 'Недоступно — Блокум', robots: { index: false, follow: false } };
+  if (!view) return { title: 'Недоступно — Блоккер', robots: { index: false, follow: false } };
   const origin = await siteOrigin();
   const title = view.title;
   // PL-05: nothing is indexed unless the creator on a paid tariff allows it.
   const indexable = view.state === 'ok' && view.indexable;
-  if (view.state !== 'ok') return { title: view.state === 'password' || view.state === 'age18' ? 'Блокум' : title, robots: { index: false, follow: false } };
+  if (view.state !== 'ok') return { title: view.state === 'password' || view.state === 'age18' ? 'Блоккер' : title, robots: { index: false, follow: false } };
   const image = view.ogImageId ? `${origin}${playMediaUrl(slug, view.ogImageId)}` : null;
   return {
     title,
     ...(view.description ? { description: view.description } : {}),
     robots: indexable ? { index: true, follow: true } : { index: false, follow: false },
-    openGraph: { title, ...(view.description ? { description: view.description } : {}), type: 'website', url: `${origin}/s/${slug}`, siteName: 'Блокум', locale: 'ru_RU', ...(image ? { images: [{ url: image }] } : {}) },
+    openGraph: { title, ...(view.description ? { description: view.description } : {}), type: 'website', url: `${origin}/s/${slug}`, siteName: 'Блоккер', locale: 'ru_RU', ...(image ? { images: [{ url: image }] } : {}) },
     twitter: { card: image ? 'summary_large_image' : 'summary', title, ...(view.description ? { description: view.description } : {}), ...(image ? { images: [image] } : {}) },
   };
 }

@@ -5,7 +5,7 @@ import { OutBack } from './OutBack';
 import './out.css';
 
 export const metadata: Metadata = {
-  title: 'Переход на другой сайт — Блокум',
+  title: 'Переход на другой сайт — Блоккер',
   robots: { index: false, follow: false },
   referrer: 'no-referrer',
 };
@@ -29,7 +29,7 @@ export default async function OutPage({ searchParams }: { searchParams: Promise<
       {target ? (
         <>
           <h1>Вы переходите на другой сайт</h1>
-          <p>Эту ссылку добавил автор сборки, Блокум её не проверял. Не вводите пароли, коды из СМС и данные банковских карт, если вас об этом просят.</p>
+          <p>Эту ссылку добавил автор сборки, Блоккер её не проверял. Не вводите пароли, коды из СМС и данные банковских карт, если вас об этом просят.</p>
           <p className="out-host">{target.host || target.pathname}</p>
           <p className="out-url" data-testid="out-url">{target.href}</p>
           <div className="out-actions">

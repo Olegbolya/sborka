@@ -14,7 +14,7 @@ export interface PlayOpen {
   document: PublicDocument;
   /** TS-24: entries with `stub` are not available but need a placeholder in the player. */
   media: Record<string, { kind: string; mime: string; stub?: 'processing' | 'blocked' }>;
-  /** PL-16 · the mark «Сделано в Блокуме — создать свою». */
+  /** PL-16 · the mark «Сделано в Блоккере — создать свою». */
   watermark: boolean;
   /** PL-18 · «Реклама», the advertiser and the erid. */
   ad: { advertiser: string; inn?: string; erid: string } | null;

@@ -2,7 +2,7 @@ import { SitePage } from '../../components/landing/SiteChrome';
 import { Faq } from '../../components/landing/Faq';
 import { HELP } from '../../lib/landing/content';
 
-export const metadata = { title: 'Помощь — Блокум', description: 'Как собрать первую сборку, поделиться ею, оживить блоки и посмотреть ответы.' };
+export const metadata = { title: 'Помощь — Блоккер', description: 'Как собрать первую сборку, поделиться ею, оживить блоки и посмотреть ответы.' };
 
 export default function HelpPage() {
   return (

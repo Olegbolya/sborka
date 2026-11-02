@@ -31,7 +31,7 @@ export interface PlayOpen {
    * TS-24: entries with `stub` are not available to serve but need a placeholder in the player.
    */
   media: Record<string, { kind: string; mime: string; stub?: 'processing' | 'blocked' }>;
-  /** PL-16 · the tariff of the creator asks for the mark «Сделано в Блокуме — создать свою». */
+  /** PL-16 · the tariff of the creator asks for the mark «Сделано в Блоккере — создать свою». */
   watermark: boolean;
   /** PL-18 · an advertising project says so: who advertises and the erid. */
   ad: { advertiser: string; inn?: string; erid: string } | null;

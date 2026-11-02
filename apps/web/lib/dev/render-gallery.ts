@@ -68,7 +68,7 @@ function liveBlock(type: BlockType): { block: BlockInput; h: number } {
   const base = { id, name: BLOCK_LABELS[type], frame: { x: 32, y: 16, w: 326, h: 120 } };
   switch (type) {
     case 'text':
-      return { h: 120, block: { ...base, type, style: card, textLayer: { paragraphs: [{ kind: 'p', runs: [{ t: 'Текст с ', b: false }, { t: 'жирным', b: true }, { t: ', ' }, { t: 'курсивом', i: true }, { t: ' и ' }, { t: 'ссылкой', href: 'https://blokum.ru', u: true }, { t: ' 🎄' }] }, { kind: 'bullet', runs: [{ t: 'Список — тоже' }] }] } } };
+      return { h: 120, block: { ...base, type, style: card, textLayer: { paragraphs: [{ kind: 'p', runs: [{ t: 'Текст с ', b: false }, { t: 'жирным', b: true }, { t: ', ' }, { t: 'курсивом', i: true }, { t: ' и ' }, { t: 'ссылкой', href: 'https://blokker.ru', u: true }, { t: ' 🎄' }] }, { kind: 'bullet', runs: [{ t: 'Список — тоже' }] }] } } };
     case 'image':
       return { h: 200, block: { ...base, type, frame: { ...base.frame, h: 200 }, style: { radius: { tl: 16, tr: 16, br: 16, bl: 16 } }, a11y: { alt: 'Зимний вечер: луна над ёлками' }, props: { media: { source: 'media', id: 'dev-foto-zima' }, caption: 'Подпись к фото' } } };
     case 'gif':

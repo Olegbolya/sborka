@@ -1,6 +1,6 @@
-# Блокум — сгенерировано infra/server-setup.sh из infra/nginx/blokum.conf.template.
+# Блоккер — сгенерировано infra/server-setup.sh из infra/nginx/blokum.conf.template.
 # Не правьте на сервере: измените шаблон в репозитории и запустите server-setup.sh снова.
-# Здесь только server_name Блокума; конфигурация BST (mybst.ru) не затрагивается.
+# Здесь только server_name Блоккера; конфигурация BST (mybst.ru) не затрагивается.
 
 upstream blokum_api { server 127.0.0.1:@@API_PORT@@; keepalive 16; }
 upstream blokum_web { server 127.0.0.1:@@WEB_PORT@@; keepalive 16; }

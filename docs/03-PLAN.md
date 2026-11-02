@@ -1,4 +1,4 @@
-# 03 · План реализации «Блокума»
+# 03 · План реализации «Блоккера»
 
 > Исполнитель — ИИ-агент (по умолчанию **Claude Sonnet, effort medium**). Задачи с пометкой **[OPUS]** (и все задачи фаз с пометкой в заголовке) рекомендуется выполнять на **Claude Opus, effort high** — в них архитектурные решения, движок сценариев, безопасность, деньги или юридические тексты. Каждую фазу после выполнения проверяет **отдельная сессия Opus high** по промпту `docs/prompts/REVIEW.md` — работа не оценивает сама себя.
 >
@@ -28,7 +28,7 @@
 
 ### P0.1 · Монорепозиторий [OPUS]
 **Покрывает:** `02-ARCHITECTURE.md` §1, §2
-**Сделать:** pnpm workspaces + Turborepo; `packages/config` (tsconfig strict с `noUncheckedIndexedAccess`, ESLint flat config с `@typescript-eslint/no-explicit-any: error`, Prettier, vitest base config с порогами покрытия); пустые, но **рабочие** пакеты `schema`, `engine`, `renderer`, `themes`, `db`, `ui`; приложения `web` (Next.js, страница `/` с текстом «Блокум — скоро»), `api` (NestJS, `GET /api/v1/health`), `worker` (подключение к Redis и heartbeat-ключ). Скрипты корня: `dev`, `build`, `lint`, `typecheck`, `test`, `e2e`, `verify`. Версии зависимостей — последние стабильные на дату выполнения (`npm view <pkg> version`), записать в `docs/DECISIONS.md`.
+**Сделать:** pnpm workspaces + Turborepo; `packages/config` (tsconfig strict с `noUncheckedIndexedAccess`, ESLint flat config с `@typescript-eslint/no-explicit-any: error`, Prettier, vitest base config с порогами покрытия); пустые, но **рабочие** пакеты `schema`, `engine`, `renderer`, `themes`, `db`, `ui`; приложения `web` (Next.js, страница `/` с текстом «Блоккер — скоро»), `api` (NestJS, `GET /api/v1/health`), `worker` (подключение к Redis и heartbeat-ключ). Скрипты корня: `dev`, `build`, `lint`, `typecheck`, `test`, `e2e`, `verify`. Версии зависимостей — последние стабильные на дату выполнения (`npm view <pkg> version`), записать в `docs/DECISIONS.md`.
 **Приёмка:**
 - [ ] `pnpm install && pnpm build` проходит с нуля в чистом клоне.
 - [ ] `pnpm dev` поднимает web на 3110, api на 3100, worker; `curl localhost:3100/api/v1/health` → `{"status":"ok",...}`.
@@ -58,7 +58,7 @@
 
 ### P0.4 · Скрипт подготовки сервера
 **Покрывает:** `02-ARCHITECTURE.md` §3, §3.1, §3.2
-**Сделать:** `infra/server-setup.sh` (идемпотентный, `set -euo pipefail`, каждый шаг печатает «уже сделано»/«сделано»): каталоги, Node 22 через nvm для `deploy`, база и пользователь PostgreSQL `blokum`, `ffmpeg`, `clamav`, `clamav-daemon`, sudoers только на `nginx -t`, `systemctl reload nginx` и копирование `infra/nginx/blokum.conf`; certbot для доменов из `infra/server.env`; `.env.prod` из примера с генерацией секретов. `infra/nginx/blokum.conf`: только `server_name` Блокума, базовая авторизация (режим до запуска), прокси `/api/` → 3100, остальное → 3110, медиа-домен — статика из `blokum-data/media` с правильными заголовками, лимиты частоты. `shellcheck` и dry-run в контейнере Ubuntu 24.04 в CI.
+**Сделать:** `infra/server-setup.sh` (идемпотентный, `set -euo pipefail`, каждый шаг печатает «уже сделано»/«сделано»): каталоги, Node 22 через nvm для `deploy`, база и пользователь PostgreSQL `blokum`, `ffmpeg`, `clamav`, `clamav-daemon`, sudoers только на `nginx -t`, `systemctl reload nginx` и копирование `infra/nginx/blokum.conf`; certbot для доменов из `infra/server.env`; `.env.prod` из примера с генерацией секретов. `infra/nginx/blokum.conf`: только `server_name` Блоккера, базовая авторизация (режим до запуска), прокси `/api/` → 3100, остальное → 3110, медиа-домен — статика из `blokum-data/media` с правильными заголовками, лимиты частоты. `shellcheck` и dry-run в контейнере Ubuntu 24.04 в CI.
 **Приёмка:**
 - [ ] `shellcheck` без ошибок; dry-run показывает, что скрипт **не** трогает пути и конфиги BST (тест grep по выводу).
 - [ ] Инструкция для владельца — в `docs/00-OWNER-DECISIONS.md` §4, по шагам, с командами для копирования.
@@ -70,7 +70,7 @@
 **Приёмка:**
 - [ ] Push в `main` → CI → деплой; на сервере работает версия коммита (диагностика печатает хэш).
 - [ ] Искусственно сломанная сборка API (через `workflow_dispatch` с параметром) приводит к откату, сайт работает.
-- [ ] BST после деплоя Блокума работает (`curl -s localhost:3000/api/health` в диагностике).
+- [ ] BST после деплоя Блоккера работает (`curl -s localhost:3000/api/health` в диагностике).
 
 ### P0.6 · Логи и тревоги
 **Сделать:** pino с маскированием (телефон, токены, коды, email), id запроса сквозь web → api → worker; модуль `Alerts` (email администратору; Telegram-бот администратора, если задан токен); тревоги из `02-ARCHITECTURE.md` §9.

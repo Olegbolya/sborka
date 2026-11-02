@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Фоновые задачи Блокума (BullMQ)",
+  "description": "Фоновые задачи Блоккера (BullMQ)",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "node ../../scripts/dev-node.mjs dist/main.js",

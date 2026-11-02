@@ -4,7 +4,7 @@ import { devPagesEnabled } from '../../../lib/dev/dev-pages';
 import { buildRenderGallery } from '../../../lib/dev/render-gallery';
 import { DevRenderGallery } from './DevRenderGallery';
 
-export const metadata: Metadata = { title: 'Галерея блоков — Блокум' };
+export const metadata: Metadata = { title: 'Галерея блоков — Блоккер' };
 export const dynamic = 'force-dynamic';
 
 export default async function DevRenderGalleryPage({ searchParams }: { searchParams: Promise<{ theme?: string }> }) {

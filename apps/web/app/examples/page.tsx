@@ -2,7 +2,7 @@ import { LazyDemo } from '../../components/landing/LazyDemo';
 import { SitePage } from '../../components/landing/SiteChrome';
 import { makeDemos } from '../../lib/landing/demos';
 
-export const metadata = { title: 'Примеры — Блокум', description: 'Три маленькие живые сборки: их можно потрогать и увидеть, из чего они сделаны.' };
+export const metadata = { title: 'Примеры — Блоккер', description: 'Три маленькие живые сборки: их можно потрогать и увидеть, из чего они сделаны.' };
 
 export default function ExamplesPage() {
   const demos = makeDemos();

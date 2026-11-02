@@ -3,7 +3,7 @@ import { type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Artboard, type ArtboardProps, DEV_THEMES, type MediaResolver } from '../src/index.js';
 
-export const media: MediaResolver = (ref) => (ref.id.startsWith('video') ? { url: `https://media.blokum.ru/${ref.id}.mp4`, kind: 'video' } : { url: `https://media.blokum.ru/${ref.id}.webp`, kind: 'image' });
+export const media: MediaResolver = (ref) => (ref.id.startsWith('video') ? { url: `https://media.blokker.ru/${ref.id}.mp4`, kind: 'video' } : { url: `https://media.blokker.ru/${ref.id}.webp`, kind: 'image' });
 
 /** Renders inside an artboard and returns a detached DOM element for queries. */
 export function render(node: ReactNode, props: Partial<ArtboardProps> = {}): HTMLElement {

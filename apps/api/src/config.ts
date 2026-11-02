@@ -34,7 +34,7 @@ export interface ApiConfig {
   /** AD-09: where the backups are put (P9.5); the admin shows the newest one. */
   backupDir?: string;
   mediaDir: string;
-  /** P4.3: base URL for serving media files (media.blokum.ru in production, /api/v1/media in dev). */
+  /** P4.3: base URL for serving media files (media.blokker.ru in production, /api/v1/media in dev). */
   mediaBaseUrl: string;
 }
 

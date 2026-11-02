@@ -1,4 +1,4 @@
-// PM2-процессы Блокума. Запускаются только через infra/deploy.sh (`--only blokum-*`), поэтому
+// PM2-процессы Блоккера. Запускаются только через infra/deploy.sh (`--only blokum-*`), поэтому
 // процессы BST в том же PM2 не затрагиваются. Секреты — из shared/.env.prod через `node --env-file`.
 const ROOT = process.env.BLOKUM_ROOT || '/home/deploy/blokum';
 const CURRENT = `${ROOT}/current`;

@@ -23,7 +23,7 @@ check() {
   printf 'events {}\nhttp {\n  include %s/blokum.conf;\n}\n' "$WORK" > "$WORK/nginx.conf"
   nginx -t -q -c "$WORK/nginx.conf"
   if grep -vE '^\s*#' "$WORK/blokum.conf" | grep -nE 'mybst|/home/deploy/bst|bst_api|bst_renderer'; then
-    echo "✗ $label: в конфигурации Блокума есть ссылки на BST" >&2; exit 1
+    echo "✗ $label: в конфигурации Блоккера есть ссылки на BST" >&2; exit 1
   fi
   echo "✓ nginx -t: $label"
 }
@@ -32,4 +32,4 @@ check "TLS + режим до запуска"
 check "только порт 80 (домен ещё не настроен)" --no-tls
 PRELAUNCH=0 check "после запуска (без пароля)"
 if grep -q 'auth_basic "' "$WORK/blokum.conf"; then echo "✗ при PRELAUNCH=0 остался пароль на сайте" >&2; exit 1; fi
-echo "nginx-конфигурация Блокума корректна"
+echo "nginx-конфигурация Блоккера корректна"

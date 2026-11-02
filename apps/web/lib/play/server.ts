@@ -14,7 +14,7 @@ export async function loadPlayView(slug: string): Promise<PlayView | null> {
 /** The address of the site as the participant sees it (for the absolute addresses of link previews). */
 export async function siteOrigin(): Promise<string> {
   const h = await headers();
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'blokum.ru';
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'blokker.ru';
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') || host.startsWith('127.') ? 'http' : 'https');
   return `${proto}://${host}`;
 }

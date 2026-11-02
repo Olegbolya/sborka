@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { devPagesEnabled } from '../../../lib/dev/dev-pages';
 import { DevArtboard } from './DevArtboard';
 
-export const metadata: Metadata = { title: 'Проверка артборда — Блокум' };
+export const metadata: Metadata = { title: 'Проверка артборда — Блоккер' };
 // The switch BLOKUM_DEV_PAGES is read on every request, not at build time.
 export const dynamic = 'force-dynamic';
 

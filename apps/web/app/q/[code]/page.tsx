@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { apiFetch } from '../../../lib/api-client';
 
-export const metadata = { title: 'Блокум', robots: { index: false, follow: false } };
+export const metadata = { title: 'Блоккер', robots: { index: false, follow: false } };
 
 /** PL-02 · the address of a QR code: counts the scan and goes to the project with the access point as the source. */
 export default async function ScanPage({ params }: { params: Promise<{ code: string }> }) {

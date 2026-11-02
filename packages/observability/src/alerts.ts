@@ -101,7 +101,7 @@ export class Alerts {
 
 const formatText = (a: Alert): string =>
   [
-    `${a.severity === 'critical' ? '🔴' : '🟠'} Блокум: ${a.title}`,
+    `${a.severity === 'critical' ? '🔴' : '🟠'} Блоккер: ${a.title}`,
     a.details,
     a.occurrences > 1 ? `Повторов с прошлой тревоги: ${a.occurrences}` : undefined,
     a.at.toISOString(),
@@ -143,7 +143,7 @@ export class EmailChannel implements AlertChannel {
   ) {}
 
   async send(alert: Alert): Promise<void> {
-    await this.mailer.send({ to: this.to, subject: `Блокум: ${alert.title}`, text: formatText(alert) });
+    await this.mailer.send({ to: this.to, subject: `Блоккер: ${alert.title}`, text: formatText(alert) });
   }
 }
 

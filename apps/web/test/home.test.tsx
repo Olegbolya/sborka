@@ -23,7 +23,7 @@ describe('P10.1 · главная и подвал', () => {
 
   it('P10.1 · вопросы-ответы и помощь написаны по-русски и без латиницы в тексте', () => {
     const text = [...FAQ.flatMap((f) => [f.q, f.a]), ...HELP.flatMap((t) => [t.title, ...t.steps])].join(' ');
-    const latin = text.replace(/VK ID|Яндекс ID|blokum\.ru\/s\/|QR/g, '').match(/[A-Za-z]{2,}/g);
+    const latin = text.replace(/VK ID|Яндекс ID|blokker\.ru\/s\/|QR/g, '').match(/[A-Za-z]{2,}/g);
     expect(latin).toBeNull();
   });
 

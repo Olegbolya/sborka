@@ -162,7 +162,7 @@ export class AccountService {
     });
     // ASVS V2.2.3, V2.5.5: a change of the address used for sign-in notices is told to the person — in the cabinet and, when there
     // was a confirmed address before, to that old address too (somebody else who changed it must not do it unseen).
-    const text = 'Адрес почты вашего аккаунта в Блокуме изменён. Если это были не вы, откройте «Аккаунт» → «Входы» и завершите чужие сеансы.';
+    const text = 'Адрес почты вашего аккаунта в Блоккере изменён. Если это были не вы, откройте «Аккаунт» → «Входы» и завершите чужие сеансы.';
     await this.notices?.notify({ userId: record.userId, kind: 'AUTH_EMAIL_CHANGED', title: 'Адрес почты изменён', body: text });
     if (before?.email && before.verifiedAt && before.email !== record.email) await this.emailSender?.sendNotice?.(before.email, 'Адрес почты изменён', text).catch(() => undefined);
   }

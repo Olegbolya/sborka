@@ -40,7 +40,7 @@ test.describe('P5.6 · безопасность участника', () => {
     await expect(p.locator('.bk-player-screen[data-live="true"]')).toBeVisible();
     const footer = p.getByTestId('play-footer');
     await expect(footer).toContainText('Создано пользователем');
-    await expect(p.getByTestId('play-watermark')).toHaveText('Сделано в Блокуме — создать свою');
+    await expect(p.getByTestId('play-watermark')).toHaveText('Сделано в Блоккере — создать свою');
     await footer.getByRole('button', { name: 'Пожаловаться' }).click();
     const dialog = p.getByTestId('report-dialog');
     await expect(dialog.getByRole('button', { name: 'Отправить' })).toBeDisabled();

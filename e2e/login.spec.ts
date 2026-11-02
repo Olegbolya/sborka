@@ -7,7 +7,7 @@ const SHOTS = 'e2e/__screenshots__';
 test.describe('A-01 · Вход через VK ID и Яндекс ID (эмулятор, ADR-034)', () => {
   test('A-01 · страница входа: две кнопки на русском, пароля нет', async ({ page }, info) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Вход в Блокум');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Вход в Блоккер');
     await expect(page.getByRole('link', { name: 'Войти через VK ID' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Войти через Яндекс ID' })).toBeVisible();
     await expect(page.locator('input[type="password"]')).toHaveCount(0);

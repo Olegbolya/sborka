@@ -67,42 +67,42 @@ function tpl(kind: MailKind, subject: string, text: string, html: string): MailT
 export const MAIL_TEMPLATES: Readonly<Record<MailKind, MailTemplate>> = {
   'account.email-verify': tpl(
     'account.email-verify',
-    'Подтвердите почту для «Блокума»',
+    'Подтвердите почту для «Блоккера»',
     [
       'Здравствуйте, {{displayName}}!',
       '',
       'Чтобы подтвердить почту, перейдите по ссылке:',
       '{{verifyUrl}}',
       '',
-      'Ссылка действует 1 час. Если вы не привязывали эту почту к аккаунту «Блокума», просто проигнорируйте письмо.',
+      'Ссылка действует 1 час. Если вы не привязывали эту почту к аккаунту «Блоккера», просто проигнорируйте письмо.',
     ].join('\n'),
     [
       '<p>Здравствуйте, {{displayName}}!</p>',
       '<p>Чтобы подтвердить почту, нажмите кнопку:</p>',
       '<p><a href="{{verifyUrl}}">Подтвердить почту</a></p>',
-      '<p>Ссылка действует 1 час. Если вы не привязывали эту почту к аккаунту «Блокума», просто проигнорируйте письмо.</p>',
+      '<p>Ссылка действует 1 час. Если вы не привязывали эту почту к аккаунту «Блоккера», просто проигнорируйте письмо.</p>',
     ].join(''),
   ),
 
   'account.email-changed': tpl(
     'account.email-changed',
-    'Почта аккаунта «Блокум» изменена',
+    'Почта аккаунта «Блоккер» изменена',
     [
       'Здравствуйте, {{displayName}}!',
       '',
-      'Почта на вашем аккаунте «Блокум» теперь — {{newEmail}}.',
+      'Почта на вашем аккаунте «Блоккер» теперь — {{newEmail}}.',
       'Если это сделали не вы, сразу напишите нам: {{supportEmail}}.',
     ].join('\n'),
     [
       '<p>Здравствуйте, {{displayName}}!</p>',
-      '<p>Почта на вашем аккаунте «Блокум» теперь — <strong>{{newEmail}}</strong>.</p>',
+      '<p>Почта на вашем аккаунте «Блоккер» теперь — <strong>{{newEmail}}</strong>.</p>',
       '<p>Если это сделали не вы, сразу напишите нам: <a href="mailto:{{supportEmail}}">{{supportEmail}}</a>.</p>',
     ].join(''),
   ),
 
   'account.deletion-scheduled': tpl(
     'account.deletion-scheduled',
-    'Удаление аккаунта «Блокум» запланировано',
+    'Удаление аккаунта «Блоккер» запланировано',
     [
       'Здравствуйте, {{displayName}}!',
       '',
@@ -118,7 +118,7 @@ export const MAIL_TEMPLATES: Readonly<Record<MailKind, MailTemplate>> = {
 
   'account.deletion-cancelled': tpl(
     'account.deletion-cancelled',
-    'Удаление аккаунта «Блокум» отменено',
+    'Удаление аккаунта «Блоккер» отменено',
     [
       'Здравствуйте, {{displayName}}!',
       '',
@@ -285,7 +285,7 @@ export const MAIL_TEMPLATES: Readonly<Record<MailKind, MailTemplate>> = {
 
   'marketing.feature-announcement': tpl(
     'marketing.feature-announcement',
-    '{{featureTitle}} — новая возможность «Блокума»',
+    '{{featureTitle}} — новая возможность «Блоккера»',
     [
       'Здравствуйте, {{displayName}}!',
       '',

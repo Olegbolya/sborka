@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Однократная подготовка домашнего сервера для Блокума (docs/02-ARCHITECTURE.md §3.2).
+# Однократная подготовка домашнего сервера для Блоккера (docs/02-ARCHITECTURE.md §3.2).
 # Запускает владелец, один раз и после изменения infra/nginx/blokum.conf.template или домена:
 #   sudo bash /home/deploy/blokum/repo-setup/infra/server-setup.sh
 # Повторный запуск безопасен: каждый шаг сначала проверяет, сделан ли он.
@@ -78,7 +78,7 @@ if [ -n "$RENDER_ONLY" ]; then
 fi
 
 echo "════════════════════════════════════════"
-echo " Блокум: подготовка сервера $(date '+%Y-%m-%d %H:%M')"
+echo " Блоккер: подготовка сервера $(date '+%Y-%m-%d %H:%M')"
 [ "$DRY_RUN" = 1 ] && echo " РЕЖИМ ПРОВЕРКИ (--dry-run): ничего не меняется"
 echo "════════════════════════════════════════"
 
@@ -118,7 +118,7 @@ BACKUP_CRON="/etc/cron.d/blokum-backup"
 if [ "$DRY_RUN" = 1 ]; then
   run "создать $BACKUP_CRON: infra/backup.sh от $DEPLOY_USER раз в сутки (нужен AGE_RECIPIENT в .env.prod)"
 else
-  printf '%s\n' "# P9.5: копия базы Блокума. Без AGE_RECIPIENT в .env.prod копия не делается (скрипт скажет об этом в журнале)." \
+  printf '%s\n' "# P9.5: копия базы Блоккера. Без AGE_RECIPIENT в .env.prod копия не делается (скрипт скажет об этом в журнале)." \
     "20 3 * * * ${DEPLOY_USER} bash -c 'set -a; . ${SHARED}/.env.prod; set +a; BACKUP_DIR=${DATA}/backups bash ${APP_ROOT}/current/infra/backup.sh' >>${LOGS}/backup.log 2>&1" >"$BACKUP_CRON"
   chmod 644 "$BACKUP_CRON"
 fi
@@ -207,7 +207,7 @@ else
 fi
 
 # ── 9. nginx ──────────────────────────────────────────────────────────────────
-step "nginx: сайт blokum.conf (только server_name Блокума)"
+step "nginx: сайт blokum.conf (только server_name Блоккера)"
 install_nginx() {
   local with_tls="$1"
   if [ "$DRY_RUN" = 1 ]; then

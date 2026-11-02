@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { devPagesEnabled } from '../../../lib/dev/dev-pages';
 import { DevShapes } from './DevShapes';
 
-export const metadata: Metadata = { title: 'Галерея форм — Блокум' };
+export const metadata: Metadata = { title: 'Галерея форм — Блоккер' };
 export const dynamic = 'force-dynamic';
 
 export default async function DevShapesPage({ searchParams }: { searchParams: Promise<{ theme?: string }> }) {

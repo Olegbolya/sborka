@@ -33,13 +33,13 @@ describe('P10.6 · шаблоны писем', () => {
   it('P10.6 · рендер подставляет переменные во всех частях письма', () => {
     const r = service.render({
       kind: 'account.email-verify',
-      variables: { displayName: 'Иван', verifyUrl: 'https://blokum.ru/verify?t=abc' },
+      variables: { displayName: 'Иван', verifyUrl: 'https://blokker.ru/verify?t=abc' },
     });
-    expect(r.subject).toContain('Блокума');
+    expect(r.subject).toContain('Блоккера');
     expect(r.text).toContain('Иван');
-    expect(r.text).toContain('https://blokum.ru/verify?t=abc');
+    expect(r.text).toContain('https://blokker.ru/verify?t=abc');
     expect(r.html).toContain('Иван');
-    expect(r.html).toContain('https://blokum.ru/verify?t=abc');
+    expect(r.html).toContain('https://blokker.ru/verify?t=abc');
     expect(r.marketing).toBe(false);
     expect(r.unsubscribeUrl).toBeUndefined();
   });
@@ -47,7 +47,7 @@ describe('P10.6 · шаблоны писем', () => {
   it('P10.6 · HTML-переменные экранируются (XSS невозможен через имя пользователя)', () => {
     const r = service.render({
       kind: 'account.email-verify',
-      variables: { displayName: '<script>alert(1)</script>', verifyUrl: 'https://blokum.ru/v?a=1&b=2' },
+      variables: { displayName: '<script>alert(1)</script>', verifyUrl: 'https://blokker.ru/v?a=1&b=2' },
     });
     expect(r.html).not.toContain('<script>');
     expect(r.html).toContain('&lt;script&gt;');
@@ -64,30 +64,30 @@ describe('P10.6 · шаблоны писем', () => {
         displayName: 'Мария',
         exampleTitle: 'Приглашение с ответом',
         tipBody: 'Собрать приглашение можно из шаблона «Приглашение с ответом» за 10 минут.',
-        exampleUrl: 'https://blokum.ru/app/new?template=sys-tpl-rsvp-invite',
+        exampleUrl: 'https://blokker.ru/app/new?template=sys-tpl-rsvp-invite',
       },
-      unsubscribeUrl: 'https://blokum.ru/mail/unsubscribe?token=xyz',
+      unsubscribeUrl: 'https://blokker.ru/mail/unsubscribe?token=xyz',
     });
     expect(r.marketing).toBe(true);
-    expect(r.unsubscribeUrl).toBe('https://blokum.ru/mail/unsubscribe?token=xyz');
+    expect(r.unsubscribeUrl).toBe('https://blokker.ru/mail/unsubscribe?token=xyz');
     expect(r.text).toContain('Отписаться от рассылки');
-    expect(r.text).toContain('https://blokum.ru/mail/unsubscribe?token=xyz');
+    expect(r.text).toContain('https://blokker.ru/mail/unsubscribe?token=xyz');
     expect(r.html).toContain('Отписаться от рассылки');
-    expect(r.html).toContain('https://blokum.ru/mail/unsubscribe?token=xyz');
+    expect(r.html).toContain('https://blokker.ru/mail/unsubscribe?token=xyz');
   });
 
   it('05-LEGAL §2.3 · маркетинговое письмо нельзя отправить без ссылки отписки', () => {
     expect(() =>
       service.render({
         kind: 'marketing.feature-announcement',
-        variables: { displayName: 'А', featureTitle: 'Темы', featureSummary: 'Теперь можно собрать свою тему из картинки.', featureUrl: 'https://blokum.ru/help/themes' },
+        variables: { displayName: 'А', featureTitle: 'Темы', featureSummary: 'Теперь можно собрать свою тему из картинки.', featureUrl: 'https://blokker.ru/help/themes' },
       }),
     ).toThrow(/отписки/);
   });
 
   it('P10.6 · отсутствие нужной переменной — явная ошибка, а не «{{displayName}}» в тексте', () => {
     expect(() =>
-      service.render({ kind: 'account.email-verify', variables: { verifyUrl: 'https://blokum.ru/v?t=1' } }),
+      service.render({ kind: 'account.email-verify', variables: { verifyUrl: 'https://blokker.ru/v?t=1' } }),
     ).toThrow(/displayName/);
   });
 
@@ -99,7 +99,7 @@ describe('P10.6 · шаблоны писем', () => {
     const template = MAIL_TEMPLATES[kind];
     const variables: Record<string, string | number> = {};
     for (const name of template.variables) variables[name] = `val-${name}`;
-    const r = service.render(template.marketing ? { kind, variables, unsubscribeUrl: 'https://blokum.ru/u?t=1' } : { kind, variables });
+    const r = service.render(template.marketing ? { kind, variables, unsubscribeUrl: 'https://blokker.ru/u?t=1' } : { kind, variables });
     expect(r.subject).not.toContain('{{');
     expect(r.text).not.toContain('{{');
     expect(r.html).not.toContain('{{');

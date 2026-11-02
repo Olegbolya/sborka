@@ -1,4 +1,4 @@
-export const metadata = { title: 'Недоступно — Блокум', robots: { index: false, follow: false } };
+export const metadata = { title: 'Недоступно — Блоккер', robots: { index: false, follow: false } };
 
 export default function Unavailable() {
   return (

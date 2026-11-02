@@ -14,10 +14,10 @@ describe('N-04 · заголовки безопасности', () => {
   it('N-04: в разработке разрешён eval, в рабочей среде — нет; медиа-домен добавляется к картинкам, звуку и видео', () => {
     expect(contentSecurityPolicy({ nonce: 'a', development: true })).toContain("'unsafe-eval'");
     expect(contentSecurityPolicy({ nonce: 'a' })).not.toContain("'unsafe-eval'");
-    const csp = contentSecurityPolicy({ nonce: 'a', mediaOrigin: 'https://media.blokum.ru' });
-    expect(csp).toContain("img-src 'self' data: blob: https://media.blokum.ru");
-    expect(csp).toContain("media-src 'self' blob: https://media.blokum.ru");
-    expect(csp).not.toMatch(/script-src[^;]*media\.blokum\.ru/);
+    const csp = contentSecurityPolicy({ nonce: 'a', mediaOrigin: 'https://media.blokker.ru' });
+    expect(csp).toContain("img-src 'self' data: blob: https://media.blokker.ru");
+    expect(csp).toContain("media-src 'self' blob: https://media.blokker.ru");
+    expect(csp).not.toMatch(/script-src[^;]*media\.blokker\.ru/);
   });
 
   it('N-04: датчики движения — только у плеера и редактора, остальное выключено везде', () => {
@@ -36,9 +36,9 @@ describe('N-04 · заголовки безопасности', () => {
   });
 
   it('N-06: страница не берёт ничего с чужих адресов — только свой сайт и, если задан, медиа-домен', () => {
-    const csp = contentSecurityPolicy({ nonce: 'a', mediaOrigin: 'https://media.blokum.ru' });
+    const csp = contentSecurityPolicy({ nonce: 'a', mediaOrigin: 'https://media.blokker.ru' });
     const hosts = csp.match(/https?:\/\/[^\s;]+/g) ?? [];
-    expect(hosts).toEqual(['https://media.blokum.ru', 'https://media.blokum.ru', 'https://media.blokum.ru', 'https://media.blokum.ru']);
+    expect(hosts).toEqual(['https://media.blokker.ru', 'https://media.blokker.ru', 'https://media.blokker.ru', 'https://media.blokker.ru']);
     expect(contentSecurityPolicy({ nonce: 'a' })).not.toMatch(/https?:\/\//);
   });
 });

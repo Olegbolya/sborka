@@ -37,7 +37,7 @@ export function LoginView({ failed }: { failed: boolean }) {
   return (
     <main style={s.main}>
       <div style={s.card}>
-        <h1 style={s.heading}>Вход в Блокум</h1>
+        <h1 style={s.heading}>Вход в Блоккер</h1>
         <p style={s.sub}>Войдите через аккаунт, который у вас уже есть. Пароль придумывать не нужно.</p>
         {failed && (
           <p role="alert" style={s.error}>

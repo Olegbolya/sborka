@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "API Блокума (NestJS)",
+  "description": "API Блоккера (NestJS)",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "node ../../scripts/dev-node.mjs dist/main.js",

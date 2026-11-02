@@ -6,9 +6,9 @@ import './landing.css';
 export function SiteHeader() {
   return (
     <header className="lp-header">
-      <a href="/" className="lp-logo" aria-label="Блокум — на главную">
+      <a href="/" className="lp-logo" aria-label="Блоккер — на главную">
         <span className="lp-logo-mark" aria-hidden="true" />
-        Блокум
+        Блоккер
       </a>
       <nav aria-label="Разделы сайта" className="lp-nav">
         <a href="/examples">Примеры</a>
@@ -27,7 +27,7 @@ export function SiteFooter() {
     <footer className="lp-footer">
       <div className="lp-wrap lp-footer-grid">
         <div>
-          <strong className="lp-footer-title">Блокум</strong>
+          <strong className="lp-footer-title">Блоккер</strong>
           <p>Конструктор интерактивных открыток, тестов, квизов и мини-игр. Участникам не нужна регистрация.</p>
           <p>
             <a href="/legal/contacts">Реквизиты исполнителя и контакты</a>

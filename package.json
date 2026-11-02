@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Блокум — конструктор интерактивных сборок",
+  "description": "Блоккер — конструктор интерактивных сборок",
   "packageManager": "pnpm@10.34.7",
   "engines": {
     "node": ">=22.12.0"

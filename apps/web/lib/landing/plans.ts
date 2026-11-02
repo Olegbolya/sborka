@@ -83,7 +83,7 @@ export function describePlan(p: PlanView): string[] {
   out.push(`${num(l.completionsPerMonth)}\u00a0${plural(l.completionsPerMonth, 'прохождение', 'прохождения', 'прохождений')} ${l.completionsScope === 'project' ? 'на сборку за срок пропуска' : 'в месяц'}`);
   out.push(`До\u00a0${num(l.screensPerProject)}\u00a0экранов и ${num(l.rulesPerProject)}\u00a0правил в сборке`);
   out.push(l.behaviors === 'all' ? 'Все поведения блоков' : 'Перетаскивание, переворот и убегание');
-  out.push(l.watermark ? 'Водяной знак «Сделано в Блокуме»' : 'Без водяного знака');
+  out.push(l.watermark ? 'Водяной знак «Сделано в Блоккере»' : 'Без водяного знака');
   if (l.customSlug) out.push('Свой адрес ссылки и оформленный QR-код');
   if (l.ownFonts) out.push('Свои шрифты и звук');
   if (l.accessControls) out.push('Пароль, расписание, одна попытка с устройства');

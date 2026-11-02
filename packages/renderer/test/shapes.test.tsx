@@ -206,10 +206,10 @@ describe('S-05 · S-06 · S-19: обводка, тени и маски по ко
 
   it('S-19: маска по картинке и затухание краёв пересекаются; обрезка по форме отключается', () => {
     const c = css({ mask: { image: { source: 'media', id: 'maska00001' }, fade: { edges: ['bottom', 'left'], size: 0.3 } } });
-    expect(c.root.maskImage).toBe('url("https://media.blokum.ru/maska00001.webp"), linear-gradient(to top, transparent 0%, #000 30%), linear-gradient(to right, transparent 0%, #000 30%)');
+    expect(c.root.maskImage).toBe('url("https://media.blokker.ru/maska00001.webp"), linear-gradient(to top, transparent 0%, #000 30%), linear-gradient(to right, transparent 0%, #000 30%)');
     expect(c.root).toMatchObject({ maskSize: 'contain, 100% 100%, 100% 100%', maskComposite: 'intersect', WebkitMaskComposite: 'source-in' });
     expect(css({ mask: { fade: { edges: ['top'], size: 0.5 } } }).root.maskComposite).toBeUndefined();
-    expect(css({ mask: { image: { source: 'media', id: 'maska00001' } } }).root.maskImage).toBe('url("https://media.blokum.ru/maska00001.webp")');
+    expect(css({ mask: { image: { source: 'media', id: 'maska00001' } } }).root.maskImage).toBe('url("https://media.blokker.ru/maska00001.webp")');
     expect(styleToCss(BlockStyle.parse({ mask: { image: { source: 'media', id: 'maska00001' } } }), { ...ctx, media: () => null }).root.maskImage).toBeUndefined();
     expect(css({ shape: { kind: 'star' }, mask: { clipToShape: false } }).content).toMatchObject({ overflow: 'visible' });
     expect(css({ shape: { kind: 'star' }, mask: { clipToShape: false } }).content.maskImage).toBeUndefined();

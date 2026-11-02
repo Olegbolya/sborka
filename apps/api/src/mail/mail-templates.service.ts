@@ -15,7 +15,7 @@ export interface RenderInput {
   readonly variables: Record<string, string | number>;
   /** Marketing letters require this URL — the renderer refuses to compose a marketing letter without it. */
   readonly unsubscribeUrl?: string;
-  /** The display address shown in the footer; defaults to «hello@blokum.ru» for all transactional letters. */
+  /** The display address shown in the footer; defaults to «hello@blokker.ru» for all transactional letters. */
   readonly supportEmail?: string;
 }
 

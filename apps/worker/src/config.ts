@@ -1,6 +1,6 @@
 export interface WorkerConfig {
   redisUrl: string;
-  /** Prefix of every Redis key of Блокум (docs/02-ARCHITECTURE.md §3: DB 3, prefix `bk:`). */
+  /** Prefix of every Redis key of Блоккер (docs/02-ARCHITECTURE.md §3: DB 3, prefix `bk:`). */
   keyPrefix: string;
   heartbeatIntervalMs: number;
   /** Partitions watched for free space (docs/02-ARCHITECTURE.md §9): data root and the system disk. */

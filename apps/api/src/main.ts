@@ -52,4 +52,4 @@ process.once('beforeExit', () => {
   redis.disconnect();
 });
 await app.listen(config.port, config.host);
-logger.info({ port: config.port }, 'API Блокума запущен');
+logger.info({ port: config.port }, 'API Блоккера запущен');

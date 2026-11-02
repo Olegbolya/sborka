@@ -38,7 +38,7 @@ const mediaWorker = startMediaProcessor({
 
 // Keep the process alive between timers (the timers themselves are unref'd so tests can exit).
 const keepAlive = setInterval(() => undefined, 60_000);
-logger.info('Воркер Блокума запущен');
+logger.info('Воркер Блоккера запущен');
 
 const shutdown = async (): Promise<void> => {
   clearInterval(keepAlive);

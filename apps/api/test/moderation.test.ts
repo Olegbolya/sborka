@@ -241,7 +241,7 @@ describe('P9.3 · AD-02, AD-03, AD-04, AD-07, AD-09, AD-11 · админка м�
     const moderator = await login('MODERATOR');
     const p = await publishedBy(owner.cookie);
     await call(t, moderator.cookie, 'post', '/admin/copyright-claims', { claimant: 'ООО «Автор»', objectDescription: 'Фотография', urls: [], statement: 'Права нарушены' }).expect(422);
-    const id = ((await call(t, moderator.cookie, 'post', '/admin/copyright-claims', { claimant: 'ООО «Автор»', objectDescription: 'Фотография на втором экране', urls: [`https://blokum.ru/s/${p.slug}`], statement: 'Права нарушены', projectId: p.id }).expect(201)).body as { id: string }).id;
+    const id = ((await call(t, moderator.cookie, 'post', '/admin/copyright-claims', { claimant: 'ООО «Автор»', objectDescription: 'Фотография на втором экране', urls: [`https://blokker.ru/s/${p.slug}`], statement: 'Права нарушены', projectId: p.id }).expect(201)).body as { id: string }).id;
     const claims = (await call(t, moderator.cookie, 'get', '/admin/copyright-claims').expect(200)).body as Array<{ id: string; remainingMs: number; overdue: boolean; open: boolean }>;
     const claim = claims.find((c) => c.id === id)!;
     expect(claim).toMatchObject({ overdue: false, open: true });

@@ -641,7 +641,7 @@ const scenarios: Scenario[] = [
   }),
 
   // ── AC-16 открыть ссылку (TS-07) ────────────────────────────────────────────
-  sc('AC-16: по нажатию — открывается', { blocks: [K], rules: [rule(on.tap('knopka'), [act.link('https://blokum.ru/')])] }, [ev.tap('knopka')], (o) => expect(o.of('openLink')).toEqual([{ type: 'openLink', url: 'https://blokum.ru/' }])),
+  sc('AC-16: по нажатию — открывается', { blocks: [K], rules: [rule(on.tap('knopka'), [act.link('https://blokker.ru/')])] }, [ev.tap('knopka')], (o) => expect(o.of('openLink')).toEqual([{ type: 'openLink', url: 'https://blokker.ru/' }])),
   sc('AC-16: после паузы жест уже закончился — не открывается', { blocks: [K], rules: [rule(on.tap('knopka'), [act.wait(100), act.link()])] }, [ev.tap('knopka'), tick(100)], (o) => {
     expect(o.of('openLink')).toEqual([]);
     expect(o.warnings).toEqual(['Ссылку можно открыть только сразу по действию участника']);

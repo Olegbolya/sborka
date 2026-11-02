@@ -3,7 +3,7 @@ import { PlanCards } from '../../components/landing/PlanCards';
 import { SitePage } from '../../components/landing/SiteChrome';
 import { loadPlans } from '../../lib/landing/plans';
 
-export const metadata = { title: 'Тарифы — Блокум', description: 'Бесплатный тариф без срока, разовый пропуск на праздник и подписки для тех, кто собирает регулярно.' };
+export const metadata = { title: 'Тарифы — Блоккер', description: 'Бесплатный тариф без срока, разовый пропуск на праздник и подписки для тех, кто собирает регулярно.' };
 
 export default async function TariffsPage() {
   const h = await headers();

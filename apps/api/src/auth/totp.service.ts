@@ -66,8 +66,8 @@ export class TotpService {
   /** Generates a TOTP URI for QR code rendering. */
   totpUri(encryptedSecret: string, phone: string): string {
     const secret = this.decryptSecret(encryptedSecret);
-    const encoded = encodeURIComponent(`Блокум (${phone})`);
-    return `otpauth://totp/${encoded}?secret=${toBase32(Buffer.from(secret, 'base64url'))}&issuer=Блокум&digits=${TOTP_DIGITS}&period=${TOTP_STEP_SEC}`;
+    const encoded = encodeURIComponent(`Блоккер (${phone})`);
+    return `otpauth://totp/${encoded}?secret=${toBase32(Buffer.from(secret, 'base64url'))}&issuer=Блоккер&digits=${TOTP_DIGITS}&period=${TOTP_STEP_SEC}`;
   }
 
   generateBackupCodes(): Array<{ code: string; hash: string }> {

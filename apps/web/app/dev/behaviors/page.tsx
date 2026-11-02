@@ -4,7 +4,7 @@ import { devPagesEnabled } from '../../../lib/dev/dev-pages';
 import { buildBehaviorScenes, buildPerfScene } from '../../../lib/dev/behaviors-gallery';
 import { DevBehaviors } from './DevBehaviors';
 
-export const metadata: Metadata = { title: 'Галерея поведений — Блокум' };
+export const metadata: Metadata = { title: 'Галерея поведений — Блоккер' };
 export const dynamic = 'force-dynamic';
 
 export default async function DevBehaviorsPage({ searchParams }: { searchParams: Promise<{ theme?: string; part?: string }> }) {

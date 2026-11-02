@@ -25,7 +25,7 @@ try {
 const summary = spawnSync('node', ['scripts/check-progress.mjs', '--summary'], { cwd: root, encoding: 'utf8' }).stdout?.trim() || 'Сводка недоступна — прочитай docs/PROGRESS.md.';
 process.stdout.write(
   [
-    '«Блокум»: состояние работы',
+    '«Блоккер»: состояние работы',
     summary,
     '',
     'Порядок: прочитай docs/PROGRESS.md → задачу в docs/03-PLAN.md → требования из «Покрывает» → делай без согласования плана.',

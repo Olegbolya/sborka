@@ -1,6 +1,6 @@
 import { ThemeEditor } from '../../../../../components/themes/ThemeEditor';
 
-export const metadata = { title: 'Редактор темы — Блокум' };
+export const metadata = { title: 'Редактор темы — Блоккер' };
 
 export default async function ThemeEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

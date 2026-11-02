@@ -159,7 +159,7 @@ describe('целостность данных', () => {
   it('единица библиотеки ссылается ровно на один файл: медиа или шрифт (LB-01)', async () => {
     const admin = await makeUser('+79000000008');
     const [col] = await t.db.insert(libraryCollections).values({ kind: 'STICKERS', title: 'Стикеры' }).returning();
-    const base = { collectionId: col!.id, title: 'Снежинка', license: 'OWN' as const, author: 'Блокум', source: 'создано для Блокума', rightsConfirmedById: admin.id };
+    const base = { collectionId: col!.id, title: 'Снежинка', license: 'OWN' as const, author: 'Блоккер', source: 'создано для Блоккера', rightsConfirmedById: admin.id };
     const none = await t.db.insert(libraryItems).values(base).catch((e: unknown) => e);
     expect(pgCode(none)).toBe('23514');
     const [m] = await t.db

@@ -123,7 +123,7 @@ export function PlayFooter({ slug, watermark }: { slug: string; watermark: boole
         </span>
         {watermark && (
           <a className="pl-link" href="/" target="_blank" rel="noopener" data-testid="play-watermark">
-            Сделано в Блокуме — создать свою
+            Сделано в Блоккере — создать свою
           </a>
         )}
       </footer>

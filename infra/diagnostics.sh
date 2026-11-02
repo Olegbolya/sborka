@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Диагностика Блокума на сервере (workflow «Диагностика сервера»). Только чтение; секреты не печатаются.
+# Диагностика Блоккера на сервере (workflow «Диагностика сервера»). Только чтение; секреты не печатаются.
 set -uo pipefail
 APP_ROOT="${BLOKUM_ROOT:-$HOME/blokum}"
 LOGS="${BLOKUM_LOGS:-$HOME/logs}"
@@ -15,7 +15,7 @@ if [ -L "$APP_ROOT/current" ]; then
   echo "current: $(basename "$(readlink "$APP_ROOT/current")"), коммит $(head -c 12 "$APP_ROOT/current/REVISION" 2>/dev/null)"
   echo "релизы: $(find "$APP_ROOT/releases" -mindepth 1 -maxdepth 1 -type d | wc -l)"
 else
-  echo "Блокум ещё не развёрнут"
+  echo "Блоккер ещё не развёрнут"
 fi
 [ -f "$ENV_FILE" ] && echo ".env.prod: есть ($(stat -c %a "$ENV_FILE"))" || echo ".env.prod: НЕТ — нужен server-setup.sh"
 
@@ -24,7 +24,7 @@ echo "── Процессы PM2 (только blokum-*)"
 pm2 jlist 2>/dev/null | node -e '
   let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => {
     const list = JSON.parse(s || "[]").filter((p) => p.name.startsWith("blokum-"));
-    if (!list.length) console.log("нет процессов Блокума");
+    if (!list.length) console.log("нет процессов Блоккера");
     for (const p of list) console.log(`${p.name}: ${p.pm2_env.status}, перезапусков ${p.pm2_env.restart_time}, память ${Math.round(p.monit.memory / 1048576)} МБ`);
   });'
 

@@ -69,13 +69,13 @@ describe('styleToCss — единственное место перевода с
       ],
     });
     expect(css({ fills: [{ kind: 'none' }, { kind: 'media', media: { source: 'media', id: 'video00002' }, fit: 'tile', scale: 2 }] }).layers).toEqual([
-      { kind: 'video', src: 'https://media.blokum.ru/video00002.mp4', style: { objectFit: 'cover', objectPosition: '50% 50%', transform: 'scale(2)', transformOrigin: '50% 50%' } },
+      { kind: 'video', src: 'https://media.blokker.ru/video00002.mp4', style: { objectFit: 'cover', objectPosition: '50% 50%', transform: 'scale(2)', transformOrigin: '50% 50%' } },
     ]);
     expect(m.layers).toEqual([
-      { kind: 'paint', style: { backgroundImage: 'url("https://media.blokum.ru/foto000001.webp")', backgroundSize: 'cover', backgroundPosition: '30% 60%', backgroundRepeat: 'no-repeat', transform: 'scale(1.5)', transformOrigin: '30% 60%' } },
-      { kind: 'paint', style: { backgroundImage: 'url("https://media.blokum.ru/uzor000001.webp")', backgroundSize: 'calc(50 * var(--u)) auto', backgroundPosition: '50% 50%', backgroundRepeat: 'repeat' } },
-      { kind: 'paint', style: { backgroundImage: 'url("https://media.blokum.ru/foto000002.webp")', backgroundSize: '100% 100%', backgroundPosition: '50% 50%', backgroundRepeat: 'no-repeat' } },
-      { kind: 'video', src: 'https://media.blokum.ru/video00001.mp4', style: { objectFit: 'contain', objectPosition: '50% 50%' } },
+      { kind: 'paint', style: { backgroundImage: 'url("https://media.blokker.ru/foto000001.webp")', backgroundSize: 'cover', backgroundPosition: '30% 60%', backgroundRepeat: 'no-repeat', transform: 'scale(1.5)', transformOrigin: '30% 60%' } },
+      { kind: 'paint', style: { backgroundImage: 'url("https://media.blokker.ru/uzor000001.webp")', backgroundSize: 'calc(50 * var(--u)) auto', backgroundPosition: '50% 50%', backgroundRepeat: 'repeat' } },
+      { kind: 'paint', style: { backgroundImage: 'url("https://media.blokker.ru/foto000002.webp")', backgroundSize: '100% 100%', backgroundPosition: '50% 50%', backgroundRepeat: 'no-repeat' } },
+      { kind: 'video', src: 'https://media.blokker.ru/video00001.mp4', style: { objectFit: 'contain', objectPosition: '50% 50%' } },
     ]);
   });
 
@@ -128,7 +128,7 @@ describe('styleToCss — единственное место перевода с
     const g = css({ text: { paint: { kind: 'linear', stops: [{ offset: 0, color: { hex: '#FF0000' } }, { offset: 1, color: { hex: '#0000FF' } }] }, outline: { width: 2, color: { hex: '#FFFFFF' } }, shadow: { x: 0, y: 2, blur: 4, color: { hex: '#000000' } } } }).text;
     expect(g).toMatchObject({ backgroundImage: 'linear-gradient(180deg, #FF0000 0%, #0000FF 100%)', color: 'transparent', backgroundClip: 'text', WebkitTextStroke: 'calc(2 * var(--u)) #FFFFFF', textShadow: '0px calc(2 * var(--u)) calc(4 * var(--u)) #000000' });
     const m = css({ text: { paint: { kind: 'media', media: { source: 'media', id: 'foto000001' }, scale: 2 } } }).text;
-    expect(m).toMatchObject({ backgroundImage: 'url("https://media.blokum.ru/foto000001.webp")', WebkitBackgroundClip: 'text' });
+    expect(m).toMatchObject({ backgroundImage: 'url("https://media.blokker.ru/foto000001.webp")', WebkitBackgroundClip: 'text' });
     expect(m.transform).toBeUndefined();
     const lost = styleToCss(BlockStyle.parse({ text: { paint: { kind: 'media', media: { source: 'media', id: 'foto000001' } } } }), { ...ctx, media: () => null }).text;
     expect(lost.backgroundImage).toBe('none');

@@ -86,7 +86,7 @@ describe('каналы', () => {
     const [url, init] = fetchFn.mock.calls[0] as unknown as [string, { body: string }];
     expect(url).toBe('https://api.telegram.org/botTOKEN/sendMessage');
     expect(JSON.parse(init.body)).toMatchObject({ chat_id: '42' });
-    expect((JSON.parse(init.body) as { text: string }).text).toContain('🔴 Блокум: Тест');
+    expect((JSON.parse(init.body) as { text: string }).text).toContain('🔴 Блоккер: Тест');
   });
 
   it('Telegram с ошибкой ответа бросает исключение (его ловит Alerts)', async () => {
@@ -97,7 +97,7 @@ describe('каналы', () => {
   it('почта уходит администратору с темой', async () => {
     const send = vi.fn(() => Promise.resolve());
     await new EmailChannel({ send }, 'admin@example.ru').send({ key: 'k', title: 'Диск', severity: 'warning', at: new Date(0), occurrences: 2 });
-    expect(send).toHaveBeenCalledWith(expect.objectContaining({ to: 'admin@example.ru', subject: 'Блокум: Диск' }));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ to: 'admin@example.ru', subject: 'Блоккер: Диск' }));
     expect((send.mock.calls[0] as unknown as [{ text: string }])[0].text).toContain('Повторов с прошлой тревоги: 2');
   });
 

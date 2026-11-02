@@ -148,7 +148,7 @@ describe('B-02…B-05, B-07: медиаблоки', () => {
     const view = { id: vb.id, protoId: vb.id, copy: false, parentId: null, visible: true, animateVisibility: false, interactive: true, dragging: false, zoneId: null, selected: false, x: 0, y: 0, w: 50, h: 50, rotation: 0, z: 0, overrides: {}, anim: {}, media: null as 'playing' | 'paused' | 'stopped' | null, flipped: false };
     const v = live([vb], { views: new Map([[vb.id, view]]) });
     const video = v.host.querySelector('video')!;
-    expect([video.autoplay, video.loop, video.controls, video.playbackRate, video.getAttribute('poster')]).toEqual([false, false, true, 1.5, 'https://media.blokum.ru/oblozhka01.webp']);
+    expect([video.autoplay, video.loop, video.controls, video.playbackRate, video.getAttribute('poster')]).toEqual([false, false, true, 1.5, 'https://media.blokker.ru/oblozhka01.webp']);
     act(() => {
       video.dispatchEvent(new Event('ended'));
     });

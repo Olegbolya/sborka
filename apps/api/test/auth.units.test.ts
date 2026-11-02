@@ -377,8 +377,8 @@ import { loadApiConfig } from '../src/config.js';
 
 describe('A-04 · ApiConfig.allowedOrigins', () => {
   it('разбирает список разрешённых origin из ALLOWED_ORIGINS', () => {
-    const config = loadApiConfig({ ALLOWED_ORIGINS: 'https://blokum.ru,https://www.blokum.ru' });
-    expect(config.allowedOrigins).toEqual(['https://blokum.ru', 'https://www.blokum.ru']);
+    const config = loadApiConfig({ ALLOWED_ORIGINS: 'https://blokker.ru,https://www.blokker.ru' });
+    expect(config.allowedOrigins).toEqual(['https://blokker.ru', 'https://www.blokker.ru']);
   });
   it('по умолчанию localhost:3110', () => {
     const config = loadApiConfig({});

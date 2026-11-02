@@ -3,7 +3,7 @@ import { ALLOWED_LICENSES, validateLicenseRecord } from '../src/index.js';
 
 describe('лицензии ассетов', () => {
   it('собственный ассет с автором и источником — без замечаний', () => {
-    expect(validateLicenseRecord({ license: 'own', author: 'Блокум', source: 'создано для Блокума' })).toEqual([]);
+    expect(validateLicenseRecord({ license: 'own', author: 'Блоккер', source: 'создано для Блоккера' })).toEqual([]);
   });
 
   it('список совпадает со скриптом check-licenses', () => {

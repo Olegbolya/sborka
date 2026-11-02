@@ -30,13 +30,13 @@ describe('E-01 · E-02: артборд и единица размера', () => 
     const own = render(<ScreenView screen={screenOf([], { background: [{ kind: 'solid', color: { hex: '#000000' } }] })} />);
     expect(styleOf(own.querySelector('.bk-screen-bg'))).toContain('linear-gradient(#000000, #000000)');
     const video = render(<ScreenView screen={screenOf([], { background: [{ kind: 'media', media: { source: 'media', id: 'video00001' }, fit: 'cover', focal: { x: 0.5, y: 0.5 }, scale: 1 }] })} />);
-    expect(video.querySelector('.bk-screen video')?.getAttribute('src')).toBe('https://media.blokum.ru/video00001.mp4');
+    expect(video.querySelector('.bk-screen video')?.getAttribute('src')).toBe('https://media.blokker.ru/video00001.mp4');
   });
 
   it('E-02: фон темы вокруг колонки — и цветом, и видео', () => {
     const tokens = { ...themes.dark, background: [{ kind: 'media' as const, media: { source: 'media' as const, id: 'video00009' }, fit: 'cover' as const, focal: { x: 0.5, y: 0.5 }, scale: 1 }, { kind: 'solid' as const, color: { hex: '#00000080' } }] };
     const host = render(<span />, { mode: 'player', unit: undefined, tokens });
-    expect(host.querySelector('.bk-stage > video')?.getAttribute('src')).toBe('https://media.blokum.ru/video00009.mp4');
+    expect(host.querySelector('.bk-stage > video')?.getAttribute('src')).toBe('https://media.blokker.ru/video00009.mp4');
     expect(styleOf(host.querySelectorAll('.bk-stage > div')[0])).toContain('position:fixed');
   });
 });
@@ -70,13 +70,13 @@ describe('E-03: свободное позиционирование блоков
   });
 
   it('L-05: подстановки в редакторе видны как метки, в плеере — значениями; ссылки — только в плеере', () => {
-    const text = { paragraphs: [{ kind: 'p' as const, runs: [{ sys: 'баллы' as const }, { v: 'peremen01' }, { answer: 'vopros001' }, { t: 'сайт', href: 'https://blokum.ru/' }] }] };
+    const text = { paragraphs: [{ kind: 'p' as const, runs: [{ sys: 'баллы' as const }, { v: 'peremen01' }, { answer: 'vopros001' }, { t: 'сайт', href: 'https://blokker.ru/' }] }] };
     const editor = render(<BlockView block={block('text', { textLayer: text })} />);
     expect(editor.querySelector('.bk-text')?.textContent).toBe('{{баллы}}{{переменная}}{{ответ}}сайт');
     expect(editor.querySelector('a')).toBeNull();
     const player = render(<BlockView block={block('text', { textLayer: text })} />, { mode: 'player', runText: (run) => ('sys' in run ? '7' : 'v' in run ? ' очков ' : null), linkHref: (u) => `/go?u=${encodeURIComponent(u)}` });
     expect(player.querySelector('.bk-text')?.textContent).toBe('7 очков сайт');
-    expect(player.querySelector('a')?.getAttribute('href')).toBe('/go?u=https%3A%2F%2Fblokum.ru%2F');
+    expect(player.querySelector('a')?.getAttribute('href')).toBe('/go?u=https%3A%2F%2Fblokker.ru%2F');
     expect(player.querySelector('a')?.getAttribute('rel')).toBe('noopener noreferrer nofollow');
   });
 
