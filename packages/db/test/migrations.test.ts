@@ -24,7 +24,7 @@ describe('миграции', () => {
     const expected = Object.values(schema)
       .filter((v) => isTable(v))
       .map((tbl) => getTableName(tbl));
-    expect(expected.length).toBe(38);
+    expect(expected.length).toBe(39);
     for (const name of expected) expect(actual, `нет таблицы ${name}`).toContain(name);
   });
 
