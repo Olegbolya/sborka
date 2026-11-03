@@ -159,7 +159,14 @@ export async function handleAt(page: Page, name: string): Promise<{ x: number; y
 export async function ensurePanel(page: Page, side: 'left' | 'right'): Promise<void> {
   const nav = page.getByTestId(`mobile-nav-${side}`);
   if (!(await nav.isVisible())) return;
-  if ((await nav.getAttribute('aria-pressed')) !== 'true') await nav.click();
+  if ((await nav.getAttribute('aria-pressed')) !== 'true') {
+    await nav.click();
+    // Шторка выезжает 0,25 с: пока она едет, нажатие по ней ещё не попадает в нужное место.
+    await page.waitForFunction((s) => {
+      const p = document.querySelector(`.ed-panel.${s}`);
+      return !!p && Math.abs(p.getBoundingClientRect().bottom - (window.innerHeight - 48)) < 1.5;
+    }, side);
+  }
 }
 
 export async function openTab(page: Page, name: string | RegExp): Promise<void> {
@@ -177,7 +184,14 @@ export async function openTab(page: Page, name: string | RegExp): Promise<void> 
 export async function collapsePanels(page: Page): Promise<void> {
   for (const side of ['left', 'right'] as const) {
     const nav = page.getByTestId(`mobile-nav-${side}`);
-    if ((await nav.isVisible()) && (await nav.getAttribute('aria-pressed')) === 'true') await nav.click();
+    if ((await nav.isVisible()) && (await nav.getAttribute('aria-pressed')) === 'true') {
+      await nav.click();
+      // Дожидаемся, пока шторка уедет вниз и перестанет закрывать холст.
+      await page.waitForFunction((s) => {
+        const p = document.querySelector(`.ed-panel.${s}`);
+        return !p || p.getBoundingClientRect().top >= window.innerHeight - 49;
+      }, side);
+    }
   }
 }
 
