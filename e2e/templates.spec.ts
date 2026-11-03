@@ -22,7 +22,10 @@ test.describe('TPL/ME · Шаблоны и мои элементы', () => {
     await page.getByTestId('tab-templates').click();
     await expect(page.getByTestId('templates-panel')).toBeVisible({ timeout: 3000 });
 
-    // No system templates → empty state visible
+    // Системные шаблоны в общей БД могут появиться (их наполняет владелец) — ищем заведомо отсутствующее имя.
+    await page.getByLabel('Поиск шаблонов').fill('zzzz-нет-такого-шаблона-9731');
+
+    // Нет совпадений → пустое состояние
     await expect(page.getByTestId('template-empty-state')).toBeVisible({ timeout: 3000 });
   });
 

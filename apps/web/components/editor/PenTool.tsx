@@ -61,11 +61,14 @@ export function PenOverlay({
   stageRef,
   screenId,
   screenHeight,
+  onDone,
 }: {
   unit: number;
   stageRef: RefObject<HTMLDivElement | null>;
   screenId: string;
   screenHeight: number;
+  /** The contour is drawn and selected: the editor goes back to «Выбор», so the new shape can be edited at once. */
+  onDone?: () => void;
 }) {
   const { store } = useControlEnv();
   const [nodes, setNodes] = useState<Pt[]>([]);
@@ -91,8 +94,9 @@ export function PenOverlay({
         { label: 'Нарисовать контур' },
       );
       if (createdId) store.getState().select(screenId, [createdId]);
+      onDone?.();
     } catch { /* flat or invalid — discard silently */ }
-  }, [screenId, store]);
+  }, [screenId, store, onDone]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -119,7 +123,12 @@ export function PenOverlay({
 
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'Escape') { setNodes([]); return; }
-      if (e.code === 'Enter') { commit(nodesRef.current); setNodes([]); }
+      if (e.code === 'Enter') {
+        // Фокус остаётся на кнопке «Перо»: без этого Enter ещё и «нажмёт» её и снова включит перо.
+        e.preventDefault();
+        commit(nodesRef.current);
+        setNodes([]);
+      }
       if (e.code === 'Backspace') setNodes(n => n.slice(0, -1));
     };
 
@@ -178,11 +187,14 @@ export function PencilOverlay({
   stageRef,
   screenId,
   screenHeight,
+  onDone,
 }: {
   unit: number;
   stageRef: RefObject<HTMLDivElement | null>;
   screenId: string;
   screenHeight: number;
+  /** The contour is drawn and selected: the editor goes back to «Выбор», so the new shape can be edited at once. */
+  onDone?: () => void;
 }) {
   const { store } = useControlEnv();
   const [pts, setPts] = useState<Pt[]>([]);
@@ -208,8 +220,9 @@ export function PencilOverlay({
         { label: 'Нарисовать карандашом' },
       );
       if (createdId) store.getState().select(screenId, [createdId]);
+      onDone?.();
     } catch { /* flat stroke — discard */ }
-  }, [screenId, store, unit]);
+  }, [screenId, store, unit, onDone]);
 
   useEffect(() => {
     const stage = stageRef.current;

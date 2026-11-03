@@ -505,6 +505,7 @@ export function Canvas() {
               stageRef={stageRef}
               screenId={screen.id}
               screenHeight={screen.height}
+              onDone={() => setToolMode('select')}
             />
           )}
           {toolMode === 'pencil' && (
@@ -513,6 +514,7 @@ export function Canvas() {
               stageRef={stageRef}
               screenId={screen.id}
               screenHeight={screen.height}
+              onDone={() => setToolMode('select')}
             />
           )}
           {toolMode === 'select' && nodeEditId && (
