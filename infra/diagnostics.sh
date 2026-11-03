@@ -47,3 +47,15 @@ for f in "$LOGS"/blokum-api-error.log "$LOGS"/blokum-web-error.log "$LOGS"/bloku
   echo "· $(basename "$f")"
   tail -n 15 "$f" | mask
 done
+
+echo "── Медиафайлы (статусы и причины)"
+if [ -f "$ENV_FILE" ]; then
+  dburl="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | cut -d= -f2-)"
+  psql "$dburl" -Atc "select status || ': ' || count(*) from media where deleted_at is null group by status order by 1" 2>&1 | head -8 | mask
+  psql "$dburl" -Atc "select to_char(created_at,'DD.MM HH24:MI') || ' ' || kind || ' ' || status || ' ' || mime || ' ' || bytes || ' ' || coalesce(left(moderation::text,120),'') from media where deleted_at is null order by created_at desc limit 5" 2>&1 | head -6 | mask
+fi
+for f in "$LOGS"/blokum-worker-out.log "$LOGS"/blokum-worker-error.log; do
+  [ -f "$f" ] || continue
+  echo "· $(basename "$f"): медиа"
+  grep -aE 'media|медиа|TS-2|REJECTED|BLOCKED|sharp|ffmpeg|ClamAV' "$f" | tail -n 8 | cut -c1-230 | mask
+done

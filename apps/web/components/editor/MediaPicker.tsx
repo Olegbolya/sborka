@@ -24,6 +24,7 @@ export function MediaPicker({ kinds, onPick, onClose }: { kinds: readonly MediaK
       form.append('file', file);
       const made = await upload<MediaItem>('/media', form);
       media.add({ ...made, createdAt: String(made.createdAt) });
+      media.watch(made.id);
       onPick({ source: 'media', id: made.id });
     } catch (e) {
       setError(errorText(e));

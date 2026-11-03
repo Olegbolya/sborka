@@ -43,6 +43,24 @@ export class MediaCatalog {
     for (const l of this.listeners) l();
   }
 
+  /**
+   * Обработка файла идёт в фоне (проверка, перекодирование) и может не пропустить его уже после загрузки. Пока статус не стал
+   * окончательным, раз в несколько секунд читаем его заново, чтобы холст показал правду без перезагрузки страницы.
+   */
+  watch(id: string): void {
+    const FINAL = new Set(['READY', 'REJECTED', 'BLOCKED']);
+    let tries = 0;
+    const tick = (): void => {
+      const item = this.byId.get(id);
+      if (!item || FINAL.has(item.status) || tries >= 8) return;
+      tries += 1;
+      setTimeout(() => {
+        void this.load().then(tick, tick);
+      }, 3000);
+    };
+    tick();
+  }
+
   /** The whole library, page by page. */
   async load(): Promise<void> {
     let cursor: string | null = null;
@@ -60,7 +78,9 @@ export class MediaCatalog {
   resolver = (ref: MediaRef): MediaSource | null => {
     if (ref.source !== 'media') return null;
     const item = this.byId.get(ref.id);
-    if (item && (item.status === 'BLOCKED' || item.status === 'REJECTED')) return null;
-    return { url: mediaUrl(ref.id), kind: item ? RENDER_KIND[item.kind] : 'image' };
+    const kind = item ? RENDER_KIND[item.kind] : 'image';
+    // Проверка не пропустила файл: холст прямо говорит об этом, а не делает вид, что файла нет.
+    if (item && (item.status === 'BLOCKED' || item.status === 'REJECTED')) return { url: '', kind, stub: 'blocked' };
+    return { url: mediaUrl(ref.id), kind };
   };
 }
