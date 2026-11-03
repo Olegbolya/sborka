@@ -16,6 +16,10 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
   const canRedo = useEditor((s) => s.future.length > 0 && s.gesture === null);
   const save = useSyncExternalStore(saver.subscribe, () => saver.state, () => saver.state);
   const [publishing, setPublishing] = useState(false);
+  // Опубликованная версия — копия черновика на момент публикации; правки после неё доходят до людей только новой публикацией.
+  const doc = useEditor((s) => s.doc);
+  const [publishedDoc, setPublishedDoc] = useState<unknown>(null);
+  const hasUnpublished = status !== 'PUBLISHED' || publishedDoc === null || doc !== publishedDoc;
   const [savingTemplate, setSavingTemplate] = useState(false);
 
   const saveAsTemplate = async () => {
@@ -39,7 +43,9 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
         flash('Сначала нужно сохранить правки — публикация остановлена.', 'error');
         return;
       }
+      const sent = store.getState().doc;
       await api(`/projects/${encodeURIComponent(projectId)}/publish`, { method: 'POST' });
+      setPublishedDoc(sent);
       onStatus('PUBLISHED');
       const { slug } = await api<{ slug: string }>(`/projects/${encodeURIComponent(projectId)}`);
       flash(`Сборка опубликована: ${window.location.origin}/s/${slug}. QR-код можно взять в кабинете.`, 'ok');
@@ -100,8 +106,8 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       <span className="ed-hint" data-testid="project-status">
         {STATUS_NAMES[status]}
       </span>
-      <button type="button" className="ed-btn primary" onClick={() => void publish()} disabled={publishing || status === 'PUBLISHED'}>
-        {publishing ? 'Публикуем…' : 'Опубликовать'}
+      <button type="button" className="ed-btn primary" onClick={() => void publish()} disabled={publishing || !hasUnpublished}>
+        {publishing ? 'Публикуем…' : status === 'PUBLISHED' ? 'Опубликовать изменения' : 'Опубликовать'}
       </button>
     </header>
   );

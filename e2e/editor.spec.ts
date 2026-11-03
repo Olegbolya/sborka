@@ -328,7 +328,7 @@ test.describe('E-19 · история версий', () => {
 });
 
 test.describe('E-16 · публикация', () => {
-  test('E-16 · «Опубликовать» сохраняет правки и публикует; кнопка затем недоступна', async ({ page }) => {
+  test('E-16 · «Опубликовать» сохраняет правки и публикует; кнопка недоступна, пока нет новых правок, и снова доступна после правки', async ({ page }) => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A')));
     await openEditor(page, id);
     await page.getByLabel('Название сборки').fill('К публикации');
@@ -337,5 +337,11 @@ test.describe('E-16 · публикация', () => {
     await expect(page.getByTestId('project-status')).toHaveText('Опубликована');
     await expect(page.getByRole('button', { name: 'Опубликовать' })).toBeDisabled();
     expect((await serverDraft(page, id)).doc.meta.title).toBe('К публикации');
+    // Правка после публикации: черновик ушёл вперёд, и людям по ссылке она придёт только новой публикацией.
+    await page.getByLabel('Название сборки').fill('К публикации, версия 2');
+    await expect(page.getByRole('button', { name: 'Опубликовать изменения' })).toBeEnabled();
+    await page.getByRole('button', { name: 'Опубликовать изменения' }).click();
+    await expect(page.getByRole('button', { name: 'Опубликовать' })).toBeDisabled();
+    await expect.poll(async () => (await page.request.get(`/api/v1/projects/${id}`)).ok()).toBe(true);
   });
 });
