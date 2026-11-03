@@ -1,0 +1,35 @@
+name: Скачать базы ClamAV (вручную)
+
+# Раздача баз ClamAV закрыта для российских адресов («Blocked by CDN»), поэтому сервер не может скачать их сам.
+# Этот процесс ТОЛЬКО скачивает базы на серверах GitHub и кладёт их в архив «clamav-db» (Artifacts внизу страницы запуска).
+# Ни на какой сервер он ничего не передаёт. Запуск вручную: Actions → «Скачать базы ClamAV (вручную)» → Run workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  download:
+    name: Скачать main, daily, bytecode
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Скачать базы
+        run: |
+          mkdir -p db && cd db
+          for f in main daily bytecode; do
+            ok=0
+            for i in 1 2 3; do
+              if curl -fsSL --max-time 600 -A "ClamAV-db-sync/1.0" -o "$f.cvd" "https://database.clamav.net/$f.cvd" \
+                 && [ "$(head -c 10 "$f.cvd")" = "ClamAV-VDB" ]; then ok=1; break; fi
+              echo "$f: попытка $i не удалась"; sleep 20
+            done
+            [ "$ok" = 1 ] || { echo "::error::Не удалось скачать $f.cvd (раздача ответила не базой)"; exit 1; }
+            ls -l "$f.cvd"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clamav-db
+          path: db/*.cvd
+          retention-days: 3
