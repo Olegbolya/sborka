@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { BLOCK_TYPES, createBlock } from '../packages/schema/dist/index.js';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { blockCenter, box, drag, hit, openEditor, saveStatus, seedProject, serverDraft } from './helpers/editor';
+import { blockCenter, box, drag, hit, openEditor, saveStatus, seedProject, serverDraft, openTab } from './helpers/editor';
 
 const SHOTS = 'e2e/__screenshots__';
 
@@ -19,7 +19,7 @@ const section = async (page: Page, id: string): Promise<Locator> => {
 };
 
 const pickInLayers = async (page: Page, name: string) => {
-  await page.getByRole('tab', { name: 'Слои' }).click();
+  await openTab(page, 'Слои');
   await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name, exact: true }).click();
 };
 

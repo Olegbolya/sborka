@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { openEditor, seedProject } from './helpers/editor';
+import { openEditor, seedProject, openTab } from './helpers/editor';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -11,7 +11,7 @@ test.describe('LB-03 · вкладка Библиотека — пустое с�
     const { id } = await seedProject(page);
     await openEditor(page, id);
 
-    await page.getByRole('tab', { name: 'Библиотека' }).click();
+    await openTab(page, 'Библиотека');
     const panel = page.getByTestId('library-panel');
     await expect(panel).toBeVisible();
     await expect(panel).toContainText('Библиотека пополняется');

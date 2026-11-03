@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { hit, openEditor, seedProject, serverDraft, textBlock } from './helpers/editor';
+import { hit, openEditor, seedProject, serverDraft, textBlock, openTab } from './helpers/editor';
 
 /* P3.8 · SC-02: the rules of a block are made in the interface, without code. */
 type Rule = { when: Record<string, unknown>; do: Array<Record<string, unknown>>; if?: Record<string, unknown> };
@@ -20,7 +20,7 @@ test.describe('P3.8 · конструктор правил', () => {
     });
     await openEditor(page, id);
     await hit(page, 'Кнопка').click();
-    await page.getByRole('tab', { name: 'Сценарии' }).click();
+    await openTab(page, 'Сценарии');
     await page.getByLabel('Добавить правило: когда').selectOption({ label: 'Нажали' });
     const rule = page.locator('[data-rule]').first();
     await expect(rule).toContainText('Когда нажали на «Кнопка»');
@@ -46,7 +46,7 @@ test.describe('P3.8 · конструктор правил', () => {
     const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(textBlock('bezhit_1', 'Нет', 120, 200, 160, 56)));
     await openEditor(page, id);
     await hit(page, 'Нет').click();
-    await page.getByRole('tab', { name: 'Сценарии' }).click();
+    await openTab(page, 'Сценарии');
     await page.getByLabel('Добавить поведение').selectOption({ label: 'Убегает' });
     const behavior = page.locator('[data-behavior="flee"]');
     await expect(behavior).toBeVisible();
@@ -228,7 +228,7 @@ test.describe('P3.8 · конструктор правил', () => {
     const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(textBlock('knopka_a', 'Кнопка', 95, 300, 200, 56), textBlock('korobka_1', 'Коробка', 20, 60, 160, 48)));
     await openEditor(page, id);
     await hit(page, 'Кнопка').click();
-    await page.getByRole('tab', { name: 'Сценарии' }).click();
+    await openTab(page, 'Сценарии');
     await page.getByLabel('Быстрое действие').selectOption({ label: 'По нажатию — скрыть блок' });
     const rule = page.locator('[data-rule]').first();
     await expect(rule).toContainText('Когда нажали на «Кнопка» → скрыть «Коробка»');

@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { openEditor, seedProject } from './helpers/editor';
+import { openEditor, seedProject, openTab } from './helpers/editor';
 
 /* P10.5 · уроки внутри редактора: пошаговые подсказки сами замечают сделанное; работают при пустых библиотеке и темах. */
 const addBlock = async (page: Page, type: string) => {
-  await page.getByRole('tab', { name: 'Добавить' }).click();
+  await openTab(page, 'Добавить');
   await page.locator(`[data-add-type="${type}"]`).click();
 };
 const openLesson = async (page: Page, id: string) => {
@@ -26,7 +26,7 @@ test.describe('P10.5 · уроки в редакторе', () => {
 
     await openLesson(page, 'rg-01');
     await expect(panel.getByTestId('lesson-progress')).toHaveText('Шаг 1 из 6');
-    await page.getByRole('tab', { name: 'Добавить' }).click();
+    await openTab(page, 'Добавить');
     await expect(page.locator('[data-add-type="button"]')).toHaveAttribute('data-lesson-glow', '');
 
     await addBlock(page, 'text');

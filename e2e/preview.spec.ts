@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { nextButton, openEditor, seedProject, textBlock } from './helpers/editor';
+import { nextButton, openEditor, seedProject, textBlock, openTab } from './helpers/editor';
 
 const SHOTS = 'e2e/__screenshots__';
 
@@ -64,7 +64,7 @@ test.describe('E-20 · предпросмотр', () => {
   test('E-20 · предпросмотр показывает правки, которые ещё не ушли на сервер', async ({ page }) => {
     const { id } = await seedTwoScreens(page);
     await openEditor(page, id);
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: 'Привет, это первый экран', exact: true }).click();
     await page.keyboard.press('Delete');
     await page.getByRole('button', { name: 'Предпросмотр' }).click();

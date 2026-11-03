@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { nextButton, openEditor, saveStatus, seedProject, textBlock } from './helpers/editor';
+import { nextButton, openEditor, saveStatus, seedProject, textBlock, openTab } from './helpers/editor';
 
 /**
  * A6 · the whole way of the product in one test: a creator signs in, builds, publishes, a participant passes it without
@@ -16,7 +16,7 @@ test('PL-03, PL-11, PL-12, D-04, D-06 · войти → собрать → оп�
     d.screens.push({ id: 'ekran_dva', name: 'Спасибо', blocks: [textBlock('spasibo_1', 'Спасибо за ответ', 20, 60, 300, 60)] } as never);
   });
   await openEditor(page, id);
-  await page.getByRole('tab', { name: 'Добавить' }).click();
+  await openTab(page, 'Добавить');
   await page.locator('[data-add-type="textInput"]').click();
   await expect(saveStatus(page)).toHaveText('Сохранено');
   await page.getByRole('button', { name: 'Опубликовать' }).click();

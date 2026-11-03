@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { hit, nextButton, openEditor, saveStatus, screensList, seedProject, serverDraft, stage, textBlock } from './helpers/editor';
+import { hit, nextButton, openEditor, saveStatus, screensList, seedProject, serverDraft, stage, textBlock, openTab } from './helpers/editor';
 
 const SHOTS = 'e2e/__screenshots__';
 
@@ -78,11 +78,11 @@ test.describe('E-13, E-15, E-16 · оболочка редактора', () => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(nextButton('knopka_a', 'Кнопка A')));
     await openEditor(page, id);
     await hit(page, 'Кнопка A').click();
-    await page.getByRole('tab', { name: 'Содержимое' }).click();
+    await openTab(page, 'Содержимое');
     await page.getByLabel('Название блока').fill('Главная кнопка');
     await page.getByLabel('Описание для скринридера').fill('Переходит к следующему экрану');
     await expect(hit(page, 'Главная кнопка')).toBeVisible();
-    await page.getByRole('tab', { name: 'Сценарии' }).click();
+    await openTab(page, 'Сценарии');
     await expect(page.getByTestId('scenario-counts')).toHaveText('Правил: 1. Поведений: 0.');
     await expect.poll(async () => {
       const b = (await serverDraft(page, id)).doc.screens[0]!.blocks[0] as { name: string; a11y: { alt?: string } };
@@ -124,7 +124,7 @@ test.describe('E-13, E-15, E-16 · оболочка редактора', () => {
   test('E-13 · слои: дерево, скрыть в редакторе, заблокировать; выбор из слоёв выделяет блок на холсте', async ({ page }) => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A'), textBlock('tekst_b', 'Текст B', 20, 120)));
     await openEditor(page, id);
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     const layers = page.getByRole('list', { name: 'Слои' });
     await layers.getByRole('button', { name: 'Текст B', exact: true }).click();
     await expect(hit(page, 'Текст B')).toHaveAttribute('aria-pressed', 'true');

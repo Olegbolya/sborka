@@ -775,6 +775,15 @@
     color: var(--accent);
     font-weight: 700;
   }
+  /* P10.5 на телефоне: панель урока стоит над самой высокой шторкой (50dvh) и нижней полосой (48px), чтобы не закрывать
+     ни вкладки шторки, ни кнопки полосы; её можно свернуть. */
+  .ed-lesson {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    bottom: calc(48px + 50dvh + 8px);
+    max-height: 26dvh;
+  }
 }
 @media (min-width: 768px) {
   .ed-mobile-nav { display: none; }

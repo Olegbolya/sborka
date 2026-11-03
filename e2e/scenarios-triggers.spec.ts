@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { hit, openEditor, seedProject } from './helpers/editor';
+import { hit, openEditor, seedProject, openTab } from './helpers/editor';
 
 /*
  * P3.8 · TR-01…TR-16: для каждого триггера правило создаётся в интерфейсе (вкладка «Сценарии» блока), а в предпросмотре
@@ -237,7 +237,7 @@ test.describe('P3.8 · правило с каждым триггером соз�
       const id = await world(page, c.audio === true);
       await openEditor(page, id);
       await hit(page, c.on).click();
-      await page.getByRole('tab', { name: 'Сценарии' }).click();
+      await openTab(page, 'Сценарии');
       for (const behavior of c.behaviors ?? []) await page.getByLabel('Добавить поведение').selectOption({ label: behavior });
       await page.getByLabel('Добавить правило: когда').selectOption({ label: c.title });
       const rule = page.locator('[data-rule]').last();

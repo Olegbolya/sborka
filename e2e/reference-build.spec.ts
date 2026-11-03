@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { hit, openEditor, saveStatus, seedProject, serverDraft } from './helpers/editor';
+import { hit, openEditor, saveStatus, seedProject, serverDraft, openTab } from './helpers/editor';
 
 /*
  * P3.12 · RG-01, RG-06, RG-07: игра собирается в редакторе через интерфейс, шаг за шагом, без единой строки кода, а потом проходится
@@ -9,9 +9,9 @@ import { hit, openEditor, saveStatus, seedProject, serverDraft } from './helpers
 type BlockKind = 'text' | 'button' | 'shape' | 'zone' | 'timer' | 'value';
 
 async function addBlock(page: Page, type: BlockKind, name: string, frame: { x: number; y: number; w: number; h: number }, text?: string): Promise<void> {
-  await page.getByRole('tab', { name: 'Добавить' }).click();
+  await openTab(page, 'Добавить');
   await page.locator(`[data-add-type="${type}"]`).click();
-  await page.getByRole('tab', { name: 'Содержимое' }).click();
+  await openTab(page, 'Содержимое');
   await page.getByLabel('Название блока').fill(name);
   if (text !== undefined) {
     if ((await page.getByRole('textbox', { name: 'Текст блока' }).count()) === 0) await page.getByRole('button', { name: 'Добавить текст' }).click();
@@ -20,13 +20,13 @@ async function addBlock(page: Page, type: BlockKind, name: string, frame: { x: n
     await page.keyboard.press('Control+A');
     await page.keyboard.type(text);
   }
-  await page.getByRole('tab', { name: 'Оформление' }).click();
+  await openTab(page, 'Оформление');
   for (const [label, value] of [['X', frame.x], ['Y', frame.y], ['Ширина', frame.w], ['Высота', frame.h]] as const) await page.getByLabel(label, { exact: true }).fill(String(value));
 }
 
 const selectBlock = async (page: Page, name: string) => {
   await hit(page, name).click();
-  await page.getByRole('tab', { name: 'Сценарии' }).click();
+  await openTab(page, 'Сценарии');
 };
 const rule = (page: Page, n: number): Locator => page.locator('[data-rule]').nth(n);
 const openRule = async (page: Page, n: number) => {
@@ -35,7 +35,7 @@ const openRule = async (page: Page, n: number) => {
   return r;
 };
 const newScreen = async (page: Page) => {
-  await page.getByRole('tab', { name: 'Экраны' }).click();
+  await openTab(page, 'Экраны');
   await page.getByRole('button', { name: 'Добавить экран' }).click();
 };
 const player = async (page: Page) => {
@@ -109,7 +109,7 @@ test.describe('P3.12 · игры собираются через интерфе�
     expect(doc.screens).toHaveLength(2);
 
     // Played: it runs away, doubts, gives in; the second screen ends the game.
-    await page.getByRole('tab', { name: 'Экраны' }).click();
+    await openTab(page, 'Экраны');
     await page.getByRole('list', { name: 'Экраны' }).getByRole('listitem').first().click();
     const g = await player(page);
     const net_ = g.blk(await selectedId(g, 'Нет'));
@@ -217,7 +217,7 @@ test.describe('P3.12 · игры собираются через интерфе�
     expect(doc.rules).toMatchObject([{ when: { kind: 'variableChange' }, if: { op: 'gte', value: 3 }, do: [{ kind: 'wait' }, { kind: 'goTo' }] }]);
 
     // Played: every fruit is carried to its own caption; the third one takes the player to the last screen.
-    await page.getByRole('tab', { name: 'Экраны' }).click();
+    await openTab(page, 'Экраны');
     await page.getByRole('list', { name: 'Экраны' }).getByRole('listitem').first().click();
     const g = await player(page);
     for (const [emoji, fruit] of fruits) {
@@ -252,13 +252,13 @@ test.describe('P3.12 · игры собираются через интерфе�
     // 2 · the star (a pattern: hidden at the start — S-16 —, flies down), the generator, the ground, the timer and the score.
     await addBlock(page, 'shape', 'Звезда', { x: 0, y: 0, w: 48, h: 48 }, '⭐');
     await page.getByLabel('Скрыт, пока правило его не покажет').check();
-    await page.getByRole('tab', { name: 'Сценарии' }).click();
+    await openTab(page, 'Сценарии');
     await page.getByLabel('Добавить поведение').selectOption({ label: 'Движется' });
     const move = page.locator('[data-behavior="move"]');
     await move.getByLabel('Скорость', { exact: true }).fill('160');
     await move.getByLabel('Разброс направления', { exact: true }).fill('20');
     await addBlock(page, 'shape', 'Генератор', { x: 0, y: 0, w: 1, h: 1 });
-    await page.getByRole('tab', { name: 'Сценарии' }).click();
+    await openTab(page, 'Сценарии');
     await page.getByLabel('Добавить поведение').selectOption({ label: 'Выпускает копии' });
     const spawner = page.locator('[data-behavior="spawner"]');
     await spawner.getByLabel('Чьи копии', { exact: true }).selectOption({ label: 'Звезда' });
@@ -270,11 +270,11 @@ test.describe('P3.12 · игры собираются через интерфе�
     await spawner.getByLabel('Не больше копий', { exact: true }).fill('12');
     await addBlock(page, 'zone', 'Земля', { x: 0, y: 700, w: 390, h: 40 });
     await addBlock(page, 'timer', 'Таймер', { x: 20, y: 20, w: 120, h: 40 });
-    await page.getByRole('tab', { name: 'Содержимое' }).click();
+    await openTab(page, 'Содержимое');
     await page.getByLabel('Секунд', { exact: true }).fill('8');
     await page.getByTestId('props-inspector').getByLabel('Вид', { exact: true }).selectOption({ label: 'Секунды' });
     await addBlock(page, 'value', 'Счёт', { x: 230, y: 20, w: 140, h: 40 });
-    await page.getByRole('tab', { name: 'Содержимое' }).click();
+    await openTab(page, 'Содержимое');
     await page.getByLabel('Переменная', { exact: true }).selectOption({ label: 'Поймано' });
 
     // 3 · the rules of the screen: a tap on a copy catches it, a copy that touches the ground falls, the timer ends the game.
@@ -328,7 +328,7 @@ test.describe('P3.12 · игры собираются через интерфе�
     expect(doc.screens[0]!.rules.map((x) => [x.when.kind, x.do.map((a) => a.kind)])).toEqual([['tap', ['setVariable', 'destroy']], ['collide', ['setVariable', 'destroy']], ['timer', ['record', 'goTo']]]);
 
     // Played: a star falls, a tap on it counts, the timer ends the game and the second screen comes.
-    await page.getByRole('tab', { name: 'Экраны' }).click();
+    await openTab(page, 'Экраны');
     await page.getByRole('list', { name: 'Экраны' }).getByRole('listitem').first().click();
     const g = await player(page);
     const copy = g.frame.locator(`[data-block-id^="${star.id}"]:visible`);

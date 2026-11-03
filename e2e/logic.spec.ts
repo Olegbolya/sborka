@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { nextButton, openEditor, seedProject, serverDraft, textBlock } from './helpers/editor';
+import { nextButton, openEditor, seedProject, serverDraft, textBlock, openTab } from './helpers/editor';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -53,11 +53,11 @@ test.describe('P3.7 · логика', () => {
 
     // Метки результата у шести вариантов — в панели «Содержимое» вопроса.
     for (const [screenName, q, tags] of [['Экран 1', 'Вопрос 1', ['лиса', 'сова', 'волк']], ['Второй', 'Вопрос 2', ['лиса', 'сова', 'волк']]] as const) {
-      await page.getByRole('tab', { name: 'Экраны' }).click();
+      await openTab(page, 'Экраны');
       await page.getByRole('button', { name: new RegExp(screenName) }).first().click();
-      await page.getByRole('tab', { name: 'Слои' }).click();
+      await openTab(page, 'Слои');
       await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: q, exact: true }).click();
-      await page.getByRole('tab', { name: 'Содержимое' }).click();
+      await openTab(page, 'Содержимое');
       for (const [i, tag] of tags.entries()) await page.getByLabel('Метки результата (через запятую)').nth(i).fill(tag);
     }
 
@@ -213,9 +213,9 @@ test.describe('P3.7 · логика', () => {
       d.screens.push({ id: 'ekran_dva', name: 'Второй', blocks: [textBlock('vtoroj_t', 'Это второй экран', 20, 60, 300, 60)] });
     });
     await openEditor(page, id);
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: 'Вопрос', exact: true }).click();
-    await page.getByRole('tab', { name: 'Содержимое' }).click();
+    await openTab(page, 'Содержимое');
     await page.getByLabel('Обязательный вопрос').check();
     await expect.poll(async () => JSON.stringify((await serverDraft(page, id)).doc.screens[0]!.blocks[0]), { timeout: 15_000 }).toContain('"required":true');
     await page.getByRole('button', { name: 'Предпросмотр' }).click();

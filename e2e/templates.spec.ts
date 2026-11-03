@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { openEditor, seedProject } from './helpers/editor';
+import { openEditor, seedProject, openTab } from './helpers/editor';
 
 /**
  * TPL-01, TPL-02, TPL-03, TPL-04, ME-01, ME-02 · Шаблоны и мои элементы.
@@ -61,7 +61,7 @@ test.describe('TPL/ME · Шаблоны и мои элементы', () => {
     await openEditor(page, id1);
 
     // Add a text block
-    await page.getByRole('tab', { name: 'Добавить' }).click();
+    await openTab(page, 'Добавить');
     const textEntry = page.locator('[data-add-type="text"]');
     await textEntry.click();
 
@@ -69,7 +69,7 @@ test.describe('TPL/ME · Шаблоны и мои элементы', () => {
     await expect(page.getByTestId('selection-box')).toBeVisible({ timeout: 3000 });
 
     // Go to Add tab and save as element
-    await page.getByRole('tab', { name: 'Добавить' }).click();
+    await openTab(page, 'Добавить');
     await expect(page.getByTestId('elements-panel')).toBeVisible({ timeout: 3000 });
     await expect(page.getByTestId('element-save')).toBeVisible({ timeout: 3000 });
     await page.getByTestId('element-save').click();
@@ -85,7 +85,7 @@ test.describe('TPL/ME · Шаблоны и мои элементы', () => {
     const { id: id2 } = await seedProject(page, undefined, 'Принимающая сборка');
     await openEditor(page, id2);
 
-    await page.getByRole('tab', { name: 'Добавить' }).click();
+    await openTab(page, 'Добавить');
     await expect(page.getByTestId('elements-panel')).toBeVisible({ timeout: 3000 });
 
     // Element should be listed (fetched from server)

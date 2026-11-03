@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { BLOCK_TYPES, createBlock, type BlockType } from '../packages/schema/dist/index.js';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { hit, openEditor, saveStatus, seedProject, serverDraft } from './helpers/editor';
+import { hit, openEditor, saveStatus, seedProject, serverDraft, openTab } from './helpers/editor';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -22,11 +22,11 @@ const open = async (page: Page, shape?: Parameters<typeof seedProject>[1]) => {
 };
 
 const add = async (page: Page, type: BlockType) => {
-  await page.getByRole('tab', { name: 'Добавить' }).click();
+  await openTab(page, 'Добавить');
   await page.locator(`[data-add-type="${type}"]`).click();
 };
 
-const contentTab = (page: Page) => page.getByRole('tab', { name: 'Содержимое' }).click();
+const contentTab = (page: Page) => openTab(page, 'Содержимое');
 
 test.describe('P3.5 · каталог блоков', () => {
   for (const type of BLOCK_TYPES.filter((t) => t !== 'consent')) {
@@ -54,7 +54,7 @@ test.describe('P3.5 · каталог блоков', () => {
 
   test('E-14 · поиск находит блок по слову и не показывает остальные', async ({ page }) => {
     await open(page);
-    await page.getByRole('tab', { name: 'Добавить' }).click();
+    await openTab(page, 'Добавить');
     await page.getByLabel('Найти блок').fill('шкал');
     await expect(page.locator('[data-add-type]')).toHaveCount(1);
     await expect(page.locator('[data-add-type="scale"]')).toBeVisible();
@@ -219,7 +219,7 @@ test.describe('P3.5 · содержимое блоков', () => {
 
   test('B-02 · изображение из медиатеки добавляется готовым блоком с пропорциями файла', async ({ page }) => {
     const id = await open(page);
-    await page.getByRole('tab', { name: 'Добавить' }).click();
+    await openTab(page, 'Добавить');
     await page.getByRole('button', { name: 'Из медиатеки', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Выбор файла' });
     await dialog.getByLabel('Загрузить файл').setInputFiles({
@@ -241,7 +241,7 @@ test('E-14 · вид панелей «Добавить» и «Содержимо
   mkdirSync('e2e/__screenshots__', { recursive: true });
   await open(page);
   await add(page, 'singleChoice');
-  await page.getByRole('tab', { name: 'Добавить' }).click();
+  await openTab(page, 'Добавить');
   await page.screenshot({ path: `e2e/__screenshots__/blocks-add-${info.project.name}.png` });
   await contentTab(page);
   await page.screenshot({ path: `e2e/__screenshots__/blocks-content-${info.project.name}.png`, fullPage: true });

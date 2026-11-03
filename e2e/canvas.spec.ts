@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { at, blockCenter, box, drag, frameFields, geometry, handleAt, hit, nextButton, openEditor, release, saveStatus, seedProject, serverDraft, snapOff, stage } from './helpers/editor';
+import { at, blockCenter, box, drag, frameFields, geometry, handleAt, hit, nextButton, openEditor, release, saveStatus, seedProject, serverDraft, snapOff, stage, openTab } from './helpers/editor';
 
 const SHOTS = 'e2e/__screenshots__';
 type Blocks = Array<Record<string, unknown>>;
@@ -57,7 +57,7 @@ test.describe('E-04 · выделение', () => {
 
   test('E-04 · выделение через панель слоёв отражается на холсте и в свойствах', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 20, 40), box('blok_b', 'Блок B', 200, 40)]);
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: 'Блок B', exact: true }).click();
     expect(await names(page)).toEqual(['Блок B']);
     expect((await frameFields(page)).x).toBe(200);
@@ -90,7 +90,7 @@ test.describe('E-05 · перетаскивание, размер, поворо�
     expect(await names(page)).toHaveLength(3);
     const c = await blockCenter(page, 'Блок A');
     await drag(page, c, { x: c.x + 30 * unit, y: c.y + 10 * unit });
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     const layers = page.getByRole('list', { name: 'Слои' });
     await layers.getByRole('button', { name: 'Закреплённый', exact: true }).click();
     expect((await frameFields(page)).x).toBe(20); // the locked one stayed
@@ -208,7 +208,7 @@ test.describe('E-05 · перетаскивание, размер, поворо�
 async function serverDraftFrames(page: import('@playwright/test').Page) {
   // The inspector shows «смешанно» for several blocks: read frames from the layers by selecting each one.
   const out: Array<{ x: number; y: number; w: number; h: number }> = [];
-  await page.getByRole('tab', { name: 'Слои' }).click();
+  await openTab(page, 'Слои');
   const layers = page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: /^Блок/ });
   const n = await layers.count();
   const labels = (await layers.allInnerTexts()).map((t) => t.trim());
@@ -349,9 +349,9 @@ test.describe('E-08 · копировать и вставить', () => {
     await page.getByRole('list', { name: 'Экраны' }).getByRole('listitem').nth(1).getByRole('button').click();
     await page.keyboard.press('Control+v');
     await expect(hit(page, 'Кнопка A')).toBeVisible();
-    await page.getByRole('tab', { name: 'Сценарии' }).click();
+    await openTab(page, 'Сценарии');
     await expect(page.getByTestId('scenario-counts')).toHaveText('Правил: 1. Поведений: 0.');
-    await page.getByRole('tab', { name: 'Оформление' }).click();
+    await openTab(page, 'Оформление');
     expect(await frameFields(page)).toMatchObject({ x: 95, y: 300 });
   });
 
@@ -387,7 +387,7 @@ test.describe('E-09 · группы, выравнивание, порядок, �
     await hit(page, 'Блок A').click();
     await hit(page, 'Блок B').click({ modifiers: ['Shift'] });
     await page.keyboard.press('Control+g');
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     await expect(page.getByRole('button', { name: 'Группа (2)' })).toBeVisible();
     await page.keyboard.press('Escape');
     await hit(page, 'Блок A').click();
@@ -411,7 +411,7 @@ test.describe('E-09 · группы, выравнивание, порядок, �
     await page.keyboard.press('Control+a');
     await page.getByRole('button', { name: 'Сгруппировать' }).click();
     await page.keyboard.press('Control+d');
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     await expect(page.getByRole('button', { name: 'Группа (2)' })).toHaveCount(2);
   });
 
@@ -434,13 +434,13 @@ test.describe('E-09 · группы, выравнивание, порядок, �
 
   test('E-09 · порядок слоёв: на передний план, назад; в панели слоёв верхний слой — первый', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 20, 40), box('blok_b', 'Блок B', 60, 60), box('blok_c', 'Блок C', 100, 80)]);
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     const layers = page.getByRole('list', { name: 'Слои' });
     const order = async () => (await layers.locator('[data-layer-id]').allInnerTexts()).map((t) => t.trim());
     expect(await order()).toEqual(['Блок C', 'Блок B', 'Блок A']);
     await hit(page, 'Блок A').click({ position: { x: 4, y: 4 } });
     await page.getByRole('button', { name: 'На передний план' }).click();
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     expect(await order()).toEqual(['Блок A', 'Блок C', 'Блок B']);
     await page.keyboard.press('Control+BracketLeft');
     expect(await order()).toEqual(['Блок C', 'Блок A', 'Блок B']);
@@ -453,7 +453,7 @@ test.describe('E-09 · группы, выравнивание, порядок, �
   test('E-09 · блокировка из слоёв: блок не двигается и не меняет размер, снятие возвращает', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 40, 60)]);
     await snapOff(page);
-    await page.getByRole('tab', { name: 'Слои' }).click();
+    await openTab(page, 'Слои');
     await page.getByRole('button', { name: 'Заблокировать: Блок A' }).click();
     const { unit } = await geometry(page);
     const c = await blockCenter(page, 'Блок A');

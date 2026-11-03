@@ -146,3 +146,21 @@ export async function handleAt(page: Page, name: string): Promise<{ x: number; y
   }
   return last;
 }
+
+/**
+ * E-12 · на телефоне (< 768 px) панели — нижние шторки: открыта одна, а выбранный блок сам открывает «Свойства».
+ * Вкладка живёт в левой или правой панели; перед нажатием нужная шторка открывается так, как это сделал бы человек.
+ * На широком экране панели видны всегда, и ничего лишнего не нажимается.
+ */
+export async function ensurePanel(page: Page, side: 'left' | 'right'): Promise<void> {
+  const nav = page.getByTestId(`mobile-nav-${side}`);
+  if (!(await nav.isVisible())) return;
+  if ((await nav.getAttribute('aria-pressed')) !== 'true') await nav.click();
+}
+
+export async function openTab(page: Page, name: string | RegExp): Promise<void> {
+  const tab = page.getByRole('tab', { name });
+  const side = await tab.evaluate((el) => (el.closest('.ed-panel')?.classList.contains('right') ? 'right' : 'left'));
+  await ensurePanel(page, side);
+  await tab.click();
+}
