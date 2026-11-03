@@ -21,13 +21,9 @@ jobs:
           mkdir -p db
           sudo systemctl stop clamav-freshclam 2>/dev/null || true
           freshclam --version
-          printf 'DatabaseDirectory %s\nDatabaseMirror database.clamav.net\n' "$PWD/db" > "$PWD/freshclam.conf"
-          cat "$PWD/freshclam.conf"; ls -ld "$PWD/db" "$PWD/freshclam.conf"
-          freshclam --config-file="$PWD/freshclam.conf" --user="$(id -un)" --foreground --stdout 2>&1 || {
-            echo "--- повтор через sudo под пользователем clamav ---"
-            sudo chmod 755 "$PWD" && sudo chown -R clamav:clamav "$PWD/db" && sudo chmod 644 "$PWD/freshclam.conf"
-            sudo freshclam --config-file="$PWD/freshclam.conf" --foreground --stdout 2>&1
-          }
+          # Пустой файл настроек: всё остальное задаётся ключами (адрес раздачи у программы уже стоит по умолчанию).
+          : > "$PWD/empty.conf"
+          freshclam --config-file="$PWD/empty.conf" --datadir="$PWD/db" --user="$(id -un)" --foreground --stdout
           for f in main daily bytecode; do
             ls -l db/$f.c?d
             [ "$(head -c 10 db/$f.c?d)" = "ClamAV-VDB" ] || { echo "::error::$f: нет базы"; exit 1; }
