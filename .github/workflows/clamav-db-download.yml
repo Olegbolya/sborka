@@ -21,9 +21,10 @@ jobs:
           mkdir -p db
           sudo systemctl stop clamav-freshclam 2>/dev/null || true
           freshclam --version
-          # Пустой файл настроек: всё остальное задаётся ключами (адрес раздачи у программы уже стоит по умолчанию).
-          : > "$PWD/empty.conf"
-          freshclam --config-file="$PWD/empty.conf" --datadir="$PWD/db" --user="$(id -un)" --foreground --stdout
+          # Штатные настройки пакета, как на любом сервере с ClamAV: базы ложатся в /var/lib/clamav, оттуда копируем в архив.
+          sudo sed -i 's/^Example/#Example/' /etc/clamav/freshclam.conf 2>/dev/null || true
+          sudo freshclam --foreground --stdout
+          cp /var/lib/clamav/main.c?d /var/lib/clamav/daily.c?d /var/lib/clamav/bytecode.c?d db/
           for f in main daily bytecode; do
             ls -l db/$f.c?d
             [ "$(head -c 10 db/$f.c?d)" = "ClamAV-VDB" ] || { echo "::error::$f: нет базы"; exit 1; }
