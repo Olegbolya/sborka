@@ -243,9 +243,11 @@ export class PlaySessionsService {
     const blocks = new Map<string, Block>();
     for (const sc of doc.screens) for (const b of walkBlocks(sc.blocks)) blocks.set(b.id, b);
     const label = (b: Block): string => clip(b.name || (b.textLayer ? plainText(b.textLayer) : '') || 'Вопрос', 60);
+    // The answer holds the id of an option of the question; the option itself is a block (B-11), found through `props.options`.
     const optionText = (b: Block, id: string): string => {
-      const o = blocks.get(id);
-      return o ? clip((o.textLayer ? plainText(o.textLayer) : '') || o.name, 80) : id;
+      const options = (b.props as { options?: Array<{ id: string; blockId: string }> } | undefined)?.options ?? [];
+      const o = blocks.get(options.find((x) => x.id === id)?.blockId ?? id);
+      return o ? clip((o.textLayer ? plainText(o.textLayer) : '') || o.name, 80) : 'вариант удалён';
     };
 
     const lines: string[] = [];

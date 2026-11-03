@@ -426,6 +426,9 @@ describe('PL-11…PL-15 · прохождение на сервере', () => {
     expect(mine[0]).toMatchObject({ kind: 'passage', title: 'Новое прохождение: «Викторина»', read: false });
     expect(mine[0]!.body).toContain('Ответы:');
     expect(mine[0]!.body).toContain('Возьми две пачки');
+    // Выбранный вариант назван по тексту/имени блока-варианта, а не внутренним кодом.
+    expect(mine[0]!.body).not.toContain(z.q1.optionIds[0]!);
+    expect(mine[0]!.body).toMatch(/• [^\n]+: [^\n]+/);
     expect(mine[0]!.body).toMatch(/Результат: (Эксперт|Новичок)/);
 
     // Чужой создатель этого сообщения не видит.
