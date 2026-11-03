@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { box, hit, openEditor, seedProject, serverDraft } from './helpers/editor';
+import { box, hit, openEditor, seedProject, serverDraft, ensurePanelOf } from './helpers/editor';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -191,6 +191,7 @@ test.describe('P3.10 · темы', () => {
     await expect.poll(async () => JSON.stringify(await draftTheme(page, id)), { timeout: 15_000 }).toContain(presetId);
     const panel = page.getByTestId('screen-panel');
     const sec = panel.locator('[data-section="screen-transition"]');
+    await ensurePanelOf(page, sec);
     await sec.locator('summary').click();
     await sec.getByLabel('Переход', { exact: true }).selectOption('preset');
     await sec.getByLabel('Переход из темы').selectOption({ label: 'Мягкий' });

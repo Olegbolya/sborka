@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { openEditor, seedProject } from './helpers/editor';
+import { collapsePanels, openEditor, seedProject } from './helpers/editor';
 
 /**
  * E-21 · Перо, карандаш, редактирование узлов.
@@ -19,6 +19,7 @@ test.describe('E-21 · Перо и редактирование узлов', () 
     await page.getByTestId('tool-pen').click();
     await expect(page.getByTestId('tool-pen')).toHaveAttribute('aria-pressed', 'true');
 
+    await collapsePanels(page);
     const stage = page.getByTestId('stage');
     const stageBox = await stage.boundingBox();
     expect(stageBox).not.toBeNull();

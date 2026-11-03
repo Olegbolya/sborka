@@ -775,6 +775,21 @@
     color: var(--accent);
     font-weight: 700;
   }
+  /* Редактор темы не имеет шторок: настройки идут обычным столбцом, пример — под ними, прокручивается вся страница. */
+  .ed-theme-body {
+    display: block;
+    overflow: auto;
+  }
+  .ed-theme-body .ed-panel.left {
+    position: static;
+    transform: none;
+    max-height: none;
+    overflow: visible;
+    border-radius: 0;
+    box-shadow: none;
+    border-top: 0;
+    z-index: auto;
+  }
   /* P10.5 на телефоне: панель урока стоит над самой высокой шторкой (50dvh) и нижней полосой (48px), чтобы не закрывать
      ни вкладки шторки, ни кнопки полосы; её можно свернуть. */
   .ed-lesson {

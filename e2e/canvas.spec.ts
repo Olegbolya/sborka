@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { at, blockCenter, box, drag, frameFields, geometry, handleAt, hit, nextButton, openEditor, release, saveStatus, seedProject, serverDraft, snapOff, stage, openTab } from './helpers/editor';
+import { at, blockCenter, box, drag, frameFields, geometry, handleAt, hit, nextButton, openEditor, release, saveStatus, seedProject, serverDraft, snapOff, stage, openTab, tap, ensurePanel } from './helpers/editor';
 
 const SHOTS = 'e2e/__screenshots__';
 type Blocks = Array<Record<string, unknown>>;
@@ -25,13 +25,13 @@ const names = async (page: import('@playwright/test').Page) => (await pressed(pa
 test.describe('E-04 · выделение', () => {
   test('E-04 · клик выделяет блок, клик по пустому месту снимает; Shift и Ctrl добавляют и убирают', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 20, 40), box('blok_b', 'Блок B', 200, 40)]);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     expect(await names(page)).toEqual(['Блок A']);
-    await hit(page, 'Блок B').click({ modifiers: ['Shift'] });
+    await tap(page, 'Блок B', { modifiers: ['Shift'] });
     expect(await names(page)).toEqual(['Блок A', 'Блок B']);
-    await hit(page, 'Блок A').click({ modifiers: ['Control'] });
+    await tap(page, 'Блок A', { modifiers: ['Control'] });
     expect(await names(page)).toEqual(['Блок B']);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     expect(await names(page)).toEqual(['Блок A']);
     const empty = await at(page, 150, 400);
     await page.mouse.click(empty.x, empty.y);
@@ -58,6 +58,7 @@ test.describe('E-04 · выделение', () => {
   test('E-04 · выделение через панель слоёв отражается на холсте и в свойствах', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 20, 40), box('blok_b', 'Блок B', 200, 40)]);
     await openTab(page, 'Слои');
+    await ensurePanel(page, 'left');
     await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: 'Блок B', exact: true }).click();
     expect(await names(page)).toEqual(['Блок B']);
     expect((await frameFields(page)).x).toBe(200);
@@ -92,8 +93,10 @@ test.describe('E-05 · перетаскивание, размер, поворо�
     await drag(page, c, { x: c.x + 30 * unit, y: c.y + 10 * unit });
     await openTab(page, 'Слои');
     const layers = page.getByRole('list', { name: 'Слои' });
+    await ensurePanel(page, 'left');
     await layers.getByRole('button', { name: 'Закреплённый', exact: true }).click();
     expect((await frameFields(page)).x).toBe(20); // the locked one stayed
+    await ensurePanel(page, 'left');
     await layers.getByRole('button', { name: 'Блок B', exact: true }).click();
     expect((await frameFields(page)).x).toBeCloseTo(230, 0);
     // Shift: the drag is straight.
@@ -107,14 +110,14 @@ test.describe('E-05 · перетаскивание, размер, поворо�
   test('E-05 · клик по блоку из выделенных оставляет только его; перетаскивание — нет', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 20, 40), box('blok_b', 'Блок B', 200, 40)]);
     await page.keyboard.press('Control+a');
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     expect(await names(page)).toEqual(['Блок A']);
   });
 
   test('E-05 · маркер юго-восточного угла меняет размер, левый верхний угол остаётся', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 40, 60, 100, 60)]);
     await snapOff(page);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     const { unit } = await geometry(page);
     const h = (await page.locator('[data-handle="se"]').boundingBox())!;
     const from = { x: h.x + h.width / 2, y: h.y + h.height / 2 };
@@ -128,7 +131,7 @@ test.describe('E-05 · перетаскивание, размер, поворо�
   test('E-05 · восемь маркеров; боковые меняют одну сторону; Shift — пропорции, Alt — от центра', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 100, 100, 100, 50)]);
     await snapOff(page);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     await expect(page.locator('.ed-handle[data-handle]:not([data-handle="rotate"])')).toHaveCount(8);
     const { unit } = await geometry(page);
     const handle = (n: string) => handleAt(page, n);
@@ -171,7 +174,7 @@ test.describe('E-05 · перетаскивание, размер, поворо�
 
   test('E-05 · поворот за маркер; Shift — шаги по 15°', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 100, 200, 100, 100)]);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     const r = (await page.locator('[data-handle="rotate"]').boundingBox())!;
     const handle = { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     const centre = await blockCenter(page, 'Блок A');
@@ -188,7 +191,7 @@ test.describe('E-05 · перетаскивание, размер, поворо�
 
   test('E-05 · закреплённый блок: ни перетаскивания, ни маркеров', async ({ page }) => {
     await open(page, [{ ...box('blok_a', 'Блок A', 40, 60), locked: true }]);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     await expect(page.locator('[data-handle]')).toHaveCount(0);
     const { unit } = await geometry(page);
     const c = await blockCenter(page, 'Блок A');
@@ -198,7 +201,7 @@ test.describe('E-05 · перетаскивание, размер, поворо�
 
   test('S-01 · поворот и отражение в свойствах', async ({ page }) => {
     const id = await open(page, [box('blok_a', 'Блок A', 40, 60)]);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     await page.getByLabel('Поворот', { exact: true }).fill('45');
     await page.getByRole('button', { name: 'Отразить по горизонтали' }).click();
     await expect.poll(async () => (await serverDraft(page, id)).doc.screens[0]!.blocks[0]).toMatchObject({ frame: { rotation: 45, flipX: true } });
@@ -213,6 +216,7 @@ async function serverDraftFrames(page: import('@playwright/test').Page) {
   const n = await layers.count();
   const labels = (await layers.allInnerTexts()).map((t) => t.trim());
   for (let i = 0; i < n; i++) {
+    await ensurePanel(page, 'left');
     await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: labels[i]!, exact: true }).click();
     const f = await frameFields(page);
     out.push({ x: f.x, y: f.y, w: f.w, h: f.h });
@@ -290,7 +294,7 @@ test.describe('E-06 · прилипание и направляющие', () => 
 
   test('E-06 · при изменении размера край прилипает к границе артборда', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 200, 100, 100, 60)]);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     const { unit } = await geometry(page);
     const h = (await page.locator('[data-handle="e"]').boundingBox())!;
     const from = { x: h.x + h.width / 2, y: h.y + h.height / 2 };
@@ -303,7 +307,7 @@ test.describe('E-06 · прилипание и направляющие', () => 
 test.describe('E-07 · стрелки', () => {
   test('E-07 · стрелка — 1 единица, Shift+стрелка — 10; быстрые нажатия — один шаг отмены', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 100, 100)]);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowDown');
@@ -316,7 +320,7 @@ test.describe('E-07 · стрелки', () => {
 
   test('E-07 · закреплённые блоки стрелками не двигаются, в поле ввода стрелки работают как обычно', async ({ page }) => {
     await open(page, [{ ...box('blok_a', 'Блок A', 100, 100), locked: true }]);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     await page.keyboard.press('ArrowRight');
     expect((await frameFields(page)).x).toBe(100);
     await page.getByLabel('X', { exact: true }).focus();
@@ -328,7 +332,7 @@ test.describe('E-07 · стрелки', () => {
 test.describe('E-08 · копировать и вставить', () => {
   test('E-08 · Ctrl+C / Ctrl+V на том же экране: копия сдвинута, выделена, с новым идентификатором', async ({ page }) => {
     const id = await open(page, [box('blok_a', 'Блок A', 40, 60)]);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     await page.keyboard.press('Control+c');
     await page.keyboard.press('Control+v');
     await expect(stage(page).locator('.ed-hit')).toHaveCount(2);
@@ -343,9 +347,10 @@ test.describe('E-08 · копировать и вставить', () => {
 
   test('E-08 · вырезать убирает блок, вставить на другой экран возвращает на то же место, правила едут вместе', async ({ page }) => {
     await open(page, [nextButton('knopka_a', 'Кнопка A')], (d) => d.screens.push({ id: 'ekran_dva', name: 'Второй', blocks: [] } as never));
-    await hit(page, 'Кнопка A').click();
+    await tap(page, 'Кнопка A');
     await page.keyboard.press('Control+x');
     await expect(stage(page).locator('.ed-hit')).toHaveCount(0);
+    await ensurePanel(page, 'left');
     await page.getByRole('list', { name: 'Экраны' }).getByRole('listitem').nth(1).getByRole('button').click();
     await page.keyboard.press('Control+v');
     await expect(hit(page, 'Кнопка A')).toBeVisible();
@@ -357,7 +362,7 @@ test.describe('E-08 · копировать и вставить', () => {
 
   test('E-08 · между сборками: копия из одной сборки вставляется в другую', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 40, 60)]);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     await page.keyboard.press('Control+c');
     const other = await seedProject(page, undefined, 'Другая сборка');
     await openEditor(page, other.id);
@@ -372,7 +377,7 @@ test.describe('E-08 · копировать и вставить', () => {
     await page.evaluate(() => localStorage.removeItem('blokum.clipboard'));
     await page.keyboard.press('Control+v');
     await expect(stage(page).locator('.ed-hit')).toHaveCount(1);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     await page.keyboard.press('Control+d');
     await expect(stage(page).locator('.ed-hit')).toHaveCount(2);
   });
@@ -384,25 +389,25 @@ test.describe('E-09 · группы, выравнивание, порядок, �
   test('E-09 · группа: Ctrl+G, клик выделяет всю группу, она двигается вместе, Alt берёт один блок, Ctrl+Shift+G разгруппирует', async ({ page }) => {
     await open(page, [box('blok_a', 'Блок A', 20, 40), box('blok_b', 'Блок B', 200, 40), box('blok_c', 'Блок C', 20, 300)]);
     await snapOff(page);
-    await hit(page, 'Блок A').click();
-    await hit(page, 'Блок B').click({ modifiers: ['Shift'] });
+    await tap(page, 'Блок A');
+    await tap(page, 'Блок B', { modifiers: ['Shift'] });
     await page.keyboard.press('Control+g');
     await openTab(page, 'Слои');
     await expect(page.getByRole('button', { name: 'Группа (2)' })).toBeVisible();
     await page.keyboard.press('Escape');
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     expect(await names(page)).toEqual(['Блок A', 'Блок B']);
     const { unit } = await geometry(page);
     const c = await blockCenter(page, 'Блок A');
     await drag(page, c, { x: c.x, y: c.y + 20 * unit });
     await page.keyboard.press('Escape');
-    await hit(page, 'Блок B').click({ modifiers: ['Alt'] });
+    await tap(page, 'Блок B', { modifiers: ['Alt'] });
     expect(await names(page)).toEqual(['Блок B']);
     expect((await frameFields(page)).y).toBeCloseTo(60, 0);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     await page.keyboard.press('Control+Shift+g');
     await expect(page.getByRole('button', { name: 'Группа (2)' })).toHaveCount(0);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
     expect(await names(page)).toEqual(['Блок A']);
   });
 
@@ -427,7 +432,8 @@ test.describe('E-09 · группы, выравнивание, порядок, �
     expect(Math.abs(gap1 - gap2)).toBeLessThan(0.3);
     expect(frames[0]!.x).toBe(20);
     expect(frames[2]!.x).toBe(300);
-    await hit(page, 'Блок A').click();
+    await tap(page, 'Блок A');
+    await ensurePanel(page, 'right');
     await page.getByRole('button', { name: 'По центру', exact: true }).click(); // one block: to the artboard
     await expect.poll(async () => (await frameFields(page)).x).toBe(165);
   });
@@ -438,7 +444,7 @@ test.describe('E-09 · группы, выравнивание, порядок, �
     const layers = page.getByRole('list', { name: 'Слои' });
     const order = async () => (await layers.locator('[data-layer-id]').allInnerTexts()).map((t) => t.trim());
     expect(await order()).toEqual(['Блок C', 'Блок B', 'Блок A']);
-    await hit(page, 'Блок A').click({ position: { x: 4, y: 4 } });
+    await tap(page, 'Блок A', { position: { x: 4, y: 4 } });
     await page.getByRole('button', { name: 'На передний план' }).click();
     await openTab(page, 'Слои');
     expect(await order()).toEqual(['Блок A', 'Блок C', 'Блок B']);
@@ -454,11 +460,13 @@ test.describe('E-09 · группы, выравнивание, порядок, �
     await open(page, [box('blok_a', 'Блок A', 40, 60)]);
     await snapOff(page);
     await openTab(page, 'Слои');
+    await ensurePanel(page, 'left');
     await page.getByRole('button', { name: 'Заблокировать: Блок A' }).click();
     const { unit } = await geometry(page);
     const c = await blockCenter(page, 'Блок A');
     await drag(page, c, { x: c.x + 30 * unit, y: c.y });
     expect((await frameFields(page)).x).toBe(40);
+    await ensurePanel(page, 'left');
     await page.getByRole('button', { name: 'Разблокировать: Блок A' }).click();
     const c2 = await blockCenter(page, 'Блок A');
     await drag(page, c2, { x: c2.x + 30 * unit, y: c2.y });

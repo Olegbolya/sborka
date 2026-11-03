@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /** Minimal block literals: the server fills in every default. Identifiers have at least six characters. */
 export const textBlock = (id: string, name: string, x = 20, y = 40, w = 160, h = 48) => ({
@@ -65,6 +65,7 @@ export interface Geometry {
 
 /** Where the artboard is on the page and how many pixels one unit takes now. */
 export async function geometry(page: Page): Promise<Geometry> {
+  await collapsePanels(page); // E-12: на телефоне шторка закрывает нижнюю часть холста
   const st = stage(page);
   await st.scrollIntoViewIfNeeded();
   const box = (await st.boundingBox())!;
@@ -78,6 +79,7 @@ export async function at(page: Page, x: number, y: number): Promise<{ x: number;
 }
 
 export async function blockCenter(page: Page, name: string): Promise<{ x: number; y: number }> {
+  await collapsePanels(page);
   await hit(page, name).scrollIntoViewIfNeeded();
   const b = (await hit(page, name).boundingBox())!;
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
@@ -85,6 +87,7 @@ export async function blockCenter(page: Page, name: string): Promise<{ x: number
 
 /** Frame of a block as the inspector shows it (the block must be the only one selected). */
 export async function frameFields(page: Page): Promise<{ x: number; y: number; w: number; h: number; rotation: number }> {
+  await ensurePanel(page, 'right'); // E-12: поля блока лежат в правой шторке
   const read = async () => {
     const field = async (label: string) => Number(await page.getByLabel(label, { exact: true }).inputValue());
     return { x: await field('X'), y: await field('Y'), w: await field('Ширина'), h: await field('Высота'), rotation: await field('Поворот') };
@@ -107,6 +110,7 @@ export async function snapOff(page: Page): Promise<void> {
 
 /** Drags with the mouse in steps; `hold` leaves the button pressed so the test can look at the guides. */
 export async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }, opts: { modifiers?: Array<'Shift' | 'Alt' | 'Control'>; late?: Array<'Shift' | 'Alt' | 'Control'>; hold?: boolean; steps?: number } = {}): Promise<void> {
+  await collapsePanels(page);
   for (const m of opts.modifiers ?? []) await page.keyboard.down(m);
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
@@ -175,4 +179,16 @@ export async function collapsePanels(page: Page): Promise<void> {
     const nav = page.getByTestId(`mobile-nav-${side}`);
     if ((await nav.isVisible()) && (await nav.getAttribute('aria-pressed')) === 'true') await nav.click();
   }
+}
+
+/** Нажимает на блок холста так, как это делает человек на телефоне: сначала сворачивает шторку, которая закрывает холст. */
+export async function tap(page: Page, name: string, options: Parameters<Locator['click']>[0] = {}): Promise<void> {
+  await collapsePanels(page);
+  await hit(page, name).click(options);
+}
+
+/** Открывает ту шторку (левую или правую), в которой лежит элемент, — как это сделал бы человек перед нажатием. */
+export async function ensurePanelOf(page: Page, target: Locator): Promise<void> {
+  const side = await target.first().evaluate((el) => (el.closest('.ed-panel')?.classList.contains('right') ? 'right' : 'left'));
+  await ensurePanel(page, side);
 }

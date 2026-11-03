@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { hit, nextButton, openEditor, saveStatus, screensList, seedProject, serverDraft, stage, textBlock, openTab } from './helpers/editor';
+import { hit, nextButton, openEditor, saveStatus, screensList, seedProject, serverDraft, stage, textBlock, openTab, tap, ensurePanel } from './helpers/editor';
 
 const SHOTS = 'e2e/__screenshots__';
 
@@ -55,7 +55,7 @@ test.describe('E-13, E-15, E-16 · оболочка редактора', () => {
   test('E-15 · выбор блока: свойства X/Y/ширина/высота; правка двигает блок; мультивыбор показывает «смешанно»', async ({ page }) => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A', 20, 40), textBlock('tekst_b', 'Текст B', 20, 120)));
     await openEditor(page, id);
-    await hit(page, 'Текст A').click();
+    await tap(page, 'Текст A');
     await expect(hit(page, 'Текст A')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByLabel('X', { exact: true })).toHaveValue('20');
     await expect(page.getByLabel('Ширина')).toHaveValue('160');
@@ -66,7 +66,7 @@ test.describe('E-13, E-15, E-16 · оболочка редактора', () => {
     await expect.poll(async () => (await serverDraft(page, id)).doc.screens[0]!.blocks.map((b) => (b as { frame: { x: number } }).frame.x)).toEqual([100, 20]);
 
     // Two blocks: X differs, Y differs, width and height are the same.
-    await hit(page, 'Текст B').click({ modifiers: ['Shift'] });
+    await tap(page, 'Текст B', { modifiers: ['Shift'] });
     await expect(page.getByLabel('X', { exact: true })).toHaveValue('');
     await expect(page.getByLabel('X', { exact: true })).toHaveAttribute('placeholder', 'смешанно');
     await expect(page.getByLabel('Ширина')).toHaveValue('160');
@@ -77,7 +77,7 @@ test.describe('E-13, E-15, E-16 · оболочка редактора', () => {
   test('E-15 · вкладки «Содержимое» и «Сценарии»: название блока, описание, число правил', async ({ page }) => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(nextButton('knopka_a', 'Кнопка A')));
     await openEditor(page, id);
-    await hit(page, 'Кнопка A').click();
+    await tap(page, 'Кнопка A');
     await openTab(page, 'Содержимое');
     await page.getByLabel('Название блока').fill('Главная кнопка');
     await page.getByLabel('Описание для скринридера').fill('Переходит к следующему экрану');
@@ -126,14 +126,18 @@ test.describe('E-13, E-15, E-16 · оболочка редактора', () => {
     await openEditor(page, id);
     await openTab(page, 'Слои');
     const layers = page.getByRole('list', { name: 'Слои' });
+    await ensurePanel(page, 'left');
     await layers.getByRole('button', { name: 'Текст B', exact: true }).click();
     await expect(hit(page, 'Текст B')).toHaveAttribute('aria-pressed', 'true');
 
+    await ensurePanel(page, 'left');
     await page.getByRole('button', { name: 'Скрыть в редакторе: Текст B' }).click();
     await expect(hit(page, 'Текст B')).toHaveCount(0);
+    await ensurePanel(page, 'left');
     await page.getByRole('button', { name: 'Показать в редакторе: Текст B' }).click();
     await expect(hit(page, 'Текст B')).toBeVisible();
 
+    await ensurePanel(page, 'left');
     await page.getByRole('button', { name: 'Заблокировать: Текст A' }).click();
     await expect(hit(page, 'Текст A')).toHaveAttribute('data-locked', 'true');
     await expect.poll(async () => (await serverDraft(page, id)).doc.screens[0]!.blocks.map((b) => (b as { locked: boolean }).locked)).toEqual([true, false]);
@@ -148,7 +152,7 @@ test.describe('E-11 · отмена и повтор', () => {
     const redo = page.getByRole('button', { name: 'Повторить', exact: true });
     await expect(undo).toBeDisabled();
     await expect(redo).toBeDisabled();
-    await hit(page, 'Текст A').click();
+    await tap(page, 'Текст A');
     for (let i = 0; i < 99; i++) await page.keyboard.press('Control+d'); // 99 steps: 100 blocks on the screen (the limit)
     await page.getByLabel('Название сборки').fill('x');
     await page.getByLabel('Название сборки').blur(); // title typing is one step (merged): 100 steps in all
@@ -170,12 +174,12 @@ test.describe('E-11 · отмена и повтор', () => {
   test('E-11 · Delete удаляет выделенное, Ctrl+Z возвращает; в поле ввода клавиши не трогают блоки', async ({ page }) => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A')));
     await openEditor(page, id);
-    await hit(page, 'Текст A').click();
+    await tap(page, 'Текст A');
     await page.getByLabel('X', { exact: true }).focus();
     await page.keyboard.press('Delete');
     await expect(hit(page, 'Текст A')).toBeVisible();
     await page.locator('body').click({ position: { x: 5, y: 5 } });
-    await hit(page, 'Текст A').click();
+    await tap(page, 'Текст A');
     await page.keyboard.press('Delete');
     await expect(hit(page, 'Текст A')).toHaveCount(0);
     await page.keyboard.press('Control+z');
@@ -189,13 +193,13 @@ test.describe('E-17 · автосохранение и сеть', () => {
   test('E-17 · «Сохраняю…» → «Сохранено», правка на сервере; после перезагрузки на месте', async ({ page }) => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A')));
     await openEditor(page, id);
-    await hit(page, 'Текст A').click();
+    await tap(page, 'Текст A');
     await page.getByLabel('Y', { exact: true }).fill('222');
     await expect(saveStatus(page)).toHaveText('Сохраняю…');
     await expect(saveStatus(page)).toHaveText('Сохранено');
     await page.reload();
     await expect(saveStatus(page)).toHaveText('Сохранено');
-    await hit(page, 'Текст A').click();
+    await tap(page, 'Текст A');
     await expect(page.getByLabel('Y', { exact: true })).toHaveValue('222');
   });
 
@@ -203,7 +207,7 @@ test.describe('E-17 · автосохранение и сеть', () => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A')));
     await openEditor(page, id);
     await context.setOffline(true);
-    await hit(page, 'Текст A').click();
+    await tap(page, 'Текст A');
     await page.getByLabel('X', { exact: true }).fill('77');
     await page.getByLabel('Название сборки').fill('Правки без сети');
     await expect(saveStatus(page)).toHaveText('Нет сети — изменения сохранятся');
@@ -284,7 +288,7 @@ test.describe('E-19 · история версий', () => {
   test('E-19 · снимок прежнего черновика: просмотр и восстановление; заменённый черновик остаётся в истории', async ({ page }) => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A')));
     await openEditor(page, id);
-    await hit(page, 'Текст A').click();
+    await tap(page, 'Текст A');
     await page.keyboard.press('Control+d');
     await expect(stage(page).locator('.ed-hit')).toHaveCount(2);
     await expect(saveStatus(page)).toHaveText('Сохранено');

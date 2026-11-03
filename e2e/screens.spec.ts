@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { openEditor, saveStatus, seedProject, serverDraft, screensList } from './helpers/editor';
+import { openEditor, saveStatus, seedProject, serverDraft, screensList, ensurePanelOf } from './helpers/editor';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -17,6 +17,7 @@ const savedScreen = async (page: Page, id: string, index: number, check: (s: Sav
 
 const section = async (page: Page, id: string): Promise<Locator> => {
   const s = page.locator(`[data-section="${id}"]`);
+  await ensurePanelOf(page, s);
   await s.scrollIntoViewIfNeeded();
   if ((await s.getAttribute('open')) === null) await s.locator('summary').click();
   return s;
