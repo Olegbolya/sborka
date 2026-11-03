@@ -164,3 +164,15 @@ export async function openTab(page: Page, name: string | RegExp): Promise<void> 
   await ensurePanel(page, side);
   await tab.click();
 }
+
+/**
+ * E-12 · на телефоне шторку можно свернуть нажатием на её кнопку в нижней полосе — холст виден целиком.
+ * Перед действиями прямо на холсте (клик, перетаскивание, рисование) тесты сворачивают шторку, как это делает человек.
+ * На широком экране ничего не нажимается.
+ */
+export async function collapsePanels(page: Page): Promise<void> {
+  for (const side of ['left', 'right'] as const) {
+    const nav = page.getByTestId(`mobile-nav-${side}`);
+    if ((await nav.isVisible()) && (await nav.getAttribute('aria-pressed')) === 'true') await nav.click();
+  }
+}

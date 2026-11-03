@@ -305,8 +305,8 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
     if (asked.dialog) setDialog('scenarios');
   }, [asked, setDialog]);
   const doc = useSyncExternalStore(store.subscribe, () => store.getState().doc, () => store.getState().doc);
-  // E-12: bottom sheet panel navigation on mobile (< 768 px).
-  const [mobilePanel, setMobilePanel] = useState<'left' | 'right'>('left');
+  // E-12: bottom sheet panel navigation on mobile (< 768 px). null — шторка свёрнута, холст виден целиком.
+  const [mobilePanel, setMobilePanel] = useState<'left' | 'right' | null>('left');
   const selLen = useSyncExternalStore(store.subscribe, () => store.getState().selection.blockIds.length, () => 0);
   const prevSelLen = useRef(0);
   useEffect(() => {
@@ -320,15 +320,15 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
           {message.text}
         </p>
       )}
-      <div className="ed-body" data-mobile-panel={mobilePanel}>
+      <div className="ed-body" data-mobile-panel={mobilePanel ?? 'none'}>
         <LeftPanel />
         <Canvas />
         <Inspector />
         <nav className="ed-mobile-nav" aria-label="Панели редактора">
-          <button type="button" className="ed-mobile-nav-btn" aria-pressed={mobilePanel === 'left'} aria-label="Слои и экраны" data-testid="mobile-nav-left" onClick={() => setMobilePanel('left')}>
+          <button type="button" className="ed-mobile-nav-btn" aria-pressed={mobilePanel === 'left'} aria-label="Слои и экраны" data-testid="mobile-nav-left" onClick={() => setMobilePanel(mobilePanel === 'left' ? null : 'left')}>
             Слои
           </button>
-          <button type="button" className="ed-mobile-nav-btn" aria-pressed={mobilePanel === 'right'} aria-label="Свойства блока" data-testid="mobile-nav-right" onClick={() => setMobilePanel('right')}>
+          <button type="button" className="ed-mobile-nav-btn" aria-pressed={mobilePanel === 'right'} aria-label="Свойства блока" data-testid="mobile-nav-right" onClick={() => setMobilePanel(mobilePanel === 'right' ? null : 'right')}>
             Свойства
           </button>
         </nav>
