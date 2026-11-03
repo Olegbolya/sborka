@@ -19,8 +19,8 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq clamav-freshclam
           mkdir -p db
-          printf 'DatabaseDirectory %s\nDatabaseMirror database.clamav.net\nDNSDatabaseInfo current.cvd.clamav.net\nMaxAttempts 3\n' "$PWD/db" > freshclam.conf
-          freshclam --config-file=freshclam.conf --foreground
+          printf 'DatabaseDirectory %s\nDatabaseOwner %s\nDatabaseMirror database.clamav.net\n' "$PWD/db" "$(id -un)" > "$PWD/freshclam.conf"
+          freshclam --config-file="$PWD/freshclam.conf" --foreground --stdout
           for f in main daily bytecode; do
             ls -l db/$f.c?d
             [ "$(head -c 10 db/$f.c?d)" = "ClamAV-VDB" ] || { echo "::error::$f: нет базы"; exit 1; }
