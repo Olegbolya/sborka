@@ -21,3 +21,6 @@ test-results/
 .claude/scheduled_tasks.lock
 e2e/__screenshots__/
 apps/web/public/vendor/
+
+# Дамп локального Redis (появляется при pnpm services)
+dump.rdb
