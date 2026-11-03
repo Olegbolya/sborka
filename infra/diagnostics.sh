@@ -59,3 +59,11 @@ for f in "$LOGS"/blokum-worker-out.log "$LOGS"/blokum-worker-error.log; do
   echo "· $(basename "$f"): медиа"
   grep -aE 'media|медиа|TS-2|REJECTED|BLOCKED|sharp|ffmpeg|ClamAV' "$f" | tail -n 8 | cut -c1-230 | mask
 done
+
+echo "── ClamAV (антивирус для загруженных файлов)"
+echo "freshclam: $(systemctl is-active clamav-freshclam 2>&1 | head -1) · clamd: $(systemctl is-active clamav-daemon 2>&1 | head -1)"
+echo "базы: $(ls -1 /var/lib/clamav 2>&1 | tr '\n' ' ' | head -c 200)"
+tail -n 6 /var/log/clamav/freshclam.log 2>&1 | cut -c1-200 | mask
+if [ -f /tmp/clam-probe.txt ] || printf 'probe' > /tmp/clam-probe.txt; then
+  echo "clamscan: $(clamscan --no-summary /tmp/clam-probe.txt 2>&1 | head -3 | tr '\n' ' ' | cut -c1-300)"; rm -f /tmp/clam-probe.txt
+fi
