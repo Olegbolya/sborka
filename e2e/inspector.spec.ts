@@ -105,6 +105,7 @@ test.describe('P3.4 · работа с контролами', () => {
     await pickInLayers(page, 'Фигура');
     const radius = await section(page, 'radius');
     const label = radius.getByText('Левый верхний угол', { exact: true });
+    await label.scrollIntoViewIfNeeded(); // название поля должно быть в окне, иначе мышь «тянет» за его пределами
     const b = (await label.boundingBox())!;
     await page.mouse.move(b.x + 5, b.y + b.height / 2);
     await page.mouse.down();
