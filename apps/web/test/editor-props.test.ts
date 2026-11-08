@@ -65,6 +65,11 @@ describe('B-01…B-23 · свойства блоков', () => {
     expect(t.get(t.ids[1]).frame.y).toBeGreaterThanOrEqual(t.get().frame.y + t.get().frame.h);
   });
 
+  it('E-14 · новая надпись растёт вместе с текстом (не обрезается рамкой), у других блоков высота фиксирована', () => {
+    expect(setup('text').get().style.autoHeight).toBe(true);
+    expect(setup('shape').get().style.autoHeight).toBeUndefined();
+  });
+
   it('E-14 · новый блок ложится под нижним, не наползая, и сверху по слоям', () => {
     const t = setup('shape');
     let second: string[] = [];

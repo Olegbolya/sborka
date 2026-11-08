@@ -194,7 +194,8 @@ export const addBlock =
     if (!screen) return;
     const parent = parentId ? findBlock(doc, parentId)?.siblings[findBlock(doc, parentId)!.index] : undefined;
     const siblings = parent ? parent.children : screen.blocks;
-    const block = createBlock(type, overrides);
+    // Новая надпись растёт вместе с текстом, чтобы длинный заголовок не обрезался рамкой блока (автовысоту можно выключить в «Размер»).
+    const block = createBlock(type, type === 'text' && !overrides.style ? { ...overrides, style: { autoHeight: true } } : overrides);
     const extra = type === 'contacts' ? [createBlock('consent')] : [];
     const room = parent ? parent.frame.h : screen.height;
     let y = siblings.length === 0 ? block.frame.y : Math.max(...siblings.map((b) => b.frame.y + b.frame.h)) + MARGIN;
