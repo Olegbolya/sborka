@@ -505,6 +505,9 @@ export class Runtime {
       case 'tap':
       case 'doubleTap':
         this.gesture(event.blockId, (inst) => {
+          // BH-02: касание, при котором кнопка убегает, — не нажатие. Браузер всё равно доставляет клик на то место,
+          // где палец опустился, пока кнопка ещё летит; пальцем быстрее, чем кнопка успевает уйти, не нажать.
+          if (event.type === 'tap' && behaviorOf(inst.block, 'flee') && this.tweens.some((t) => t.inst === inst && (t.prop === 'x' || t.prop === 'y'))) return;
           if (event.type === 'tap') {
             const wheel = behaviorOf(inst.block, 'wheel');
             if (wheel) this.spin(inst, wheel);

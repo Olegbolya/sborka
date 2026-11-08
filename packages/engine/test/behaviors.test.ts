@@ -81,6 +81,16 @@ describe('BH-02: убегает от пальца', () => {
     expect(places[3]).toEqual(places[2]);
   });
 
+  it('BH-02: касание пальцем, при котором кнопка убегает, не считается нажатием; после остановки — считается', () => {
+    const press: RuleInput = rule({ kind: 'tap', source: { kind: 'block', blockId: 'knopka_net' } }, [{ kind: 'effect', effect: 'confetti', intensity: 1 }]);
+    // Палец опустился рядом: кнопка пошла прочь; клик приходит сразу, пока она летит, — это не нажатие.
+    const flying = play({ blocks: [runner({ times: 1 })], rules: [press] }, [pointer(190, 415), ev.tap('knopka_net')]);
+    expect(flying.of('effect')).toHaveLength(0);
+    // Убегать больше нельзя (times: 1 уже потрачено) — и следующее нажатие проходит.
+    const later = play({ blocks: [runner({ times: 1 })], rules: [press] }, [pointer(190, 415), ev.tap('knopka_net'), tick(400), ev.tap('knopka_net')]);
+    expect(later.of('effect')).toHaveLength(1);
+  });
+
   it('BH-02: убегает только внутри своей области', () => {
     const o = play({ blocks: [runner({ area: { x: 100, y: 300, w: 200, h: 200 } })] }, [pointer(190, 415), tick(400)]);
     const v = o.view('knopka_net')!;

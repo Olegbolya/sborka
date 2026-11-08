@@ -49,6 +49,7 @@ export function TextEditor({ block }: { block: Block }) {
     return ref;
   });
 
+  const lastSelection = useRef<{ from: number; to: number } | null>(null);
   const last = useRef(textOf(block.textLayer));
   const editor = useTipTap({
     immediatelyRender: false,
@@ -68,6 +69,10 @@ export function TextEditor({ block }: { block: Block }) {
     content: toEditorDoc(block.textLayer),
     editorProps: { attributes: { role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Текст блока', class: 'ed-richtext' } },
     onTransaction: () => setTick((n) => n + 1),
+    // Список «Вставить в текст» забирает фокус: место курсора запоминается, чтобы вставка попала именно туда.
+    onSelectionUpdate: ({ editor: e }) => {
+      if (e.isFocused) lastSelection.current = { from: e.state.selection.from, to: e.state.selection.to };
+    },
     onUpdate: ({ editor: e }) => {
       const next = RichText.safeParse(fromEditorDoc(e.getJSON() as EditorNode));
       if (!next.success) {
@@ -102,7 +107,10 @@ export function TextEditor({ block }: { block: Block }) {
   );
   const insert = (value: string) => {
     const [kind, ref] = value.split(':') as [string, string];
-    editor.chain().focus().insertContent({ type: 'placeholder', attrs: { kind, ref } }).run();
+    const chain = editor.chain().focus();
+    const at = lastSelection.current;
+    if (at && at.to <= editor.state.doc.content.size) chain.setTextSelection(at);
+    chain.insertContent({ type: 'placeholder', attrs: { kind, ref } }).run();
   };
   const applyLink = () => {
     if (!SafeHref.safeParse(href).success) return setProblem('Ссылка должна начинаться с https://, http://, mailto: или tel:');

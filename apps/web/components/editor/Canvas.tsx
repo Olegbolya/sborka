@@ -1,5 +1,5 @@
 'use client';
-import { Artboard, ScreenView } from '@blokum/renderer';
+import { Artboard, ScreenView, type TextRunValue } from '@blokum/renderer';
 import { type Block } from '@blokum/schema';
 import { type KeyboardEvent, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { withGroupMates } from '../../lib/editor/arrange';
@@ -225,6 +225,16 @@ export function Canvas() {
     pair.current = touches.current.size === 2 ? pairOf(touches.current) : null;
   };
 
+  // В редакторе вставка в тексте показана по имени: «{{счёт}}», «{{ответ: Вопрос}}» (в плеере вместо неё — значение).
+  const runTextNames = useCallback(
+    (run: Parameters<TextRunValue>[0]): string | null => {
+      if ('sys' in run) return `{{${run.sys}}}`;
+      if ('v' in run) return `{{${doc.variables.find((v) => v.id === run.v)?.name ?? 'переменная'}}}`;
+      if ('answer' in run) return `{{ответ: ${[...doc.screens.flatMap((sc) => [...drawOrder(sc.blocks)])].find((b) => b.id === run.answer)?.name ?? 'вопрос'}}}`;
+      return null;
+    },
+    [doc],
+  );
   const blocksById = useMemo(() => new Map([...drawOrder(screen.blocks)].map((b) => [b.id, b])), [screen.blocks]);
   const frames = useMemo(() => absoluteFrames(screen.blocks), [screen.blocks]);
   const hits = useMemo(() => drawOrder(screen.blocks).filter((b) => !b.hiddenInEditor), [screen.blocks]);
@@ -386,7 +396,7 @@ export function Canvas() {
             if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.bk-artboard')) onStageDown(e);
           }}
         >
-          <Artboard mode="editor" unit={unit} tokens={doc.theme.tokens} media={media.resolver}>
+          <Artboard mode="editor" unit={unit} tokens={doc.theme.tokens} media={media.resolver} runText={runTextNames}>
             <ScreenView screen={screen} />
           </Artboard>
           {screen.blocks.length === 0 && <EmptyScreenHint screenId={screen.id} />}
