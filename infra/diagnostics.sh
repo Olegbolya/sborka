@@ -75,6 +75,8 @@ if [ -f "$ENV_FILE" ]; then
   psql "$dburl" -At -F' ' -c "select m.owner_id, m.id, m.status, m.mime from media m where m.deleted_at is null and m.status='READY' order by m.created_at desc limit 3" 2>&1 | while read -r owner mid st mime; do
     [ -n "$mid" ] || continue
     echo "· $mid $st $mime файл: $(ls -l "$mroot/$owner/$mid" 2>&1 | cut -c1-160) [корень: ${mroot:-не задан}]"
+    echo "  variants: $(psql "$dburl" -At -c "select left(variants::text,300) from media where id='$mid'" 2>&1 | head -1)"
+    echo "  папка владельца: $(ls -1 "$mroot/$owner" 2>&1 | grep "$mid" | tr '\n' ' ' | cut -c1-300)"
     pub="$(psql "$dburl" -At -c "select p.slug from projects p join project_versions v on v.id=p.published_version_id where v.document::text like '%$mid%' limit 1" 2>&1 | head -1)"
     echo "  в опубликованной сборке: ${pub:-нет (не опубликовано после добавления)}"
     if [ -n "$pub" ]; then
