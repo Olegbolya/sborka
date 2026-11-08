@@ -7,7 +7,7 @@ import { createId, type ProjectDocument, type PublicDocument, type ThemeTokens, 
 import { API_CONFIG, DB } from '../tokens.js';
 import { type ApiConfig } from '../config.js';
 import { FREE_LIMITS } from '../media/entitlements.js';
-import { LocalStorageService } from '../media/storage.js';
+import { LocalStorageService, servedKey } from '../media/storage.js';
 import { type ProjectSettings } from '../projects/projects.service.js';
 import { checkUnlockToken, deviceHash, unlockToken, verifyPassword } from './secrets.js';
 
@@ -248,11 +248,11 @@ export class PlayService {
       if (!fontHasMedia) throw unavailable();
     }
     const [m] = await this.db
-      .select({ mime: schema.media.mime, status: schema.media.status })
+      .select({ mime: schema.media.mime, status: schema.media.status, variants: schema.media.variants })
       .from(schema.media)
       .where(and(eq(schema.media.id, mediaId), eq(schema.media.ownerId, p.ownerId), isNull(schema.media.deletedAt)));
     if (!m || m.status === 'BLOCKED' || m.status === 'REJECTED') throw unavailable();
-    return { path: this.storage.getPath(`${p.ownerId}/${mediaId}`), mime: m.mime };
+    return { path: this.storage.getPath(servedKey(p.ownerId, mediaId, m.variants)), mime: m.mime };
   }
 
   /**

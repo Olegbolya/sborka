@@ -12,7 +12,7 @@ import {
 } from '@blokum/schema';
 import { DB } from '../tokens.js';
 import { FREE_LIMITS } from '../media/entitlements.js';
-import { LocalStorageService } from '../media/storage.js';
+import { LocalStorageService, servedKey } from '../media/storage.js';
 
 export interface ThemeDto {
   id: string;
@@ -236,7 +236,7 @@ export class ThemesService {
   async fromImage(userId: string, mediaId: unknown, name: unknown): Promise<ThemeDto> {
     if (typeof mediaId !== 'string') throw fail('INVALID_INPUT', 'Не выбрана картинка');
     const [m] = await this.db
-      .select({ kind: schema.media.kind, status: schema.media.status })
+      .select({ kind: schema.media.kind, status: schema.media.status, variants: schema.media.variants })
       .from(schema.media)
       .where(and(eq(schema.media.id, mediaId), eq(schema.media.ownerId, userId), isNull(schema.media.deletedAt)));
     if (!m || m.status === 'BLOCKED' || m.status === 'REJECTED') throw fail('NOT_FOUND', 'Картинка не найдена', 404);
@@ -244,7 +244,7 @@ export class ThemesService {
     await this.checkLimit(userId);
     let pixels: Buffer;
     try {
-      pixels = await sharp(this.storage.getPath(`${userId}/${mediaId}`))
+      pixels = await sharp(this.storage.getPath(servedKey(userId, mediaId, m.variants)))
         .resize(64, 64, { fit: 'inside' })
         .removeAlpha()
         .raw()

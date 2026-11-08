@@ -8,6 +8,7 @@ import { and, eq, isNull, sql, sum } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createId } from '@blokum/schema';
 import { DB, MEDIA_QUEUE } from '../tokens.js';
+import { servedKey } from './storage.js';
 import { checkSignature, SignatureError } from './signatures.js';
 import { checkFileSize, checkStorageQuota, QuotaError } from './entitlements.js';
 import { LocalStorageService } from './storage.js';
@@ -173,11 +174,11 @@ export class MediaService {
    */
   async fileOf(ownerId: string, mediaId: string): Promise<{ path: string; mime: string }> {
     const [row] = await this.db
-      .select({ mime: schema.media.mime, status: schema.media.status })
+      .select({ mime: schema.media.mime, status: schema.media.status, variants: schema.media.variants })
       .from(schema.media)
       .where(and(eq(schema.media.id, mediaId), eq(schema.media.ownerId, ownerId), isNull(schema.media.deletedAt)));
     if (!row || row.status === 'BLOCKED' || row.status === 'REJECTED') throw makeError('NOT_FOUND', 'Медиафайл не найден');
-    return { path: this.storage.getPath(`${ownerId}/${mediaId}`), mime: row.mime };
+    return { path: this.storage.getPath(servedKey(ownerId, mediaId, row.variants)), mime: row.mime };
   }
 
   /** P4.4/D-08: Delete media — block if in use unless confirm=true. */
@@ -187,7 +188,7 @@ export class MediaService {
     confirm: boolean,
   ): Promise<{ deleted: boolean; usages: MediaUsage[] }> {
     const [row] = await this.db
-      .select({ id: schema.media.id })
+      .select({ id: schema.media.id, variants: schema.media.variants })
       .from(schema.media)
       .where(and(eq(schema.media.id, mediaId), eq(schema.media.ownerId, ownerId), isNull(schema.media.deletedAt)));
     if (!row) throw makeError('NOT_FOUND', 'Медиафайл не найден');
@@ -198,7 +199,14 @@ export class MediaService {
     }
 
     await this.db.update(schema.media).set({ deletedAt: new Date() }).where(eq(schema.media.id, mediaId));
-    await this.storage.delete(`${ownerId}/${mediaId}`);
+    // Вместе с исходником уходят перекодированный файл и его варианты по ширине (лежат рядом, имя начинается с id).
+    const keys = new Set<string>([`${ownerId}/${mediaId}`, servedKey(ownerId, mediaId, row.variants)]);
+    for (const v of Object.values((row.variants ?? {}))) {
+      if (typeof v !== 'string') continue;
+      const name = path.basename(v);
+      if (name === mediaId || name.startsWith(`${mediaId}.`) || name.startsWith(`${mediaId}_`)) keys.add(`${ownerId}/${name}`);
+    }
+    for (const key of keys) await this.storage.delete(key);
 
     return { deleted: true, usages: [] };
   }

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import request from 'supertest';
@@ -352,6 +352,34 @@ describe('P4.1, P4.4, B-02–B-07, D-08, TS-01 · Медиатека', () => {
     }).expect(200);
     expect(res.headers['content-type']).toBe('image/jpeg');
     expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(Buffer.compare(res.body as Buffer, JPEG_1PX)).toBe(0);
+  });
+
+  it('P4.3 · GET /media/:id/file отдаёт файл, обработанный воркером (<id>.webp вместо исходного)', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991250032');
+    const up = await request(t.http())
+      .post(`/${API_PREFIX}/media`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .attach('file', JPEG_1PX, { filename: 'a.jpg', contentType: 'image/jpeg' })
+      .expect(201);
+    const id = up.body.id as string;
+    const [row] = await db.db.select().from(schema.media).where(eq(schema.media.id, id));
+    const ownerDir = path.join(mediaDir, row!.ownerId!);
+    // Воркер: пишет <id>.webp, удаляет исходный файл, запоминает путь в variants.original.
+    rmSync(path.join(ownerDir, id), { force: true });
+    const processed = path.join(ownerDir, `${id}.webp`);
+    writeFileSync(processed, JPEG_1PX);
+    await db.db
+      .update(schema.media)
+      .set({ status: 'READY', variants: { original: processed } })
+      .where(eq(schema.media.id, id));
+    const res = await request(t.http()).get(`/${API_PREFIX}/media/${id}/file`).set('Cookie', cookie).buffer(true).parse((r, cb) => {
+      const parts: Buffer[] = [];
+      r.on('data', (c: Buffer) => parts.push(c));
+      r.on('end', () => cb(null, Buffer.concat(parts)));
+    }).expect(200);
     expect(Buffer.compare(res.body as Buffer, JPEG_1PX)).toBe(0);
   });
 

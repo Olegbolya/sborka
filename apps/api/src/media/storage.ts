@@ -18,6 +18,21 @@ export interface StorageService {
   ensureDir(key: string): Promise<void>;
 }
 
+/**
+ * Ключ файла, который отдаётся людям. Загруженный файл лежит как `<владелец>/<id>`, но после проверки фоновая задача
+ * перекодирует картинку (WebP/JPEG), кладёт её рядом как `<id>.webp` и удаляет исходник — тогда отдавать нужно именно
+ * перекодированный файл (`variants.original`). Берём только имя файла и только если оно начинается с id, чтобы значение из базы
+ * не могло вывести за папку владельца.
+ */
+export function servedKey(ownerId: string, mediaId: string, variants: unknown): string {
+  const original = (variants as { original?: unknown } | null | undefined)?.original;
+  if (typeof original === 'string') {
+    const name = path.basename(original);
+    if (name === mediaId || name.startsWith(`${mediaId}.`)) return `${ownerId}/${name}`;
+  }
+  return `${ownerId}/${mediaId}`;
+}
+
 export class LocalStorageService implements StorageService {
   constructor(private readonly baseDir: string) {}
 
