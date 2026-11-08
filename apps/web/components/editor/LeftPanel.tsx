@@ -277,7 +277,7 @@ function LayersList() {
   if (screen.blocks.length === 0) {
     return (
       <div className="ed-section">
-        <p className="ed-hint">На этом экране пока нет блоков.</p>
+        <p className="ed-hint">На этом экране пока нет блоков. Слои появятся, когда вы добавите первый блок — на вкладке «Добавить» или кнопкой на самом экране.</p>
       </div>
     );
   }

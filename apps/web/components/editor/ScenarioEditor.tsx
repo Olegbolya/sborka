@@ -51,6 +51,11 @@ export function ScenarioEditor({ owner, rules, title = 'Правила' }: { own
           </button>
         </p>
       )}
+      {rules.length === 0 && (
+        <p className="ed-hint" data-testid="rules-empty">
+          Правил пока нет. Правило отвечает на вопрос «Когда → Если → Сделать». Пример: когда нажали кнопку → перейти на следующий экран. Выберите событие в списке «Добавить правило» ниже.
+        </p>
+      )}
       {rules.map((rule, index) => {
         const isOpen = open === rule.id;
         const triggerSpec = specOf(TRIGGERS, rule.when.kind)!;

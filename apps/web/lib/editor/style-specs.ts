@@ -247,6 +247,22 @@ export const SHAPE_VARIANTS: Record<string, { title: string; make: () => unknown
 
 const TEXT_PAINT_VARIANTS = PAINT_FIELDS(true);
 
+/** Одна понятная фраза под названием группы: что здесь меняется. Показывается внутри раскрытой группы. */
+export const GROUP_HINTS: Partial<Record<StyleGroup, string>> = {
+  autoHeight: 'Блок сам растёт вниз, когда текста становится больше, — текст не обрежется рамкой.',
+  lockAspect: 'При изменении размера ширина и высота меняются вместе.',
+  shape: 'Вид блока: прямоугольник, круг, сердце или свой контур.',
+  radius: 'Насколько скруглены углы.',
+  fills: 'Что залито внутри блока: цвет, градиент или картинка. Слоёв может быть несколько.',
+  stroke: 'Рамка вокруг блока.',
+  shadows: 'Тень под блоком: можно сделать несколько.',
+  glow: 'Мягкое свечение вокруг блока.',
+  effects: 'Прозрачность, размытие и режим наложения на то, что под блоком.',
+  filters: 'Яркость, контраст и цветовые эффекты для картинки или всего блока.',
+  padding: 'Отступ текста и вложенных блоков от краёв.',
+  text: 'Шрифт, размер, цвет и выравнивание текста.',
+}
+
 /** Style groups and what is changed in each; the keys are the keys of `BlockStyle`. */
 export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }> = {
   autoHeight: { title: 'Размер', fields: [{ t: 'bool', key: '', label: 'Автовысота по содержимому' }] },

@@ -17,7 +17,7 @@ export const ROLE_TITLES: Record<string, string> = {
 };
 
 /** A collapsible group of properties with the mark «своё» and «Сбросить к теме» (TH-06). */
-export function Section({ id, title, own, onReset, resetLabel = 'Сбросить к теме', children, open = false }: { id: string; title: string; own?: boolean; onReset?: () => void; resetLabel?: string; children: ReactNode; open?: boolean }) {
+export function Section({ id, title, own, onReset, resetLabel = 'Сбросить к теме', children, open = false, hint }: { id: string; title: string; hint?: string; own?: boolean; onReset?: () => void; resetLabel?: string; children: ReactNode; open?: boolean }) {
   // The group stays as the person left it (open or closed) whatever happens to the values inside.
   const [isOpen, setIsOpen] = useState(open);
   return (
@@ -31,6 +31,7 @@ export function Section({ id, title, own, onReset, resetLabel = 'Сбросит�
         )}
       </summary>
       <div className="ed-sec-body">
+        {hint && <p className="ed-hint" data-testid={`hint-${id}`}>{hint}</p>}
         {own && onReset && (
           <button type="button" className="ed-btn small" aria-label={`${resetLabel}: ${title}`} onClick={onReset}>
             {resetLabel}

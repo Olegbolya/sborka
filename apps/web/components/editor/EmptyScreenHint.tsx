@@ -3,6 +3,9 @@ import { type BlockType } from '@blokum/schema';
 import { addBlock } from '../../lib/editor/commands';
 import { useEditor } from './context';
 
+/** Событие окна: «открыть панель уроков» (его слушает редактор). */
+export const OPEN_LESSONS_EVENT = 'bk:open-lessons';
+
 /** Что чаще всего кладут на пустой экран: у каждого блока — понятное название и подсказка, зачем он. */
 const FIRST_BLOCKS: Array<{ type: BlockType; title: string; hint: string }> = [
   { type: 'text', title: 'Текст', hint: 'Заголовок или абзац' },
@@ -33,6 +36,9 @@ export function EmptyScreenHint({ screenId }: { screenId: string }) {
           </button>
         ))}
       </div>
+      <button type="button" className="ed-btn small" data-testid="empty-open-lessons" onClick={() => window.dispatchEvent(new Event(OPEN_LESSONS_EVENT))}>
+        Впервые здесь? Пройти урок
+      </button>
       <p className="ed-hint">Остальные блоки (фото, видео, фигуры, таймер…) — на вкладке «Добавить».</p>
     </div>
   );

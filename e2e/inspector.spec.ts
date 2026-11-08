@@ -369,3 +369,15 @@ test.describe('P3.4 · работа с контролами', () => {
     await drag(page, await blockCenter(page, 'Фигура'), await blockCenter(page, 'Фигура'));
   });
 });
+
+test.describe('E-15 · пояснения к группам свойств', () => {
+  test('E-15 · в раскрытых группах «Размер» и «Заливка» есть пояснение, что они меняют', async ({ page }) => {
+    const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(shapeAt('figura_1', 'Фигура', 40)));
+    await openEditor(page, id);
+    await pickInLayers(page, 'Фигура');
+    for (const name of ['size', 'fills']) {
+      const group = await section(page, name);
+      await expect(group.getByTestId(`hint-${name}`)).toHaveText(/\S{4,}/);
+    }
+  });
+});

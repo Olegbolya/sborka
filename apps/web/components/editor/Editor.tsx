@@ -27,6 +27,7 @@ import { ScenarioDialog } from './ScenarioDialog';
 import { ThemeDialog } from './ThemeDialog';
 import { PreviewDialog } from './PreviewDialog';
 import { LessonsPanel } from './LessonsPanel';
+import { OPEN_LESSONS_EVENT } from './EmptyScreenHint';
 import { TopBar } from './TopBar';
 
 type Loaded = { store: EditorStore; saver: Saver; media: MediaCatalog; status: 'DRAFT' | 'PUBLISHED' | 'CLOSED'; restored: boolean };
@@ -43,6 +44,12 @@ export function Editor({ projectId }: { projectId: string }) {
   const [status, setStatus] = useState<Loaded['status']>('DRAFT');
   const [dialog, setDialog] = useState<'preview' | 'history' | 'logic' | 'scenarios' | 'theme' | null>(null);
   const [lessons, setLessons] = useState(false);
+  // «Пройти урок» в подсказке пустого экрана просит открыть панель уроков.
+  useEffect(() => {
+    const open = () => setLessons(true);
+    window.addEventListener(OPEN_LESSONS_EVENT, open);
+    return () => window.removeEventListener(OPEN_LESSONS_EVENT, open);
+  }, []);
   const [message, setMessage] = useState<{ text: string; kind: 'ok' | 'error' } | null>(null);
   const suppress = useRef(false);
   const picker = useMemo(() => new BlockPicker(), []);

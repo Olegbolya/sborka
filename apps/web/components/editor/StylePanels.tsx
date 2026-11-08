@@ -14,7 +14,7 @@ import {
   same,
   setStyleGroup,
 } from '../../lib/editor/style-edit';
-import { ANIMATION_SPEC, EDGES, type Field, GROUP_SPECS, MEDIA_TYPES } from '../../lib/editor/style-specs';
+import { ANIMATION_SPEC, EDGES, type Field, GROUP_HINTS, GROUP_SPECS, MEDIA_TYPES } from '../../lib/editor/style-specs';
 import { ColorInput, NumberInput, Section, SelectInput, SliderInput, TextInput, Toggle } from './controls';
 import { useEditor, useEnv } from './context';
 import { MediaField } from './MediaPicker';
@@ -433,7 +433,7 @@ function GroupSection({ group, blocks, state }: { group: StyleGroup; blocks: Blo
   if (group === 'glow') {
     const on = values.every((v) => v !== undefined) ? true : values.every((v) => v === undefined) ? false : null;
     return (
-      <Section id="glow" title={spec.title} own={own} onReset={reset}>
+      <Section id="glow" title={spec.title} hint={GROUP_HINTS.glow} own={own} onReset={reset}>
         <Toggle
           control="glow#switch"
           label="Свечение"
@@ -445,7 +445,7 @@ function GroupSection({ group, blocks, state }: { group: StyleGroup; blocks: Blo
     );
   }
   return (
-    <Section id={group} title={spec.title} own={own} onReset={reset}>
+    <Section id={group} title={spec.title} hint={GROUP_HINTS[group]} own={own} onReset={reset}>
       <Fields fields={spec.fields} level={level} prefix={group} />
     </Section>
   );
@@ -506,6 +506,7 @@ function SizeSection({ blocks, state }: { blocks: Block[]; state: BlockState | n
     <Section
       id="size"
       title="Размер"
+      hint="Сохранять пропорции — ширина и высота меняются вместе. Автовысота — блок сам растёт вниз, когда текста больше, и текст не обрезается рамкой."
       own={blocks.some((b) => isOwn(b, 'autoHeight', state) || isOwn(b, 'lockAspect', state))}
       onReset={() =>
         apply(resetStyleGroup(ids, ['autoHeight', 'lockAspect'], state), { label: 'Сбросить к теме: Размер' })

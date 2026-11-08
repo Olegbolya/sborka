@@ -353,6 +353,9 @@ test.describe('E-14 · подсказка на пустом экране', () =>
     const hint = page.getByTestId('empty-screen-hint');
     await expect(hint).toBeVisible();
     await expect(hint).toContainText('Экран пока пустой');
+    await hint.getByTestId('empty-open-lessons').click();
+    await expect(page.getByTestId('lesson-panel')).toBeVisible();
+    await page.getByRole('button', { name: 'Закрыть уроки' }).click();
     await hint.getByRole('button', { name: '+ Текст' }).click();
     await expect(hint).toHaveCount(0);
     await expect(page.getByTestId('save-status')).toHaveText('Сохранено');
@@ -375,5 +378,21 @@ test.describe('E-14 · подсказка на пустом экране', () =>
       const b = (await tab.boundingBox())!;
       if (b.x < bounds.x + bounds.width) expect(b.x + b.width).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
     }
+  });
+});
+
+test.describe('E-14 · пустые списки объясняют, что делать', () => {
+  test('E-14 · «Слои», «Сценарии» и «Логика → Ветки» на пустой сборке подсказывают первый шаг', async ({ page }) => {
+    const { id } = await seedProject(page, () => undefined, 'Пустая');
+    await openEditor(page, id);
+    await openTab(page, 'Слои');
+    await expect(page.getByText(/Слои появятся, когда вы добавите первый блок/)).toBeVisible();
+    await page.getByRole('button', { name: 'Сценарии', exact: true }).click();
+    await expect(page.getByTestId('rules-empty').first()).toContainText('Когда → Если → Сделать');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Логика', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Логика сборки' });
+    await dialog.getByRole('tab', { name: /^Ветвление/ }).click();
+    await expect(dialog.getByTestId('branches-empty')).toContainText('Нет → сразу показать финальный экран');
   });
 });

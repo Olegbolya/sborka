@@ -125,7 +125,7 @@ function BranchesTab({ doc, screenId, onScreen }: { doc: ProjectDocument; screen
     <div>
       <SelectInput<string> control="branch-screen" label="Экран" value={screen.id} options={doc.screens.map((s, i) => [s.id, `${i + 1}. ${s.name}`] as const)} onChange={onScreen} />
       <p className="ed-hint">Ветки проверяются сверху вниз; сработает первая подходящая. Если не подошла ни одна — идём на следующий экран.</p>
-      {screen.branches.length === 0 && <p className="ed-hint">У этого экрана нет веток.</p>}
+      {screen.branches.length === 0 && <p className="ed-hint" data-testid="branches-empty">У этого экрана нет веток: сборка идёт по порядку экранов. Ветка нужна, когда путь зависит от ответа. Пример: «если ответ — Нет → сразу показать финальный экран».</p>}
       {screen.branches.map((b, i) => (
         <div key={b.id} className="ed-layer" data-branch={i}>
           <div className="ed-layerhead">
