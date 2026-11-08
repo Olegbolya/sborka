@@ -71,6 +71,11 @@ fi
 echo "── Картинки в опубликованных сборках (почему у участника пусто)"
 if [ -f "$ENV_FILE" ]; then
   dburl="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | cut -d= -f2-)"
+  echo "проекты (последние 6): $(psql "$dburl" -At -F' · ' -c "select slug, status, to_char(updated_at,'DD.MM HH24:MI'), (published_version_id is not null) from projects where deleted_at is null order by updated_at desc limit 6" 2>&1 | tr '\n' ';' | cut -c1-400)"
+  echo "медиа всего (с удалёнными): $(psql "$dburl" -At -F' ' -c "select id, status, (deleted_at is not null), to_char(created_at,'DD.MM HH24:MI') from media order by created_at desc limit 8" 2>&1 | tr '\n' ';' | cut -c1-500)"
+fi
+if [ -f "$ENV_FILE" ]; then
+  dburl="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | cut -d= -f2-)"
   mroot="$(grep -E '^MEDIA_ROOT=' "$ENV_FILE" | cut -d= -f2-)"
   psql "$dburl" -At -F' ' -c "select m.owner_id, m.id, m.status, m.mime from media m where m.deleted_at is null and m.status='READY' order by m.created_at desc limit 3" 2>&1 | while read -r owner mid st mime; do
     [ -n "$mid" ] || continue
