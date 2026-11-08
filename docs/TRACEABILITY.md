@@ -318,7 +318,7 @@
 | D-04 | P6.4 | `apps/api/src/projects/responses.service.ts`; `apps/api/src/projects/responses.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
 | D-06 | P6.6 | `apps/api/src/projects/export.service.ts`; `apps/api/src/projects/responses.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
 | D-07 | P6.7 (часть) | `apps/api/src/play/play-sessions.service.ts#notifyOwner`; `apps/web/components/admin/Notifications.tsx` | `apps/api/test/play-session.test.ts` |
-| GS-02 | P6.9 | `packages/engine/src/runtime/runtime.ts` (flee + касание); `apps/web/components/editor/TextEditor.tsx`; `apps/web/components/editor/Canvas.tsx` | `e2e/golden-own-game.spec.ts`; `packages/engine/test/behaviors.test.ts` |
+| GS-02 | P6.9 | `packages/engine/src/runtime/runtime.ts`; `apps/web/components/editor/TextEditor.tsx`; `apps/web/components/editor/Canvas.tsx` | `e2e/golden-own-game.spec.ts` |
 | D1 | P8.1 | `legal/terms.md`, `apps/api/src/auth/legal-document.service.ts`, `apps/api/src/auth/consent.controller.ts` (LegalController), `apps/web/app/legal/[type]/page.tsx` | `apps/api/test/legal.test.ts` |
 | D2 | P8.1 | `legal/offer.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
 | D3 | P8.1 | `legal/privacy.md`, `apps/api/src/auth/legal-document.service.ts` | `apps/api/test/legal.test.ts` |
