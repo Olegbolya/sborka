@@ -71,6 +71,16 @@ fi
 echo "── Картинки в опубликованных сборках (почему у участника пусто)"
 if [ -f "$ENV_FILE" ]; then
   dburl="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | cut -d= -f2-)"
+  for pub in $(psql "$dburl" -At -c "select slug from projects where status='PUBLISHED' and deleted_at is null and published_version_id is not null limit 3" 2>&1); do
+    echo "опубликованная $pub: media в документе: $(psql "$dburl" -At -c "select string_agg(m.id, ',') from media m, projects p join project_versions v on v.id=p.published_version_id where p.slug='$pub' and v.document::text like '%' || m.id || '%'" 2>&1 | head -1)"
+    echo "  страница: $(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://127.0.0.1:3100/api/v1/play/$pub" 2>&1)"
+    for mid in $(psql "$dburl" -At -c "select m.id from media m, projects p join project_versions v on v.id=p.published_version_id where p.slug='$pub' and v.document::text like '%' || m.id || '%'" 2>&1); do
+      echo "  картинка $mid: $(curl -s -o /dev/null -m 10 -w '%{http_code} %{content_type} %{size_download}' "http://127.0.0.1:3100/api/v1/play/$pub/media/$mid" 2>&1)"
+    done
+  done
+fi
+if [ -f "$ENV_FILE" ]; then
+  dburl="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | cut -d= -f2-)"
   echo "проекты (последние 6): $(psql "$dburl" -At -F' · ' -c "select slug, status, to_char(updated_at,'DD.MM HH24:MI'), (published_version_id is not null) from projects where deleted_at is null order by updated_at desc limit 6" 2>&1 | tr '\n' ';' | cut -c1-400)"
   echo "медиа всего (с удалёнными): $(psql "$dburl" -At -F' ' -c "select id, status, (deleted_at is not null), to_char(created_at,'DD.MM HH24:MI') from media order by created_at desc limit 8" 2>&1 | tr '\n' ';' | cut -c1-500)"
 fi
