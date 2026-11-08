@@ -44,6 +44,7 @@ const play = async (page: Page, picks: string[]) => {
 
 test.describe('P3.7 · логика', () => {
   test('L-04 · личностный тест на 3 результата собирается через интерфейс и проходится тремя путями', async ({ page }, info) => {
+    test.slow(); // длинный сценарий: на медленной машине CI укладывается впритык
     const { id } = await seedProject(page, (d) => {
       d.screens[0]!.blocks.push(question('vopros_1', 'Вопрос 1', 40, ['Лиса 1', 'Сова 1', 'Волк 1']), nextButton('knopka_1', 'Дальше', 300));
       d.screens.push({ id: 'ekran_dva', name: 'Второй', blocks: [question('vopros_2', 'Вопрос 2', 40, ['Лиса 2', 'Сова 2', 'Волк 2']), goTo('knopka_2', 'Узнать', 300, { kind: 'finish' })] });

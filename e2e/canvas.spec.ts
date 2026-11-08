@@ -532,6 +532,9 @@ test.describe('E-10 · масштаб и панорамирование', () => 
     await page.keyboard.press('Control+1');
     for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Приблизить' }).click(); // big enough to scroll
     const canvas = page.getByTestId('canvas');
+    // Масштаб и прокрутка устаканились (на медленной машине кнопки «Приблизить» догоняют не сразу).
+    await expect.poll(async () => canvas.evaluate((el) => `${el.scrollWidth}x${el.scrollHeight}`), { timeout: 5000 }).toBe(await canvas.evaluate((el) => `${el.scrollWidth}x${el.scrollHeight}`));
+    await page.waitForTimeout(400);
     const scroll = () => canvas.evaluate((el) => [el.scrollLeft, el.scrollTop]);
     const canScroll = await canvas.evaluate((el) => el.scrollHeight > el.clientHeight + 4 || el.scrollWidth > el.clientWidth + 4);
     await canvas.scrollIntoViewIfNeeded();
