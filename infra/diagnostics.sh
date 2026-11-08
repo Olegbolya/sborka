@@ -80,6 +80,9 @@ if [ -f "$ENV_FILE" ]; then
     pub="$(psql "$dburl" -At -c "select p.slug from projects p join project_versions v on v.id=p.published_version_id where v.document::text like '%$mid%' limit 1" 2>&1 | head -1)"
     echo "  в опубликованной сборке: ${pub:-нет (не опубликовано после добавления)}"
     if [ -n "$pub" ]; then
+      echo "  тело ответа: $(curl -s -m 10 "http://127.0.0.1:3100/api/v1/play/$pub/media/$mid" 2>&1 | head -c 200)"
+      echo "  слаг открывается: $(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://127.0.0.1:3100/api/v1/play/$pub" 2>&1)"
+      echo "  id встречается в документе в кавычках: $(psql "$dburl" -At -c "select (v.document::text like '%\"$mid\"%') from projects p join project_versions v on v.id=p.published_version_id where p.slug='$pub'" 2>&1 | head -1)"
       echo "  ответ участнику: $(curl -s -o /dev/null -m 10 -w '%{http_code} %{content_type} %{size_download}' "http://127.0.0.1:3100/api/v1/play/$pub/media/$mid" 2>&1)"
       echo "  через nginx (публично): $(curl -s -o /dev/null -m 10 -w '%{http_code} %{content_type} %{size_download}' -H 'Host: blokker.ru' --resolve blokker.ru:443:127.0.0.1 "https://blokker.ru/api/v1/play/$pub/media/$mid" 2>&1)"
     fi
