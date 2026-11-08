@@ -118,6 +118,7 @@ test.describe('P6.9 · GS-02 «Своя мини-игра»', () => {
     const field = page.getByRole('textbox', { name: 'Текст блока' });
     await field.click();
     await page.keyboard.press('End');
+    await page.waitForTimeout(400); // редактор успевает запомнить место курсора до того, как список заберёт фокус
     await page.getByLabel('Вставить в текст').selectOption({ label: 'счёт' });
     await field.click();
     await page.keyboard.press('End');
