@@ -81,6 +81,8 @@ if [ -f "$ENV_FILE" ]; then
     echo "  в опубликованной сборке: ${pub:-нет (не опубликовано после добавления)}"
     if [ -n "$pub" ]; then
       echo "  тело ответа: $(curl -s -m 10 "http://127.0.0.1:3100/api/v1/play/$pub/media/$mid" 2>&1 | head -c 200)"
+      echo "  проект: $(psql "$dburl" -At -F' · ' -c "select status, moderation_status, coalesce(deleted_at::text,'не удалён'), to_char(updated_at,'DD.MM HH24:MI') from projects where slug='$pub'" 2>&1 | head -1)"
+      echo "  флаги: $(psql "$dburl" -At -F'=' -c "select key, enabled from feature_flags order by 1" 2>&1 | tr '\n' ' ' | cut -c1-300)"
       echo "  слаг открывается: $(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://127.0.0.1:3100/api/v1/play/$pub" 2>&1)"
       echo "  id встречается в документе в кавычках: $(psql "$dburl" -At -c "select (v.document::text like '%\"$mid\"%') from projects p join project_versions v on v.id=p.published_version_id where p.slug='$pub'" 2>&1 | head -1)"
       echo "  ответ участнику: $(curl -s -o /dev/null -m 10 -w '%{http_code} %{content_type} %{size_download}' "http://127.0.0.1:3100/api/v1/play/$pub/media/$mid" 2>&1)"
