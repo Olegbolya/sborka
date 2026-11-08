@@ -831,3 +831,27 @@
   justify-content: center;
   margin: 12px 0;
 }
+
+/* E-12 · на телефоне шапка и панель инструментов — по одной прокручиваемой строке: холсту остаётся место. */
+@media (max-width: 767px) {
+  .ed-top,
+  .ed-viewbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ed-top > *,
+  .ed-viewbar > * {
+    flex: none;
+  }
+  .ed-top .ed-title {
+    width: 150px;
+  }
+  /* главная кнопка всегда на виду, остальные листаются под ней */
+  .ed-top .ed-btn.primary {
+    position: sticky;
+    right: 0;
+    box-shadow: -8px 0 8px -4px var(--panel);
+  }
+}

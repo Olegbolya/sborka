@@ -25,7 +25,7 @@ export function EmptyScreenHint({ screenId }: { screenId: string }) {
   return (
     <div className="ed-empty" data-testid="empty-screen-hint">
       <p className="ed-empty-title">Экран пока пустой</p>
-      <p className="ed-hint">Добавьте первый блок — его можно будет перетащить, изменить размер и оформить справа.</p>
+      <p className="ed-hint">Добавьте первый блок — его можно будет перетащить, изменить размер и оформить в свойствах.</p>
       <div className="ed-empty-actions">
         {FIRST_BLOCKS.map((b) => (
           <button key={b.type} type="button" className="ed-btn" title={b.hint} onClick={() => add(b.type)}>
@@ -33,7 +33,7 @@ export function EmptyScreenHint({ screenId }: { screenId: string }) {
           </button>
         ))}
       </div>
-      <p className="ed-hint">Остальные блоки (фото, видео, фигуры, таймер…) — на вкладке «Добавить» слева.</p>
+      <p className="ed-hint">Остальные блоки (фото, видео, фигуры, таймер…) — на вкладке «Добавить».</p>
     </div>
   );
 }
