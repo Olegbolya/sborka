@@ -74,8 +74,8 @@ if [ -f "$ENV_FILE" ]; then
   mroot="$(grep -E '^MEDIA_ROOT=' "$ENV_FILE" | cut -d= -f2-)"
   psql "$dburl" -At -F' ' -c "select m.owner_id, m.id, m.status, m.mime from media m where m.deleted_at is null and m.status='READY' order by m.created_at desc limit 3" 2>&1 | while read -r owner mid st mime; do
     [ -n "$mid" ] || continue
-    echo "· $mid $st $mime файл: $(ls -l "$mroot/$owner/$mid" 2>&1 | awk '{print $1, $5, $9}' | cut -c1-120)"
-    pub="$(psql "$dburl" -At -c "select p.slug from projects p join project_versions v on v.id=p.published_version_id where v.doc::text like '%$mid%' limit 1" 2>&1 | head -1)"
+    echo "· $mid $st $mime файл: $(ls -l "$mroot/$owner/$mid" 2>&1 | cut -c1-160) [корень: ${mroot:-не задан}]"
+    pub="$(psql "$dburl" -At -c "select p.slug from projects p join project_versions v on v.id=p.published_version_id where v.document::text like '%$mid%' limit 1" 2>&1 | head -1)"
     echo "  в опубликованной сборке: ${pub:-нет (не опубликовано после добавления)}"
     if [ -n "$pub" ]; then
       echo "  ответ участнику: $(curl -s -o /dev/null -m 10 -w '%{http_code} %{content_type} %{size_download}' "http://127.0.0.1:3100/api/v1/play/$pub/media/$mid" 2>&1)"
