@@ -82,25 +82,25 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       <button type="button" className="ed-btn" onClick={() => store.getState().redo()} disabled={!canRedo} aria-label="Повторить" title="Повторить (Ctrl+Shift+Z)">
         ↷ Повторить
       </button>
-      <button type="button" className="ed-btn" onClick={onHistory}>
+      <button type="button" className="ed-btn" onClick={onHistory} title="Прошлые версии сборки: посмотреть и вернуться к любой">
         История
       </button>
-      <button type="button" className="ed-btn" data-lesson="theme" onClick={onTheme}>
+      <button type="button" className="ed-btn" data-lesson="theme" onClick={onTheme} title="Цвета, шрифты и скругления всей сборки">
         Тема
       </button>
-      <button type="button" className="ed-btn" data-lesson="scenarios" onClick={onScenarios}>
+      <button type="button" className="ed-btn" data-lesson="scenarios" onClick={onScenarios} title="Что происходит по нажатию, таймеру и другим событиям: «Когда → Если → Сделать»">
         Сценарии
       </button>
-      <button type="button" className="ed-btn" onClick={onLogic}>
+      <button type="button" className="ed-btn" onClick={onLogic} title="Переменные, баллы и результаты теста">
         Логика
       </button>
-      <button type="button" className="ed-btn" onClick={onLessons}>
+      <button type="button" className="ed-btn" onClick={onLessons} title="Короткие уроки: как собрать сборку шаг за шагом">
         Уроки
       </button>
-      <button type="button" className="ed-btn" data-testid="tool-template-save" onClick={() => void saveAsTemplate()} disabled={savingTemplate}>
+      <button type="button" className="ed-btn" data-testid="tool-template-save" onClick={() => void saveAsTemplate()} disabled={savingTemplate} title="Сохранить эту сборку как шаблон, чтобы начинать новые с неё">
         {savingTemplate ? 'Сохраняем…' : 'Шаблон'}
       </button>
-      <button type="button" className="ed-btn" data-lesson="preview" onClick={onPreview}>
+      <button type="button" className="ed-btn" data-lesson="preview" onClick={onPreview} title="Пройти сборку так, как её увидят участники">
         Предпросмотр
       </button>
       <span className="ed-hint" data-testid="project-status">

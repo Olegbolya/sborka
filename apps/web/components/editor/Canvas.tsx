@@ -7,6 +7,7 @@ import { type Handle, HANDLES, absoluteFrames, boundsOf, unionOf } from '../../l
 import { type GestureEnv, NO_TRANSIENT, type Transient, startMarquee, startMove, startResize, startRotate } from '../../lib/editor/gestures';
 import { drawOrder } from '../../lib/editor/tree';
 import { useEditor, useEnv } from './context';
+import { EmptyScreenHint } from './EmptyScreenHint';
 import { NodeEditor, PenOverlay, PencilOverlay } from './PenTool';
 
 const ARTBOARD = 390;
@@ -326,7 +327,7 @@ export function Canvas() {
         <button type="button" className="ed-btn small" title="Вписать экран целиком (Ctrl+0)" onClick={() => setView({ mode: 'screen' })}>
           Вписать
         </button>
-        <button type="button" className="ed-btn small" aria-pressed={grid} onClick={() => setGrid((g) => !g)}>
+        <button type="button" className="ed-btn small" aria-pressed={grid} title="Показать сетку из клеток по 8 единиц — по ней удобно выравнивать блоки" onClick={() => setGrid((g) => !g)}>
           Сетка
         </button>
         <button type="button" className="ed-btn small" aria-pressed={snap} title="Прилипание (Alt при перетаскивании отключает)" onClick={() => setSnap((s) => !s)}>
@@ -388,6 +389,7 @@ export function Canvas() {
           <Artboard mode="editor" unit={unit} tokens={doc.theme.tokens} media={media.resolver}>
             <ScreenView screen={screen} />
           </Artboard>
+          {screen.blocks.length === 0 && <EmptyScreenHint screenId={screen.id} />}
           {grid && unit * 8 >= 4 && (
             <div
               aria-hidden

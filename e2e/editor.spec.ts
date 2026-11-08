@@ -345,3 +345,35 @@ test.describe('E-16 · публикация', () => {
     await expect.poll(async () => (await page.request.get(`/api/v1/projects/${id}`)).ok()).toBe(true);
   });
 });
+
+test.describe('E-14 · подсказка на пустом экране', () => {
+  test('E-14 · на пустом экране есть подсказка с кнопками; блок добавляется с неё, и подсказка исчезает', async ({ page }) => {
+    const { id } = await seedProject(page, () => undefined, 'Пустая');
+    await openEditor(page, id);
+    const hint = page.getByTestId('empty-screen-hint');
+    await expect(hint).toBeVisible();
+    await expect(hint).toContainText('Экран пока пустой');
+    await hint.getByRole('button', { name: '+ Текст' }).click();
+    await expect(hint).toHaveCount(0);
+    await expect(page.getByTestId('save-status')).toHaveText('Сохранено');
+    const doc = (await serverDraft(page, id)).doc as unknown as { screens: Array<{ blocks: Array<{ type: string; style: { autoHeight?: boolean } }> }> };
+    expect(doc.screens[0]!.blocks.map((b) => b.type)).toEqual(['text']);
+    expect(doc.screens[0]!.blocks[0]!.style.autoHeight).toBe(true);
+  });
+
+  test('E-14 · у кнопок верхней панели есть пояснения; все вкладки слева видны целиком', async ({ page }) => {
+    const { id } = await seedProject(page, () => undefined, 'Пустая');
+    await openEditor(page, id);
+    for (const name of ['Сценарии', 'Логика', 'Тема', 'История']) {
+      await expect(page.getByRole('button', { name, exact: true })).toHaveAttribute('title', /\S{10,}/);
+    }
+    const tabs = page.getByRole('tab');
+    const panel = page.locator('.ed-panel.left');
+    const bounds = (await panel.boundingBox())!;
+    for (const tab of await tabs.all()) {
+      if (!(await tab.isVisible())) continue;
+      const b = (await tab.boundingBox())!;
+      if (b.x < bounds.x + bounds.width) expect(b.x + b.width).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
+    }
+  });
+});

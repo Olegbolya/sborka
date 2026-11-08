@@ -122,6 +122,7 @@
 }
 .ed-tabs {
   display: flex;
+  flex-wrap: wrap; /* все вкладки видны, лишние уходят во вторую строку */
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
@@ -129,7 +130,8 @@
   z-index: 1;
 }
 .ed-tab {
-  flex: 1;
+  flex: 1 1 auto;
+  white-space: nowrap;
   padding: 9px 6px;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -802,4 +804,30 @@
 }
 @media (min-width: 768px) {
   .ed-mobile-nav { display: none; }
+}
+
+.ed-empty {
+  position: absolute;
+  left: 50%;
+  top: 20%;
+  transform: translate(-50%, -50%);
+  width: min(86%, 320px);
+  padding: 16px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  text-align: center;
+  z-index: 5;
+}
+.ed-empty-title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.ed-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 12px 0;
 }
