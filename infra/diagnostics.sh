@@ -62,7 +62,7 @@ done
 
 echo "── ClamAV (антивирус для загруженных файлов)"
 echo "freshclam: $(systemctl is-active clamav-freshclam 2>&1 | head -1) · clamd: $(systemctl is-active clamav-daemon 2>&1 | head -1)"
-echo "базы: $(ls -1 /var/lib/clamav 2>&1 | tr '\n' ' ' | head -c 200)"
+echo "базы: $(find /var/lib/clamav -maxdepth 1 -type f -printf '%f ' 2>&1 | head -c 200)"
 tail -n 6 /var/log/clamav/freshclam.log 2>&1 | cut -c1-200 | mask
 if [ -f /tmp/clam-probe.txt ] || printf 'probe' > /tmp/clam-probe.txt; then
   echo "clamscan: $(clamscan --no-summary /tmp/clam-probe.txt 2>&1 | head -3 | tr '\n' ' ' | cut -c1-300)"; rm -f /tmp/clam-probe.txt
@@ -89,9 +89,9 @@ if [ -f "$ENV_FILE" ]; then
   mroot="$(grep -E '^MEDIA_ROOT=' "$ENV_FILE" | cut -d= -f2-)"
   psql "$dburl" -At -F' ' -c "select m.owner_id, m.id, m.status, m.mime from media m where m.deleted_at is null and m.status='READY' order by m.created_at desc limit 3" 2>&1 | while read -r owner mid st mime; do
     [ -n "$mid" ] || continue
-    echo "· $mid $st $mime файл: $(ls -l "$mroot/$owner/$mid" 2>&1 | cut -c1-160) [корень: ${mroot:-не задан}]"
+    echo "· $mid $st $mime файл: $(find "$mroot/$owner" -maxdepth 1 -name "$mid" -printf '%s байт' 2>&1 | head -c 160) [корень: ${mroot:-не задан}]"
     echo "  variants: $(psql "$dburl" -At -c "select left(variants::text,300) from media where id='$mid'" 2>&1 | head -1)"
-    echo "  папка владельца: $(ls -1 "$mroot/$owner" 2>&1 | grep "$mid" | tr '\n' ' ' | cut -c1-300)"
+    echo "  папка владельца: $(find "$mroot/$owner" -maxdepth 1 -name "$mid*" -printf '%f ' 2>&1 | cut -c1-300)"
     pub="$(psql "$dburl" -At -c "select p.slug from projects p join project_versions v on v.id=p.published_version_id where v.document::text like '%$mid%' limit 1" 2>&1 | head -1)"
     echo "  в опубликованной сборке: ${pub:-нет (не опубликовано после добавления)}"
     if [ -n "$pub" ]; then
