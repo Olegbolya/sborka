@@ -67,3 +67,20 @@ tail -n 6 /var/log/clamav/freshclam.log 2>&1 | cut -c1-200 | mask
 if [ -f /tmp/clam-probe.txt ] || printf 'probe' > /tmp/clam-probe.txt; then
   echo "clamscan: $(clamscan --no-summary /tmp/clam-probe.txt 2>&1 | head -3 | tr '\n' ' ' | cut -c1-300)"; rm -f /tmp/clam-probe.txt
 fi
+
+echo "── Картинки в опубликованных сборках (почему у участника пусто)"
+if [ -f "$ENV_FILE" ]; then
+  dburl="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | cut -d= -f2-)"
+  mroot="$(grep -E '^MEDIA_ROOT=' "$ENV_FILE" | cut -d= -f2-)"
+  psql "$dburl" -At -F' ' -c "select m.owner_id, m.id, m.status, m.mime from media m where m.deleted_at is null and m.status='READY' order by m.created_at desc limit 3" 2>&1 | while read -r owner mid st mime; do
+    [ -n "$mid" ] || continue
+    echo "· $mid $st $mime файл: $(ls -l "$mroot/$owner/$mid" 2>&1 | awk '{print $1, $5, $9}' | cut -c1-120)"
+    pub="$(psql "$dburl" -At -c "select p.slug from projects p join project_versions v on v.id=p.published_version_id where v.doc::text like '%$mid%' limit 1" 2>&1 | head -1)"
+    echo "  в опубликованной сборке: ${pub:-нет (не опубликовано после добавления)}"
+    if [ -n "$pub" ]; then
+      echo "  ответ участнику: $(curl -s -o /dev/null -m 10 -w '%{http_code} %{content_type} %{size_download}' "http://127.0.0.1:3100/api/v1/play/$pub/media/$mid" 2>&1)"
+      echo "  через nginx (публично): $(curl -s -o /dev/null -m 10 -w '%{http_code} %{content_type} %{size_download}' -H 'Host: blokker.ru' --resolve blokker.ru:443:127.0.0.1 "https://blokker.ru/api/v1/play/$pub/media/$mid" 2>&1)"
+    fi
+  done
+fi
+tail -n 5 /var/log/nginx/blokum-error.log 2>/dev/null | cut -c1-200
