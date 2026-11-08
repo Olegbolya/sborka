@@ -47,3 +47,21 @@ export async function selectedId(g: { frame: Locator }, name: string): Promise<s
   const id = await g.frame.locator('[data-block-id]', { hasText: name }).first().getAttribute('data-block-id');
   return id!;
 }
+
+export const screenItem = (page: Page, n: number) => page.getByRole('list', { name: 'Экраны' }).getByRole('listitem').nth(n);
+export const goToScreen = async (page: Page, n: number) => {
+  await openTab(page, 'Экраны');
+  await screenItem(page, n).click();
+};
+export const renameScreen = async (page: Page, name: string) => {
+  await openTab(page, 'Оформление');
+  await page.getByLabel('Название экрана').fill(name);
+};
+
+/** Группа правой панели (инспектор), раскрытая. */
+export const inspectorSection = async (page: Page, id: string): Promise<Locator> => {
+  const s = page.locator(`[data-section="${id}"]`);
+  await s.scrollIntoViewIfNeeded();
+  if ((await s.getAttribute('open')) === null) await s.locator('summary').first().click();
+  return s;
+};

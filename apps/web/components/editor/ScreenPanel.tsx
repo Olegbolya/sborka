@@ -3,6 +3,7 @@ import { setScreenProps } from '../../lib/editor/commands';
 import { SCREEN_SECTIONS } from '../../lib/editor/screen-specs';
 import { Section } from './controls';
 import { useEditor } from './context';
+import { MediaByAnswerEditor } from './MediaByAnswerEditor';
 import { Fields, type Level } from './StylePanels';
 
 /** E-13, L-06 · the screen when no block is picked: name, kind, height, background, particles, transition in, timer. */
@@ -29,6 +30,9 @@ export function ScreenPanel() {
           <Fields fields={section.fields} level={level} prefix={`screen-${section.id}`} />
         </Section>
       ))}
+      <Section id="screen-media-by-answer" title="Мем по ответу" hint="Когда участник ответил на вопрос и идёт дальше, на секунду показывается ваш мем — свой для верного, неверного или выбранного ответа.">
+        <MediaByAnswerEditor screen={screen} />
+      </Section>
     </div>
   );
 }

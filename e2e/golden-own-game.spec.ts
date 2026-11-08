@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { addBlock, newScreen, openRule, player, rule, selectBlock } from './helpers/build';
+import { addBlock, goToScreen, newScreen, openRule, player, renameScreen, rule, selectBlock } from './helpers/build';
+import { SMALL_PNG, wav } from './helpers/files';
 import { hit, openEditor, saveStatus, seedProject, serverDraft, openTab } from './helpers/editor';
 
 /*
@@ -9,38 +10,7 @@ import { hit, openEditor, saveStatus, seedProject, serverDraft, openTab } from '
  * (касаниями), значение «счёт» видно в кабинете, а «убегающая кнопка» сохраняется как «Мой элемент» и работает в другой сборке.
  */
 
-/** Своя картинка подарка: настоящий PNG 2×2. */
-const GIFT_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGP8z8Dwn4EIwDiqEAAAXQQC/0b6dI4AAAAASUVORK5CYII=', 'base64');
-
-/** Свой звук: WAV на одну сотую секунды тишины. */
-function wav(): Buffer {
-  const samples = 80;
-  const data = Buffer.alloc(samples * 2);
-  const head = Buffer.alloc(44);
-  head.write('RIFF', 0);
-  head.writeUInt32LE(36 + data.length, 4);
-  head.write('WAVEfmt ', 8);
-  head.writeUInt32LE(16, 16);
-  head.writeUInt16LE(1, 20);
-  head.writeUInt16LE(1, 22);
-  head.writeUInt32LE(8000, 24);
-  head.writeUInt32LE(16000, 28);
-  head.writeUInt16LE(2, 32);
-  head.writeUInt16LE(16, 34);
-  head.write('data', 36);
-  head.writeUInt32LE(data.length, 40);
-  return Buffer.concat([head, data]);
-}
-
-const screenItem = (page: Page, n: number) => page.getByRole('list', { name: 'Экраны' }).getByRole('listitem').nth(n);
-const goToScreen = async (page: Page, n: number) => {
-  await openTab(page, 'Экраны');
-  await screenItem(page, n).click();
-};
-const renameScreen = async (page: Page, name: string) => {
-  await openTab(page, 'Оформление');
-  await page.getByLabel('Название экрана').fill(name);
-};
+const GIFT_PNG = SMALL_PNG;
 
 test.describe('P6.9 · GS-02 «Своя мини-игра»', () => {
   // Игру создают за столом: редактор — в окне 1440 в любом проекте; участник ниже открывает свой контекст 390 с касаниями.

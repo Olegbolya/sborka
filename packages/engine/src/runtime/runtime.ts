@@ -467,6 +467,12 @@ export class Runtime {
     this.answers = { ...answers };
   }
 
+  /** T-21: was the answer to the question right or wrong — what the server (or the local check) said; null — not known. */
+  verdictOf(questionBlockId: string): boolean | null {
+    return this.verdicts.get(questionBlockId)?.correct ?? null;
+  }
+
+
   /** Verdict of the server for a question (L-03): lets «правильно / неверно / баллы» work in the browser. */
   setVerdict(questionBlockId: string, verdict: { correct: boolean | null; score: number }): void {
     this.verdicts.set(questionBlockId, verdict);

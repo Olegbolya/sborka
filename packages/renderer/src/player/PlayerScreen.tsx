@@ -32,11 +32,12 @@ export function requiredMissing(screen: Screen, answers: Readonly<Record<string,
 /** The screen has blocks that react to the pointer itself (BH-02 flee, BH-08 follow). */
 export const usesPointer = (screen: Screen): boolean => [...walkBlocks(screen.blocks)].some((b) => b.behaviors.some((x) => x.kind === 'flee' || x.kind === 'follow'));
 
-export function PlayerScreen({ screen, store, progress }: { screen: Screen; store: RuntimeStore; progress?: { index: number; total: number } }): ReactNode {
+export function PlayerScreen({ screen, store, progress, entryOverlay }: { screen: Screen; store: RuntimeStore; progress?: { index: number; total: number }; entryOverlay?: MediaOverlay | null }): ReactNode {
   const ctx = useRenderContext();
   const shakeTarget = useRef<HTMLDivElement>(null);
   const effects = useRef<EffectsHandle>(null);
-  const [overlays, setOverlays] = useState<MediaOverlay[]>([]);
+  // T-20, T-21: a media insert on the way to this screen covers it first.
+  const [overlays, setOverlays] = useState<MediaOverlay[]>(() => (entryOverlay ? [entryOverlay] : []));
   // The server sends the markup of the screen; it is alive (handlers attached, runtime ticking) only after this
   // effect. `data-live` marks that moment for automated checks and for styles.
   const [live, setLive] = useState(false);

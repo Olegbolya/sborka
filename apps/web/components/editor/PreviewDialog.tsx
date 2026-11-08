@@ -151,7 +151,7 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
               {box && <div className="ed-hl" data-testid="debug-highlight" aria-hidden style={{ left: box.x, top: box.y, width: box.w, height: box.h }} />}
               {view.screen ? (
                 <Artboard mode="player" unit={size.unit} tokens={doc.theme.tokens} media={media.resolver} runText={session.textValue}>
-                  <PlayerScreen key={`${view.screen.id}:${view.screenKey}`} screen={view.screen} store={session.store} {...(view.progress ? { progress: view.progress } : {})} />
+                  <PlayerScreen key={`${view.screen.id}:${view.screenKey}`} screen={view.screen} store={session.store} {...(view.progress ? { progress: view.progress } : {})} entryOverlay={view.entryOverlay} />
                 </Artboard>
               ) : (
                 <div className="ed-end" data-testid="preview-end">

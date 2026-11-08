@@ -183,7 +183,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
     <Artboard mode="player" tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} linkHref={outHref}>
       {boot.view.ad && <AdBanner ad={boot.view.ad} />}
       {passage.screen ? (
-        <PlayerScreen key={`${passage.screen.id}:${passage.screenKey}`} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} />
+        <PlayerScreen key={`${passage.screen.id}:${passage.screenKey}`} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} entryOverlay={passage.entryOverlay} />
       ) : (
         <div className="pl-end" data-testid="play-end" role="status">
           <strong>{passage.completing ? 'Считаем результат…' : 'Спасибо! Прохождение завершено.'}</strong>

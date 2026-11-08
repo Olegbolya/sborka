@@ -1,5 +1,6 @@
 import {
   BLOCK_PROPS,
+  MediaByAnswer,
   type Block,
   type BlockInput,
   type BlockType,
@@ -350,6 +351,23 @@ export const setScreenProps =
     }
     Object.assign(screen, parsed);
     for (const key of SCREEN_KEYS) if (parsed[key] === undefined) delete (screen as Record<string, unknown>)[key];
+  };
+
+/**
+ * T-21 · a different media insert for the answer to a question of the screen. `undefined` takes the rule away;
+ * a value the schema refuses is not written.
+ */
+export const setMediaByAnswer =
+  (screenId: string, value: unknown): Recipe =>
+  (doc) => {
+    const screen = doc.screens[screenIndex(doc, screenId)];
+    if (!screen) return;
+    if (value === undefined) {
+      delete screen.mediaByAnswer;
+      return;
+    }
+    const parsed = MediaByAnswer.safeParse(value);
+    if (parsed.success) screen.mediaByAnswer = parsed.data;
   };
 
 /**

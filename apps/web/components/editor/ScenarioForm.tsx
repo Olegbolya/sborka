@@ -238,7 +238,7 @@ function MediaField({ label, value, onChange, kinds, optional }: { label: string
 }
 
 const POSITIONS: ReadonlyArray<readonly [string, string]> = [['bottom', 'внизу'], ['top', 'вверху']];
-function OverlayField({ label, value, onChange }: { label: string; value: unknown; onChange: (v: unknown) => void }) {
+export function OverlayField({ label, value, onChange }: { label: string; value: unknown; onChange: (v: unknown) => void }) {
   const tokens = useEditor((s) => s.doc.theme.tokens);
   const o = asRecord(value);
   const caption = o.caption && typeof o.caption === 'object' ? (o.caption as Value) : null;
@@ -342,7 +342,7 @@ function PropertyValueField({ label, property, value, onChange }: { label: strin
   );
 }
 
-function OptionPick({ label, value, questionId, onChange, optional }: { label: string; value: string | undefined; questionId: string; onChange: (id: string | undefined) => void; optional?: boolean }) {
+export function OptionPick({ label, value, questionId, onChange, optional }: { label: string; value: string | undefined; questionId: string; onChange: (id: string | undefined) => void; optional?: boolean }) {
   const doc = useEditor((s) => s.doc);
   const block = allBlocks(doc).find((b) => b.block.id === questionId)?.block;
   const options = (block && 'options' in block.props ? (block.props.options as Array<{ id: string; blockId: string }>) : []).map((o, i) => [o.id, `${i + 1}. ${block!.children.find((c) => c.id === o.blockId)?.name ?? 'вариант'}`] as const);

@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
+import { createBlock, createId, createScreen, plainText } from '@blokum/schema';
 import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 0;
@@ -418,6 +419,34 @@ describe('D-04 · Ответы', () => {
     expect(res.body.items).toBeInstanceOf(Array);
     expect(res.body.items.length).toBe(0);
     expect(res.body.nextCursor).toBeNull();
+  });
+
+  it('D-04: карточка прохождения читается по-человечески: названия, текст варианта, путь по экранам, источник', async () => {
+    const [version] = await db.db.select().from(schema.projectVersions).where(eq(schema.projectVersions.projectId, projectId));
+    const question = createBlock('singleChoice', { name: 'Что хочешь?' });
+    const options = (question.props as { options: Array<{ id: string; blockId: string }> }).options;
+    const chosen = question.children.find((c) => c.id === options[1]!.blockId)!;
+    const doc = JSON.parse(JSON.stringify(version!.document)) as { screens: unknown[] };
+    const first = createScreen('Вопрос');
+    first.blocks.push(question);
+    doc.screens = [first, createScreen('Финал')];
+    await db.db.update(schema.projectVersions).set({ document: doc as never }).where(eq(schema.projectVersions.id, version!.id));
+    const [point] = await db.db.insert(schema.accessPoints).values({ id: createId(), projectId, code: 'abcd1234', kind: 'QR', label: 'Плакат у входа' }).returning();
+    const sessionId = createId();
+    await db.db.insert(schema.participantSessions).values({
+      id: sessionId, projectId, versionId: version!.id, accessPointId: point!.id, status: 'COMPLETED', completedAt: new Date(), durationMs: 41_000,
+      runtimeState: { screenId: (doc.screens[1] as { id: string }).id, history: [first.id], variables: {} },
+    });
+    await db.db.insert(schema.answers).values({ id: createId(), sessionId, blockId: question.id, source: 'QUESTION', value: { kind: 'choice', optionIds: [options[1]!.id] } });
+    await db.db.insert(schema.answers).values({ id: createId(), sessionId, variableId: 'net_takoj', source: 'VARIABLE', value: 'Хочу санки' });
+    const res = await request(t.http()).get(`/${API_PREFIX}/projects/${projectId}/responses/${sessionId}`).set('Cookie', cookie).expect(200);
+    const body = res.body as { path: string[]; source: { kind: string; label: string }; answers: Array<{ label: string; shown: string }>; versionId?: unknown; runtimeState?: unknown };
+    expect(body.path).toEqual(['Вопрос', 'Финал']);
+    expect(body.source).toEqual({ kind: 'QR', label: 'Плакат у входа' });
+    expect(body.answers[0]).toMatchObject({ label: 'Что хочешь?', shown: plainText(chosen.textLayer!) || chosen.name });
+    expect(body.answers[1]).toMatchObject({ label: 'Ответ', shown: 'Хочу санки' });
+    expect(body.versionId).toBeUndefined();
+    expect(body.runtimeState).toBeUndefined();
   });
 
   it('D-04: IDOR — ответы чужого проекта возвращают 403', async () => {

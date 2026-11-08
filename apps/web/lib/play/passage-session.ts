@@ -19,8 +19,8 @@ import {
   scoreTotals,
   startFlow,
 } from '@blokum/engine';
-import { type FrameScheduler, RuntimeStore } from '@blokum/renderer';
-import { type ProjectDocument, type Screen, walkBlocks } from '@blokum/schema';
+import { type FrameScheduler, RuntimeStore, mediaForAnswer } from '@blokum/renderer';
+import { type MediaOverlay, type ProjectDocument, type Screen, walkBlocks } from '@blokum/schema';
 
 export interface PassageView {
   /** Screen on show; null after the end of the passage. */
@@ -37,6 +37,8 @@ export interface PassageView {
   progress: { index: number; total: number } | null;
   /** The end has been sent to the server and the result is awaited. */
   completing: boolean;
+  /** T-20, T-21: the media insert shown on the way to this screen (a meme transition, or a meme for the answer); null — none. */
+  entryOverlay: MediaOverlay | null;
 }
 
 /** What the player's side of a server passage does with the events of the session (PL-11…PL-15). */
@@ -99,6 +101,7 @@ export class PassageSession {
   private totals: ScoreTotals | null = null;
   private completedOnServer = false;
   private completing = false;
+  private entryOverlay: MediaOverlay | null = null;
 
   constructor(
     readonly doc: ProjectDocument,
@@ -155,6 +158,7 @@ export class PassageSession {
       canGoBack: !this.ended && this.doc.settings.allowBack && this.flow.history.length > 0,
       progress: this.doc.settings.showProgress && index >= 0 ? { index: index + 1, total: this.doc.screens.length } : null,
       completing: this.completing,
+      entryOverlay: this.entryOverlay,
     };
   }
 
@@ -215,11 +219,28 @@ export class PassageSession {
         void this.serverStep(screen.id, nav.state);
         return;
       }
+      this.entryOverlay = this.overlayOnTheWay(screen, nav.to, nav.transition);
       this.arrive(nav.state, nav.to);
     } catch (e) {
       if (!(e instanceof FlowError)) throw e;
       this.refused(e.message);
     }
+  }
+
+  /**
+   * T-20, T-21: what is shown between two screens. A meme for the answer given on the screen left wins over the
+   * transition of the step, which wins over the «transition in» of the screen reached.
+   */
+  private overlayOnTheWay(from: Screen | undefined, toId: string | null, transition: { kind: string; overlay?: MediaOverlay } | undefined): MediaOverlay | null {
+    if (from?.mediaByAnswer) {
+      const answer = this.runtime.currentAnswers[from.mediaByAnswer.questionBlockId];
+      const chosen = answer?.kind === 'choice' ? answer.optionIds : [];
+      const byAnswer = mediaForAnswer(from.mediaByAnswer, chosen, this.runtime.verdictOf(from.mediaByAnswer.questionBlockId));
+      if (byAnswer) return byAnswer;
+    }
+    if (transition?.kind === 'media' && transition.overlay) return transition.overlay;
+    const target = toId ? this.doc.screens.find((sc) => sc.id === toId) : undefined;
+    return target?.transitionIn?.kind === 'media' ? target.transitionIn.overlay : null;
   }
 
   private async serverStep(screenId: string, local: FlowState): Promise<void> {
@@ -355,6 +376,7 @@ export class PassageSession {
   back(): void {
     try {
       const nav = goBack(this.flowDoc, this.synced(), this.env());
+      this.entryOverlay = null;
       this.arrive(nav.state, nav.to);
     } catch (e) {
       if (!(e instanceof FlowError)) throw e;
@@ -365,6 +387,7 @@ export class PassageSession {
   /** SC-03 «перезапуск экрана»: the screen starts over, answers and variables stay. */
   restartScreen(): void {
     this.screenKey += 1;
+    this.entryOverlay = null;
     this.message = null;
     this.armTimer();
     this.publish();

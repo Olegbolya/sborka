@@ -54,6 +54,9 @@ interface Answer {
   blockId: string | null;
   variableId: string | null;
   value: unknown;
+  /** D-04: what the answer is about and the answer as a person reads it. */
+  label?: string;
+  shown?: string;
   answeredAt: string;
   /** RN-02: the value of a game was worked out on the participant's device. */
   deviceReported?: boolean;
@@ -61,6 +64,9 @@ interface Answer {
 
 interface ResponseDetail extends ResponseSummary {
   answers: Answer[];
+  /** The screens the participant went through, in order. */
+  path?: string[];
+  source?: { kind: 'LINK' | 'QR'; label: string };
 }
 
 interface AccessPoint {
@@ -151,6 +157,8 @@ function ResponseCard({ detail }: { detail: ResponseDetail }) {
         <span>Завершение: {detail.completedAt ? formatDate(detail.completedAt) : '—'}</span>
         <span>Длительность: {formatDuration(detail.durationMs)}</span>
         <span>Устройство: {detail.deviceType === 'desktop' ? 'ПК' : detail.deviceType === 'mobile' ? 'Телефон' : detail.deviceType}</span>
+        {detail.source && <span data-testid="response-source">Источник: {detail.source.kind === 'QR' ? `QR-код · ${detail.source.label}` : detail.source.label}</span>}
+        {detail.path && detail.path.length > 0 && <span data-testid="response-path">Путь: {detail.path.join(' → ')}</span>}
       </div>
       {detail.answers.length === 0 ? (
         <p style={{ margin: 0, color: 'var(--muted)', fontStyle: 'italic' }}>Ответов нет</p>
@@ -166,8 +174,8 @@ function ResponseCard({ detail }: { detail: ResponseDetail }) {
           <tbody>
             {detail.answers.map((a) => (
               <tr key={a.id}>
-                <td style={{ ...s.td, fontFamily: 'monospace', fontSize: 12 }}>{a.blockId ?? a.variableId ?? '—'}</td>
-                <td style={{ ...s.td, maxWidth: 400, wordBreak: 'break-word' as const }}>{JSON.stringify(a.value)}{a.deviceReported ? <div style={{ fontSize: 11, color: 'var(--muted)' }} data-testid="device-reported">посчитано на устройстве участника</div> : null}</td>
+                <td style={{ ...s.td, fontSize: 13 }}>{a.label ?? a.blockId ?? a.variableId ?? '—'}</td>
+                <td style={{ ...s.td, maxWidth: 400, wordBreak: 'break-word' as const }}>{a.shown ?? JSON.stringify(a.value)}{a.deviceReported ? <div style={{ fontSize: 11, color: 'var(--muted)' }} data-testid="device-reported">посчитано на устройстве участника</div> : null}</td>
                 <td style={{ ...s.td, whiteSpace: 'nowrap' as const, color: 'var(--muted)' }}>{formatDate(a.answeredAt)}</td>
               </tr>
             ))}
@@ -873,7 +881,7 @@ export default function ProjectDetailPage() {
       <h1 style={s.heading}>{project.title}</h1>
       <p style={s.subHeading}>
         {STATUS_PROJECT[project.status] ?? project.status}
-        {' · '}Открытий: {project.starts}
+        {' · '}Открытий: {project.settings.maxStarts ? <span data-testid="starts-counter">{project.starts} из {project.settings.maxStarts}</span> : project.starts}
         {' · '}Прохождений: {project.completions}
       </p>
 
