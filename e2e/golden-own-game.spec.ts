@@ -43,10 +43,10 @@ const renameScreen = async (page: Page, name: string) => {
 };
 
 test.describe('P6.9 · GS-02 «Своя мини-игра»', () => {
-  test.use({ actionTimeout: 15_000 });
+  // Игру создают за столом: редактор — в окне 1440 в любом проекте; участник ниже открывает свой контекст 390 с касаниями.
+  test.use({ actionTimeout: 15_000, viewport: { width: 1440, height: 900 }, hasTouch: false, isMobile: false });
   test('GS-02 · «Поймай подарок»: собрана из блоков, поведений и правил → отладчик → публикация → участник на телефоне → «Мой элемент»', async ({ page, browser }, info) => {
     test.setTimeout(540_000);
-    test.skip(info.project.name !== 'desktop-1440', 'Игра собирается за столом; участник проходит её в своём окне 390 с касаниями');
     await loginAndOnboard(page, freshUser('Автор игры'));
     const { id } = await seedProject(page, undefined, 'Поймай подарок');
     await openEditor(page, id);

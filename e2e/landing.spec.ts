@@ -41,6 +41,7 @@ test.describe('P10.1 · лендинг', () => {
     }
     // It runs only a few times (`times` of the behaviour), then stays and answers.
     for (let i = 0; i < 8 && (await demo.getByRole('button', { name: 'Нажми меня' }).count()) > 0; i++) {
+      await button.scrollIntoViewIfNeeded(); // убегая, кнопка может уйти за нижний край окна
       const box = await button.boundingBox();
       if (!box) break;
       const to = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
