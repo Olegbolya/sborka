@@ -55,6 +55,8 @@ export async function processGif(filePath: string, mediaId: string): Promise<Vid
     '-pix_fmt', 'yuv420p',
     '-b:v', '0',
     '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+    // Временный файл без расширения: контейнер задаётся явно, иначе ffmpeg не выберет формат и файл будет отклонён.
+    '-f', 'mp4',
     '-y', tmpMp4,
   ]);
 
@@ -108,6 +110,7 @@ export async function processVideo(filePath: string, mediaId: string): Promise<V
     '-vf', 'scale=-2:min(720\\,trunc(ih/2)*2)',
     '-c:a', 'aac',
     '-movflags', 'faststart',
+    '-f', 'mp4',
     '-y', tmp720p,
   ]);
 

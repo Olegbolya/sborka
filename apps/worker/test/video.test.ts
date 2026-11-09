@@ -10,11 +10,11 @@ import { isFfmpegAvailable, processGif, processVideo } from '../src/media/video.
 const exec = promisify(execFile);
 
 let tmpDir = '';
-let ffmpegReady = false;
+// Проверка до сбора тестов: `skipIf` читает значение сразу, поэтому присваивание в beforeAll приводило к тому, что тесты видео пропускались всегда.
+const ffmpegReady = await isFfmpegAvailable();
 
-beforeAll(async () => {
+beforeAll(() => {
   tmpDir = mkdtempSync(path.join(os.tmpdir(), 'videotest-'));
-  ffmpegReady = await isFfmpegAvailable();
 });
 
 afterAll(() => {

@@ -113,6 +113,8 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
   // The phone frame must fit in the width of the window; the computer frame keeps its size (the window scrolls), as the column of 480 is the point of it (E-02).
   const fit = frame === 'phone' ? Math.min(1, Math.max(0.4, (room - 24) / base.w)) : 1;
   const size = { w: base.w * fit, h: base.h * fit, unit: base.unit * fit };
+  // Рамка по высоте не выше самого экрана: иначе под короткой картинкой остаётся полоса фона, которой в сборке нет (экран выше 640 прокручивается).
+  const frameHeight = Math.min(size.h, 640, view.screen ? view.screen.height * size.unit : size.h);
   const rules = useMemo(() => ruleIndex(doc), [doc]);
   const last = entries[entries.length - 1];
   const highlighted = focusId ?? last?.event.self ?? null;
@@ -145,9 +147,9 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
             className={`ed-frame ${frame === 'phone' ? 'ed-phone' : 'ed-desktop'}`}
             data-preview="true"
             data-frame={frame}
-            style={{ width: size.w + 20, height: Math.min(size.h, 640) + 20 }}
+            style={{ width: size.w + 20, height: frameHeight + 20 }}
           >
-            <div style={{ width: size.w, height: Math.min(size.h, 640), overflow: 'auto', position: 'relative' }}>
+            <div style={{ width: size.w, height: frameHeight, overflow: 'auto', position: 'relative' }}>
               {box && <div className="ed-hl" data-testid="debug-highlight" aria-hidden style={{ left: box.x, top: box.y, width: box.w, height: box.h }} />}
               {view.screen ? (
                 <Artboard mode="player" unit={size.unit} tokens={doc.theme.tokens} media={media.resolver} runText={session.textValue}>
