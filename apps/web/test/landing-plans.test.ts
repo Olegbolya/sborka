@@ -10,20 +10,21 @@ const view = (code: string): PlanView => {
 describe('P10.1 · тарифы на сайте читаются из лимитов', () => {
   it('P10.1 · цены: бесплатно, разово, в месяц и в год', () => {
     expect(priceLine(view('FREE'))).toEqual({ main: '0\u00a0₽', extra: 'навсегда' });
-    expect(priceLine(view('PASS')).main).toBe('249\u00a0₽');
+    expect(priceLine(view('PASS')).main).toBe('79\u00a0₽');
     expect(priceLine(view('PASS')).extra).toContain('разово');
     expect(priceLine(view('PLUS'))).toEqual({ main: '349\u00a0₽', extra: 'в месяц, или 2\u00a0990\u00a0₽ в год' });
   });
 
-  it('P10.1 · описание бесплатного тарифа называет лимиты и водяной знак; бизнеса — оплату по счёту', () => {
+  it('P10.1 · описание бесплатного тарифа называет лимиты и водяной знак; «Автора» — пробные 3 дня', () => {
     const free = describePlan(view('FREE')).join('|');
     expect(free).toContain('3\u00a0сборки одновременно');
-    expect(free).toContain('100\u00a0прохождений в месяц');
+    expect(free).toContain('30\u00a0прохождений в месяц');
     expect(free).toContain('Водяной знак');
-    const biz = describePlan(view('BUSINESS')).join('|');
-    expect(biz).toContain('Оплата по счёту');
-    expect(biz).toContain('Без водяного знака');
-    expect(biz).toContain('Сборок одновременно — сколько нужно');
+    const author = describePlan(view('AUTHOR')).join('|');
+    expect(author).toContain('Первые 3\u00a0дня бесплатно, без привязки карты');
+    expect(author).toContain('10\u00a0сборок одновременно');
+    expect(author).toContain('Без водяного знака');
+    expect(describePlan(view('PRO')).join('|')).not.toContain('Первые');
   });
 
   it('P10.1 · единицы по-русски', () => {

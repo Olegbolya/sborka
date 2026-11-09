@@ -31,10 +31,10 @@ describe('P10.1 · публичный список тарифов', () => {
 
   it('P10.1 · цена, изменённая в админке, сразу видна на сайте; скрытый тариф не показывается', async () => {
     await db.db.update(schema.plans).set({ priceMonthRub: 399 }).where(eq(schema.plans.code, 'PLUS'));
-    await db.db.update(schema.plans).set({ public: false }).where(eq(schema.plans.code, 'BUSINESS'));
+    await db.db.update(schema.plans).set({ public: false }).where(eq(schema.plans.code, 'PRO'));
     const res = await request(t.http()).get(`/${API_PREFIX}/plans`).expect(200);
     const { plans } = res.body as Body;
     expect(plans.find((p) => p.code === 'PLUS')!.priceMonthRub).toBe(399);
-    expect(plans.some((p) => p.code === 'BUSINESS')).toBe(false);
+    expect(plans.some((p) => p.code === 'PRO')).toBe(false);
   });
 });

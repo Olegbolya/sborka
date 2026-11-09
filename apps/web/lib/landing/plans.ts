@@ -33,6 +33,7 @@ export interface PlanView {
     invoicePayment: boolean;
     supportHours: number | null;
     passDays?: number;
+    trialDays?: number;
   };
 }
 
@@ -64,7 +65,7 @@ export function formatDays(days: number): string {
   return `${num(days)}\u00a0${plural(days, 'день', 'дня', 'дней')}`;
 }
 
-/** The price line of a plan: «0 ₽», «249 ₽ разово», «349 ₽ в месяц». */
+/** The price line of a plan: «0 ₽», «79 ₽ разово», «349 ₽ в месяц». */
 export function priceLine(p: PlanView): { main: string; extra: string | null } {
   if (p.priceOnceRub !== null) return { main: `${num(p.priceOnceRub)}\u00a0₽`, extra: `разово, на одну сборку${p.limits.passDays ? ` на ${formatDays(p.limits.passDays)}` : ''}` };
   if (!p.priceMonthRub) return { main: '0\u00a0₽', extra: 'навсегда' };
@@ -75,6 +76,7 @@ export function priceLine(p: PlanView): { main: string; extra: string | null } {
 export function describePlan(p: PlanView): string[] {
   const l = p.limits;
   const out: string[] = [];
+  if (l.trialDays) out.push(`Первые ${l.trialDays}\u00a0${plural(l.trialDays, 'день', 'дня', 'дней')} бесплатно, без привязки карты`);
   out.push(
     l.publishedProjects === null
       ? 'Сборок одновременно — сколько нужно'

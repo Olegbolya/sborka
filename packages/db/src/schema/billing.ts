@@ -43,6 +43,8 @@ export interface PlanLimits {
   invoicePayment: boolean;
   supportHours: number | null;
   passDays?: number;
+  /** Free trial of a subscription in days, no card needed (ADR-048). */
+  trialDays?: number;
 }
 
 export const plans = pgTable('plans', {

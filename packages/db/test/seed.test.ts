@@ -1,13 +1,17 @@
-import { readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { count, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PLANS } from '../src/plans.js';
 import { ProjectDocument, ThemeTokens, validateDocument } from '@blokum/schema';
 import { DEV_SEED, devDoc, seedDevData, seedPlans } from '../src/seed.js';
 import { libraryItems, participantSessions, plans, projectVersions, projects, templates, themes, users } from '../src/schema/index.js';
+import { MIGRATIONS_FOLDER, runMigrations } from '../src/migrate.js';
 import { createTestDb, type TestDb } from './helpers.js';
 
-const ORDER = ['FREE', 'PASS', 'PLUS', 'PRO', 'BUSINESS'] as const;
+const ORDER = ['FREE', 'PASS', 'AUTHOR', 'PLUS', 'PRO'] as const;
 const tariffs = readFileSync(new URL('../../../docs/04-TARIFFS.md', import.meta.url), 'utf8');
 
 /** Cells of a row of the main tariff table in docs/04-TARIFFS.md, by its first column. */
@@ -33,7 +37,7 @@ describe('тарифы в seed совпадают с docs/04-TARIFFS.md', () => 
     const cells = row('Цена');
     expect(plan('FREE').priceMonthRub).toBe(0);
     expect(cells[1]).toContain(`${plan('PASS').priceOnceRub} ₽`);
-    for (const [i, code] of (['PLUS', 'PRO', 'BUSINESS'] as const).entries()) {
+    for (const [i, code] of (['AUTHOR', 'PLUS', 'PRO'] as const).entries()) {
       const p = plan(code);
       const cell = cells[i + 2]!.replace(/\s(?=\d{3})/g, '');
       expect(cell).toContain(`${p.priceMonthRub} ₽/мес`);
@@ -71,11 +75,43 @@ describe('seed', () => {
   });
 
   it('тарифы создаются и не перезаписываются при повторном запуске', async () => {
+    // Миграция 0010 уже положила пять тарифов (ADR-048), seed ничего не добавляет.
+    expect(await seedPlans(t.db)).toBe(0);
+    await t.db.delete(plans);
     expect(await seedPlans(t.db)).toBe(5);
+    expect(await seedPlans(t.db)).toBe(0);
     await t.db.update(plans).set({ priceMonthRub: 399 }).where(eq(plans.code, 'PLUS'));
     expect(await seedPlans(t.db)).toBe(0);
     const [plus] = await t.db.select().from(plans).where(eq(plans.code, 'PLUS'));
     expect(plus?.priceMonthRub).toBe(399);
+  });
+
+  it('миграция 0010 приводит тарифы к пяти из PLANS, а старый «Бизнес» скрывает', async () => {
+    const fresh = await createTestDb({ migrate: false });
+    try {
+      // Старое состояние: журнал миграций обрезан до 0009 (копия папки миграций без 0010).
+      const old = mkdtempSync(join(tmpdir(), 'mig-'));
+      cpSync(MIGRATIONS_FOLDER, old, { recursive: true });
+      const journalPath = join(old, 'meta', '_journal.json');
+      const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as { entries: { tag: string }[] };
+      journal.entries = journal.entries.filter((e) => e.tag !== '0010_five_tariffs');
+      writeFileSync(journalPath, JSON.stringify(journal));
+      await migrate(fresh.db, { migrationsFolder: old });
+      rmSync(old, { recursive: true, force: true });
+      await fresh.db.insert(plans).values({ code: 'BUSINESS', title: 'Бизнес', limits: PLANS[4]!.limits, public: true, sort: 5 });
+      await fresh.db.insert(plans).values({ code: 'PLUS', title: 'Плюс (старый)', priceMonthRub: 499, limits: PLANS[3]!.limits, sort: 9 });
+      await runMigrations(fresh.db);
+      const rows = await fresh.db.select().from(plans);
+      for (const p of PLANS) {
+        const r = rows.find((x) => x.code === p.code);
+        expect(r, p.code).toBeDefined();
+        expect(r).toMatchObject({ title: p.title, priceMonthRub: p.priceMonthRub, priceYearRub: p.priceYearRub, priceOnceRub: p.priceOnceRub, sort: p.sort, public: true });
+        expect(r!.limits).toEqual(p.limits);
+      }
+      expect(rows.find((x) => x.code === 'BUSINESS')?.public).toBe(false);
+    } finally {
+      await fresh.drop();
+    }
   });
 
   it('тестовые данные загружаются и повторный запуск идемпотентен', async () => {
