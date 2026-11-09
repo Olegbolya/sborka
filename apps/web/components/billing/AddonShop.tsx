@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, errorText, isApiError } from '../../lib/api-browser';
-import { type AddonRow, createAddonOrder, loadAddons } from '../../lib/billing';
+import { type AddonRow, type PromoQuote, createAddonOrder, loadAddons, quotePromo, rub, savedPromo } from '../../lib/billing';
 
 interface ProjectRow {
   id: string;
@@ -20,6 +20,15 @@ export function AddonShop() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [anonymous, setAnonymous] = useState(false);
+  const [quotes, setQuotes] = useState<Record<string, PromoQuote>>({});
+  const [promoTick, setPromoTick] = useState(0);
+
+  // The code of the page changes the prices shown here.
+  useEffect(() => {
+    const on = () => setPromoTick((n) => n + 1);
+    window.addEventListener('bk-promo', on);
+    return () => window.removeEventListener('bk-promo', on);
+  }, []);
 
   useEffect(() => {
     api<ProjectRow[]>('/projects')
@@ -42,6 +51,29 @@ export function AddonShop() {
       stop = true;
     };
   }, [projectId]);
+
+  useEffect(() => {
+    const code = savedPromo();
+    if (!code || !addons) {
+      setQuotes({});
+      return;
+    }
+    let stop = false;
+    void Promise.all(
+      addons
+        .filter((a) => a.available)
+        .map((a) =>
+          quotePromo({ kind: 'ADDON', addon: a.code, ...(a.needsProject && projectId ? { projectId } : {}) }, code)
+            .then((q) => [a.code, q] as const)
+            .catch(() => null),
+        ),
+    ).then((rows) => {
+      if (!stop) setQuotes(Object.fromEntries(rows.filter((r): r is readonly [string, PromoQuote] => r !== null)));
+    });
+    return () => {
+      stop = true;
+    };
+  }, [addons, projectId, promoTick]);
 
   const buy = async (a: AddonRow) => {
     setBusy(a.code);
@@ -84,7 +116,7 @@ export function AddonShop() {
             <div className="lp-note" style={{ margin: '2px 0 6px' }}>{a.description}</div>
             {a.available ? (
               <button type="button" className="lp-btn" data-testid={`addon-buy-${a.code}`} disabled={busy !== null} onClick={() => void buy(a)}>
-                {busy === a.code ? 'Переходим к оплате…' : `Купить за ${a.priceRub}\u00a0₽`}
+                {busy === a.code ? 'Переходим к оплате…' : quotes[a.code] ? (quotes[a.code]!.finalKop === 0 ? 'Получить бесплатно' : `Купить за ${rub(quotes[a.code]!.finalKop)}`) : `Купить за ${a.priceRub}\u00a0₽`}
               </button>
             ) : (
               <span className="lp-note" data-testid={`addon-reason-${a.code}`}>{a.needsProject && !projectId ? 'Выберите сборку выше.' : a.reason}</span>

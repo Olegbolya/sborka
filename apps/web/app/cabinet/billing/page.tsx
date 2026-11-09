@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { Suspense } from 'react';
 import { AddonShop } from '../../../components/billing/AddonShop';
 import { BillingSummary } from '../../../components/billing/BillingSummary';
+import { PromoBar } from '../../../components/billing/PromoBar';
 import { PlanCards } from '../../../components/landing/PlanCards';
 import { SitePage } from '../../../components/landing/SiteChrome';
 import { loadPlans } from '../../../lib/landing/plans';
@@ -19,6 +20,7 @@ export default async function BillingPage() {
           <Suspense fallback={<p className="lp-note">Загрузка…</p>}>
             <BillingSummary />
           </Suspense>
+          <PromoBar />
           <AddonShop />
           <h2 className="lp-h2">Выбрать тариф</h2>
           <PlanCards plans={plans} titleLevel={3} />

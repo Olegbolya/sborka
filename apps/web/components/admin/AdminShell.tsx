@@ -18,6 +18,7 @@ const LINKS: Array<{ href: string; label: string; admin?: boolean }> = [
   { href: '/admin/users', label: 'Пользователи' },
   { href: '/admin/legal', label: 'Заявления и требования' },
   { href: '/admin/content', label: 'Шаблоны и темы', admin: true },
+  { href: '/admin/promo', label: 'Промокоды', admin: true },
   { href: '/admin/flags', label: 'Выключатели', admin: true },
   { href: '/admin/system', label: 'Состояние', admin: true },
   { href: '/admin/audit', label: 'Журнал аудита', admin: true },

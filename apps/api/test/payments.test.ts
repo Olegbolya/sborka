@@ -311,6 +311,159 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
     expect((await ent.passOf(project!.id))!.to.getTime()).toBe(pass.to.getTime() + 30 * 86_400_000);
   });
 
+  // ── P7.5 · промокоды ────────────────────────────────────────────────────────
+  let promoSeq = 0;
+  const makePromo = async (over: Partial<typeof schema.promoCodes.$inferInsert> = {}) => {
+    const [row] = await db.db
+      .insert(schema.promoCodes)
+      .values({ code: `TEST${++promoSeq}X${Date.now() % 100000}`, kind: 'PERCENT', value: 20, appliesTo: ['SUBSCRIPTION', 'PASS', 'ADDON'], ...over })
+      .returning();
+    return row!;
+  };
+  const promoRow = async (id: string) => (await db.db.select().from(schema.promoCodes).where(eq(schema.promoCodes.id, id)))[0]!;
+  const pay = async (orderId: string) => {
+    const [o] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, orderId));
+    yoo.payments.get(o!.providerPaymentId!)!.status = 'succeeded';
+    await notify(t, succeeded(o!.providerPaymentId!)).expect(200);
+    return o!;
+  };
+
+  it('P7.5 · промокод «процент»: цена пересчитана, провайдеру уходит сумма со скидкой, использование записано; в заказе видны цена и скидка', async () => {
+    const { cookie } = await login(t, db);
+    const promo = await makePromo({ kind: 'PERCENT', value: 20 });
+    const quote = await request(t.http()).post(`/${API_PREFIX}/promo/check`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ kind: 'SUBSCRIPTION', planCode: 'AUTHOR', period: 'MONTH', promo: promo.code.toLowerCase() }).expect(200);
+    expect(quote.body).toEqual({ listKop: 19900, discountKop: 3980, finalKop: 15920, code: promo.code });
+    // Без названия покупки проверяется только сам код (страница «Тариф и оплата»).
+    const described = await request(t.http()).post(`/${API_PREFIX}/promo/check`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ promo: promo.code }).expect(200);
+    expect(described.body).toEqual({ code: promo.code, kind: 'PERCENT', value: 20, appliesTo: ['SUBSCRIPTION', 'PASS', 'ADDON'] });
+    await request(t.http()).post(`/${API_PREFIX}/promo/check`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ promo: 'NETTAKOGO' }).expect(400);
+    // Проверка цены ничего не расходует.
+    expect((await promoRow(promo.id)).activations).toBe(0);
+    const res = await order(t, cookie, { kind: 'SUBSCRIPTION', planCode: 'AUTHOR', period: 'MONTH', promo: promo.code }).expect(201);
+    const [o] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, res.body.orderId as string));
+    expect(o!.amountKop).toBe(15920);
+    expect(o!.item).toMatchObject({ promo: promo.code, listPriceKop: 19900, discountKop: 3980 });
+    expect(yoo.payments.get(o!.providerPaymentId!)!.amount.value).toBe('159.20');
+    expect((await promoRow(promo.id)).activations).toBe(1);
+    await pay(o!.id);
+    // Повторное уведомление не добавляет использований.
+    await notify(t, succeeded(o!.providerPaymentId!)).expect(200);
+    expect((await promoRow(promo.id)).activations).toBe(1);
+  });
+
+  it('P7.5 · промокод «фиксированная скидка»: рубли вычитаются, но к оплате остаётся не меньше 1 ₽', async () => {
+    const { cookie, userId } = await login(t, db);
+    const [project] = await db.db.insert(schema.projects).values({ ownerId: userId, title: 'Скидка', slug: 'promo-fixed' }).returning();
+    const fixed = await makePromo({ kind: 'FIXED', value: 30 });
+    const big = await makePromo({ kind: 'FIXED', value: 500 });
+    const a = await order(t, cookie, { kind: 'PASS', projectId: project!.id, promo: fixed.code }).expect(201);
+    expect((await db.db.select().from(schema.orders).where(eq(schema.orders.id, a.body.orderId as string)))[0]!.amountKop).toBe(4900);
+    const b = await order(t, cookie, { kind: 'PASS', projectId: project!.id, promo: big.code }).expect(201);
+    expect((await db.db.select().from(schema.orders).where(eq(schema.orders.id, b.body.orderId as string)))[0]!.amountKop).toBe(100);
+  });
+
+  it('P7.5 · бесплатный «Праздник»: заказ оплачен сразу без платёжного сервиса, пропуск выдан один раз; промокод — только к «Празднику»', async () => {
+    const { cookie, userId } = await login(tOff, dbOff);
+    const [project] = await dbOff.db.insert(schema.projects).values({ ownerId: userId, title: 'Подарок', slug: 'promo-free' }).returning();
+    const [free] = await dbOff.db.insert(schema.promoCodes).values({ code: 'PODAROK1', kind: 'FREE_PASS', appliesTo: ['PASS'], maxActivations: 1 }).returning();
+    // Подписку по такому коду не купить.
+    const wrong = await order(tOff, cookie, { kind: 'SUBSCRIPTION', planCode: 'AUTHOR', period: 'MONTH', promo: 'PODAROK1' });
+    expect([400, 503]).toContain(wrong.status);
+    expect((await dbOff.db.select().from(schema.promoCodes).where(eq(schema.promoCodes.id, free!.id)))[0]!.activations).toBe(0);
+    const res = await order(tOff, cookie, { kind: 'PASS', projectId: project!.id, promo: 'podarok1' }).expect(201);
+    expect(res.body.confirmationUrl).toBe(`http://localhost:3110/app/projects/${project!.id}/edit?paid=${res.body.orderId as string}`);
+    const [o] = await dbOff.db.select().from(schema.orders).where(eq(schema.orders.id, res.body.orderId as string));
+    expect(o).toMatchObject({ status: 'PAID', amountKop: 0, provider: 'promo' });
+    const grants = await dbOff.db.select().from(schema.entitlements).where(eq(schema.entitlements.sourceOrderId, o!.id));
+    expect(grants).toHaveLength(1);
+    expect(await new EntitlementsService(dbOff.db).passOf(project!.id)).not.toBeNull();
+    // Единственное использование потрачено: второй человек получает отказ.
+    const second = await login(tOff, dbOff);
+    const [other] = await dbOff.db.insert(schema.projects).values({ ownerId: second.userId, title: 'Ещё', slug: 'promo-free-2' }).returning();
+    const refused = await order(tOff, second.cookie, { kind: 'PASS', projectId: other!.id, promo: 'PODAROK1' }).expect(400);
+    expect(refused.body.error.code).toBe('PROMO_EXHAUSTED');
+  });
+
+  it('P7.5 · промокод не работает: нет такого, выключен, ещё не начался, закончился, не к этой покупке, лимит исчерпан, второй раз тем же человеком', async () => {
+    const { cookie, userId } = await login(t, db);
+    const day = 86_400_000;
+    const code = async (over: Partial<typeof schema.promoCodes.$inferInsert>) => (await makePromo(over)).code;
+    const tryIt = async (promo: string, expectCode: string) => {
+      const res = await order(t, cookie, { kind: 'SUBSCRIPTION', planCode: 'AUTHOR', period: 'MONTH', promo }).expect(400);
+      expect(res.body.error.code).toBe(expectCode);
+    };
+    await tryIt('NETTAKOGO', 'PROMO_INVALID');
+    await tryIt(await code({ active: false }), 'PROMO_INVALID');
+    await tryIt(await code({ validFrom: new Date(Date.now() + day) }), 'PROMO_NOT_STARTED');
+    await tryIt(await code({ validTo: new Date(Date.now() - day) }), 'PROMO_EXPIRED');
+    await tryIt(await code({ appliesTo: ['PASS'] }), 'PROMO_NOT_APPLICABLE');
+    await tryIt(await code({ maxActivations: 1, activations: 1 }), 'PROMO_EXHAUSTED');
+    // Один человек — одно использование: после оплаты тот же код отклоняется.
+    const once = await makePromo({});
+    const first = await order(t, cookie, { kind: 'SUBSCRIPTION', planCode: 'AUTHOR', period: 'MONTH', promo: once.code }).expect(201);
+    await pay(first.body.orderId as string);
+    await tryIt(once.code, 'PROMO_USED');
+    expect((await promoRow(once.id)).activations).toBe(1);
+    // Заказ без промокода по-прежнему создаётся по полной цене.
+    const plain = await order(t, cookie, { kind: 'SUBSCRIPTION', planCode: 'PLUS', period: 'MONTH' }).expect(201);
+    expect((await db.db.select().from(schema.orders).where(eq(schema.orders.id, plain.body.orderId as string)))[0]!.amountKop).toBe(34900);
+    expect(userId).toBeTruthy();
+  });
+
+  it('P7.5 · использование не пропадает зря: не оплатил — повторить тем же кодом можно, платёж отменён — использование возвращается', async () => {
+    const { cookie } = await login(t, db);
+    const limited = await makePromo({ maxActivations: 1 });
+    const body = { kind: 'SUBSCRIPTION', planCode: 'AUTHOR', period: 'MONTH', promo: limited.code };
+    const first = await order(t, cookie, body).expect(201);
+    expect((await promoRow(limited.id)).activations).toBe(1);
+    // Человек вернулся, не оплатив, и нажал снова: то же использование, а не второе.
+    const again = await order(t, cookie, body).expect(201);
+    expect((await promoRow(limited.id)).activations).toBe(1);
+    const [o] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, again.body.orderId as string));
+    yoo.payments.get(o!.providerPaymentId!)!.status = 'canceled';
+    await notify(t, { type: 'notification', event: 'payment.canceled', object: { id: o!.providerPaymentId, status: 'canceled' } }).expect(200);
+    expect((await promoRow(limited.id)).activations).toBe(0);
+    expect(first.body.orderId).not.toBe(again.body.orderId);
+  });
+
+  it('P7.5 · пять человек одновременно берут последнее использование — достаётся одному', async () => {
+    const people: Array<{ cookie: string; userId: string }> = [];
+    for (let i = 0; i < 5; i++) people.push(await login(t, db));
+    const last = await makePromo({ maxActivations: 1 });
+    const results = await Promise.all(people.map((p) => order(t, p.cookie, { kind: 'SUBSCRIPTION', planCode: 'AUTHOR', period: 'MONTH', promo: last.code })));
+    expect(results.filter((r) => r.status === 201)).toHaveLength(1);
+    expect(results.filter((r) => r.status === 400)).toHaveLength(4);
+    expect((await promoRow(last.id)).activations).toBe(1);
+  });
+
+  it('P7.5 · админка промокодов: только администратор; проверка полей; повтор кода отклонён; выключение и лимит правятся, вид скидки — нет; всё в журнале', async () => {
+    const user = await login(t, db);
+    const adminSession = await login(t, db);
+    await db.db.update(schema.users).set({ role: 'ADMIN' }).where(eq(schema.users.id, adminSession.userId));
+    const api = (method: 'get' | 'post' | 'patch', path: string, cookie: string, body?: object) => {
+      const r = request(t.http())[method](`/${API_PREFIX}/admin/promo-codes${path}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1');
+      return body ? r.send(body) : r;
+    };
+    await api('get', '', user.cookie).expect(403);
+    await api('post', '', user.cookie, { code: 'ZIMA2027', kind: 'PERCENT', value: 10 }).expect(403);
+    await api('post', '', adminSession.cookie, { code: 'ab', kind: 'PERCENT', value: 10 }).expect(400);
+    await api('post', '', adminSession.cookie, { code: 'ZIMA2027', kind: 'PERCENT', value: 100 }).expect(400);
+    await api('post', '', adminSession.cookie, { code: 'ZIMA2027', kind: 'FIXED', value: 0 }).expect(400);
+    await api('post', '', adminSession.cookie, { code: 'ZIMA2027', kind: 'PERCENT', value: 10, validFrom: '2027-01-10', validTo: '2027-01-01' }).expect(400);
+    const created = (await api('post', '', adminSession.cookie, { code: 'zima2027', kind: 'PERCENT', value: 15, maxActivations: 100, validTo: '2027-03-01T00:00:00Z', note: 'Зимняя акция' }).expect(201)).body as { id: string; code: string; appliesTo: string[] };
+    expect(created.code).toBe('ZIMA2027');
+    expect(created.appliesTo).toEqual(['SUBSCRIPTION', 'PASS', 'ADDON']);
+    expect((await api('post', '', adminSession.cookie, { code: 'ZIMA2027', kind: 'PERCENT', value: 10 }).expect(409)).body.error.code).toBe('PROMO_EXISTS');
+    const free = (await api('post', '', adminSession.cookie, { code: 'DAROM-1', kind: 'FREE_PASS', appliesTo: ['SUBSCRIPTION'] }).expect(201)).body as { appliesTo: string[] };
+    expect(free.appliesTo).toEqual(['PASS']);
+    const changed = (await api('patch', `/${created.id}`, adminSession.cookie, { active: false, maxActivations: 50, kind: 'FIXED', value: 999 }).expect(200)).body as { active: boolean; maxActivations: number; kind: string; value: number };
+    expect(changed).toMatchObject({ active: false, maxActivations: 50, kind: 'PERCENT', value: 15 });
+    const list = (await api('get', '', adminSession.cookie).expect(200)).body.codes as Array<{ code: string }>;
+    expect(list.map((c) => c.code)).toEqual(expect.arrayContaining(['ZIMA2027', 'DAROM-1']));
+    const logged = await db.db.select({ action: schema.auditLog.action }).from(schema.auditLog).where(eq(schema.auditLog.targetId, created.id));
+    expect(logged.map((l) => l.action).sort()).toEqual(['PROMO_CHANGED', 'PROMO_CREATED']);
+  });
+
   it('P7.4 · пробный период: 3 дня без карты, один раз на человека, потом «Старт» и никаких списаний', async () => {
     const { cookie, userId } = await login(t, db);
     const trial = (planCode: string) => request(t.http()).post(`/${API_PREFIX}/billing/trial`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ planCode });

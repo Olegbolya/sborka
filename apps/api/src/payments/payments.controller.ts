@@ -25,7 +25,7 @@ export class PaymentsController {
 
   @Post('orders')
   @HttpCode(201)
-  create(@Body() body: OrderRequest, @CurrentUser() user: RequestUser) {
+  create(@Body() body: OrderRequest & { promo?: unknown }, @CurrentUser() user: RequestUser) {
     return this.payments.createOrder(user.id, body ?? {});
   }
 
@@ -33,6 +33,13 @@ export class PaymentsController {
   @Get('billing/addons')
   async addons(@CurrentUser() user: RequestUser, @Query('projectId') projectId?: string) {
     return { addons: await this.payments.addons(user.id, projectId) };
+  }
+
+  /** P7.5 · цена с промокодом до оплаты; ничего не списывает и не расходует. */
+  @Post('promo/check')
+  @HttpCode(200)
+  check(@Body() body: OrderRequest & { promo?: unknown }, @CurrentUser() user: RequestUser) {
+    return this.payments.quote(user.id, body ?? {});
   }
 
   @Get('orders')

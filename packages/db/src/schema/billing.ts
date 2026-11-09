@@ -83,6 +83,48 @@ export interface AddonParams {
   rules?: number;
 }
 
+export type PromoKind = 'PERCENT' | 'FIXED' | 'FREE_PASS';
+
+/** P7.5 · promo codes (AD-05): a percent off, a fixed sum off, or a free pass «Праздник»; with a limit of uses and a term. */
+export const promoCodes = pgTable(
+  'promo_codes',
+  {
+    id: id(),
+    code: text('code').notNull(),
+    kind: text('kind').$type<PromoKind>().notNull(),
+    /** Percent (1–99) for PERCENT, roubles for FIXED, unused for FREE_PASS. */
+    value: integer('value').notNull().default(0),
+    /** The kinds of order the code works for: `SUBSCRIPTION`, `PASS`, `ADDON`. */
+    appliesTo: jsonb('applies_to').$type<string[]>().notNull(),
+    maxActivations: integer('max_activations'),
+    activations: integer('activations').notNull().default(0),
+    validFrom: ts('valid_from'),
+    validTo: ts('valid_to'),
+    active: boolean('active').notNull().default(true),
+    note: text('note').notNull().default(''),
+    createdById: text('created_by_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('promo_codes_code_uq').on(t.code)],
+);
+
+/** One use of a code by one person: a code works once for a person. The row is released when the order is not paid. */
+export const promoRedemptions = pgTable(
+  'promo_redemptions',
+  {
+    id: id(),
+    promoId: text('promo_id')
+      .notNull()
+      .references(() => promoCodes.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    orderId: text('order_id').references(() => orders.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('promo_redemptions_person_uq').on(t.promoId, t.userId), index('promo_redemptions_order_idx').on(t.orderId)],
+);
+
 export const subscriptions = pgTable(
   'subscriptions',
   {

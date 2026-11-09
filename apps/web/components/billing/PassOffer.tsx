@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, errorText } from '../../lib/api-browser';
-import { createPassOrder, rub } from '../../lib/billing';
+import { type PromoQuote, createPassOrder, quotePromo, rub } from '../../lib/billing';
+import { PromoField } from './PromoField';
 
 interface PassPlan {
   priceOnceRub: number;
@@ -22,6 +23,7 @@ export function PassOffer({ projectId, reasons = [], where = 'editor' }: { proje
   const [plan, setPlan] = useState<PassPlan | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [promoQuote, setPromoQuote] = useState<PromoQuote | null>(null);
 
   useEffect(() => {
     api<{ plans: Array<{ code: string; priceOnceRub: number | null; limits: { passDays?: number; screensPerProject: number; completionsPerMonth: number } }> }>('/plans')
@@ -57,8 +59,9 @@ export function PassOffer({ projectId, reasons = [], where = 'editor' }: { proje
         Пропуск «Праздник» включает возможности платного тарифа для этой одной сборки на {plan?.days ?? 30}&nbsp;дней: до {plan?.screens ?? '…'} экранов, свой адрес,
         красивый QR-код, все поведения, до {plan?.completions ?? '…'} прохождений, без отметки «Блоккер». Подписка не нужна, деньги списываются один раз.
       </p>
+      <PromoField compact check={(code) => quotePromo({ kind: 'PASS', projectId }, code)} onChange={(_, q) => setPromoQuote(q)} />
       <button type="button" className={inEditor ? 'ed-btn primary' : undefined} style={inEditor ? undefined : CABINET_PRIMARY} data-testid="pass-pay" disabled={busy || !plan} onClick={() => void pay()}>
-        {busy ? 'Переходим к оплате…' : plan ? `Включить за ${rub(plan.priceOnceRub * 100)}` : 'Включить'}
+        {busy ? 'Переходим к оплате…' : promoQuote ? (promoQuote.finalKop === 0 ? 'Включить бесплатно' : `Включить за ${rub(promoQuote.finalKop)}`) : plan ? `Включить за ${rub(plan.priceOnceRub * 100)}` : 'Включить'}
       </button>{' '}
       <a href="/tariffs" className={inEditor ? 'ed-btn' : undefined} style={inEditor ? { textDecoration: 'none', color: 'inherit' } : CABINET_SECONDARY}>
         Посмотреть все тарифы

@@ -99,6 +99,13 @@
       "when": 1794253446115,
       "tag": "0013_addons",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794254230330,
+      "tag": "0014_promo_codes",
+      "breakpoints": true
     }
   ]
 }

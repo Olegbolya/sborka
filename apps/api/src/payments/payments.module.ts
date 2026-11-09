@@ -5,6 +5,8 @@ import { type PaymentProvider } from './payment-provider.js';
 import { BillingService } from './billing.service.js';
 import { PaymentsController } from './payments.controller.js';
 import { PaymentsService } from './payments.service.js';
+import { PromoAdminController } from './promo-admin.controller.js';
+import { PromoService } from './promo.service.js';
 import { YooKassaProvider } from './yookassa.provider.js';
 
 @Module({})
@@ -14,8 +16,8 @@ export class PaymentsModule {
     const resolved = provider !== undefined ? provider : config.yookassa ? new YooKassaProvider(config.yookassa.shopId, config.yookassa.secretKey) : null;
     return {
       module: PaymentsModule,
-      controllers: [PaymentsController],
-      providers: [PaymentsService, BillingService, { provide: API_CONFIG, useValue: config }, { provide: PAYMENT_PROVIDER, useValue: resolved }],
+      controllers: [PaymentsController, PromoAdminController],
+      providers: [PaymentsService, PromoService, BillingService, { provide: API_CONFIG, useValue: config }, { provide: PAYMENT_PROVIDER, useValue: resolved }],
     };
   }
 }

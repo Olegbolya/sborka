@@ -4,6 +4,7 @@ import { type Db, schema } from '@blokum/db';
 import type { ApiConfig } from '../config.js';
 import { API_CONFIG, DB, PAYMENT_PROVIDER } from '../tokens.js';
 import { type PaymentProvider, PaymentProviderError } from './payment-provider.js';
+import { type OrderKindName, PromoService } from './promo.service.js';
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
 
@@ -47,6 +48,7 @@ export class PaymentsService {
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider | null,
+    private readonly promos: PromoService,
   ) {}
 
   private requireProvider(): PaymentProvider {
@@ -54,9 +56,8 @@ export class PaymentsService {
     return this.provider;
   }
 
-  /** Создаёт заказ «подписка» или «пропуск» и платёж у провайдера; человек идёт оплачивать по `confirmationUrl`. */
-  async createOrder(userId: string, body: OrderRequest): Promise<{ orderId: string; confirmationUrl: string }> {
-    const provider = this.requireProvider();
+  /** What the order costs and what it is, before any discount and without writing anything. */
+  private async priceOrder(userId: string, body: OrderRequest): Promise<{ kind: OrderKindName; amountKop: number; item: Record<string, unknown>; description: string }> {
     const kind = body.kind;
     let amountKop: number;
     let item: Record<string, unknown>;
@@ -91,16 +92,59 @@ export class PaymentsService {
     } else {
       throw fail(400, 'ORDER_INVALID', 'Неизвестный вид заказа.');
     }
+    return { kind, amountKop, item, description };
+  }
+
+  /** P7.5 · the price with a promo code, for the line «К оплате» before the payment; nothing is used up. */
+  async quote(userId: string, body: OrderRequest & { promo?: unknown }): Promise<{ listKop: number; discountKop: number; finalKop: number; code: string } | { code: string; kind: string; value: number; appliesTo: string[] }> {
+    // Without a purchase named, only the code itself is checked.
+    if (body.kind === undefined) return this.promos.describe(userId, body.promo);
+    const priced = await this.priceOrder(userId, body);
+    const q = await this.promos.quote(userId, body.promo, priced.kind, priced.amountKop);
+    return { listKop: q.listKop, discountKop: q.discountKop, finalKop: q.finalKop, code: q.code };
+  }
+
+  /** Создаёт заказ «подписка», «пропуск» или допродажа и платёж у провайдера; человек идёт оплачивать по `confirmationUrl`. */
+  async createOrder(userId: string, body: OrderRequest & { promo?: unknown }): Promise<{ orderId: string; confirmationUrl: string }> {
+    // With a promo code the provider is needed only when something is left to pay (a free pass needs no payment).
+    const withPromo = typeof body.promo === 'string' && body.promo.trim() !== '';
+    const provider = withPromo ? this.provider : this.requireProvider();
+    const priced = await this.priceOrder(userId, body);
+    const { kind, description } = priced;
+    let { amountKop, item } = priced;
+    let redemptionId: string | null = null;
+    if (withPromo) {
+      const r = await this.promos.reserve(userId, body.promo, kind, amountKop);
+      redemptionId = r.redemptionId;
+      item = { ...item, promo: r.code, listPriceKop: r.listKop, discountKop: r.discountKop };
+      amountKop = r.finalKop;
+      if (amountKop > 0 && !provider) {
+        await this.promos.release({ redemptionId });
+        throw fail(503, 'PAYMENTS_UNAVAILABLE', 'Оплата пока не подключена. Попробуйте позже.');
+      }
+    }
     const [order] = await this.db
       .insert(schema.orders)
-      .values({ userId, kind, item, amountKop, provider: provider.name })
-      .returning({ id: schema.orders.id });
+      .values({ userId, kind, item, amountKop, provider: amountKop === 0 ? 'promo' : provider!.name })
+      .returning({ id: schema.orders.id })
+      .catch(async (e: unknown) => {
+        if (redemptionId) await this.promos.release({ redemptionId });
+        throw e;
+      });
+    if (redemptionId) await this.promos.attach(redemptionId, order!.id);
+    const returnUrl = kind === 'PASS' ? `${this.config.webUrl}/app/projects/${String(item.projectId)}/edit?paid=${order!.id}` : `${this.config.webUrl}/cabinet/billing?order=${order!.id}`;
+    // A free pass by a promo code: nothing to pay, the rights are given at once, the same way as after a payment.
+    if (amountKop === 0) {
+      await this.markPaid(order!.id);
+      return { orderId: order!.id, confirmationUrl: returnUrl };
+    }
     try {
-      const created = await provider.createPayment({ orderId: order!.id, amountKop, description, returnUrl: kind === 'PASS' ? `${this.config.webUrl}/app/projects/${String(item.projectId)}/edit?paid=${order!.id}` : `${this.config.webUrl}/cabinet/billing?order=${order!.id}` });
+      const created = await provider!.createPayment({ orderId: order!.id, amountKop, description, returnUrl });
       await this.db.update(schema.orders).set({ providerPaymentId: created.providerPaymentId }).where(eq(schema.orders.id, order!.id));
       return { orderId: order!.id, confirmationUrl: created.confirmationUrl };
     } catch (e) {
       await this.db.update(schema.orders).set({ status: 'CANCELED' }).where(eq(schema.orders.id, order!.id));
+      await this.promos.release({ orderId: order!.id });
       if (e instanceof PaymentProviderError) throw fail(502, 'PAYMENTS_FAILED', 'Платёжный сервис сейчас не отвечает. Попробуйте позже.');
       throw e;
     }
@@ -187,7 +231,9 @@ export class PaymentsService {
     if (isRefund) return this.markRefunded(order.id);
     if (payment.status === 'succeeded') return this.markPaid(order.id);
     if (payment.status === 'canceled') {
-      await this.db.update(schema.orders).set({ status: 'CANCELED' }).where(and(eq(schema.orders.id, order.id), eq(schema.orders.status, 'PENDING')));
+      const canceled = await this.db.update(schema.orders).set({ status: 'CANCELED' }).where(and(eq(schema.orders.id, order.id), eq(schema.orders.status, 'PENDING'))).returning({ id: schema.orders.id });
+      // The use of a promo code goes back when the payment is canceled.
+      if (canceled.length > 0) await this.promos.release({ orderId: order.id });
     }
     return { ok: true };
   }
