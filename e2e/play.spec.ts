@@ -276,6 +276,16 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
     await p.goto(`/s/${slug}`);
     await expect(p.getByTestId('play-state')).toContainText('Временно недоступно');
+    // P7.2: участнику не показывается реклама тарифа — ни слов про тариф и цену, ни ссылок на оплату.
+    const shown = (await p.locator('body').innerText()).toLowerCase();
+    expect(shown).not.toMatch(/тариф|₽|оплат|подписк|праздник/);
+    await expect(p.locator('a[href*="/pricing"], a[href*="/cabinet"], a[href*="/app"]')).toHaveCount(0);
     await ctx.close();
+    // P7.2: создателю пришли уведомления на 80 % (24 из 30) и на 100 % (30 из 30) — по одному.
+    const mine = (await (await page.request.get('/api/v1/notifications')).json()) as Array<{ kind: string; body: string; projectId: string | null }>;
+    const usage = mine.filter((n) => n.projectId === id && n.kind.startsWith('usage-'));
+    expect(usage.map((n) => n.kind).sort()).toEqual(['usage-100', 'usage-80']);
+    expect(usage.find((n) => n.kind === 'usage-80')!.body).toContain('24 из 30');
+    expect(usage.find((n) => n.kind === 'usage-100')!.body).toContain('30 из 30');
   });
 });

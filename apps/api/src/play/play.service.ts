@@ -1,5 +1,6 @@
 import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
+import { NotificationsService } from '../admin/notifications.service.js';
 import { hashIp } from '../auth/ip-hash.js';
 import { and, count, eq, gt, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
@@ -69,6 +70,33 @@ const fail = (status: number, code: string, message: string): HttpException => n
 const unavailable = (): HttpException => fail(404, 'UNAVAILABLE', 'Недоступно');
 
 const monthStart = (now: Date): Date => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+export interface UsageNotice {
+  kind: 'usage-80' | 'usage-100';
+  title: string;
+  body: string;
+}
+
+/** P7.2 · PL-07: the message to the creator when `used` passages are reached of `limit`; null when this start crosses nothing. `projectTitle` is set for the pass «Праздник», whose limit is the project's. */
+export function usageNotice(used: number, limit: number, projectTitle: string | null): UsageNotice | null {
+  if (limit < 1) return null;
+  const where = projectTitle ? `сборки «${projectTitle.slice(0, 80)}» за срок пропуска` : 'в этом месяце';
+  if (used === limit) {
+    return {
+      kind: 'usage-100',
+      title: 'Лимит прохождений исчерпан',
+      body: `Использовано ${used} из ${limit} прохождений ${where}. Новые участники увидят «Временно недоступно», а те, кто уже начал, смогут закончить. Чтобы сборка снова принимала участников, перейдите на тариф с большим лимитом в разделе «Тарифы».`,
+    };
+  }
+  if (used === Math.ceil(limit * 0.8)) {
+    return {
+      kind: 'usage-80',
+      title: 'Использовано 80 % прохождений',
+      body: `Использовано ${used} из ${limit} прохождений ${where}. Когда лимит закончится, новые участники не смогут начать. Если ждёте ещё гостей, подключите тариф с большим лимитом в разделе «Тарифы».`,
+    };
+  }
+  return null;
+}
+
 /** An unfinished passage counts against the completion limit only while it is fresh. */
 const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_TRIES = 10;
@@ -97,6 +125,7 @@ export class PlayService {
     private readonly storage: LocalStorageService,
     private readonly entitlements: EntitlementsService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
   private async published(by: { slug: string } | { projectId: string }) {
@@ -386,7 +415,8 @@ export class PlayService {
 
     // The tariff is read before the transaction opens: inside it a second connection would be taken from the pool while this one waits.
     const { plan, pass } = await this.entitlements.limitsOfProject(p.ownerId, p.id, now);
-    return this.db.transaction(async (tx) => {
+    let usage: UsageNotice | null = null;
+    const started = await this.db.transaction(async (tx) => {
       // Locks are always taken in the same order (account, then project), so two projects of one account cannot block each other.
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'owner:' + p.ownerId}))`);
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'project:' + p.id}))`);
@@ -417,6 +447,9 @@ export class PlayService {
             .innerJoin(schema.projects, eq(schema.projects.id, schema.participantSessions.projectId))
             .where(and(eq(schema.projects.ownerId, p.ownerId), eq(schema.participantSessions.isPreview, false), gte(schema.participantSessions.startedAt, monthStart(now))));
       if ((month?.n ?? 0) >= plan.limits.completionsPerMonth) throw fail(503, 'TEMPORARILY_UNAVAILABLE', 'Временно недоступно');
+      // P7.2: the start that takes the tariff to 80 % and the one that takes it to the limit — each happens once in a period, because
+      // the count is read under the lock of the account.
+      usage = usageNotice((month?.n ?? 0) + 1, plan.limits.completionsPerMonth, scoped ? p.title : null);
       // 7. One attempt from a device (PL-10): a token kept by the browser, never a fingerprint.
       if (p.settings.singleAttempt && device) {
         const [again] = await tx
@@ -439,5 +472,9 @@ export class PlayService {
         .onConflictDoUpdate({ target: [schema.limitCounters.projectId, schema.limitCounters.kind], set: { value: sql`${schema.limitCounters.value} + 1` } });
       return { sessionId, versionId: p.versionId };
     });
+    // The message is a courtesy to the creator: its failure must not undo the passage that has begun.
+    const notice = usage as UsageNotice | null;
+    if (notice && this.notifications) await this.notifications.notify({ userId: p.ownerId, kind: notice.kind, title: notice.title, body: notice.body, projectId: p.id }).catch(() => undefined);
+    return started;
   }
 }

@@ -1,11 +1,12 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { schema } from '@blokum/db';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { usageNotice } from '../src/play/play.service.js';
 
 let phoneCounter = 0;
 
@@ -149,6 +150,37 @@ describe('PL-06…PL-10 · проверки доступа и лимиты', () 
     const res = await start(p.id).expect(503);
     expect(res.body.error).toMatchObject({ code: 'TEMPORARILY_UNAVAILABLE', message: 'Временно недоступно' });
   }, 60_000);
+
+  it('PL-07 · P7.2 · создатель получает уведомление на 80 % и на 100 % месячного лимита — по одному, участнику ничего о тарифе не говорится', async () => {
+    const p = await published();
+    const [version] = await db.db.select({ id: schema.projects.publishedVersionId }).from(schema.projects).where(eq(schema.projects.id, p.id));
+    const seed = async (n: number) => db.db.insert(schema.participantSessions).values(Array.from({ length: n }, () => ({ id: createId(), projectId: p.id, versionId: version!.id!, isPreview: false })));
+    const kinds = async () => (await db.db.select({ kind: schema.notifications.kind }).from(schema.notifications).where(eq(schema.notifications.projectId, p.id))).map((r) => r.kind).sort();
+    await seed(22);
+    await start(p.id).expect(201); // 23 из 30
+    expect(await kinds()).toEqual([]);
+    await start(p.id).expect(201); // 24 из 30 = 80 %
+    expect(await kinds()).toEqual(['usage-80']);
+    await seed(4);
+    await start(p.id).expect(201); // 29
+    await start(p.id).expect(201); // 30 из 30 = 100 %
+    expect(await kinds()).toEqual(['usage-100', 'usage-80']);
+    const [full] = await db.db.select().from(schema.notifications).where(and(eq(schema.notifications.projectId, p.id), eq(schema.notifications.kind, 'usage-100')));
+    expect(full!.body).toContain('30 из 30');
+    // Отказ не создаёт новых уведомлений, а участнику говорят только «Временно недоступно» — без слов про тариф и цену.
+    const refused = await start(p.id).expect(503);
+    expect(JSON.stringify(refused.body)).not.toMatch(/тариф|₽|Праздник|оплат/i);
+    expect(await kinds()).toEqual(['usage-100', 'usage-80']);
+  }, 60_000);
+
+  it('P7.2 · usageNotice: порог 80 % — округление вверх, при лимите 1 только «исчерпан», середина молчит', () => {
+    expect(usageNotice(24, 30, null)?.kind).toBe('usage-80');
+    expect(usageNotice(30, 30, null)?.kind).toBe('usage-100');
+    expect(usageNotice(23, 30, null)).toBeNull();
+    expect(usageNotice(1, 1, null)?.kind).toBe('usage-100');
+    expect(usageNotice(400, 500, 'Мой праздник')?.body).toContain('«Мой праздник»');
+    expect(usageNotice(5, 0, null)).toBeNull();
+  });
 
   it('PL-08 · пароль: без него документа нет; неверный отклоняется; верный даёт допуск; хэш не виден создателю; смена пароля обесценивает допуск', async () => {
     const p = await published({ password: 'sekret-1' });
