@@ -174,6 +174,8 @@ export const MediaSettings = z.strictObject({
   autoplay: z.boolean().default(true),
   muted: z.boolean().default(true),
   loop: z.boolean().default(true),
+  /** Видео не по кругу: после конца показывается кнопка «Ещё раз» (B-04). */
+  replayButton: z.boolean().default(false),
   controls: z.boolean().default(false),
   poster: MediaRef.optional(),
   speed: num(0.25, 4).default(1),

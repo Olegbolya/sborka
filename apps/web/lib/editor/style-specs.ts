@@ -604,6 +604,7 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
       { t: 'bool', key: 'autoplay', label: 'Автозапуск' },
       { t: 'bool', key: 'muted', label: 'Без звука' },
       { t: 'bool', key: 'loop', label: 'По кругу' },
+      { t: 'bool', key: 'replayButton', label: 'Кнопка «Ещё раз» в конце' },
       { t: 'bool', key: 'controls', label: 'Кнопки управления' },
       {
         t: 'optional',

@@ -415,7 +415,7 @@ export function groupsFor(block: Pick<Block, 'type' | 'children'>): StyleGroup[]
 export const GLOW_DEFAULT = { color: { token: 'accent', alpha: 1 }, size: 16 };
 
 /** One style group as a section of the panel. */
-function GroupSection({ group, blocks, state }: { group: StyleGroup; blocks: Block[]; state: BlockState | null }) {
+function GroupSection({ group, blocks, state, only, title, sectionId, open }: { group: StyleGroup; blocks: Block[]; state: BlockState | null; only?: string[]; title?: string; sectionId?: string; open?: boolean }) {
   const apply = useEditor((s) => s.apply);
   const tokens = useEditor((s) => s.doc.theme.tokens);
   const ids = blocks.map((b) => b.id);
@@ -428,6 +428,7 @@ function GroupSection({ group, blocks, state }: { group: StyleGroup; blocks: Blo
       mergeKey: `style:${group}:${state ?? ''}:${ids.join(',')}`,
     });
   const level: Level = { values, write, tokens };
+  const fields = only ? spec.fields.filter((f) => only.includes(f.key)) : spec.fields;
   const reset = () => apply(resetStyleGroup(ids, [group], state), { label: `Сбросить к теме: ${spec.title}` });
 
   if (group === 'glow') {
@@ -445,10 +446,15 @@ function GroupSection({ group, blocks, state }: { group: StyleGroup; blocks: Blo
     );
   }
   return (
-    <Section id={group} title={spec.title} hint={GROUP_HINTS[group]} own={own} onReset={reset}>
-      <Fields fields={spec.fields} level={level} prefix={group} />
+    <Section id={sectionId ?? group} title={title ?? spec.title} hint={only ? undefined : GROUP_HINTS[group]} own={own} onReset={reset} {...(open !== undefined ? { open } : {})}>
+      <Fields fields={fields} level={level} prefix={group} />
     </Section>
   );
+}
+
+/** B-04 · звук и повтор видео рядом с файлом, в его свойствах: те же настройки, что и в «Оформление» → «Медиа». */
+export function VideoPlayback({ blocks }: { blocks: Block[] }) {
+  return <GroupSection group="media" blocks={blocks} state={null} only={['autoplay', 'muted', 'loop', 'replayButton', 'controls']} title="Воспроизведение" sectionId="playback" open />;
 }
 
 const STATE_ORDER = Object.keys(STATE_TITLES) as BlockState[];

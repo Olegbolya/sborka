@@ -34,7 +34,7 @@ export const BLOCK_STYLE_DEFAULTS: Readonly<BlockStyle> = freeze({
     paint: { kind: 'solid', color: { token: 'text', alpha: 1 } },
     path: { kind: 'none', curvature: 0.5 },
   },
-  media: { fit: 'cover', focal: { x: 0.5, y: 0.5 }, autoplay: true, muted: true, loop: true, controls: false, speed: 1 },
+  media: { fit: 'cover', focal: { x: 0.5, y: 0.5 }, autoplay: true, muted: true, loop: true, replayButton: false, controls: false, speed: 1 },
   transform3d: { rotateX: 0, rotateY: 0, perspective: 1000, origin: { x: 0.5, y: 0.5 }, tiltFollow: false, tiltStrength: 10 },
   mask: { clipToShape: true },
   layout: { mode: 'free', gap: 8, align: 'start', justify: 'start', wrap: false, columns: 2, scroll: false },

@@ -77,3 +77,15 @@ describe('PL-19: стиль блока собирается без разбор�
     );
   }, 30_000);
 });
+
+describe('B-04: у видео звук включён по умолчанию', () => {
+  it('B-04 · блок «Видео» со звуком, по кругу и без кнопки «Ещё раз»; GIF, анимация и картинка по-прежнему без звука', () => {
+    expect(resolveBlockStyle(createBlock('video'), undefined).media).toMatchObject({ muted: false, loop: true, replayButton: false, autoplay: true });
+    for (const type of ['gif', 'animation', 'image'] as const) expect(resolveBlockStyle(createBlock(type), undefined).media.muted).toBe(true);
+  });
+
+  it('B-04 · своя настройка видео сильнее умолчания: «Без звука» и «Кнопка „Ещё раз“» сохраняются', () => {
+    const own = createBlock('video', { style: { media: { muted: true, loop: false, replayButton: true } } });
+    expect(resolveBlockStyle(own, undefined).media).toMatchObject({ muted: true, loop: false, replayButton: true });
+  });
+});

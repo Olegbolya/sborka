@@ -48,34 +48,112 @@ function useMediaCommands(el: HTMLMediaElement | null, instanceId: string): void
   }, [el, state]);
 }
 
-function Video({ src, css, instanceId, alt, gif }: { src: MediaSource; css: BlockCss; instanceId: string; alt: string; gif: boolean }): ReactNode {
+/** Как играет ролик: звук и повтор (B-04). GIF всегда без звука и по кругу. */
+export interface Playback {
+  muted: boolean;
+  repeat: 'loop' | 'once' | 'button';
+}
+
+/** Звук и повтор ролика из медиа-настроек блока (S-11); «Дальше, когда ролик закончился» отменяет повтор по кругу и кнопку. */
+function playbackOf(m: BlockCss['mediaSettings'], advances = false): Playback {
+  const loop = m.loop && !advances;
+  return { muted: m.muted, repeat: loop ? 'loop' : m.replayButton && !advances ? 'button' : 'once' };
+}
+
+const overlayButton: CSSProperties = {
+  position: 'absolute',
+  minHeight: u(44),
+  minWidth: u(44),
+  padding: `${u(8)} ${u(14)}`,
+  border: 'none',
+  borderRadius: u(22),
+  background: 'rgba(0, 0, 0, 0.65)',
+  color: '#FFFFFF',
+  fontSize: u(14),
+  fontWeight: 600,
+  cursor: 'pointer',
+};
+
+function Video({ src, css, instanceId, alt, gif, playback }: { src: MediaSource; css: BlockCss; instanceId: string; alt: string; gif: boolean; playback: Playback }): ReactNode {
   const ctx = useRenderContext();
   const [el, setEl] = useState<HTMLVideoElement | null>(null);
+  // Браузер не даёт включить звук без касания участника: тогда ролик идёт без звука, пока он не нажмёт «Включить звук».
+  const [soundBlocked, setSoundBlocked] = useState(false);
+  const [ended, setEnded] = useState(false);
   const m = css.mediaSettings;
   const player = ctx.mode === 'player';
   const poster = (m.poster ? ctx.media(m.poster)?.url : undefined) ?? src.poster;
+  const loop = gif || playback.repeat === 'loop';
+  // Участник мог выключить звук во всей сборке; выбор создателя «без звука» сильнее.
+  const silent = gif || playback.muted || ctx.sound?.isMuted === true || soundBlocked;
   useMediaCommands(el, instanceId);
   useEffect(() => {
     if (el) el.playbackRate = gif ? 1 : m.speed;
   }, [el, m.speed, gif]);
-  // GIF (B-03) always plays silently in a loop; a video (B-04) follows its media settings (S-11).
+  useEffect(() => {
+    if (el) el.muted = silent;
+  }, [el, silent]);
+  useEffect(() => {
+    if (!el || !player || gif || !m.autoplay || playback.muted) return;
+    el.play().catch(() => {
+      setSoundBlocked(true);
+      el.muted = true;
+      void el.play().catch(() => undefined);
+    });
+  }, [el, player, gif, m.autoplay, playback.muted]);
+  // GIF (B-03) always plays silently in a loop; a video (B-04) follows its media settings (S-11) and its own sound and repeat.
   const autoPlay = player && (gif || m.autoplay);
+  const centre: CSSProperties = { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
   return (
-    <video
-      ref={setEl}
-      className="bk-media"
-      src={src.url}
-      {...(poster ? { poster } : {})}
-      autoPlay={autoPlay}
-      muted={gif || m.muted}
-      loop={gif || m.loop}
-      controls={!gif && m.controls && player}
-      playsInline
-      preload={player ? 'auto' : 'metadata'}
-      aria-label={alt || undefined}
-      onEnded={() => ctx.dispatch?.({ type: 'mediaEnd', blockId: instanceId })}
-      style={css.media}
-    />
+    <>
+      <video
+        ref={setEl}
+        className="bk-media"
+        src={src.url}
+        {...(poster ? { poster } : {})}
+        autoPlay={autoPlay}
+        muted={silent}
+        loop={loop}
+        controls={!gif && m.controls && player}
+        playsInline
+        preload={player ? 'auto' : 'metadata'}
+        aria-label={alt || undefined}
+        onPlay={() => setEnded(false)}
+        onEnded={() => {
+          setEnded(true);
+          ctx.dispatch?.({ type: 'mediaEnd', blockId: instanceId });
+        }}
+        style={css.media}
+      />
+      {player && !gif && soundBlocked && !playback.muted && (
+        <button
+          type="button"
+          className="bk-video-sound"
+          style={{ ...overlayButton, left: u(8), bottom: u(8) }}
+          onClick={() => {
+            if (el) el.muted = false;
+            setSoundBlocked(false);
+          }}
+        >
+          Включить звук
+        </button>
+      )}
+      {player && !gif && playback.repeat === 'button' && ended && (
+        <button
+          type="button"
+          className="bk-video-replay"
+          style={{ ...overlayButton, ...centre }}
+          onClick={() => {
+            if (!el) return;
+            el.currentTime = 0;
+            setEnded(false);
+            void el.play().catch(() => undefined);
+          }}
+        >
+          Ещё раз
+        </button>
+      )}
+    </>
   );
 }
 
@@ -107,7 +185,9 @@ export function VideoContent({ block, css, instanceId }: { block: Of<'gif'> | Of
   if (!src) return <NoFile label={gif ? 'Добавьте GIF' : 'Добавьте видео'} />;
   if (src.stub) return <MediaStub stub={src.stub} />;
   const alt = block.a11y.alt ?? '';
-  return <div style={fill}>{src.kind === 'image' ? <img className="bk-media" src={src.url} alt={alt} draggable={false} style={css.media} /> : <Video src={src} css={css} instanceId={instanceId} alt={alt} gif={gif} />}</div>;
+  // Ролик, после которого сборка идёт дальше, по кругу не повторяется: иначе он никогда не закончится.
+  const playback = playbackOf(css.mediaSettings, block.type === 'video' && block.props.nextOnEnd);
+  return <div style={fill}>{src.kind === 'image' ? <img className="bk-media" src={src.url} alt={alt} draggable={false} style={css.media} /> : <Video src={src} css={css} instanceId={instanceId} alt={alt} gif={gif} playback={playback} />}</div>;
 }
 
 /**
@@ -214,7 +294,7 @@ export function AnimationContent({ block, css, instanceId }: { block: Of<'animat
       {src.kind === 'lottie' ? (
         <Lottie src={src} css={css} frame={block.props.frame} />
       ) : src.kind === 'video' ? (
-        <Video src={src} css={css} instanceId={instanceId} alt={alt} gif={false} />
+        <Video src={src} css={css} instanceId={instanceId} alt={alt} gif={false} playback={playbackOf(css.mediaSettings)} />
       ) : (
         <img className="bk-media" src={src.url} alt={alt} draggable={false} style={css.media} />
       )}

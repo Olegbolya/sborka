@@ -164,6 +164,71 @@ describe('B-02…B-05, B-07: медиаблоки', () => {
     vi.restoreAllMocks();
   });
 
+  it('B-04: у видео звук включён по умолчанию и выключается; повтор — по кругу, один раз или один раз и кнопка «Ещё раз»', () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+    const film = { source: 'media', id: 'video-film' } as const;
+    const of = (settings: Record<string, unknown>, props: Record<string, unknown> = {}) => {
+      // Звук включён и ролик по кругу — настройки видео по умолчанию; блоку достаточно указать то, что он меняет.
+      const v = live([make('video', { props: { media: film, ...props }, ...(Object.keys(settings).length ? { style: { media: { muted: false, ...settings } } } : {}) })]);
+      return { v, video: v.host.querySelector('video')! };
+    };
+    // По умолчанию: со звуком и по кругу.
+    let one = of({});
+    expect([one.video.muted, one.video.loop]).toEqual([false, true]);
+    one.v.unmount();
+    // «Без звука».
+    one = of({ muted: true });
+    expect(one.video.muted).toBe(true);
+    one.v.unmount();
+    // Один раз: не по кругу, кнопки «Ещё раз» нет.
+    one = of({ loop: false });
+    expect(one.video.loop).toBe(false);
+    act(() => {
+      one.video.dispatchEvent(new Event('ended'));
+    });
+    expect(one.v.host.querySelector('button.bk-video-replay')).toBeNull();
+    one.v.unmount();
+    // «Дальше, когда ролик закончился» не даёт ролику крутиться по кругу.
+    one = of({}, { nextOnEnd: true });
+    expect(one.video.loop).toBe(false);
+    one.v.unmount();
+    // Один раз и кнопка: после конца появляется «Ещё раз», по нажатию ролик идёт с начала.
+    one = of({ loop: false, replayButton: true });
+    expect(one.video.loop).toBe(false);
+    expect(one.v.host.querySelector('button.bk-video-replay')).toBeNull();
+    act(() => {
+      one.video.dispatchEvent(new Event('ended'));
+    });
+    const replay = one.v.host.querySelector('button.bk-video-replay')!;
+    expect(replay.textContent).toBe('Ещё раз');
+    one.video.currentTime = 7;
+    play.mockClear();
+    click(replay);
+    expect(one.video.currentTime).toBe(0);
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(one.v.host.querySelector('button.bk-video-replay')).toBeNull();
+    one.v.unmount();
+    vi.restoreAllMocks();
+  });
+
+  it('B-04: браузер не дал включить звук без касания — ролик идёт без звука, пока участник не нажмёт «Включить звук»', async () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValueOnce(new DOMException('blocked', 'NotAllowedError')).mockResolvedValue();
+    const v = live([make('video', { props: { media: { source: 'media', id: 'video-film' } } })]);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const video = v.host.querySelector('video')!;
+    expect(play).toHaveBeenCalled();
+    expect(video.muted).toBe(true);
+    const sound = v.host.querySelector('button.bk-video-sound')!;
+    expect(sound.textContent).toBe('Включить звук');
+    click(sound);
+    expect(video.muted).toBe(false);
+    expect(v.host.querySelector('button.bk-video-sound')).toBeNull();
+    v.unmount();
+    vi.restoreAllMocks();
+  });
+
   it('B-05: звук — настоящая кнопка; играет после первого действия участника, громкость из настроек', () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
     const ab = make('audio', { name: 'Бубенцы', props: { media: { source: 'media', id: 'zvuk000001' }, volume: 0.4 } });

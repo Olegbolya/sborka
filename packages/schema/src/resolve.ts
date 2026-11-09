@@ -11,6 +11,8 @@ const copy = (value: unknown): unknown => {
   return value;
 };
 
+const VIDEO_MEDIA_DEFAULTS: Readonly<BlockStyle['media']> = Object.freeze({ ...BLOCK_STYLE_DEFAULTS.media, muted: false });
+
 /**
  * Effective style of a block (TH-01, TH-06): base defaults ← the theme's default style for the block
  * type ← the block's own style groups ← the active state (S-15). Groups merge as a whole: the editor
@@ -26,6 +28,8 @@ export function resolveBlockStyle(
   // Every group that is present was parsed when it was written (TH-06), so a group is taken as it is and only the
   // missing ones come from the defaults: the result equals `BlockStyle.parse` of the merge without carrying the parser.
   const merged: Record<string, unknown> = { ...BLOCK_STYLE_DEFAULTS };
+  // У блока «Видео» звук включён по умолчанию (B-04); у фонового видео и анимации он выключен, чтобы они стартовали без касания участника.
+  if (block.type === 'video') merged.media = VIDEO_MEDIA_DEFAULTS;
   for (const layer of [themeDefault, block.style, stateStyle] as Array<Record<string, unknown>>) {
     for (const [group, value] of Object.entries(layer)) if (value !== undefined) merged[group] = value;
   }
