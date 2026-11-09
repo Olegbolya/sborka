@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 0;
 
@@ -49,18 +49,23 @@ async function makeAppWithAuth(): Promise<{ t: TestApp; db: TestDb; loginViaOtp:
 import { createBlock, createDocument, createScreen, textOf } from '@blokum/schema';
 
 describe('TPL-01/TPL-02 · свои шаблоны (сохранить, список, переименовать, удалить)', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let cookie: string;
 
   beforeAll(async () => {
-    let loginViaOtp: (phone?: string) => Promise<string>;
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
-    cookie = await loginViaOtp();
+    try {
+      let loginViaOtp: (phone?: string) => Promise<string>;
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+      cookie = await loginViaOtp();
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   const get = (path: string) => request(t.http()).get(`/${API_PREFIX}${path}`).set('Cookie', cookie);
@@ -122,18 +127,23 @@ describe('TPL-01/TPL-02 · свои шаблоны (сохранить, спис
 });
 
 describe('P10.2 · TPL-03/TPL-04 · сборка из системного шаблона и пустая галерея', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let cookie: string;
 
   beforeAll(async () => {
-    let loginViaOtp: (phone?: string) => Promise<string>;
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
-    cookie = await loginViaOtp();
+    try {
+      let loginViaOtp: (phone?: string) => Promise<string>;
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+      cookie = await loginViaOtp();
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   const get = (path: string) => request(t.http()).get(`/${API_PREFIX}${path}`).set('Cookie', cookie);

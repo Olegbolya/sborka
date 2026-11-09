@@ -3,22 +3,28 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { schema } from '@blokum/db';
 import { API_PREFIX } from '../src/app.js';
 import { SessionService } from '../src/auth/session.service.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, startTestApp, type TestApp, type TestDb, pgSkipGuard } from './helpers.js';
 
 describe('A-04 · сеансы и CSRF', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let sessions: SessionService;
 
   beforeAll(async () => {
-    db = await createTestDb();
-    t = await startTestApp({ db: db.db });
-    sessions = t.app.get(SessionService);
+    try {
+      db = await createTestDb();
+      t = await startTestApp({ db: db.db });
+      sessions = t.app.get(SessionService);
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pg.skip(); return; }
+      throw e;
+    }
   });
 
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   const makeUser = async (phone: string) => {
@@ -71,6 +77,7 @@ describe('A-04 · сеансы и CSRF', () => {
     let sessionId: string;
 
     beforeAll(async () => {
+      if (pg.skipped) return;
       const user = await makeUser('+79000000100');
       userId = user.id;
       token = await sessions.create(userId, { ua: 'Mozilla/5.0 Chrome/120' });

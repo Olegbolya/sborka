@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { schema } from '@blokum/db';
 import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, startTestApp, type TestApp, type TestDb, pgSkipGuard } from './helpers.js';
 
 const ADMIN_ID = '777000111222';
 
@@ -26,16 +26,22 @@ const codeFor = (secret: string, shiftSteps = 0): string => {
 };
 
 describe('AD-01 · вход администратора через VK ID / Яндекс ID с обязательным TOTP', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
 
   beforeAll(async () => {
-    db = await createTestDb();
-    t = await startTestApp({ db: db.db }, { adminAccounts: [`vk:${ADMIN_ID}`, 'yandex:888000111222'] });
+    try {
+      db = await createTestDb();
+      t = await startTestApp({ db: db.db }, { adminAccounts: [`vk:${ADMIN_ID}`, 'yandex:888000111222'] });
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pg.skip(); return; }
+      throw e;
+    }
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   const cookiesOf = (res: request.Response): string[] => {

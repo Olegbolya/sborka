@@ -6,7 +6,7 @@ import { createBlock, createScreen, type ProjectDocument } from '@blokum/schema'
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 0;
 const sentCodes: { phone: string; code: string }[] = [];
@@ -21,6 +21,7 @@ const open = (t: TestApp, method: 'get' | 'post', url: string, body?: unknown) =
 };
 
 describe('P9.3 · AD-02, AD-03, AD-04, AD-07, AD-09, AD-11 · админка модерации и контента', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
 
@@ -50,14 +51,18 @@ describe('P9.3 · AD-02, AD-03, AD-04, AD-07, AD-09, AD-11 · админка м�
     (await db.db.select().from(schema.auditLog)).filter((r) => r.action === action && (targetId === undefined || r.targetId === targetId));
 
   beforeAll(async () => {
-    db = await createTestDb();
-    const otpSender: OtpSender = { sendCode: vi.fn((phone: string, code: string) => (sentCodes.push({ phone, code }), Promise.resolve())) };
-    const captchaVerifier: CaptchaVerifier = { verify: () => Promise.resolve(true) };
-    t = await startTestApp({ db: db.db, otpSender, captchaVerifier });
+    try {
+      db = await createTestDb();
+      const otpSender: OtpSender = { sendCode: vi.fn((phone: string, code: string) => (sentCodes.push({ phone, code }), Promise.resolve())) };
+      const captchaVerifier: CaptchaVerifier = { verify: () => Promise.resolve(true) };
+      t = await startTestApp({ db: db.db, otpSender, captchaVerifier });
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('AD-01 · админка закрыта для обычных пользователей и для гостей; выключатели и системное — только администратору', async () => {

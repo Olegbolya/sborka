@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { checkDatabase } from '../src/client.js';
 import { runMigrations } from '../src/migrate.js';
 import * as schema from '../src/schema/index.js';
@@ -8,12 +8,19 @@ import { createTestDb, type TestDb } from './helpers.js';
 
 describe('миграции', () => {
   let t: TestDb;
+  let pgSkip = false;
   beforeAll(async () => {
-    t = await createTestDb({ migrate: false });
+    try {
+      t = await createTestDb({ migrate: false });
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pgSkip = true; return; }
+      throw e;
+    }
   });
   afterAll(async () => {
-    await t.drop();
+    await t?.drop();
   });
+  beforeEach(({ skip }) => { if (pgSkip) skip(); });
 
   it('применяются к пустой базе и создают все таблицы схемы', async () => {
     await runMigrations(t.db);

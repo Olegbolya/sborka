@@ -7,9 +7,10 @@ import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import type { EmailSender } from '../src/auth/email-sender.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, startTestApp, type TestApp, type TestDb, pgSkipGuard } from './helpers.js';
 
 describe('A-03, A-05, D-10 · Аккаунт', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   const sentCodes: { phone: string; code: string }[] = [];
@@ -35,8 +36,9 @@ describe('A-03, A-05, D-10 · Аккаунт', () => {
     try {
       db = await createTestDb();
       t = await startTestApp({ db: db.db, otpSender, captchaVerifier, emailSender });
-    } catch {
-      // PostgreSQL not available — tests skipped.
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pg.skip(); return; }
+      throw e;
     }
   });
 
@@ -378,25 +380,35 @@ describe('A-03, A-05, D-10 · Аккаунт', () => {
 });
 
 describe('A-03 · почтовый сервис не подключён', () => {
+  const pg2 = pgSkipGuard();
   it('A-03: без почтового сервиса API запускается, профиль сообщает emailAvailable=false, подтверждение адреса — 503 с понятной причиной', async () => {
-    const db = await createTestDb();
-    const codes: string[] = [];
-    const t = await startTestApp({
-      db: db.db,
-      otpSender: { sendCode: (_p: string, code: string) => (codes.push(code), Promise.resolve()) },
-      captchaVerifier: { verify: () => Promise.resolve(true) },
-      emailSender: null,
-    });
-    const phone = '+79991249901';
-    await request(t.http()).post(`/${API_PREFIX}/auth/otp/request`).set('X-Blokum-CSRF', '1').send({ phone, captchaToken: 'ok' }).expect(200);
-    const res = await request(t.http()).post(`/${API_PREFIX}/auth/otp/verify`).set('X-Blokum-CSRF', '1').send({ phone, code: codes[0] }).expect(200);
-    const cookie = (res.headers['set-cookie'] as unknown as string[]).find((c) => c.startsWith('session='))!.split(';')[0]!;
-    const profile = await request(t.http()).get(`/${API_PREFIX}/auth/account`).set('Cookie', cookie).expect(200);
-    expect(profile.body.emailAvailable).toBe(false);
-    const email = await request(t.http()).post(`/${API_PREFIX}/auth/account/email`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ email: 'u@example.ru' });
-    expect(email.status).toBe(503);
-    expect(email.body.error.code).toBe('EMAIL_UNAVAILABLE');
-    await t.app.close();
-    await db.drop();
+    if (pg2.skipped) return;
+    let db: TestDb | undefined;
+    let t: TestApp | undefined;
+    try {
+      db = await createTestDb();
+      const codes: string[] = [];
+      t = await startTestApp({
+        db: db.db,
+        otpSender: { sendCode: (_p: string, code: string) => (codes.push(code), Promise.resolve()) },
+        captchaVerifier: { verify: () => Promise.resolve(true) },
+        emailSender: null,
+      });
+      const phone = '+79991249901';
+      await request(t.http()).post(`/${API_PREFIX}/auth/otp/request`).set('X-Blokum-CSRF', '1').send({ phone, captchaToken: 'ok' }).expect(200);
+      const res = await request(t.http()).post(`/${API_PREFIX}/auth/otp/verify`).set('X-Blokum-CSRF', '1').send({ phone, code: codes[0] }).expect(200);
+      const cookie = (res.headers['set-cookie'] as unknown as string[]).find((c) => c.startsWith('session='))!.split(';')[0]!;
+      const profile = await request(t.http()).get(`/${API_PREFIX}/auth/account`).set('Cookie', cookie).expect(200);
+      expect(profile.body.emailAvailable).toBe(false);
+      const email = await request(t.http()).post(`/${API_PREFIX}/auth/account/email`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ email: 'u@example.ru' });
+      expect(email.status).toBe(503);
+      expect(email.body.error.code).toBe('EMAIL_UNAVAILABLE');
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') return;
+      throw e;
+    } finally {
+      await t?.app.close();
+      await db?.drop();
+    }
   });
 });

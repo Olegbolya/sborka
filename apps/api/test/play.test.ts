@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 0;
 
@@ -56,17 +56,22 @@ const call = (t: TestApp, cookie: string, method: 'post' | 'put' | 'patch' | 'ge
 const pub = (t: TestApp, url: string) => request(t.http()).get(`/${API_PREFIX}${url}`);
 
 describe('PL-01…PL-05 · публикация и открытие плеера', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let loginViaOtp: (phone?: string) => Promise<string>;
   let cookie: string;
 
   beforeAll(async () => {
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
   beforeEach(async () => {
     cookie = await loginViaOtp();

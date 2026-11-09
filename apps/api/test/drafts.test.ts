@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, startTestApp, type TestApp, type TestDb, pgSkipGuard } from './helpers.js';
 
 let phoneCounter = 0;
 
@@ -55,17 +55,23 @@ interface Loaded {
 import { SNAPSHOTS_KEPT, parseIfMatch } from '../src/projects/drafts.service.js';
 
 describe('E-17…E-19 · Черновик, версии, конфликты', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let loginViaOtp: (phone?: string) => Promise<string>;
   let cookie: string;
 
   beforeAll(async () => {
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pg.skip(); return; }
+      throw e;
+    }
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
   beforeEach(async () => {
     cookie = await loginViaOtp();

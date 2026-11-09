@@ -5,11 +5,12 @@ import { schema } from '@blokum/db';
 import { createId } from '@blokum/schema';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
-import { createTestDb, startTestApp, testConfig, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, testConfig, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 30000;
 
 describe('LB-01, LB-04, AD-10 · Библиотека платформы', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   const sentCodes: { phone: string; code: string }[] = [];
@@ -25,8 +26,8 @@ describe('LB-01, LB-04, AD-10 · Библиотека платформы', () =>
     try {
       db = await createTestDb();
       t = await startTestApp({ db: db.db, otpSender });
-    } catch {
-      // PostgreSQL недоступен — тесты пропускаются
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
     }
   });
 

@@ -2,11 +2,12 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 60000;
 
 describe('TS-27 · E-21 · SVG-импорт контуров', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   const sentCodes: { phone: string; code: string }[] = [];
@@ -22,8 +23,8 @@ describe('TS-27 · E-21 · SVG-импорт контуров', () => {
     try {
       db = await createTestDb();
       t = await startTestApp({ db: db.db, otpSender });
-    } catch {
-      // PostgreSQL недоступен — тесты пропускаются
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
     }
   });
 

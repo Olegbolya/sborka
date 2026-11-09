@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb, testConfig } from './helpers.js';
+import { createTestDb, startTestApp, type TestApp, type TestDb, testConfig, pgSkipGuard } from './helpers.js';
 
 // Standalone TOTP computation for tests (mirrors totp.service.ts logic).
 function computeTotp(secretBase64url: string, offsetSec = 0): string {
@@ -35,6 +35,7 @@ function decryptTotpSecret(encrypted: string, keyHex: string): string {
 }
 
 describe('AD-01, AD-08 · Роли и админ', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   const sentCodes: { phone: string; code: string }[] = [];
@@ -53,8 +54,9 @@ describe('AD-01, AD-08 · Роли и админ', () => {
     try {
       db = await createTestDb();
       t = await startTestApp({ db: db.db, otpSender, captchaVerifier });
-    } catch {
-      // PostgreSQL not available — tests skipped.
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pg.skip(); return; }
+      throw e;
     }
   });
 

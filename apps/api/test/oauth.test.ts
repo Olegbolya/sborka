@@ -1,9 +1,10 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { API_PREFIX } from '../src/app.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
 
@@ -11,8 +12,8 @@ describe('A-01 · OAuth VK и Яндекс ID (интеграция)', () => {
     try {
       db = await createTestDb();
       t = await startTestApp({ db: db.db });
-    } catch {
-      // PostgreSQL not available — tests skipped.
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
     }
   });
 

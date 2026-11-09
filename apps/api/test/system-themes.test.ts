@@ -3,23 +3,28 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { schema } from '@blokum/db';
 import { SYSTEM_THEMES, SYSTEM_THEME_NAMES } from '@blokum/themes';
 import { SystemThemesService } from '../src/themes/system-themes.service.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 /**
  * TH-05 · the API seeds the three starter system themes at startup, idempotently.
  * The administrator can still add more through AD-11 (see moderation.test.ts).
  */
 describe('TH-05 · посев системных тем на старте API', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
 
   beforeAll(async () => {
-    db = await createTestDb();
-    t = await startTestApp({ db: db.db });
+    try {
+      db = await createTestDb();
+      t = await startTestApp({ db: db.db });
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('TH-05 · после запуска API в БД лежат три стартовые темы с нужными именами и isSystem=true', async () => {

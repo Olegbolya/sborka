@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { count, eq } from 'drizzle-orm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { PLANS } from '../src/plans.js';
 import { ProjectDocument, ThemeTokens, validateDocument } from '@blokum/schema';
 import { DEV_SEED, devDoc, seedDevData, seedPlans } from '../src/seed.js';
@@ -67,12 +67,19 @@ describe('тарифы в seed совпадают с docs/04-TARIFFS.md', () => 
 
 describe('seed', () => {
   let t: TestDb;
+  let pgSkip = false;
   beforeAll(async () => {
-    t = await createTestDb();
+    try {
+      t = await createTestDb();
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pgSkip = true; return; }
+      throw e;
+    }
   });
   afterAll(async () => {
-    await t.drop();
+    await t?.drop();
   });
+  beforeEach(({ skip }) => { if (pgSkip) skip(); });
 
   it('тарифы создаются и не перезаписываются при повторном запуске', async () => {
     // Миграция 0010 уже положила пять тарифов (ADR-048), seed ничего не добавляет.

@@ -1,5 +1,5 @@
 import { eq, sql } from 'drizzle-orm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   accessPoints,
   answers,
@@ -23,12 +23,19 @@ const pgCode = (e: unknown): string | undefined =>
 
 describe('целостность данных', () => {
   let t: TestDb;
+  let pgSkip = false;
   beforeAll(async () => {
-    t = await createTestDb();
+    try {
+      t = await createTestDb();
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pgSkip = true; return; }
+      throw e;
+    }
   });
   afterAll(async () => {
-    await t.drop();
+    await t?.drop();
   });
+  beforeEach(({ skip }) => { if (pgSkip) skip(); });
 
   const makeUser = async (phone: string) => {
     const [u] = await t.db.insert(users).values({ displayName: 'Тест', phoneE164: phone }).returning();

@@ -1,6 +1,7 @@
 import { Writable } from 'node:stream';
 import { type Server } from 'node:http';
 import os from 'node:os';
+import { beforeEach as _beforeEach } from 'vitest';
 import { type INestApplication } from '@nestjs/common';
 import { type Alert, Alerts, createLogger } from '@blokum/observability';
 import { createDb, runMigrations, type Db } from '@blokum/db';
@@ -15,6 +16,16 @@ import { type HealthProbes } from '../src/health/health.controller.js';
 import type { IMediaQueue } from '../src/media/media-jobs.js';
 
 export const TEST_BASE_URL = process.env.DATABASE_URL ?? 'postgresql://blokum:blokum@127.0.0.1:5432/blokum_test';
+
+/**
+ * Call at the top of a describe block. Registers a beforeEach that skips tests when
+ * PostgreSQL is not reachable. Call pg.skip() from beforeAll when ECONNREFUSED is caught.
+ */
+export function pgSkipGuard(): { skip(): void; readonly skipped: boolean } {
+  let _skipped = false;
+  _beforeEach(({ skip }) => { if (_skipped) skip(); });
+  return { skip() { _skipped = true; }, get skipped() { return _skipped; } };
+}
 
 export const testConfig: ApiConfig = {
   port: 0,

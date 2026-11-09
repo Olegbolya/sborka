@@ -5,9 +5,10 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, startTestApp, type TestApp, type TestDb, pgSkipGuard } from './helpers.js';
 
 describe('A-02, D1/D4/D9 · Онбординг и согласия', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   const sentCodes: { phone: string; code: string }[] = [];
@@ -26,8 +27,9 @@ describe('A-02, D1/D4/D9 · Онбординг и согласия', () => {
     try {
       db = await createTestDb();
       t = await startTestApp({ db: db.db, otpSender, captchaVerifier });
-    } catch {
-      // PostgreSQL not available — tests skipped.
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pg.skip(); return; }
+      throw e;
     }
   });
 

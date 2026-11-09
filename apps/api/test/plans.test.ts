@@ -3,21 +3,27 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PLANS, schema, seedPlans } from '@blokum/db';
 import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 type Body = { plans: Array<{ code: string; priceMonthRub: number | null; limits: { publishedProjects: number | null } }> };
 
 describe('P10.1 · публичный список тарифов', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   beforeAll(async () => {
-    db = await createTestDb();
-    await seedPlans(db.db);
-    t = await startTestApp({ db: db.db });
+    try {
+      db = await createTestDb();
+      await seedPlans(db.db);
+      t = await startTestApp({ db: db.db });
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pg.skip(); return; }
+      throw e;
+    }
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('P10.1 · отдаёт тарифы из таблицы без входа, по порядку и с лимитами', async () => {

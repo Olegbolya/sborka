@@ -6,7 +6,7 @@ import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import { createBlock, createId, createScreen, plainText } from '@blokum/schema';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 0;
 
@@ -48,18 +48,23 @@ async function makeAppWithAuth(): Promise<{ t: TestApp; db: TestDb; loginViaOtp:
 }
 
 describe('D-01 · Мои сборки', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let loginViaOtp: (phone?: string) => Promise<string>;
   let cookie: string;
 
   beforeAll(async () => {
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
 
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   beforeEach(async () => {
@@ -234,18 +239,23 @@ describe('D-01 · Мои сборки', () => {
 });
 
 describe('D-03 · Доступ', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let loginViaOtp: (phone?: string) => Promise<string>;
   let cookie: string;
 
   beforeAll(async () => {
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
 
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   beforeEach(async () => {
@@ -279,6 +289,7 @@ describe('D-03 · Доступ', () => {
 });
 
 describe('Q-01/Q-02/Q-04/Q-05/Q-07 · Точки доступа и QR', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let loginViaOtp: (phone?: string) => Promise<string>;
@@ -286,20 +297,24 @@ describe('Q-01/Q-02/Q-04/Q-05/Q-07 · Точки доступа и QR', () => {
   let projectId: string;
 
   beforeAll(async () => {
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
-    cookie = await loginViaOtp();
-    const res = await request(t.http())
-      .post(`/${API_PREFIX}/projects`)
-      .set('Cookie', cookie)
-      .set('X-Blokum-CSRF', '1')
-      .send({ title: 'QR-тест' })
-      .expect(200);
-    projectId = res.body.id as string;
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+      cookie = await loginViaOtp();
+      const res = await request(t.http())
+        .post(`/${API_PREFIX}/projects`)
+        .set('Cookie', cookie)
+        .set('X-Blokum-CSRF', '1')
+        .send({ title: 'QR-тест' })
+        .expect(200);
+      projectId = res.body.id as string;
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
 
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('Q-01: создать точку доступа и получить URL', async () => {
@@ -388,6 +403,7 @@ describe('Q-01/Q-02/Q-04/Q-05/Q-07 · Точки доступа и QR', () => {
 });
 
 describe('D-04 · Ответы', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let loginViaOtp: (phone?: string) => Promise<string>;
@@ -395,20 +411,24 @@ describe('D-04 · Ответы', () => {
   let projectId: string;
 
   beforeAll(async () => {
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
-    cookie = await loginViaOtp();
-    const res = await request(t.http())
-      .post(`/${API_PREFIX}/projects`)
-      .set('Cookie', cookie)
-      .set('X-Blokum-CSRF', '1')
-      .send({ title: 'Ответы-тест' })
-      .expect(200);
-    projectId = res.body.id as string;
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+      cookie = await loginViaOtp();
+      const res = await request(t.http())
+        .post(`/${API_PREFIX}/projects`)
+        .set('Cookie', cookie)
+        .set('X-Blokum-CSRF', '1')
+        .send({ title: 'Ответы-тест' })
+        .expect(200);
+      projectId = res.body.id as string;
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
 
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('D-04: список ответов пуст для нового проекта', async () => {
@@ -465,6 +485,7 @@ describe('D-04 · Ответы', () => {
 });
 
 describe('D-02 · Поделиться', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let loginViaOtp: (phone?: string) => Promise<string>;
@@ -472,20 +493,24 @@ describe('D-02 · Поделиться', () => {
   let projectId: string;
 
   beforeAll(async () => {
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
-    cookie = await loginViaOtp();
-    const res = await request(t.http())
-      .post(`/${API_PREFIX}/projects`)
-      .set('Cookie', cookie)
-      .set('X-Blokum-CSRF', '1')
-      .send({ title: 'Поделиться-тест' })
-      .expect(200);
-    projectId = res.body.id as string;
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+      cookie = await loginViaOtp();
+      const res = await request(t.http())
+        .post(`/${API_PREFIX}/projects`)
+        .set('Cookie', cookie)
+        .set('X-Blokum-CSRF', '1')
+        .send({ title: 'Поделиться-тест' })
+        .expect(200);
+      projectId = res.body.id as string;
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
 
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('D-02: точка доступа возвращает URL для поделиться', async () => {
@@ -503,19 +528,24 @@ describe('D-02 · Поделиться', () => {
 });
 
 describe('D-11 · Моё творчество', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let loginViaOtp: (phone?: string) => Promise<string>;
   let cookie: string;
 
   beforeAll(async () => {
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
-    cookie = await loginViaOtp();
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+      cookie = await loginViaOtp();
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
 
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('D-11: неаутентифицированный пользователь получает 401 на списке сборок', async () => {
@@ -534,6 +564,7 @@ describe('D-11 · Моё творчество', () => {
 });
 
 describe('D-06 · Экспорт CSV/XLSX', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let loginViaOtp: (phone?: string) => Promise<string>;
@@ -541,20 +572,24 @@ describe('D-06 · Экспорт CSV/XLSX', () => {
   let projectId: string;
 
   beforeAll(async () => {
-    ({ t, db, loginViaOtp } = await makeAppWithAuth());
-    cookie = await loginViaOtp();
-    const res = await request(t.http())
-      .post(`/${API_PREFIX}/projects`)
-      .set('Cookie', cookie)
-      .set('X-Blokum-CSRF', '1')
-      .send({ title: 'Экспорт-тест' })
-      .expect(200);
-    projectId = res.body.id as string;
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+      cookie = await loginViaOtp();
+      const res = await request(t.http())
+        .post(`/${API_PREFIX}/projects`)
+        .set('Cookie', cookie)
+        .set('X-Blokum-CSRF', '1')
+        .send({ title: 'Экспорт-тест' })
+        .expect(200);
+      projectId = res.body.id as string;
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
 
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('D-06: export.csv — UTF-8 BOM + Content-Type text/csv', async () => {

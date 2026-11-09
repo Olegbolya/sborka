@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { IMediaQueue } from '../src/media/media-jobs.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 /** Minimal JPEG header (JFIF) — enough for file-type to detect image/jpeg. */
 const JPEG_1PX = Buffer.from([
@@ -79,6 +79,7 @@ const PDF_CONTENT = Buffer.from('%PDF-1.4 fake pdf content here');
 const EXE_CONTENT = Buffer.concat([Buffer.from([0x4d, 0x5a, 0x90, 0x00]), Buffer.alloc(60)]);
 
 describe('P4.1, P4.4, B-02–B-07, D-08, TS-01 · Медиатека', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let mediaDir: string;
@@ -100,8 +101,8 @@ describe('P4.1, P4.4, B-02–B-07, D-08, TS-01 · Медиатека', () => {
         { db: db.db, otpSender, mediaQueue: stubQueue },
         { mediaDir, phoneLogin: true },
       );
-    } catch {
-      // PostgreSQL not available — tests skipped.
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
     }
   });
 

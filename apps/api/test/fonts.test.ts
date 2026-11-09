@@ -9,7 +9,7 @@ import { schema } from '@blokum/db';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import { commercialVendor, isFontLicense } from '../src/fonts/font-processor.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 /** Буфер с валидным TTF-заголовком, но мусорным содержимым — fontkit не сможет прочитать. */
 const BROKEN_TTF = Buffer.concat([
@@ -53,6 +53,7 @@ async function findGeistTtf(): Promise<string | null> {
 let phoneCounter = 10000;
 
 describe('TH-04, TS-26 · пользовательские шрифты', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let mediaDir: string;
@@ -72,8 +73,9 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
       db = await createTestDb();
       mediaDir = mkdtempSync(path.join(os.tmpdir(), 'blokum-fonts-test-'));
       t = await startTestApp({ db: db.db, otpSender }, { mediaDir, phoneLogin: true });
-    } catch {
-      // PostgreSQL недоступен — тесты пропускаются
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pg.skip(); return; }
+      throw e;
     }
   });
 

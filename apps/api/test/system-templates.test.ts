@@ -4,7 +4,7 @@ import { schema } from '@blokum/db';
 import { ProjectDocument } from '@blokum/schema';
 import { loadSystemTemplates } from '@blokum/themes';
 import { SystemTemplatesService } from '../src/projects/system-templates.service.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 /**
  * TPL-03 · на старте API таблица `templates` получает стартовый набор шаблонов из
@@ -12,16 +12,21 @@ import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers
  * Админ продолжает добавлять свои через AD-11.
  */
 describe('TPL-03 · посев системных шаблонов на старте API', () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
 
   beforeAll(async () => {
-    db = await createTestDb();
-    t = await startTestApp({ db: db.db });
+    try {
+      db = await createTestDb();
+      t = await startTestApp({ db: db.db });
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
+    }
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('TPL-03 · после старта в БД лежат все 14 стартовых шаблонов из @blokum/themes', async () => {

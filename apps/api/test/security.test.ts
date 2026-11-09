@@ -8,7 +8,7 @@ import { API_PREFIX } from '../src/app.js';
 import { IS_PUBLIC_KEY, ROLES_KEY } from '../src/auth/decorators.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 /*
  * P9.4 · N-04 · docs/02-ARCHITECTURE.md §8 п. 10: «проверка роли на каждом эндпоинте» и тесты IDOR по эндпоинтам кабинета.
@@ -61,6 +61,7 @@ let phoneCounter = 0;
 const sentCodes: { phone: string; code: string }[] = [];
 
 describe('P9.4 · N-04 · роли и доступ к чужим объектам на каждом эндпоинте', { timeout: 120_000 }, () => {
+  const pg = pgSkipGuard();
   let t: TestApp;
   let db: TestDb;
   let routes: Route[];
@@ -86,39 +87,43 @@ describe('P9.4 · N-04 · роли и доступ к чужим объекта�
   const fill = (path: string, ids: Record<string, string>) => path.replace(/:(\w+)/g, (_m, name: string) => ids[name] ?? 'net-takogo');
 
   beforeAll(async () => {
-    db = await createTestDb();
-    const otpSender: OtpSender = { sendCode: vi.fn((phone: string, code: string) => (sentCodes.push({ phone, code }), Promise.resolve())) };
-    const captchaVerifier: CaptchaVerifier = { verify: () => Promise.resolve(true) };
-    t = await startTestApp({ db: db.db, otpSender, captchaVerifier });
+    try {
+      db = await createTestDb();
+      const otpSender: OtpSender = { sendCode: vi.fn((phone: string, code: string) => (sentCodes.push({ phone, code }), Promise.resolve())) };
+      const captchaVerifier: CaptchaVerifier = { verify: () => Promise.resolve(true) };
+      t = await startTestApp({ db: db.db, otpSender, captchaVerifier });
 
-    const reflector = t.app.get(Reflector);
-    const scanner = new MetadataScanner();
-    const found: Route[] = [];
-    for (const w of [...t.app.get(ModulesContainer).values()].flatMap((m) => [...m.controllers.values()])) {
-      if (!w.instance || !w.metatype) continue;
-      const proto = Object.getPrototypeOf(w.instance) as Record<string, unknown>;
-      const base = (Reflect.getMetadata('path', w.metatype) as string | undefined) ?? '';
-      for (const name of scanner.getAllMethodNames(proto)) {
-        const handler = proto[name] as object;
-        const sub = Reflect.getMetadata('path', handler) as string | undefined;
-        const verb = Reflect.getMetadata('method', handler) as number | undefined;
-        if (sub === undefined || verb === undefined) continue;
-        const path = `/${base}/${sub}`.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
-        const method = METHODS[verb]!;
-        found.push({
-          key: `${method.toUpperCase()} ${path}`,
-          method,
-          path,
-          isPublic: reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY as never, [handler as never, w.metatype]) === true,
-          roles: reflector.getAllAndOverride<string[]>(ROLES_KEY, [handler as never, w.metatype]) ?? [],
-        });
+        const reflector = t.app.get(Reflector);
+      const scanner = new MetadataScanner();
+      const found: Route[] = [];
+      for (const w of [...t.app.get(ModulesContainer).values()].flatMap((m) => [...m.controllers.values()])) {
+        if (!w.instance || !w.metatype) continue;
+        const proto = Object.getPrototypeOf(w.instance) as Record<string, unknown>;
+        const base = (Reflect.getMetadata('path', w.metatype) as string | undefined) ?? '';
+        for (const name of scanner.getAllMethodNames(proto)) {
+          const handler = proto[name] as object;
+          const sub = Reflect.getMetadata('path', handler) as string | undefined;
+          const verb = Reflect.getMetadata('method', handler) as number | undefined;
+          if (sub === undefined || verb === undefined) continue;
+          const path = `/${base}/${sub}`.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
+          const method = METHODS[verb]!;
+          found.push({
+            key: `${method.toUpperCase()} ${path}`,
+            method,
+            path,
+            isPublic: reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY as never, [handler as never, w.metatype]) === true,
+            roles: reflector.getAllAndOverride<string[]>(ROLES_KEY, [handler as never, w.metatype]) ?? [],
+          });
+        }
       }
+      routes = found;
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();
     }
-    routes = found;
   });
   afterAll(async () => {
-    await t.app.close();
-    await db.drop();
+    await t?.app.close();
+    await db?.drop();
   });
 
   it('N-04 · у каждого маршрута есть решение: открытый, по роли, только свой сеанс или объект по идентификатору — новый маршрут без записи ломает тест', () => {
