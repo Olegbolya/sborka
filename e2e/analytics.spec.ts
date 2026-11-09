@@ -34,10 +34,10 @@ test.describe('P10.7 · 05-LEGAL §2.2 · D8 · cookie-баннер и Метр�
     await page.waitForTimeout(1500);
     expect(hits).toEqual([]);
     // Two buttons of the same size: to refuse is as easy as to agree.
-    const agree = await page.getByRole('button', { name: 'Согласен' }).boundingBox();
-    const refuse = await page.getByRole('button', { name: 'Отказаться' }).boundingBox();
+    const agree = await page.getByRole('button', { name: 'Принять' }).boundingBox();
+    const refuse = await page.getByRole('button', { name: 'Отклонить' }).boundingBox();
     expect(Math.abs(agree!.height - refuse!.height)).toBeLessThan(2);
-    await page.getByRole('button', { name: 'Отказаться' }).click();
+    await page.getByRole('button', { name: 'Отклонить' }).click();
     await expect(page.getByTestId('cookie-banner')).toHaveCount(0);
     await page.goto(`${site.origin}/tariffs`);
     await page.waitForTimeout(1000);
@@ -48,12 +48,12 @@ test.describe('P10.7 · 05-LEGAL §2.2 · D8 · cookie-баннер и Метр�
   test('P10.7 · после согласия счётчик загружается; отзыв согласия через «Настройки cookie» убирает его', async ({ page }) => {
     await watch(page);
     await page.goto(`${site.origin}/`);
-    await page.getByRole('button', { name: 'Согласен' }).click();
+    await page.getByRole('button', { name: 'Принять' }).click();
     await expect.poll(() => hits.some((u) => u.includes('/metrika/tag.js'))).toBe(true);
     await page.goto(`${site.origin}/help`);
     await expect(page.getByTestId('cookie-banner')).toHaveCount(0);
     await page.getByRole('button', { name: 'Настройки cookie' }).click();
-    await page.getByRole('button', { name: 'Отказаться' }).click();
+    await page.getByRole('button', { name: 'Отклонить' }).click();
     await page.waitForLoadState('load');
     hits.length = 0;
     await page.goto(`${site.origin}/help`);

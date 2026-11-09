@@ -6,13 +6,14 @@ import { type Db, schema } from '@blokum/db';
 import { createId } from '@blokum/schema';
 import { DB } from '../tokens.js';
 import { LocalStorageService } from '../media/storage.js';
-import { processFont } from './font-processor.js';
+import { type FontLicense, processFont } from './font-processor.js';
 
 export interface FontDto {
   id: string;
   family: string;
   styles: Record<string, { mediaId: string }>;
   hasCyrillic: boolean;
+  license: FontLicense | null;
   createdAt: Date;
 }
 
@@ -27,10 +28,10 @@ export class FontsService {
    * Обрабатывает загруженный файл шрифта, сохраняет WOFF2 как медиафайл,
    * создаёт или обновляет запись шрифта (группировка по family + ownerId).
    */
-  async upload(ownerId: string, buffer: Buffer): Promise<FontDto> {
+  async upload(ownerId: string, buffer: Buffer, license: FontLicense): Promise<FontDto> {
     let result: Awaited<ReturnType<typeof processFont>>;
     try {
-      result = await processFont(buffer);
+      result = await processFont(buffer, license);
     } catch (e: unknown) {
       const err = e as { status?: number; code?: string; message?: string };
       if (err.status === 400) {
@@ -72,7 +73,7 @@ export class FontsService {
       styles = { ...existing.styles, [styleKey]: { mediaId } };
       await this.db
         .update(schema.fonts)
-        .set({ styles, hasCyrillic: existing.hasCyrillic || hasCyrillic })
+        .set({ styles, hasCyrillic: existing.hasCyrillic || hasCyrillic, license })
         .where(eq(schema.fonts.id, fontId));
     } else {
       fontId = createId();
@@ -83,6 +84,7 @@ export class FontsService {
         family,
         styles,
         hasCyrillic,
+        license,
       });
     }
 
@@ -129,6 +131,7 @@ function toDto(row: typeof schema.fonts.$inferSelect): FontDto {
     family: row.family,
     styles: row.styles,
     hasCyrillic: row.hasCyrillic,
+    license: (row.license as FontLicense | null) ?? null,
     createdAt: row.createdAt,
   };
 }

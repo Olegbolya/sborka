@@ -693,18 +693,21 @@ interface OperatorInfo {
 function OperatorTab({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
   const [info, setInfo] = useState<OperatorInfo | null>(null);
   const [dpaAcceptedAt, setDpaAcceptedAt] = useState<string | null>(null);
+  const [ackAt, setAckAt] = useState<string | null>(null);
+  const [understood, setUnderstood] = useState(false);
   const [form, setForm] = useState<OperatorInfo>({ name: '', email: '', inn: '', purpose: '', retentionPeriod: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    apiFetch<{ operatorInfo: OperatorInfo | null; dpaAcceptedAt: string | null }>(`/projects/${projectId}/operator-info`)
+    apiFetch<{ operatorInfo: OperatorInfo | null; dpaAcceptedAt: string | null; operatorAckAt: string | null }>(`/projects/${projectId}/operator-info`)
       .then((res) => {
         if (res.operatorInfo) {
           setInfo(res.operatorInfo);
           setForm(res.operatorInfo);
         }
         setDpaAcceptedAt(res.dpaAcceptedAt);
+        setAckAt(res.operatorAckAt);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -719,6 +722,21 @@ function OperatorTab({ projectId, setError }: { projectId: string; setError: (e:
         body: JSON.stringify(form),
       });
       setInfo(updated);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function acknowledge() {
+    setSaving(true);
+    try {
+      const res = await apiFetch<{ acknowledgedAt: string }>(`/projects/${projectId}/operator-ack`, {
+        method: 'POST',
+        headers: { 'X-Blokum-CSRF': '1' },
+      });
+      setAckAt(res.acknowledgedAt);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -742,6 +760,34 @@ function OperatorTab({ projectId, setError }: { projectId: string; setError: (e:
   }
 
   if (loading) return <p style={{ fontSize: 14, color: 'var(--muted)' }}>Загрузка...</p>;
+
+  if (!ackAt) {
+    return (
+      <div style={{ maxWidth: 540 }} data-testid="operator-ack">
+        <h2 style={{ fontSize: 20, margin: '0 0 12px' }}>Вы становитесь оператором персональных данных</h2>
+        <p style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 12 }}>
+          Когда ваша сборка собирает имя, телефон или email участников, <strong>оператором этих данных являетесь вы</strong>, а не «Блоккер». Мы только храним данные по вашему поручению.
+        </p>
+        <ul style={{ fontSize: 14, lineHeight: 1.6, margin: '0 0 12px', paddingLeft: 20 }}>
+          <li>До начала сбора данных нужно подать уведомление об обработке персональных данных в Роскомнадзор на сайте pd.rkn.gov.ru. Это бесплатно.</li>
+          <li>Участник должен дать отдельное согласие — его текст мы покажем в сборке автоматически из ваших сведений об операторе.</li>
+          <li>Вы отвечаете за цель сбора, срок хранения и за ответы на обращения участников.</li>
+          <li>Если данные утекут, о происшествии нужно сообщить в Роскомнадзор в течение 24 часов.</li>
+        </ul>
+        <label style={{ display: 'flex', gap: 8, fontSize: 14, margin: '16px 0', alignItems: 'flex-start' }}>
+          <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} style={{ marginTop: 3 }} />
+          <span>Я понимаю, что становлюсь оператором персональных данных, и сам(а) подам уведомление в Роскомнадзор до начала сбора</span>
+        </label>
+        <button
+          onClick={() => void acknowledge()}
+          disabled={!understood || saving}
+          style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'var(--accent, #0066ff)', color: '#fff', cursor: understood ? 'pointer' : 'not-allowed', opacity: understood ? 1 : 0.5, fontSize: 14 }}
+        >
+          {saving ? 'Сохранение...' : 'Продолжить'}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 540 }}>

@@ -25,6 +25,13 @@ check() {
   if grep -vE '^\s*#' "$WORK/blokum.conf" | grep -nE 'mybst|/home/deploy/bst|bst_api|bst_renderer'; then
     echo "✗ $label: в конфигурации Блоккера есть ссылки на BST" >&2; exit 1
   fi
+  # ADR-048: ни один server Блоккера не пишет журнал доступа в обычном формате (с полным IP).
+  if [ "$(grep -cE '^\s*server \{' "$WORK/blokum.conf")" != "$(grep -cE '^\s*access_log .* blokum_anon;' "$WORK/blokum.conf")" ]; then
+    echo "✗ $label: не во всех server есть access_log в формате blokum_anon (без IP)" >&2; exit 1
+  fi
+  if grep -vE '^\s*#' "$WORK/blokum.conf" | grep -nE 'remote_addr' | grep -vE 'limit_req_zone|map \$remote_addr|X-Real-IP|binary_remote_addr'; then
+    echo "✗ $label: \$remote_addr попадает в журнал" >&2; exit 1
+  fi
   echo "✓ nginx -t: $label"
 }
 

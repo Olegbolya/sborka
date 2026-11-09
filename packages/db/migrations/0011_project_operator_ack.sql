@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "operator_ack_at" timestamp with time zone;

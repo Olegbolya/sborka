@@ -474,14 +474,14 @@ export class ProjectsService {
    * published version — the player reads that copy, so later edits of the draft or of a theme reach participants only at
    * the next publication.
    */
-  private async publish(row: { id: string; operatorInfo: Record<string, unknown> | null; dpaAcceptedAt: Date | null }): Promise<void> {
+  private async publish(row: { id: string; operatorInfo: Record<string, unknown> | null; dpaAcceptedAt: Date | null; operatorAckAt?: Date | null }): Promise<void> {
     await this.flags?.require('PUBLISHING_ENABLED', 'Публикация сборок временно отключена.');
     const [project] = await this.db.select({ draftVersionId: schema.projects.draftVersionId }).from(schema.projects).where(eq(schema.projects.id, row.id));
     const [draft] = project?.draftVersionId
       ? await this.db.select({ document: schema.projectVersions.document }).from(schema.projectVersions).where(eq(schema.projectVersions.id, project.draftVersionId))
       : [];
     if (!draft) throw new BadRequestException({ error: { code: 'NO_DRAFT', message: 'У сборки нет черновика, который можно опубликовать.' } });
-    await this.checkPdRequirements(row.id, row.operatorInfo, row.dpaAcceptedAt);
+    await this.checkPdRequirements(row.id, row.operatorInfo, row.dpaAcceptedAt, row.operatorAckAt ?? null);
     const parsed = ProjectDocument.safeParse(draft.document);
     if (!parsed.success) {
       throw new BadRequestException({ error: { code: 'INVALID_DOCUMENT', message: `Сборка не прошла проверку: ${parsed.error.issues[0]?.message ?? 'неверная структура'}` } });
@@ -522,6 +522,7 @@ export class ProjectsService {
     projectId: string,
     operatorInfo: Record<string, unknown> | null,
     dpaAcceptedAt: Date | null,
+    operatorAckAt: Date | null,
   ): Promise<void> {
     const versions = await this.db
       .select({ document: schema.projectVersions.document })
@@ -546,6 +547,11 @@ export class ProjectsService {
     if (!dpaAcceptedAt) {
       throw new BadRequestException({
         error: { code: 'DPA_REQUIRED', message: 'Примите условия поручения обработки персональных данных (D6) перед публикацией.' },
+      });
+    }
+    if (!operatorAckAt) {
+      throw new BadRequestException({
+        error: { code: 'OPERATOR_ACK_REQUIRED', message: 'Подтвердите, что вы понимаете: вы становитесь оператором персональных данных участников и должны уведомить Роскомнадзор. Это делается на вкладке «Оператор ПД».' },
       });
     }
   }
@@ -583,6 +589,14 @@ export class ProjectsService {
     return row.isAdvertising && row.adMarking ? row.adMarking : null;
   }
 
+  /** PL-23 · the creator confirmed the screen «Вы становитесь оператором ПД»; the time is the server's. */
+  async acknowledgeOperator(userId: string, projectId: string): Promise<{ acknowledgedAt: Date }> {
+    await this.assertOwner(userId, projectId);
+    const acknowledgedAt = new Date();
+    await this.db.update(schema.projects).set({ operatorAckAt: acknowledgedAt }).where(eq(schema.projects.id, projectId));
+    return { acknowledgedAt };
+  }
+
   /** PL-23: record DPA (D6) acceptance for this project. */
   async acceptDpa(userId: string, projectId: string): Promise<{ acceptedAt: Date }> {
     await this.assertOwner(userId, projectId);
@@ -595,11 +609,12 @@ export class ProjectsService {
   async getOperatorInfo(
     userId: string,
     projectId: string,
-  ): Promise<{ operatorInfo: OperatorInfo | null; dpaAcceptedAt: Date | null }> {
+  ): Promise<{ operatorInfo: OperatorInfo | null; dpaAcceptedAt: Date | null; operatorAckAt: Date | null }> {
     const row = await this.assertOwner(userId, projectId);
     return {
       operatorInfo: row.operatorInfo ? (row.operatorInfo as unknown as OperatorInfo) : null,
       dpaAcceptedAt: row.dpaAcceptedAt,
+      operatorAckAt: row.operatorAckAt ?? null,
     };
   }
 
@@ -663,6 +678,7 @@ export class ProjectsService {
         settings: schema.projects.settings,
         operatorInfo: schema.projects.operatorInfo,
         dpaAcceptedAt: schema.projects.dpaAcceptedAt,
+        operatorAckAt: schema.projects.operatorAckAt,
         isAdvertising: schema.projects.isAdvertising,
         adMarking: schema.projects.adMarking,
         createdAt: schema.projects.createdAt,

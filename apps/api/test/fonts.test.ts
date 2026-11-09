@@ -8,6 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { schema } from '@blokum/db';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
+import { commercialVendor, isFontLicense } from '../src/fonts/font-processor.js';
 import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 /** Буфер с валидным TTF-заголовком, но мусорным содержимым — fontkit не сможет прочитать. */
@@ -109,6 +110,50 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
     return cookies.find((c) => c.startsWith('session='))!.split(';')[0]!;
   }
 
+  it('TH-04 · POST /fonts — без указания лицензии отказ с понятным текстом', async () => {
+    if (skip() || !geistPath) return;
+    const cookie = await loginViaOtp();
+    const buf = await readFile(geistPath);
+    const res = await request(t.http())
+      .post(`/${API_PREFIX}/fonts`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .attach('file', buf, { filename: 'Geist-Regular.ttf', contentType: 'application/octet-stream' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('FONT_LICENSE_REQUIRED');
+    const wrong = await request(t.http())
+      .post(`/${API_PREFIX}/fonts`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .field('license', 'ЛЮБАЯ')
+      .attach('file', buf, { filename: 'Geist-Regular.ttf', contentType: 'application/octet-stream' });
+    expect(wrong.status).toBe(400);
+  });
+
+  it('TH-04 · лицензия сохраняется вместе со шрифтом', async () => {
+    if (skip() || !geistPath) return;
+    const cookie = await loginViaOtp();
+    const buf = await readFile(geistPath);
+    const res = await request(t.http())
+      .post(`/${API_PREFIX}/fonts`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .field('license', 'OFL')
+      .attach('file', buf, { filename: 'Geist-Regular.ttf', contentType: 'application/octet-stream' });
+    expect(res.status).toBe(201);
+    expect(res.body.license).toBe('OFL');
+  });
+
+  it('TH-04 · метаданные: коммерческая словолитня распознаётся, свободный шрифт — нет', () => {
+    const none = { copyright: null, manufacturer: null, vendorId: null, licenseText: null };
+    expect(commercialVendor({ ...none, copyright: 'Copyright 2024 The Geist Project Authors' })).toBeNull();
+    expect(commercialVendor({ ...none, copyright: '© 2010 Monotype Imaging Inc. All rights reserved.' })).toBe('monotype');
+    expect(commercialVendor({ ...none, manufacturer: 'Linotype GmbH' })).toBe('linotype');
+    expect(commercialVendor({ ...none, vendorId: 'MONO' })).toBe('MONO');
+    expect(isFontLicense('OFL')).toBe(true);
+    expect(isFontLicense('GPL')).toBe(false);
+  });
+
   it('TH-04 · POST /fonts — отклоняет слишком большой файл (>10 МБ)', async () => {
     if (skip()) return;
     const cookie = await loginViaOtp();
@@ -116,6 +161,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
       .post(`/${API_PREFIX}/fonts`)
       .set('Cookie', cookie)
       .set('X-Blokum-CSRF', '1')
+      .field('license', 'OFL')
       .attach('file', BIG_TTF, { filename: 'big.ttf', contentType: 'application/octet-stream' });
     // NestJS FileInterceptor returns 413 (multer LIMIT_FILE_SIZE) or 400 (processFont check)
     expect([400, 413]).toContain(res.status);
@@ -128,6 +174,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
       .post(`/${API_PREFIX}/fonts`)
       .set('Cookie', cookie)
       .set('X-Blokum-CSRF', '1')
+      .field('license', 'OFL')
       .attach('file', BROKEN_TTF, { filename: 'broken.ttf', contentType: 'application/octet-stream' })
       .expect(400);
     expect(res.body.error?.code).toMatch(/FONT_BROKEN|FONT_INVALID_FORMAT|FONT_CONVERSION_FAILED/);
@@ -142,6 +189,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
       .post(`/${API_PREFIX}/fonts`)
       .set('Cookie', cookie)
       .set('X-Blokum-CSRF', '1')
+      .field('license', 'OFL')
       .attach('file', buf, { filename: 'Geist-Regular.ttf', contentType: 'application/octet-stream' })
       .expect(201);
     expect(res.body.id).toBeTruthy();
@@ -160,6 +208,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
       .post(`/${API_PREFIX}/fonts`)
       .set('Cookie', cookie)
       .set('X-Blokum-CSRF', '1')
+      .field('license', 'OFL')
       .attach('file', buf, { filename: 'Geist-Regular.ttf', contentType: 'application/octet-stream' })
       .expect(201);
     const list = await request(t.http())
@@ -182,6 +231,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
       .post(`/${API_PREFIX}/fonts`)
       .set('Cookie', cookie)
       .set('X-Blokum-CSRF', '1')
+      .field('license', 'OFL')
       .attach('file', buf, { filename: 'Geist-Regular.ttf', contentType: 'application/octet-stream' })
       .expect(201);
     const fontId = (created.body as { id: string }).id;
@@ -211,6 +261,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
       .post(`/${API_PREFIX}/fonts`)
       .set('Cookie', cookie)
       .set('X-Blokum-CSRF', '1')
+      .field('license', 'OFL')
       .attach('file', buf, { filename: 'Geist-Regular.ttf', contentType: 'application/octet-stream' })
       .expect(201);
     // Проверяем, что стили содержат mediaId

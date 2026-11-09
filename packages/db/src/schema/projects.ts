@@ -23,6 +23,7 @@ export const projects = pgTable(
     adMarking: jsonb('ad_marking').$type<{ advertiser: string; inn?: string; erid: string }>(),
     operatorInfo: jsonb('operator_info').$type<Record<string, unknown>>(),
     dpaAcceptedAt: ts('dpa_accepted_at'),
+    operatorAckAt: ts('operator_ack_at'),
     settings: jsonb('settings').$type<Record<string, unknown>>().notNull().default({}),
     themeId: text('theme_id').references((): AnyPgColumn => themes.id, { onDelete: 'set null' }),
     draftVersionId: text('draft_version_id').references((): AnyPgColumn => projectVersions.id, { onDelete: 'set null' }),

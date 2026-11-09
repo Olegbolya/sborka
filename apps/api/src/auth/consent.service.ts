@@ -1,20 +1,16 @@
-import { createHash, createHmac } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { DB } from '../tokens.js';
 import { LegalDocumentService } from './legal-document.service.js';
+import { hashIp } from './ip-hash.js';
 
 /** Required document types for onboarding (A-02). */
 const REQUIRED_TYPES: Array<(typeof schema.legalDocuments.$inferInsert)['type']> = ['TOS', 'PD_CONSENT_USER'];
 
 function generateId(): string {
   return createHash('sha256').update(Math.random().toString() + Date.now()).digest('hex').slice(0, 24);
-}
-
-function hashIp(ip: string): string {
-  const salt = new Date().toISOString().slice(0, 10);
-  return createHmac('sha256', salt).update(ip).digest('hex').slice(0, 16);
 }
 
 export interface PendingDocument {

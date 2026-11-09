@@ -1,6 +1,6 @@
 import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
+import { hashIp } from '../auth/ip-hash.js';
 import { ModerationService } from '../admin/moderation.service.js';
-import { createHash } from 'node:crypto';
 import { and, count, eq, gte, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { REPORT_SLA_HOURS, findReportCategory } from '@blokum/schema';
@@ -45,7 +45,7 @@ export class ReportsService {
       .where(and(eq(schema.projects.slug, body.slug), isNull(schema.projects.deletedAt)));
     if (!project) throw fail(404, 'UNAVAILABLE', 'Недоступно');
 
-    const ipHash = createHash('sha256').update(`ip:${now.toISOString().slice(0, 10)}:${ip}`).digest('hex');
+    const ipHash = hashIp(ip, now, 64);
     const [recent] = await this.db
       .select({ n: count() })
       .from(schema.reports)

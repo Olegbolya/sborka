@@ -534,3 +534,7 @@
 | ME-02 | P3.11 | `apps/api/src/projects/elements.controller.ts`; `apps/api/src/projects/projects.service.ts#getElement`; `apps/web/components/editor/AddPanel.tsx#insertElement` | `apps/api/test/elements.test.ts`; `e2e/templates.spec.ts` |
 | E-12 | P3.14 | `apps/web/components/editor/Editor.tsx#Body`; `apps/web/components/editor/editor.css` | `e2e/editor-mobile.spec.ts` |
 | SC-06 | P3.8 | `apps/web/lib/editor/clipboard.ts`; `apps/web/components/editor/PasteVariablesDialog.tsx` | `apps/web/test/clipboard-rules.test.ts`; `e2e/scenarios.spec.ts` |
+| ADR-048 тарифы | P7.1 | `packages/db/src/plans.ts`; `packages/db/migrations/0010_five_tariffs.sql`; `apps/web/lib/landing/plans.ts` | `packages/db/test/seed.test.ts`; `apps/web/test/landing-plans.test.ts`; `apps/api/test/plans.test.ts` |
+| TH-04 лицензия | P4.6 | `apps/api/src/fonts/font-processor.ts#commercialVendor`; `apps/api/src/fonts/fonts.controller.ts`; `apps/web/lib/fonts/api.ts` | `apps/api/test/fonts.test.ts` |
+| PL-23 экран оператора | P8.3 | `apps/api/src/projects/projects.service.ts#acknowledgeOperator`; `apps/web/app/cabinet/projects/[id]/page.tsx#OperatorTab`; `packages/db/migrations/0011_project_operator_ack.sql` | `apps/api/test/legal.test.ts` |
+| ADR-048 IP | P8.2 | `apps/api/src/auth/ip-hash.ts`; `infra/nginx/blokum.conf.template` (`blokum_anon`) | `apps/api/test/ip-hash.test.ts`; `infra/test/check-nginx.sh` |

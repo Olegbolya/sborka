@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { hashIp } from './ip-hash.js';
 import { Inject, Injectable } from '@nestjs/common';
 import { type Db, schema } from '@blokum/db';
 import { DB } from '../tokens.js';
@@ -19,7 +19,7 @@ export class AuditLogService {
 
   async log(entry: AuditLogEntry): Promise<void> {
     if (typeof (this.db as unknown as Record<string, unknown>)['insert'] !== 'function') return;
-    const ipHash = entry.ip ? createHash('sha256').update(entry.ip).digest('hex').slice(0, 16) : null;
+    const ipHash = entry.ip ? hashIp(entry.ip) : null;
     await this.db.insert(schema.auditLog).values({
       actorId: entry.actorId ?? null,
       action: entry.action,

@@ -55,10 +55,10 @@ export function CookieBanner({ metrikaId }: { metrikaId: string | null }) {
       </p>
       <div className="lp-cookie-actions">
         <button ref={first} type="button" className="lp-btn lp-btn-small" onClick={() => choose('granted')}>
-          Согласен
+          Принять
         </button>
         <button type="button" className="lp-btn lp-btn-small" onClick={() => choose('denied')}>
-          Отказаться
+          Отклонить
         </button>
       </div>
     </div>

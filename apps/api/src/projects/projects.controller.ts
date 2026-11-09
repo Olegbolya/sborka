@@ -114,6 +114,13 @@ export class ProjectsController {
     return this.projects.setOperatorInfo(user.id, id, body);
   }
 
+  /** PL-23 · confirm the screen «Вы становитесь оператором ПД» (the creator will file the notice to Roskomnadzor). */
+  @Post(':id/operator-ack')
+  @HttpCode(200)
+  acknowledgeOperator(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.projects.acknowledgeOperator(user.id, id);
+  }
+
   /** PL-23: Accept DPA (D6 — условия поручения обработки ПД) for this project. */
   @Post(':id/dpa-accept')
   @HttpCode(200)

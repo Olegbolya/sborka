@@ -38,7 +38,7 @@ const BY_ID = new Set([
   'GET /projects/:id/moderation', 'POST /projects/:id/appeals',
   'GET /projects/:id', 'PATCH /projects/:id', 'DELETE /projects/:id', 'POST /projects/:id/restore', 'POST /projects/:id/duplicate', 'POST /projects/:id/status', 'POST /projects/:id/publish',
   'GET /projects/:id/access-settings', 'PATCH /projects/:id/access-settings', 'GET /projects/:id/advertising', 'PATCH /projects/:id/advertising',
-  'GET /projects/:id/operator-info', 'PATCH /projects/:id/operator-info', 'POST /projects/:id/dpa-accept',
+  'GET /projects/:id/operator-info', 'PATCH /projects/:id/operator-info', 'POST /projects/:id/dpa-accept', 'POST /projects/:id/operator-ack',
   'PUT /projects/:id/draft', 'GET /projects/:id/versions', 'GET /projects/:id/versions/:versionId', 'POST /projects/:id/restore/:versionId',
   'GET /projects/:projectId/responses', 'GET /projects/:projectId/responses/export.csv', 'GET /projects/:projectId/responses/export.xlsx',
   'GET /projects/:projectId/responses/:id', 'DELETE /projects/:projectId/responses/:id', 'POST /projects/:projectId/responses/:id/viewed',

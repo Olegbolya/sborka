@@ -1,6 +1,6 @@
 import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
-import { createHash } from 'node:crypto';
+import { hashIp } from '../auth/ip-hash.js';
 import { and, count, eq, gt, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createId, type ProjectDocument, type PublicDocument, type ThemeTokens, toPublicDocument } from '@blokum/schema';
@@ -373,7 +373,7 @@ export class PlayService {
   async start(projectId: string, body: { deviceToken?: unknown; source?: unknown; unlock?: unknown; age18?: unknown }, userAgent: string | undefined, ip: string, now = new Date()): Promise<{ sessionId: string; versionId: string }> {
     const p = await this.published({ projectId });
     // TS-13: starts are limited by the hash of the address (rotating every day; the address itself is not kept).
-    const ipHash = createHash('sha256').update(`ip:${now.toISOString().slice(0, 10)}:${ip}`).digest('hex');
+    const ipHash = hashIp(ip, now, 64);
     const [recent] = await this.db.select({ n: count() }).from(schema.participantSessions).where(and(eq(schema.participantSessions.ipHash, ipHash), gte(schema.participantSessions.startedAt, new Date(now.getTime() - 3_600_000))));
     if ((recent?.n ?? 0) >= (this.config.playLimits?.startsPerHourPerIp ?? 120)) throw fail(429, 'TOO_MANY_REQUESTS', 'Слишком много запусков с вашего адреса. Попробуйте позже.');
     const closed = await this.closedReason(p, now);

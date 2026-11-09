@@ -89,12 +89,12 @@ describe('seed', () => {
   it('миграция 0010 приводит тарифы к пяти из PLANS, а старый «Бизнес» скрывает', async () => {
     const fresh = await createTestDb({ migrate: false });
     try {
-      // Старое состояние: журнал миграций обрезан до 0009 (копия папки миграций без 0010).
+      // Старое состояние: журнал миграций обрезан до 0009 (копия папки без 0010 и позднейших).
       const old = mkdtempSync(join(tmpdir(), 'mig-'));
       cpSync(MIGRATIONS_FOLDER, old, { recursive: true });
       const journalPath = join(old, 'meta', '_journal.json');
       const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as { entries: { tag: string }[] };
-      journal.entries = journal.entries.filter((e) => e.tag !== '0010_five_tariffs');
+      journal.entries = journal.entries.filter((e) => Number(e.tag.slice(0, 4)) < 10);
       writeFileSync(journalPath, JSON.stringify(journal));
       await migrate(fresh.db, { migrationsFolder: old });
       rmSync(old, { recursive: true, force: true });

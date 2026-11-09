@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes, randomInt } from 'node:crypto';
+import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, Optional, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { and, count, desc, eq, gt, isNull } from 'drizzle-orm';
@@ -10,6 +10,7 @@ import type { OtpSender } from './otp-sender.js';
 import { type RequestUser, SessionService } from './session.service.js';
 import { TotpService } from './totp.service.js';
 import { AuditLogService } from './audit-log.service.js';
+import { hashIp } from './ip-hash.js';
 
 const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const OTP_MAX_ATTEMPTS = 5;
@@ -42,11 +43,6 @@ function generateCode(): string {
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
-}
-
-function hashIp(ip: string): string {
-  const salt = new Date().toISOString().slice(0, 10);
-  return createHmac('sha256', salt).update(ip).digest('hex').slice(0, 16);
 }
 
 function generateId(): string {

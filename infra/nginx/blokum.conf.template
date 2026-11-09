@@ -10,7 +10,17 @@ limit_req_zone $binary_remote_addr zone=blokum_auth:10m rate=10r/m;
 limit_req_zone $binary_remote_addr zone=blokum_play:10m rate=20r/s;
 limit_req_zone $binary_remote_addr zone=blokum_upload:10m rate=2r/s;
 
+# ADR-048: IP-адрес — персональные данные, поэтому в журнале доступа он не хранится целиком:
+# у IPv4 последний октет заменяется нулём, IPv6 не пишется вовсе. Ограничение запросов выше работает в памяти
+# nginx и в журнал не попадает. Журнал ведётся только в серверах Блоккера (журналы BST не затрагиваются).
+map $remote_addr $blokum_anon_ip {
+    ~^(?<net>\d+\.\d+\.\d+)\.\d+$  $net.0;
+    default                                        "-";
+}
+log_format blokum_anon '$blokum_anon_ip - [$time_local] "$request_method $uri" $status $body_bytes_sent "$http_user_agent" rt=$request_time';
+
 server {
+    access_log /var/log/nginx/blokum-access.log blokum_anon;
     listen 80;
     server_name @@DOMAIN@@ www.@@DOMAIN@@ @@MEDIA_DOMAIN@@;
 
@@ -25,6 +35,7 @@ server {
 
 #@TLS_BEGIN
 server {
+    access_log /var/log/nginx/blokum-access.log blokum_anon;
     listen 443 ssl http2;
     server_name www.@@DOMAIN@@;
     ssl_certificate     /etc/letsencrypt/live/blokum/fullchain.pem;
@@ -33,6 +44,7 @@ server {
 }
 
 server {
+    access_log /var/log/nginx/blokum-access.log blokum_anon;
     listen 443 ssl http2;
     server_name @@DOMAIN@@;
 
@@ -156,6 +168,7 @@ server {
 
 # Пользовательские файлы — отдельное имя, без cookie основного сайта, без исполнения чего-либо.
 server {
+    access_log /var/log/nginx/blokum-access.log blokum_anon;
     listen 443 ssl http2;
     server_name @@MEDIA_DOMAIN@@;
 

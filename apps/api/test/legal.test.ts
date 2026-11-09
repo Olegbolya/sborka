@@ -248,7 +248,20 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     await db.db.update(schema.projectVersions).set({ document: docWithContacts }).where(eq(schema.projectVersions.projectId, pid));
     await request(t.http()).patch(`/${API_PREFIX}/projects/${pid}/operator-info`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: 'Тест', email: 'ok@ok.com', purpose: 'Тест', retentionPeriod: '1 год' }).expect(200);
     await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/dpa-accept`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
+    // Без подтверждения экрана «Вы становитесь оператором ПД» публикация закрыта.
+    const blocked = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
+    expect(blocked.body.error?.code ?? blocked.body.message).toMatch(/OPERATOR_ACK_REQUIRED/);
+    const ack = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/operator-ack`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
+    expect(typeof ack.body.acknowledgedAt).toBe('string');
+    const state = await request(t.http()).get(`/${API_PREFIX}/projects/${pid}/operator-info`).set('Cookie', cookie).expect(200);
+    expect(state.body.operatorAckAt).toBe(ack.body.acknowledgedAt);
     await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(200);
+  });
+
+  it('PL-23: POST operator-ack чужого проекта → 403', async () => {
+    if (!t) return;
+    const cookie2 = await loginFn();
+    await request(t.http()).post(`/${API_PREFIX}/projects/${projectId}/operator-ack`).set('Cookie', cookie2).set('X-Blokum-CSRF', '1').expect(403);
   });
 
   it('PL-23: GET operator-info чужого проекта → 403', async () => {

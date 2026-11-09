@@ -7,6 +7,9 @@ const fontkit = _require('fontkit') as {
     familyName: string | undefined;
     subfamilyName: string | undefined;
     characterSet: number[];
+    copyright?: string;
+    manufacturer?: string;
+    license?: string;
     [key: string]: unknown;
   };
 };
@@ -31,7 +34,52 @@ const FONT_SIGNATURES: Array<{ hex: string; name: string }> = [
 const CYRILLIC_START = 0x0400;
 const CYRILLIC_END = 0x04ff;
 
+/** Основание, по которому создатель вправе использовать шрифт (ADR-048). */
+export const FONT_LICENSES = ['OFL', 'PURCHASED_WEB', 'OWN_WORK'] as const;
+export type FontLicense = (typeof FONT_LICENSES)[number];
+
+export function isFontLicense(value: unknown): value is FontLicense {
+  return typeof value === 'string' && (FONT_LICENSES as readonly string[]).includes(value);
+}
+
+/**
+ * Известные коммерческие словолитни. Если в метаданных шрифта (copyright, производитель, код производителя,
+ * текст лицензии) есть одно из этих названий, а создатель заявил свободную лицензию OFL, файл не принимается:
+ * для такого шрифта нужна купленная веб-лицензия.
+ */
+export const COMMERCIAL_FONT_VENDORS: readonly string[] = [
+  'monotype',
+  'linotype',
+  'itc ',
+  'agfa',
+  'berthold',
+  'fontfont',
+  'fontshop',
+  'bitstream',
+  'hoefler',
+  'commercial type',
+  'type network',
+  'emigre',
+  'village type',
+  'dalton maag',
+  'lineto',
+  'klim type',
+  'grilli type',
+  'colophon foundry',
+];
+
+/** Название коммерческой словолитни из метаданных шрифта или null. */
+export function commercialVendor(meta: { copyright: string | null; manufacturer: string | null; vendorId: string | null; licenseText: string | null }): string | null {
+  const hay = [meta.copyright, meta.manufacturer, meta.licenseText].filter(Boolean).join(' \n ').toLowerCase();
+  for (const v of COMMERCIAL_FONT_VENDORS) if (hay.includes(v)) return v.trim();
+  const code = meta.vendorId?.trim().toUpperCase();
+  if (code && ['MONO', 'LINO', 'AGFA', 'BITS', 'FSHP', 'HOEF'].includes(code)) return code;
+  return null;
+}
+
 export interface FontProcessResult {
+  /** Текст авторских прав из таблицы имён шрифта (nameID 0). */
+  copyright: string | null;
   family: string;
   /** Ключ стиля: «400», «700», «400i», «700i» и т. д. */
   styleKey: string;
@@ -53,7 +101,7 @@ function detectFontFormat(buffer: Buffer): string | null {
  * Обрабатывает буфер шрифта: проверяет формат, извлекает метаданные, конвертирует в WOFF2.
  * Выбрасывает HttpException-совместимую ошибку при проблемах.
  */
-export async function processFont(buffer: Buffer): Promise<FontProcessResult> {
+export async function processFont(buffer: Buffer, declared?: FontLicense): Promise<FontProcessResult> {
   if (buffer.length > FONT_MAX_BYTES) {
     throw Object.assign(new Error('Файл шрифта превышает максимальный размер 10 МБ (TS-26)'), {
       status: 400,
@@ -105,6 +153,23 @@ export async function processFont(buffer: Buffer): Promise<FontProcessResult> {
     // hasCyrillic остаётся false
   }
 
+  // Метаданные: авторские права, производитель, код производителя, текст лицензии.
+  const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  let vendorId: string | null = null;
+  try {
+    vendorId = str((font['OS/2'] as { achVendID?: unknown } | undefined)?.achVendID);
+  } catch {
+    // таблицы нет — кода производителя нет
+  }
+  const copyright = str(font.copyright);
+  const vendor = commercialVendor({ copyright, manufacturer: str(font.manufacturer), vendorId, licenseText: str(font.license) });
+  if (declared === 'OFL' && vendor) {
+    throw Object.assign(
+      new Error(`В файле указан правообладатель «${vendor}» — это коммерческий шрифт, а не свободный. Выберите «Куплена веб-лицензия» или загрузите другой шрифт`),
+      { status: 400, code: 'FONT_LICENSE_MISMATCH' },
+    );
+  }
+
   // Конвертируем в WOFF2
   let woff2Buffer: Buffer;
   try {
@@ -116,5 +181,5 @@ export async function processFont(buffer: Buffer): Promise<FontProcessResult> {
     });
   }
 
-  return { family, styleKey, hasCyrillic, woff2Buffer };
+  return { family, styleKey, hasCyrillic, woff2Buffer, copyright };
 }

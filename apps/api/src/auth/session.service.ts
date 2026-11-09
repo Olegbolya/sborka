@@ -1,8 +1,9 @@
-import { createHash, createHmac, randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, gt, isNull, ne } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { DB } from '../tokens.js';
+import { hashIp } from './ip-hash.js';
 
 export interface RequestUser {
   id: string;
@@ -32,11 +33,6 @@ const SESSION_IDLE_MS = 14 * DAY_MS;
 const SESSION_MAX_MS = 30 * DAY_MS;
 
 /** HMAC-SHA256(IP, YYYY-MM-DD) — daily-rotating pseudonymisation per architecture §8.1. */
-function hashIp(ip: string): string {
-  const salt = new Date().toISOString().slice(0, 10);
-  return createHmac('sha256', salt).update(ip).digest('hex').slice(0, 16);
-}
-
 function parseUaFamily(ua: string): string | null {
   if (/\bChrome\//.test(ua) && !/\bEdg\//.test(ua)) return 'Chrome';
   if (/\bFirefox\//.test(ua)) return 'Firefox';
