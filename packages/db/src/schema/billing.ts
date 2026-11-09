@@ -76,6 +76,8 @@ export const subscriptions = pgTable(
     autoRenewConsentId: text('auto_renew_consent_id').references(() => consentRecords.id, { onDelete: 'set null' }),
     paymentMethodRef: text('payment_method_ref'),
     canceledAt: ts('canceled_at'),
+    /** Пробный период без карты (ADR-048): один на человека, признак остаётся, даже когда подписка закончилась или оплачена. */
+    trial: boolean('trial').notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [index('subscriptions_user_status_idx').on(t.userId, t.status)],

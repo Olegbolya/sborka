@@ -24,7 +24,7 @@ const OWN_SESSION = new Set([
   'POST /auth/account/totp/setup', 'POST /auth/account/totp/confirm', 'DELETE /auth/account/totp',
   'GET /auth/me', 'GET /auth/sessions', 'DELETE /auth/sessions',
   'GET /notifications', 'GET /media', 'POST /media', 'POST /media/sessions', 'GET /projects', 'POST /projects', 'GET /templates', 'GET /themes', 'POST /themes', 'POST /themes/from-image',
-  'GET /fonts', 'POST /fonts', 'GET /orders', 'POST /orders',
+  'GET /fonts', 'POST /fonts', 'GET /orders', 'POST /orders', 'GET /billing/me', 'POST /billing/trial',
   'GET /library/collections', 'GET /library/collections/:id/items',
   'POST /editor/svg-import',
   'GET /templates/mine', 'POST /templates', 'GET /elements', 'POST /elements',

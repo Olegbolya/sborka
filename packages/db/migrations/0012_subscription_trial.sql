@@ -1,0 +1,1 @@
+ALTER TABLE "subscriptions" ADD COLUMN "trial" boolean DEFAULT false NOT NULL;

@@ -2,6 +2,7 @@ import { type DynamicModule, Module } from '@nestjs/common';
 import { type ApiConfig } from '../config.js';
 import { API_CONFIG, PAYMENT_PROVIDER } from '../tokens.js';
 import { type PaymentProvider } from './payment-provider.js';
+import { BillingService } from './billing.service.js';
 import { PaymentsController } from './payments.controller.js';
 import { PaymentsService } from './payments.service.js';
 import { YooKassaProvider } from './yookassa.provider.js';
@@ -14,7 +15,7 @@ export class PaymentsModule {
     return {
       module: PaymentsModule,
       controllers: [PaymentsController],
-      providers: [PaymentsService, { provide: API_CONFIG, useValue: config }, { provide: PAYMENT_PROVIDER, useValue: resolved }],
+      providers: [PaymentsService, BillingService, { provide: API_CONFIG, useValue: config }, { provide: PAYMENT_PROVIDER, useValue: resolved }],
     };
   }
 }

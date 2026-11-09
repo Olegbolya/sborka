@@ -85,6 +85,13 @@
       "when": 1794223446407,
       "tag": "0011_project_operator_ack",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794231870739,
+      "tag": "0012_subscription_trial",
+      "breakpoints": true
     }
   ]
 }

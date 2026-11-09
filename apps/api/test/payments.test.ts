@@ -226,4 +226,33 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
     const [sub] = await db.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId));
     expect(sub).toMatchObject({ renewMode: 'LINK', paymentMethodRef: null, autoRenewConsentId: null });
   });
+
+  it('P7.4 · пробный период: 3 дня без карты, один раз на человека, потом «Старт» и никаких списаний', async () => {
+    const { cookie, userId } = await login(t, db);
+    const trial = (planCode: string) => request(t.http()).post(`/${API_PREFIX}/billing/trial`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ planCode });
+    await trial('FREE').expect(400);
+    await trial('PASS').expect(400);
+    await trial('PRO').expect(400);
+    const res = await trial('AUTHOR').expect(200);
+    expect(res.body).toMatchObject({ plan: { code: 'AUTHOR' }, trialUsed: true, subscription: { status: 'TRIAL', trial: true, renewMode: 'LINK' } });
+    const [sub] = await db.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId));
+    expect(sub!.currentPeriodEnd.getTime() - sub!.currentPeriodStart.getTime()).toBe(3 * 86_400_000);
+    expect(sub).toMatchObject({ paymentMethodRef: null, autoRenewConsentId: null });
+    await trial('PLUS').expect(409); // уже действует платный тариф
+    // после окончания — «Старт», второй пробный период недоступен, заказов и списаний нет
+    const after = new Date(sub!.currentPeriodEnd.getTime() + 1000);
+    expect((await ent.planOf(userId, after)).code).toBe('FREE');
+    await db.db.update(schema.subscriptions).set({ currentPeriodStart: new Date(Date.now() - 5 * 86_400_000), currentPeriodEnd: new Date(Date.now() - 2 * 86_400_000) }).where(eq(schema.subscriptions.id, sub!.id));
+    await trial('PLUS').expect(409);
+    expect(await db.db.select().from(schema.orders).where(eq(schema.orders.userId, userId))).toHaveLength(0);
+    const state = await request(t.http()).get(`/${API_PREFIX}/billing/me`).set('Cookie', cookie).expect(200);
+    expect(state.body).toMatchObject({ plan: { code: 'FREE' }, trialUsed: true });
+  });
+
+  it('P7.4 · пять одновременных заявок на пробный период создают ровно один', async () => {
+    const { cookie, userId } = await login(t, db);
+    const results = await Promise.all(Array.from({ length: 5 }, () => request(t.http()).post(`/${API_PREFIX}/billing/trial`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ planCode: 'PLUS' })));
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    expect(await db.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId))).toHaveLength(1);
+  });
 });

@@ -1,4 +1,5 @@
 import { type PlanView, describePlan, priceLine } from '../../lib/landing/plans';
+import { PlanActions } from '../billing/PlanActions';
 
 /** P10.1 · the plans of the site: everything on a card is read from the table of plans. */
 export function PlanCards({ plans, titleLevel = 3 }: { plans: PlanView[] | null; titleLevel?: 2 | 3 }) {
@@ -26,9 +27,7 @@ export function PlanCards({ plans, titleLevel = 3 }: { plans: PlanView[] | null;
                 <li key={line}>{line}</li>
               ))}
             </ul>
-            <a href="/login" className="lp-btn lp-btn-ghost">
-              {p.priceMonthRub === 0 ? 'Начать бесплатно' : 'Выбрать после входа'}
-            </a>
+            <PlanActions plan={p} />
           </li>
         );
       })}

@@ -141,6 +141,7 @@ export default function ProjectsPage() {
   return (
     <main style={s.wrap}>
       <nav style={s.nav}>
+        <Link href="/cabinet/billing" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Тариф и оплата</Link>
         <Link href="/account" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Аккаунт</Link>
         <span>/</span>
         <span style={{ color: 'var(--fg)' }}>Мои сборки</span>
