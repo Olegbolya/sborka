@@ -48,17 +48,55 @@ const precision = (step: number): number => (String(step).split('.')[1]?.length 
 const roundTo = (n: number, step: number): number => Number(n.toFixed(precision(step)));
 
 /**
+ * Набор числа в поле. Пока человек печатает, число не подгоняется под границы (иначе «583» при минимуме 400 не набрать:
+ * первая «5» тут же превращалась бы в 400); если оно вне границ, под полем написано «Минимум …» или «Максимум …».
+ * В допустимых границах число применяется сразу; вне границ — когда поле отпущено (или нажат Enter): тогда оно становится ближайшей границей.
+ */
+export function useTypedNumber({ shown, lo, hi, apply }: { shown: string; lo?: number; hi?: number; apply: (n: number) => void }) {
+  const [typed, setTyped] = useState<{ text: string; base: string; held: boolean } | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
+  // Набранное показывается, пока оно ещё значит сохранённое число («5.», «05», пустое поле) или пока оно вне границ и потому не сохранено
+  // (тогда сохранённое с начала набора не менялось); иначе — сохранённое (после отмены, после выбора другого блока): ни одного кадра со старым числом.
+  const text = typed !== null && (typed.text === '' || Number.isNaN(Number(typed.text)) || shown === '' || Number(typed.text) === Number(shown) || (typed.held && typed.base === shown)) ? typed.text : shown;
+  const problem = (n: number): string | null => (lo !== undefined && n < lo ? `Минимум ${lo}` : hi !== undefined && n > hi ? `Максимум ${hi}` : null);
+  return {
+    text,
+    hint,
+    onFocus: () => setHint(null),
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      const n = e.target.valueAsNumber;
+      const bad = Number.isFinite(n) ? problem(n) : null;
+      setTyped({ text: e.target.value, base: shown, held: bad !== null });
+      setHint(bad);
+      if (Number.isFinite(n) && !bad) apply(n);
+    },
+    onBlur: () => {
+      const n = typed === null || typed.text.trim() === '' ? NaN : Number(typed.text);
+      if (Number.isFinite(n)) {
+        const bad = problem(n);
+        if (bad) {
+          const bound = lo !== undefined && n < lo ? lo : hi!;
+          apply(bound);
+          setHint(`${bad}: поставили ${bound}`);
+        }
+      } else setHint(null);
+      setTyped(null);
+    },
+    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') e.currentTarget.blur();
+    },
+  };
+}
+
+/**
  * A number: typed, or dragged by its label («протягивание», Shift — ×10, Alt — ×0.1). The whole dragging is one step of the
  * history. `value` is null when the selected blocks differ («смешанно»).
  */
 export function NumberInput({ control, label, value, onChange, min, max, step = 1, suffix, scale = 1 }: { control: string; label: string; value: number | null; onChange: (n: number) => void; min?: number; max?: number; step?: number; suffix?: string; scale?: number }) {
   const { store } = useControlEnv();
   const shown = value === null ? '' : String(roundTo(value * scale, step));
-  // What is typed is shown while it still means the stored number («5.», «05», a lone «-»); otherwise the stored value
-  // (after undo, after another block is picked): there is no frame in which the field shows an old number.
-  const [draft, setDraft] = useState<string | null>(null);
-  const text = draft !== null && (Number.isNaN(Number(draft)) || shown === '' || Number(draft) === Number(shown)) ? draft : shown;
   const commit = (n: number) => onChange(clamp(roundTo(n / scale, step / scale), min, max));
+  const typing = useTypedNumber({ shown, ...(min !== undefined ? { lo: min * scale } : {}), ...(max !== undefined ? { hi: max * scale } : {}), apply: commit });
 
   const scrub = (e: React.PointerEvent<HTMLSpanElement>) => {
     if (e.button !== 0) return;
@@ -98,20 +136,23 @@ export function NumberInput({ control, label, value, onChange, min, max, step = 
         <input
           type="number"
           aria-label={label}
-          value={text}
+          value={typing.text}
           placeholder={value === null ? 'смешанно' : undefined}
           step={step}
           {...(min !== undefined ? { min: min * scale } : {})}
           {...(max !== undefined ? { max: max * scale } : {})}
-          onBlur={() => setDraft(null)}
-          onChange={(e) => {
-            setDraft(e.target.value);
-            const n = e.target.valueAsNumber;
-            if (Number.isFinite(n)) commit(n);
-          }}
+          onFocus={typing.onFocus}
+          onBlur={typing.onBlur}
+          onChange={typing.onChange}
+          onKeyDown={typing.onKeyDown}
         />
         {suffix && <span className="ed-suffix">{suffix}</span>}
       </div>
+      {typing.hint && (
+        <span className="ed-num-hint" role="status" data-testid="num-hint">
+          {typing.hint}
+        </span>
+      )}
     </div>
   );
 }

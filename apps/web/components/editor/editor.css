@@ -523,6 +523,10 @@
   align-items: center;
   gap: 4px;
 }
+.ed-num-hint {
+  font-size: 12px;
+  color: var(--danger, #dc2626);
+}
 .ed-suffix {
   font-size: 12px;
   color: var(--muted);

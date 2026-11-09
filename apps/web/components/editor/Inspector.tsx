@@ -16,7 +16,7 @@ import { selectedBlocks } from '../../lib/editor/store';
 import { PropsInspector } from './PropsInspector';
 import { BehaviorsEditor } from './BehaviorsEditor';
 import { ConditionEditor, newCondition } from './ConditionEditor';
-import { Toggle } from './controls';
+import { Toggle, useTypedNumber } from './controls';
 import { ScenarioEditor } from './ScenarioEditor';
 import { ScreenPanel } from './ScreenPanel';
 import { TextEditor } from './TextEditor';
@@ -42,27 +42,27 @@ function NumberField({
   max?: number;
 }) {
   const shown = value === null ? '' : String(value);
-  // The typed text is shown while it still means the stored number; otherwise the stored value, with no lag after a change elsewhere.
-  const [draft, setDraft] = useState<string | null>(null);
-  const text =
-    draft !== null && (Number.isNaN(Number(draft)) || shown === '' || Number(draft) === Number(shown)) ? draft : shown;
+  const typing = useTypedNumber({ shown, ...(min !== undefined ? { lo: min } : {}), ...(max !== undefined ? { hi: max } : {}), apply: onChange });
   return (
     <label className="ed-num">
       <span>{label}</span>
       <input
         type="number"
         inputMode="decimal"
-        value={text}
+        value={typing.text}
         placeholder={value === null ? 'смешанно' : undefined}
         {...(min !== undefined ? { min } : {})}
         {...(max !== undefined ? { max } : {})}
-        onBlur={() => setDraft(null)}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          const n = e.target.valueAsNumber;
-          if (Number.isFinite(n)) onChange(n);
-        }}
+        onFocus={typing.onFocus}
+        onBlur={typing.onBlur}
+        onChange={typing.onChange}
+        onKeyDown={typing.onKeyDown}
       />
+      {typing.hint && (
+        <span className="ed-num-hint" role="status" data-testid="num-hint">
+          {typing.hint}
+        </span>
+      )}
     </label>
   );
 }
