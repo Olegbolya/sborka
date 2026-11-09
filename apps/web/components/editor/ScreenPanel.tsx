@@ -17,12 +17,18 @@ export function ScreenPanel() {
     write: (change) => apply(setScreenProps(screen.id, change), { label: 'Свойства экрана', mergeKey: `screen:${screen.id}` }),
     tokens: doc.theme.tokens,
   };
+  const phonePx = (width: number): number => Math.round((screen.height * width) / 390);
   const [main, ...rest] = SCREEN_SECTIONS;
   return (
     <div data-testid="screen-panel">
       <div className="ed-section">
         <h2>{main!.title}</h2>
         <Fields fields={main!.fields} level={level} prefix="screen" />
+        <p className="ed-hint" data-testid="screen-height-hint">
+          Высота указана в единицах холста: его ширина всегда 390. Холст подгоняется под ширину экрана, поэтому в пикселях высота
+          отличается: на телефоне шириной 360&nbsp;px — {phonePx(360)}&nbsp;px, 390&nbsp;px — {phonePx(390)}&nbsp;px, 412&nbsp;px — {phonePx(412)}&nbsp;px. В редакторе
+          она ещё зависит от масштаба.
+        </p>
         <p className="ed-hint">Выберите блок на экране или в слоях, чтобы изменить его.</p>
       </div>
       {rest.map((section) => (
