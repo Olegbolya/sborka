@@ -66,6 +66,15 @@ ensure_secret() {
 }
 ensure_secret TOTP_SECRET_KEY
 
+# Inject externally-provided secrets from CI (GitHub Actions secrets); value is never printed.
+inject_secret() {
+  [ -z "${2:-}" ] && return 0
+  sed -i "/^$1=/d" "$ENV_FILE"
+  printf '%s=%s\n' "$1" "$2" >> "$ENV_FILE"
+  echo "→ в .env.prod обновлён секрет $1 (значение не выводится)"
+}
+inject_secret YOOKASSA_SECRET_KEY "${YOOKASSA_SECRET_KEY:-}"
+
 # До запуска (PRELAUNCH=1: весь сайт закрыт паролем) служебные галереи /dev открыты владельцу для проверки;
 # после запуска флажок снимается сам.
 sed -i '/^BLOKUM_DEV_PAGES=/d' "$ENV_FILE"
