@@ -243,11 +243,11 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
     await other.ctx.close();
   });
 
-  test('PL-07 · месячный лимит тарифа: после 100 прохождений новый участник видит «Временно недоступно»', async ({ page, browser }, info) => {
+  test('PL-07 · месячный лимит тарифа: после 30 прохождений тарифа «Старт» новый участник видит «Временно недоступно»', async ({ page, browser }, info) => {
     test.setTimeout(120_000);
     const { id, slug } = await published(page);
-    for (let batch = 0; batch < 5; batch++) {
-      const results = await Promise.all(Array.from({ length: 20 }, () => post(page, `/play/${id}/sessions`, {})));
+    for (let batch = 0; batch < 3; batch++) {
+      const results = await Promise.all(Array.from({ length: 10 }, () => post(page, `/play/${id}/sessions`, {})));
       expect(results.every((r) => r.status() === 201)).toBe(true);
     }
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);

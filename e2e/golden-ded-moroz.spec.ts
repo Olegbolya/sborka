@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
+import { subscribeOwner } from './helpers/plan';
 import { addBlock, goToScreen, inspectorSection, newScreen, renameScreen } from './helpers/build';
 import { hit, openEditor, openTab, saveStatus, serverDraft } from './helpers/editor';
 import { PHOTO_PNG, SMALL_PNG, TINY_GIF, rgbOf, wav } from './helpers/files';
@@ -269,6 +270,7 @@ test.describe('P6.8 · GS-01 «Письмо Деду Морозу»', () => {
 
     // ── Шаг 9: 51-й участник видит «Сборка закрыта» в оформлении темы.
     const projectId = id;
+    await subscribeOwner(projectId); // лимит сборки — 50, а не месячный лимит «Старта» (30)
     for (let i = 1; i < 50; i++) {
       const started = await page.request.post(`/api/v1/play/${projectId}/sessions`, { data: {}, headers: { origin: origin(page) } });
       expect(started.status(), await started.text()).toBe(201);
