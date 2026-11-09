@@ -111,8 +111,17 @@ describe('PL-06…PL-10 · проверки доступа и лимиты', () 
     expect(await rows(p.id)).toHaveLength(3);
   });
 
+  /** Владельцу сборки включается подписка «Плюс» (лимиты тарифа берутся из таблицы, а не из констант). */
+  async function subscribePlus(projectId: string): Promise<void> {
+    const [owner] = await db.db.select({ id: schema.projects.ownerId }).from(schema.projects).where(eq(schema.projects.id, projectId));
+    const now = Date.now();
+    await db.db.insert(schema.subscriptions).values({ userId: owner!.id, planCode: 'PLUS', period: 'MONTH', status: 'ACTIVE', currentPeriodStart: new Date(now - 86_400_000), currentPeriodEnd: new Date(now + 29 * 86_400_000) });
+  }
+
   it('PL-06 · наплыв: 200 одновременных стартов при лимите 50 дают ровно 50 прохождений', async () => {
     const p = await published({ maxStarts: 50 });
+    // Проверяется лимит сборки (50), а не месячный лимит «Старта» (30): у владельца действует «Плюс».
+    await subscribePlus(p.id);
     const results = await Promise.all(Array.from({ length: 200 }, () => start(p.id)));
     expect(results.filter((r) => r.status === 201)).toHaveLength(50);
     expect(results.filter((r) => r.status === 403)).toHaveLength(150);
@@ -134,9 +143,9 @@ describe('PL-06…PL-10 · проверки доступа и лимиты', () 
     const p = await published();
     const old = new Date(Date.now() - 40 * 86_400_000);
     const [version] = await db.db.select({ id: schema.projects.publishedVersionId }).from(schema.projects).where(eq(schema.projects.id, p.id));
-    await db.db.insert(schema.participantSessions).values(Array.from({ length: 100 }, () => ({ id: createId(), projectId: p.id, versionId: version!.id!, startedAt: old, lastActivityAt: old })));
+    await db.db.insert(schema.participantSessions).values(Array.from({ length: 30 }, () => ({ id: createId(), projectId: p.id, versionId: version!.id!, startedAt: old, lastActivityAt: old })));
     await start(p.id).expect(201);
-    await db.db.insert(schema.participantSessions).values(Array.from({ length: 99 }, () => ({ id: createId(), projectId: p.id, versionId: version!.id!, isPreview: false })));
+    await db.db.insert(schema.participantSessions).values(Array.from({ length: 29 }, () => ({ id: createId(), projectId: p.id, versionId: version!.id!, isPreview: false })));
     const res = await start(p.id).expect(503);
     expect(res.body.error).toMatchObject({ code: 'TEMPORARILY_UNAVAILABLE', message: 'Временно недоступно' });
   }, 60_000);

@@ -11,7 +11,7 @@ import {
   DEFAULT_COLORS,
 } from '@blokum/schema';
 import { DB } from '../tokens.js';
-import { FREE_LIMITS } from '../media/entitlements.js';
+import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { LocalStorageService, servedKey } from '../media/storage.js';
 
 export interface ThemeDto {
@@ -44,6 +44,7 @@ export class ThemesService {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly storage: LocalStorageService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   private parseTokens(input: unknown): ThemeTokens {
@@ -142,12 +143,15 @@ export class ThemesService {
       .where(
         and(eq(schema.themes.ownerId, userId), eq(schema.themes.isSystem, false), isNull(schema.themes.deletedAt)),
       );
-    if (mine.length >= FREE_LIMITS.themes)
+    const plan = await this.entitlements.planOf(userId);
+    const max = plan.limits.ownThemes;
+    if (max !== null && mine.length >= max)
       throw fail(
         'QUOTA_EXCEEDED',
-        `На тарифе «Старт» можно сделать до ${FREE_LIMITS.themes} своих тем. Удалите ненужную или перейдите на другой тариф.`,
+        `На тарифе «${plan.title}» можно сделать до ${max} своих тем. Удалите ненужную или перейдите на другой тариф.`,
         402,
       );
+
   }
 
   async create(userId: string, name: unknown, tokens: unknown): Promise<ThemeDto> {

@@ -241,6 +241,9 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     await request(t.http()).patch(`/${API_PREFIX}/projects/${pid}/operator-info`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: 'Тест', email: 'ok@ok.com', purpose: 'Тест', retentionPeriod: '1 год' }).expect(200);
     await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/dpa-accept`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
     // Без подтверждения экрана «Вы становитесь оператором ПД» публикация закрыта.
+    // Сбор контактов — возможность платных тарифов (04-TARIFFS §2): у владельца действует «Плюс».
+    const [owner] = await db.db.select({ id: schema.projects.ownerId }).from(schema.projects).where(eq(schema.projects.id, pid));
+    await db.db.insert(schema.subscriptions).values({ userId: owner!.id, planCode: 'PLUS', period: 'MONTH', status: 'ACTIVE', currentPeriodStart: new Date(Date.now() - 86_400_000), currentPeriodEnd: new Date(Date.now() + 29 * 86_400_000) });
     const blocked = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(400);
     expect(blocked.body.error?.code ?? blocked.body.message).toMatch(/OPERATOR_ACK_REQUIRED/);
     const ack = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/operator-ack`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
@@ -248,6 +251,21 @@ describe('PL-23/B-19/B-20 · Оператор ПД и DPA', () => {
     const state = await request(t.http()).get(`/${API_PREFIX}/projects/${pid}/operator-info`).set('Cookie', cookie).expect(200);
     expect(state.body.operatorAckAt).toBe(ack.body.acknowledgedAt);
     await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(200);
+  });
+
+  it('P7.1: на «Старте» публикация со сбором контактов закрыта (402 PLAN_LIMIT), условия называются в ответе', async () => {
+    if (!t) return;
+    const cookie = await loginFn(); // новый человек без подписки
+    const proj = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'B-19 free' }).expect(200);
+    const pid = proj.body.id as string;
+    await db.db.update(schema.projectVersions).set({ document: documentWithContacts('B-19 free') }).where(eq(schema.projectVersions.projectId, pid));
+    await request(t.http()).patch(`/${API_PREFIX}/projects/${pid}/operator-info`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: 'Тест', email: 'ok@ok.com', purpose: 'Тест', retentionPeriod: '1 год' }).expect(200);
+    await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/dpa-accept`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
+    await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/operator-ack`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
+    const res = await request(t.http()).post(`/${API_PREFIX}/projects/${pid}/status`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ status: 'PUBLISHED' }).expect(402);
+    expect(res.body.error.code).toBe('PLAN_LIMIT');
+    const issues = (res.body as { error: { issues: Array<{ code: string }> } }).error.issues;
+    expect(issues.map((i) => i.code)).toContain('FEATURE_CONTACTS');
   });
 
   it('PL-23: POST operator-ack чужого проекта → 403', async () => {

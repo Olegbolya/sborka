@@ -9,7 +9,8 @@ import {
 import { and, asc, desc, eq, inArray, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createDocument, createId, createSlug, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
-import { Inject, Optional } from '@nestjs/common';
+import { HttpException, Inject, Optional } from '@nestjs/common';
+import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { DB } from '../tokens.js';
 import { hashPassword } from '../play/secrets.js';
@@ -88,6 +89,7 @@ async function getCounters(db: Db, projectId: string): Promise<{ starts: number;
 export class ProjectsService {
   constructor(
     @Inject(DB) private readonly db: Db,
+    private readonly entitlements: EntitlementsService,
     @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
@@ -474,7 +476,7 @@ export class ProjectsService {
    * published version — the player reads that copy, so later edits of the draft or of a theme reach participants only at
    * the next publication.
    */
-  private async publish(row: { id: string; operatorInfo: Record<string, unknown> | null; dpaAcceptedAt: Date | null; operatorAckAt?: Date | null }): Promise<void> {
+  private async publish(row: { id: string; ownerId: string; settings: Record<string, unknown> | null; operatorInfo: Record<string, unknown> | null; dpaAcceptedAt: Date | null; operatorAckAt?: Date | null }): Promise<void> {
     await this.flags?.require('PUBLISHING_ENABLED', 'Публикация сборок временно отключена.');
     const [project] = await this.db.select({ draftVersionId: schema.projects.draftVersionId }).from(schema.projects).where(eq(schema.projects.id, row.id));
     const [draft] = project?.draftVersionId
@@ -496,6 +498,13 @@ export class ProjectsService {
           issues: errors.map((i) => ({ code: i.code, message: i.message, path: i.path })),
         },
       });
+    }
+    const violations = await this.entitlements.publishViolations(row.ownerId, row.id, doc, (row.settings ?? {}));
+    if (violations.length > 0) {
+      throw new HttpException(
+        { error: { code: 'PLAN_LIMIT', message: violations.map((v) => v.message).join(' '), issues: violations } },
+        402,
+      );
     }
     await this.db.transaction(async (tx) => {
       await tx.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.id, row.id)).for('update');

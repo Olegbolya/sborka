@@ -36,6 +36,8 @@ import { ThemesModule } from './themes/themes.module.js';
 import { PlayModule } from './play/play.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { PlansController } from './plans/plans.controller.js';
+import { PaymentsModule } from './payments/payments.module.js';
+import { type PaymentProvider } from './payments/payment-provider.js';
 import { AdminModule } from './admin/admin.module.js';
 import type { IMediaQueue } from './media/media-jobs.js';
 import { ProjectsModule } from './projects/projects.module.js';
@@ -58,6 +60,8 @@ export interface AppDeps {
   /** Extra controllers (used by tests to exercise error handling). */
   extraControllers?: DynamicModule['controllers'];
   extraProviders?: Provider[];
+  /** P7.3: override of the payment provider (tests); `null` — payments are off. */
+  paymentProvider?: PaymentProvider | null;
 }
 
 @Module({})
@@ -69,7 +73,7 @@ export class AppModule {
     const emailSender: EmailSender | null = deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender();
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), LibraryModule, EditorModule],
+      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), PaymentsModule.register(config, deps.paymentProvider), LibraryModule, EditorModule],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),
@@ -99,7 +103,7 @@ export class AppModule {
         { provide: OAUTH_STATE_STORE, useValue: new InMemoryOAuthStateStore() },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         // Global guards: CSRF → Auth → Roles (order matters).
-        { provide: APP_GUARD, useFactory: (cfg: ApiConfig) => new CsrfGuard(cfg), inject: [API_CONFIG] },
+        { provide: APP_GUARD, useFactory: (cfg: ApiConfig, reflector: Reflector) => new CsrfGuard(cfg, reflector), inject: [API_CONFIG, Reflector] },
         { provide: APP_GUARD, useFactory: (svc: SessionService, ref: Reflector) => new AuthGuard(svc, ref), inject: [SessionService, Reflector] },
         { provide: APP_GUARD, useFactory: (ref: Reflector) => new RolesGuard(ref), inject: [Reflector] },
         ...(deps.extraProviders ?? []),

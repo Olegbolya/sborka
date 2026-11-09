@@ -6,7 +6,7 @@ import { type Db, schema } from '@blokum/db';
 import { createId, type ProjectDocument, type PublicDocument, type ThemeTokens, toPublicDocument } from '@blokum/schema';
 import { API_CONFIG, DB } from '../tokens.js';
 import { type ApiConfig } from '../config.js';
-import { FREE_LIMITS } from '../media/entitlements.js';
+import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { LocalStorageService, servedKey } from '../media/storage.js';
 import { type ProjectSettings } from '../projects/projects.service.js';
 import { checkUnlockToken, deviceHash, unlockToken, verifyPassword } from './secrets.js';
@@ -75,8 +75,8 @@ const PASSWORD_TRIES = 10;
 const PASSWORD_WINDOW_MS = 10 * 60 * 1000;
 
 /** PL-16, PL-18 · what the player must show whatever the creator drew: the tariff's mark and the advertising label. */
-function marks(p: { isAdvertising: boolean; adMarking: { advertiser: string; inn?: string; erid: string } | null }): Pick<PlayOpen, 'watermark' | 'ad'> {
-  return { watermark: FREE_LIMITS.watermark, ad: p.isAdvertising && p.adMarking ? p.adMarking : null };
+function marks(p: { isAdvertising: boolean; adMarking: { advertiser: string; inn?: string; erid: string } | null }, watermark: boolean): Pick<PlayOpen, 'watermark' | 'ad'> {
+  return { watermark, ad: p.isAdvertising && p.adMarking ? p.adMarking : null };
 }
 
 export function deviceTypeOf(userAgent: string | undefined): 'PHONE' | 'TABLET' | 'DESKTOP' | 'UNKNOWN' {
@@ -95,6 +95,7 @@ export class PlayService {
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     private readonly storage: LocalStorageService,
+    private readonly entitlements: EntitlementsService,
     @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
@@ -175,7 +176,7 @@ export class PlayService {
       document: toPublicDocument(doc),
       media,
       fonts: fontsMap,
-      ...marks(row),
+      ...marks(row, (await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits.watermark),
     };
   }
 
@@ -208,7 +209,7 @@ export class PlayService {
       document: toPublicDocument(p.doc),
       media,
       fonts: fontsMap,
-      ...marks(p),
+      ...marks(p, (await this.entitlements.limitsOfProject(p.ownerId, p.id, now)).plan.limits.watermark),
     };
   }
 
@@ -383,6 +384,8 @@ export class PlayService {
     const device = typeof body.deviceToken === 'string' && body.deviceToken.length >= 8 && body.deviceToken.length <= 100 ? deviceHash(p.id, body.deviceToken) : null;
     if (p.settings.singleAttempt && !device) throw fail(400, 'DEVICE_TOKEN_REQUIRED', 'Не удалось определить устройство.');
 
+    // The tariff is read before the transaction opens: inside it a second connection would be taken from the pool while this one waits.
+    const { plan, pass } = await this.entitlements.limitsOfProject(p.ownerId, p.id, now);
     return this.db.transaction(async (tx) => {
       // Locks are always taken in the same order (account, then project), so two projects of one account cannot block each other.
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'owner:' + p.ownerId}))`);
@@ -400,13 +403,20 @@ export class PlayService {
           .where(and(eq(schema.participantSessions.projectId, p.id), eq(schema.participantSessions.status, 'IN_PROGRESS'), eq(schema.participantSessions.isPreview, false), gt(schema.participantSessions.lastActivityAt, new Date(now.getTime() - ACTIVE_WINDOW_MS))));
         if (completions + (active?.n ?? 0) >= p.settings.maxCompletions) throw fail(403, 'CLOSED', p.settings.closedText?.trim() || 'Сборка закрыта');
       }
-      // 4. Monthly limit of the tariff (PL-07): new passages do not start; those already begun go on.
-      const [month] = await tx
-        .select({ n: count() })
-        .from(schema.participantSessions)
-        .innerJoin(schema.projects, eq(schema.projects.id, schema.participantSessions.projectId))
-        .where(and(eq(schema.projects.ownerId, p.ownerId), eq(schema.participantSessions.isPreview, false), gte(schema.participantSessions.startedAt, monthStart(now))));
-      if ((month?.n ?? 0) >= FREE_LIMITS.passesPerMonth) throw fail(503, 'TEMPORARILY_UNAVAILABLE', 'Временно недоступно');
+      // 4. Limit of the tariff (PL-07): new passages do not start; those already begun go on. The tariff of the account counts
+      // passages of the month for the whole account; the pass «Праздник» counts passages of its project for the term of the pass.
+      const scoped = plan.limits.completionsScope === 'project' && pass !== null;
+      const [month] = scoped
+        ? await tx
+            .select({ n: count() })
+            .from(schema.participantSessions)
+            .where(and(eq(schema.participantSessions.projectId, p.id), eq(schema.participantSessions.isPreview, false), gte(schema.participantSessions.startedAt, pass.from)))
+        : await tx
+            .select({ n: count() })
+            .from(schema.participantSessions)
+            .innerJoin(schema.projects, eq(schema.projects.id, schema.participantSessions.projectId))
+            .where(and(eq(schema.projects.ownerId, p.ownerId), eq(schema.participantSessions.isPreview, false), gte(schema.participantSessions.startedAt, monthStart(now))));
+      if ((month?.n ?? 0) >= plan.limits.completionsPerMonth) throw fail(503, 'TEMPORARILY_UNAVAILABLE', 'Временно недоступно');
       // 7. One attempt from a device (PL-10): a token kept by the browser, never a fingerprint.
       if (p.settings.singleAttempt && device) {
         const [again] = await tx

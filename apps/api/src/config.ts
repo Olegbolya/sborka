@@ -35,6 +35,8 @@ export interface ApiConfig {
   /** P4.3: directory where uploaded media files are stored (under DATA_ROOT). */
   /** AD-09: where the backups are put (P9.5); the admin shows the newest one. */
   backupDir?: string;
+  /** P7.3 · ЮKassa: ShopID и секретный ключ (ключ приходит только из окружения сервера, в репозитории его нет). `undefined` — оплата не подключена. */
+  yookassa?: { shopId: string; secretKey: string };
   mediaDir: string;
   /** P4.3: base URL for serving media files (media.blokker.ru in production, /api/v1/media in dev). */
   mediaBaseUrl: string;
@@ -87,6 +89,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     totpSecretKey: env.TOTP_SECRET_KEY ?? 'a'.repeat(64),
     playLimits: { startsPerHourPerIp: Number(env.PLAY_STARTS_PER_HOUR_PER_IP ?? 120), answersPerMinutePerSession: Number(env.PLAY_ANSWERS_PER_MINUTE ?? 240), reportsPerHourPerIp: Number(env.REPORTS_PER_HOUR_PER_IP ?? 5) },
     ...(env.BACKUP_DIR ? { backupDir: env.BACKUP_DIR } : {}),
+    ...(env.YOOKASSA_SHOP_ID?.trim() && env.YOOKASSA_SECRET_KEY?.trim() ? { yookassa: { shopId: env.YOOKASSA_SHOP_ID.trim(), secretKey: env.YOOKASSA_SECRET_KEY.trim() } } : {}),
     mediaDir: env.MEDIA_DIR ?? (production ? '/srv/blokum/media' : `${env.DATA_ROOT ?? '/tmp'}/blokum-media`),
     mediaBaseUrl: env.MEDIA_BASE_URL ?? `http://${env.API_HOST ?? '127.0.0.1'}:${parsed}/api/v1/media`,
   };

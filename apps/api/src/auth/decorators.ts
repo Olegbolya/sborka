@@ -20,3 +20,7 @@ export const CurrentUser = createParamDecorator((_data: unknown, ctx: ExecutionC
 export const CurrentSessionId = createParamDecorator((_data: unknown, ctx: ExecutionContext): string => {
   return (ctx.switchToHttp().getRequest<Request & { sessionId: string }>()).sessionId;
 });
+
+export const SKIP_CSRF_KEY = 'skipCsrf';
+/** Для вызовов от серверов провайдеров (вебхук оплаты): у них нет Origin. Подлинность такой ручка проверяет сама. */
+export const SkipCsrf = () => SetMetadata(SKIP_CSRF_KEY, true);

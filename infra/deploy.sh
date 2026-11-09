@@ -97,6 +97,11 @@ if [ -f "$SERVER_ENV" ]; then
     sed -i '/^MEDIA_URL=/d' "$ENV_FILE"; printf 'MEDIA_URL=https://%s\n' "$want_media" >> "$ENV_FILE"
     echo "→ в .env.prod адрес медиа приведён к $want_media"
   fi
+  want_shop="$(sed -n 's/^YOOKASSA_SHOP_ID=//p' "$SERVER_ENV" | head -1)"
+  if [ -n "$want_shop" ] && ! grep -qx "YOOKASSA_SHOP_ID=$want_shop" "$ENV_FILE"; then
+    sed -i '/^YOOKASSA_SHOP_ID=/d' "$ENV_FILE"; printf 'YOOKASSA_SHOP_ID=%s\n' "$want_shop" >> "$ENV_FILE"
+    echo "→ в .env.prod номер магазина ЮKassa приведён к $want_shop"
+  fi
 fi
 
 # ── Node 22 (у BST по умолчанию Node 20 — его не меняем) ──────────────────────

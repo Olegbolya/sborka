@@ -24,7 +24,7 @@ const OWN_SESSION = new Set([
   'POST /auth/account/totp/setup', 'POST /auth/account/totp/confirm', 'DELETE /auth/account/totp',
   'GET /auth/me', 'GET /auth/sessions', 'DELETE /auth/sessions',
   'GET /notifications', 'GET /media', 'POST /media', 'POST /media/sessions', 'GET /projects', 'POST /projects', 'GET /templates', 'GET /themes', 'POST /themes', 'POST /themes/from-image',
-  'GET /fonts', 'POST /fonts',
+  'GET /fonts', 'POST /fonts', 'GET /orders', 'POST /orders',
   'GET /library/collections', 'GET /library/collections/:id/items',
   'POST /editor/svg-import',
   'GET /templates/mine', 'POST /templates', 'GET /elements', 'POST /elements',
@@ -142,7 +142,7 @@ describe('P9.4 · N-04 · роли и доступ к чужим объекта�
 
   it('N-04 · все маршруты админки закрыты ролью, а маршруты кабинета и аккаунта — сеансом; открыты только перечисленные', () => {
     const open = routes.filter((r) => r.isPublic).map((r) => r.key).sort();
-    const prefixes = ['/health', '/auth/otp/', '/auth/oauth/', '/legal/', '/auth/account/email/verify', '/dev/oauth/', '/flags/public', '/play/', '/reports', '/plans'];
+    const prefixes = ['/health', '/auth/otp/', '/auth/oauth/', '/legal/', '/auth/account/email/verify', '/dev/oauth/', '/flags/public', '/play/', '/reports', '/plans', '/payments/yookassa/notify'];
     expect(open.filter((k) => !prefixes.some((p) => k.split(' ')[1]!.startsWith(p)))).toEqual([]);
     for (const r of routes.filter((x) => x.path.startsWith('/admin'))) expect(r.roles.length, r.key).toBeGreaterThan(0);
     for (const r of routes.filter((x) => x.path.startsWith('/projects') || x.path.startsWith('/themes') || x.path.startsWith('/media'))) expect(r.isPublic, r.key).toBe(false);

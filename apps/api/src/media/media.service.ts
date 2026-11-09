@@ -10,6 +10,7 @@ import { createId } from '@blokum/schema';
 import { DB, MEDIA_QUEUE } from '../tokens.js';
 import { servedKey } from './storage.js';
 import { checkSignature, SignatureError } from './signatures.js';
+import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { checkFileSize, checkStorageQuota, QuotaError } from './entitlements.js';
 import { LocalStorageService } from './storage.js';
 import { MEDIA_PROCESS_JOB, type IMediaQueue } from './media-jobs.js';
@@ -42,6 +43,7 @@ export class MediaService {
     @Inject(DB) private readonly db: Db,
     @Inject(MEDIA_QUEUE) private readonly queue: IMediaQueue,
     private readonly storage: LocalStorageService,
+    private readonly entitlements: EntitlementsService,
     @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
@@ -54,7 +56,8 @@ export class MediaService {
     });
     const { kind, mime } = result;
 
-    try { checkFileSize(kind, buffer.length); } catch (e) {
+    const limits = await this.entitlements.limitsOf(ownerId);
+    try { checkFileSize(kind, buffer.length, limits); } catch (e) {
       if (e instanceof QuotaError) throw makeError(e.code, e.message); throw e;
     }
     await this.checkQuota(ownerId, buffer.length);
@@ -123,7 +126,8 @@ export class MediaService {
     });
     const { kind, mime } = result;
 
-    try { checkFileSize(kind, buffer.length); } catch (e) {
+    const limits = await this.entitlements.limitsOf(ownerId);
+    try { checkFileSize(kind, buffer.length, limits); } catch (e) {
       if (e instanceof QuotaError) throw makeError(e.code, e.message); throw e;
     }
     await this.checkQuota(ownerId, buffer.length);
@@ -242,7 +246,7 @@ export class MediaService {
       .where(and(eq(schema.media.ownerId, ownerId), isNull(schema.media.deletedAt)));
     const used = Number(result?.total ?? 0);
     try {
-      checkStorageQuota(used, fileBytes);
+      checkStorageQuota(used, fileBytes, await this.entitlements.limitsOf(ownerId));
     } catch (e) {
       if (e instanceof QuotaError) throw makeError(e.code, e.message);
       throw e;
