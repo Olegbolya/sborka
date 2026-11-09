@@ -111,13 +111,20 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
       })();
       if (kept) {
         try {
-          const saved = await api<{ status: string; runtimeState: { screenId?: string; history?: string[]; variables?: Record<string, unknown> } | null; answers: PassageResume['answers']; singleAttempt: boolean; view: PlayOpen }>(`/play/sessions/${encodeURIComponent(kept)}`);
+          const saved = await api<{ status: string; runtimeState: { screenId?: string; history?: string[]; variables?: Record<string, unknown> } | null; answers: PassageResume['answers']; singleAttempt: boolean; restartOnReload?: boolean; view: PlayOpen }>(`/play/sessions/${encodeURIComponent(kept)}`);
           // PL-10: with «одна попытка» a finished passage is not shown again, it is told that it was taken.
           if (saved.status === 'COMPLETED' && saved.singleAttempt) {
             latest.current.onBlocked({ title: REFUSALS.ALREADY_PLAYED!, text: 'Вы уже проходили эту сборку.' });
             return;
           }
-          if (saved.status === 'IN_PROGRESS' || saved.status === 'COMPLETED') {
+          // PL-11: the author asked to begin from the first screen after a reload: the kept passage is left, a new one begins below.
+          if (saved.restartOnReload && saved.status === 'IN_PROGRESS') {
+            try {
+              window.localStorage.removeItem(sessionKey(view.projectId));
+            } catch {
+              // Nothing to remove.
+            }
+          } else if (saved.status === 'IN_PROGRESS' || saved.status === 'COMPLETED') {
             const next = makeBoot(saved.view, { ...(saved.runtimeState ?? {}), ...(saved.answers ? { answers: saved.answers } : {}) });
             next.setSession(kept);
             bootRef.current.session.dispose();

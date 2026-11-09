@@ -91,11 +91,12 @@ export class PlaySessionsService {
   }
 
   /** PL-11 · the saved place of a passage and its answers, after a reload. */
-  async resume(sessionId: string): Promise<{ sessionId: string; projectId: string; status: string; versionId: string; runtimeState: Record<string, unknown> | null; answers: Answers; singleAttempt: boolean }> {
+  async resume(sessionId: string): Promise<{ sessionId: string; projectId: string; status: string; versionId: string; runtimeState: Record<string, unknown> | null; answers: Answers; singleAttempt: boolean; restartOnReload: boolean }> {
     const { session } = await this.load(sessionId);
     const [project] = await this.db.select({ settings: schema.projects.settings }).from(schema.projects).where(eq(schema.projects.id, session.projectId));
     const singleAttempt = Boolean(((project?.settings ?? {}) as { singleAttempt?: boolean }).singleAttempt);
-    return { sessionId, projectId: session.projectId, status: session.status, versionId: session.versionId, runtimeState: session.runtimeState ?? null, answers: await this.answersOf(sessionId), singleAttempt };
+    const restartOnReload = Boolean(((project?.settings ?? {}) as { restartOnReload?: boolean }).restartOnReload);
+    return { sessionId, projectId: session.projectId, status: session.status, versionId: session.versionId, runtimeState: session.runtimeState ?? null, answers: await this.answersOf(sessionId), singleAttempt, restartOnReload };
   }
 
   /**

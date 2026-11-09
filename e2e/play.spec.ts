@@ -219,6 +219,29 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
     await second.ctx.close();
   });
 
+  test('PL-11 · «после перезагрузки с первого экрана»: перезагрузка начинает новое прохождение, без флажка — продолжает', async ({ page, browser }, info) => {
+    const { id, slug } = await published(page);
+    await patch(page, `/projects/${id}/access-settings`, { restartOnReload: true });
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.goto(`/s/${slug}`);
+    await expect(p.getByText('Привет, участник')).toBeVisible();
+    await p.getByText('Да, верно', { exact: true }).click();
+    await p.getByRole('button', { name: 'Дальше' }).click();
+    await expect(p.getByRole('button', { name: 'Закончить' })).toBeVisible();
+    await p.reload();
+    await expect(p.getByText('Привет, участник')).toBeVisible();
+    await expect(p.getByRole('button', { name: 'Закончить' })).toHaveCount(0);
+    await expect.poll(async () => ((await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { starts: number }).starts).toBe(2);
+    // Флажок снят — перезагрузка продолжает с того же места.
+    await patch(page, `/projects/${id}/access-settings`, { restartOnReload: false });
+    await p.getByText('Да, верно', { exact: true }).click();
+    await p.getByRole('button', { name: 'Дальше' }).click();
+    await expect(p.getByRole('button', { name: 'Закончить' })).toBeVisible();
+    await p.reload();
+    await expect(p.getByRole('button', { name: 'Закончить' })).toBeVisible();
+    await ctx.close();
+  });
+
   test('PL-10 · одна попытка: после прохождения повторный заход с того же устройства — «Вы уже проходили»; другое устройство проходит', async ({ page, browser }, info) => {
     const { id, slug } = await published(page);
     await patch(page, `/projects/${id}/access-settings`, { singleAttempt: true });

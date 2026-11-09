@@ -29,6 +29,7 @@ interface ProjectSettings {
   hasPassword?: boolean;
   age18?: boolean | null;
   singleAttempt?: boolean | null;
+  restartOnReload?: boolean | null;
   closedText?: string | null;
 }
 
@@ -658,6 +659,19 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           Одна попытка на участника
         </label>
         <p style={s.hint}>Участник не сможет пройти повторно с того же устройства</p>
+      </div>
+
+      <div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+          <input
+            type="checkbox"
+            checked={settings.restartOnReload ?? false}
+            onChange={(e) => update('restartOnReload', e.target.checked)}
+            aria-label="После перезагрузки начинать заново"
+          />
+          После перезагрузки страницы проходить заново с первого экрана
+        </label>
+        <p style={s.hint}>Если выключено, участник продолжит с того места, где остановился</p>
       </div>
 
       <div>

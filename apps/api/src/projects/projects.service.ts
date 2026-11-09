@@ -16,7 +16,7 @@ import { DB } from '../tokens.js';
 import { hashPassword } from '../play/secrets.js';
 
 /** The settings of access the cabinet may write (PL-06…PL-10); the password goes separately and is stored as a hash. */
-const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'singleAttempt', 'closedText'] as const;
+const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'singleAttempt', 'restartOnReload', 'closedText'] as const;
 
 export interface ProjectSettings {
   /** PL-06 · at most so many started and/or completed passages. */
@@ -33,6 +33,8 @@ export interface ProjectSettings {
   age18?: boolean;
   /** PL-10 · one passage per device. */
   singleAttempt?: boolean;
+  /** PL-11 · after a reload the passage begins again from the first screen instead of continuing. */
+  restartOnReload?: boolean;
   closedText?: string;
 }
 
@@ -650,7 +652,7 @@ export class ProjectsService {
       const v = incoming[key];
       if (v !== undefined && v !== null && (typeof v !== 'string' || Number.isNaN(Date.parse(v)))) throw bad();
     }
-    for (const key of ['age18', 'singleAttempt'] as const) {
+    for (const key of ['age18', 'singleAttempt', 'restartOnReload'] as const) {
       const v = incoming[key];
       if (v !== undefined && v !== null && typeof v !== 'boolean') throw bad();
     }

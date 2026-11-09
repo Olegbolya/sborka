@@ -278,13 +278,20 @@ describe('D-03 · Доступ', () => {
       .patch(`/${API_PREFIX}/projects/${c.body.id as string}/access-settings`)
       .set('Cookie', cookie)
       .set('X-Blokum-CSRF', '1')
-      .send({ maxCompletions: 50, singleAttempt: true })
+      .send({ maxCompletions: 50, singleAttempt: true, restartOnReload: true })
       .expect(200);
     const updated = await request(t.http())
       .get(`/${API_PREFIX}/projects/${c.body.id as string}/access-settings`)
       .set('Cookie', cookie)
       .expect(200);
-    expect(updated.body).toMatchObject({ maxCompletions: 50, singleAttempt: true });
+    expect(updated.body).toMatchObject({ maxCompletions: 50, singleAttempt: true, restartOnReload: true });
+    // PL-11: флажок «начинать заново» — только true/false.
+    await request(t.http())
+      .patch(`/${API_PREFIX}/projects/${c.body.id as string}/access-settings`)
+      .set('Cookie', cookie)
+      .set('X-Blokum-CSRF', '1')
+      .send({ restartOnReload: 'да' })
+      .expect(400);
   });
 });
 
