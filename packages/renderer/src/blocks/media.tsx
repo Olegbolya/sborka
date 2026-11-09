@@ -93,14 +93,20 @@ function Video({ src, css, instanceId, alt, gif, playback }: { src: MediaSource;
   useEffect(() => {
     if (el) el.muted = silent;
   }, [el, silent]);
+  // Запуск делаем сами, а не атрибутом `autoplay`: страница плеера приходит с сервера, а React не пишет `muted` в серверную разметку,
+  // поэтому браузер пытался запустить ролик «со звуком», запрещал и больше не повторял — оставался первый кадр.
   useEffect(() => {
-    if (!el || !player || gif || !m.autoplay || playback.muted) return;
-    el.play().catch(() => {
+    if (!el || !player || !(gif || m.autoplay)) return;
+    el.muted = gif || playback.muted || ctx.sound?.isMuted === true;
+    // `play()` в старых браузерах ничего не возвращает: Promise.resolve делает его одинаковым везде.
+    Promise.resolve(el.play()).catch(() => {
+      if (el.muted) return;
+      // Со звуком без касания участника браузер не запускает: идём без звука, пока не нажмут «Включить звук».
       setSoundBlocked(true);
       el.muted = true;
-      void el.play().catch(() => undefined);
+      void Promise.resolve(el.play()).catch(() => undefined);
     });
-  }, [el, player, gif, m.autoplay, playback.muted]);
+  }, [el, player, gif, m.autoplay, playback.muted, ctx.sound]);
   // GIF (B-03) always plays silently in a loop; a video (B-04) follows its media settings (S-11) and its own sound and repeat.
   const autoPlay = player && (gif || m.autoplay);
   const centre: CSSProperties = { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };

@@ -229,6 +229,32 @@ describe('B-02…B-05, B-07: медиаблоки', () => {
     vi.restoreAllMocks();
   });
 
+  it('B-04: запуск делается после появления на странице — ролик без звука, GIF и видео в заливке запускаются явно (серверная разметка без `muted` не даёт автозапуску сработать)', () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+    const film = { source: 'media', id: 'video-film' } as const;
+    const started = (blocks: Block[]) => {
+      play.mockClear();
+      const v = live(blocks);
+      const calls = play.mock.calls.length;
+      const video = v.host.querySelector('video')!;
+      const state = [video.muted, video.autoplay];
+      v.unmount();
+      return { calls, state };
+    };
+    // Видео без звука: звук выставлен свойством и запуск вызван.
+    expect(started([make('video', { props: { media: film }, style: { media: { muted: true } } })])).toEqual({ calls: 1, state: [true, true] });
+    // Видео со звуком: запуск вызван, звук включён (браузер сам решит, пускать ли).
+    expect(started([make('video', { props: { media: film } })])).toEqual({ calls: 1, state: [false, true] });
+    // GIF всегда без звука и запускается.
+    expect(started([make('gif', { props: { media: film } })])).toEqual({ calls: 1, state: [true, true] });
+    // Автозапуск выключен — сам ролик не запускается.
+    expect(started([make('video', { props: { media: film }, style: { media: { autoplay: false } } })]).calls).toBe(0);
+    // Видео в заливке блока: без звука по умолчанию, запускается.
+    const filled = make('shape', { style: { fills: [{ kind: 'media', media: film }] } as never });
+    expect(started([filled]).calls).toBe(1);
+    vi.restoreAllMocks();
+  });
+
   it('B-05: звук — настоящая кнопка; играет после первого действия участника, громкость из настроек', () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
     const ab = make('audio', { name: 'Бубенцы', props: { media: { source: 'media', id: 'zvuk000001' }, volume: 0.4 } });

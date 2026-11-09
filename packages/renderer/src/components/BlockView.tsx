@@ -2,7 +2,7 @@
 
 import { behaviorOf } from '@blokum/engine';
 import { type Block, type BLOCK_STATES, type BlockStyle, resolveBlockStyle } from '@blokum/schema';
-import { type CSSProperties, type PointerEvent, type ReactNode, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type PointerEvent, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TINT_STYLE, animatedLayerStyle, useBlockAnimation, usesTint } from '../animation/useBlockAnimation.js';
 import { prefersReducedMotion } from '../particles/ParticleLayer.js';
 import { cssColor } from '../theme/color.js';
@@ -42,31 +42,41 @@ export function childInstanceId(parentInstanceId: string, child: Block): string 
 }
 
 /**
+ * Видео в заливке. Запуск и звук выставляются после появления на странице: серверная разметка не содержит `muted`,
+ * и без этого браузер не запускал ролик (остававался первый кадр).
+ */
+function FillVideo({ layer, media, base, poster }: { layer: Extract<FillLayer, { kind: 'video' }>; media: BlockStyle['media']; base: CSSProperties; poster?: string }): ReactNode {
+  const [el, setEl] = useState<HTMLVideoElement | null>(null);
+  useEffect(() => {
+    if (!el) return;
+    el.playbackRate = media.speed;
+    el.muted = media.muted;
+    if (media.autoplay) void Promise.resolve(el.play()).catch(() => undefined);
+  }, [el, media.speed, media.muted, media.autoplay]);
+  return (
+    <video
+      ref={setEl}
+      className="bk-fill"
+      src={layer.src}
+      autoPlay={media.autoplay}
+      muted={media.muted}
+      loop={media.loop}
+      controls={media.controls}
+      {...(poster ? { poster } : {})}
+      data-speed={media.speed}
+      playsInline
+      style={{ ...base, width: '100%', height: '100%', ...layer.style }}
+    />
+  );
+}
+
+/**
  * One fill layer. A video fill plays by the block's media settings (S-11): for a block without media of its
  * own its video fill is its media, so autoplay, sound, loop, controls, cover and speed work on every type.
  */
 function Layer({ layer, media, poster }: { layer: FillLayer; media: BlockStyle['media']; poster?: string }): ReactNode {
   const base: CSSProperties = { position: 'absolute', inset: 0 };
-  if (layer.kind === 'video') {
-    const rate = (el: HTMLVideoElement | null) => {
-      if (el) el.playbackRate = media.speed;
-    };
-    return (
-      <video
-        ref={rate}
-        className="bk-fill"
-        src={layer.src}
-        autoPlay={media.autoplay}
-        muted={media.muted}
-        loop={media.loop}
-        controls={media.controls}
-        {...(poster ? { poster } : {})}
-        data-speed={media.speed}
-        playsInline
-        style={{ ...base, width: '100%', height: '100%', ...layer.style }}
-      />
-    );
-  }
+  if (layer.kind === 'video') return <FillVideo layer={layer} media={media} base={base} {...(poster ? { poster } : {})} />;
   return <div className="bk-fill" style={{ ...base, ...layer.style }} />;
 }
 
