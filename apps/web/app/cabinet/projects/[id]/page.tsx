@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ModerationNotice } from '../../../../components/admin/ModerationNotice';
+import { PassOffer } from '../../../../components/billing/PassOffer';
 
 type Tab = 'responses' | 'access' | 'settings' | 'export' | 'operator';
 
@@ -676,6 +677,11 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           {saving ? 'Сохранение...' : saved ? 'Сохранено!' : 'Сохранить настройки'}
         </button>
       </div>
+
+      <section style={{ borderTop: '1px solid var(--border, #eee)', paddingTop: 20 }} aria-labelledby="pass-title">
+        <h3 id="pass-title" style={{ fontSize: 16, margin: '0 0 8px' }}>Платные возможности для этой сборки</h3>
+        <PassOffer projectId={projectId} where="cabinet" />
+      </section>
 
       <AdSection projectId={projectId} />
     </div>

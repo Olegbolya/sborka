@@ -1,8 +1,9 @@
 'use client';
 import Link from 'next/link';
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { api, errorText, isApiError } from '../../lib/api-browser';
 import { setTitle } from '../../lib/editor/commands';
+import { PassDialog } from './PassDialog';
 import { useEditor, useEnv } from './context';
 
 const STATUS_NAMES = { DRAFT: 'Черновик', PUBLISHED: 'Опубликована', CLOSED: 'Закрыта' } as const;
@@ -21,6 +22,16 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
   const [publishedDoc, setPublishedDoc] = useState<unknown>(null);
   const hasUnpublished = status !== 'PUBLISHED' || publishedDoc === null || doc !== publishedDoc;
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [passReasons, setPassReasons] = useState<string[] | null>(null);
+
+  // Человек вернулся из ЮKassa: оплата подтверждается у провайдера не мгновенно, поэтому сразу говорим, что делать дальше.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('paid')) return;
+    url.searchParams.delete('paid');
+    window.history.replaceState(null, '', url.pathname + url.search);
+    flash('Спасибо! Как только платёж подтвердится, нажмите «Опубликовать» ещё раз.', 'ok');
+  }, [flash]);
 
   const saveAsTemplate = async () => {
     setSavingTemplate(true);
@@ -51,6 +62,10 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       flash(`Сборка опубликована: ${window.location.origin}/s/${slug}. QR-код можно взять в кабинете.`, 'ok');
     } catch (e) {
       const issues = isApiError(e) ? (e.issues ?? []) : [];
+      if (isApiError(e) && e.status === 402 && e.code === 'PLAN_LIMIT') {
+        setPassReasons(issues.length > 0 ? issues.map((i) => i.message) : [e.message]);
+        return;
+      }
       flash(issues.length > 0 ? `${errorText(e)} ${issues.slice(0, 3).map((i) => i.message).join('; ')}${issues.length > 3 ? '…' : ''} Полный список — «Логика» → «Проверка».` : errorText(e), 'error');
     } finally {
       setPublishing(false);
@@ -109,6 +124,7 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       <button type="button" className="ed-btn primary" onClick={() => void publish()} disabled={publishing || !hasUnpublished}>
         {publishing ? 'Публикуем…' : status === 'PUBLISHED' ? 'Опубликовать изменения' : 'Опубликовать'}
       </button>
+      {passReasons && <PassDialog projectId={projectId} reasons={passReasons} onClose={() => setPassReasons(null)} />}
     </header>
   );
 }

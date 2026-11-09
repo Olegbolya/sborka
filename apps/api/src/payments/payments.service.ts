@@ -83,7 +83,7 @@ export class PaymentsService {
       .values({ userId, kind, item, amountKop, provider: provider.name })
       .returning({ id: schema.orders.id });
     try {
-      const created = await provider.createPayment({ orderId: order!.id, amountKop, description, returnUrl: `${this.config.webUrl}/cabinet/billing?order=${order!.id}` });
+      const created = await provider.createPayment({ orderId: order!.id, amountKop, description, returnUrl: kind === 'PASS' ? `${this.config.webUrl}/app/projects/${String(item.projectId)}/edit?paid=${order!.id}` : `${this.config.webUrl}/cabinet/billing?order=${order!.id}` });
       await this.db.update(schema.orders).set({ providerPaymentId: created.providerPaymentId }).where(eq(schema.orders.id, order!.id));
       return { orderId: order!.id, confirmationUrl: created.confirmationUrl };
     } catch (e) {

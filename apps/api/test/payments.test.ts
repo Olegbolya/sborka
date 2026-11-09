@@ -190,6 +190,9 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
     const res = await order(t, cookie, { kind: 'PASS', projectId: mine!.id }).expect(201);
     const [o] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, res.body.orderId as string));
     expect(o!.amountKop).toBe(7900);
+    // После оплаты человек возвращается в редактор этой сборки, а не в общий кабинет.
+    const returnUrl = ((yoo.calls.at(-1)!.body as { confirmation: { return_url: string } }).confirmation.return_url);
+    expect(returnUrl).toBe(`http://localhost:3110/app/projects/${mine!.id}/edit?paid=${o!.id}`);
     yoo.payments.get(o!.providerPaymentId!)!.status = 'succeeded';
     for (let i = 0; i < 3; i++) await notify(t, succeeded(o!.providerPaymentId!)).expect(200);
     const grants = await db.db.select().from(schema.entitlements).where(eq(schema.entitlements.sourceOrderId, o!.id));

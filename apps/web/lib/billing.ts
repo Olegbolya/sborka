@@ -23,6 +23,9 @@ export const startTrial = (planCode: string): Promise<BillingState> => api<Billi
 export const createOrder = (body: { kind: 'SUBSCRIPTION'; planCode: string; period: 'MONTH' | 'YEAR' }): Promise<{ orderId: string; confirmationUrl: string }> =>
   api('/orders', { method: 'POST', body });
 
+export const createPassOrder = (projectId: string): Promise<{ orderId: string; confirmationUrl: string }> =>
+  api('/orders', { method: 'POST', body: { kind: 'PASS', projectId } });
+
 export const ORDER_STATUS_LABEL: Record<OrderRow['status'], string> = {
   PENDING: 'Ждёт оплаты',
   PAID: 'Оплачен',
