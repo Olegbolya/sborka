@@ -12,7 +12,7 @@ export interface OrderRow {
   kind: 'SUBSCRIPTION' | 'PASS' | 'ADDON';
   status: 'PENDING' | 'PAID' | 'CANCELED' | 'REFUNDED';
   amountKop: number;
-  item: { planCode?: string; period?: 'MONTH' | 'YEAR' };
+  item: { planCode?: string; period?: 'MONTH' | 'YEAR'; addon?: string };
   createdAt: string;
   paidAt: string | null;
 }
@@ -25,6 +25,23 @@ export const createOrder = (body: { kind: 'SUBSCRIPTION'; planCode: string; peri
 
 export const createPassOrder = (projectId: string): Promise<{ orderId: string; confirmationUrl: string }> =>
   api('/orders', { method: 'POST', body: { kind: 'PASS', projectId } });
+
+/** P7.5 · дополнительная покупка из каталога (`GET /billing/addons`). */
+export interface AddonRow {
+  code: string;
+  title: string;
+  description: string;
+  priceRub: number;
+  needsProject: boolean;
+  available: boolean;
+  reason: string | null;
+}
+
+export const loadAddons = async (projectId?: string): Promise<AddonRow[]> =>
+  (await api<{ addons: AddonRow[] }>(`/billing/addons${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ''}`)).addons;
+
+export const createAddonOrder = (addon: string, projectId?: string): Promise<{ orderId: string; confirmationUrl: string }> =>
+  api('/orders', { method: 'POST', body: { kind: 'ADDON', addon, ...(projectId ? { projectId } : {}) } });
 
 export const ORDER_STATUS_LABEL: Record<OrderRow['status'], string> = {
   PENDING: 'Ждёт оплаты',

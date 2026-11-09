@@ -230,6 +230,87 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
     expect(sub).toMatchObject({ renewMode: 'LINK', paymentMethodRef: null, autoRenewConsentId: null });
   });
 
+  /** Заказ на допродажу, оплаченный в поддельной ЮKassa; возвращает заказ. */
+  async function buyAddon(cookie: string, body: object): Promise<typeof schema.orders.$inferSelect> {
+    const res = await order(t, cookie, { kind: 'ADDON', ...body }).expect(201);
+    const [o] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, res.body.orderId as string));
+    yoo.payments.get(o!.providerPaymentId!)!.status = 'succeeded';
+    await notify(t, succeeded(o!.providerPaymentId!)).expect(200);
+    return o!;
+  }
+  const subscribe = (userId: string, planCode = 'AUTHOR') =>
+    db.db.insert(schema.subscriptions).values({ userId, planCode, period: 'MONTH', status: 'ACTIVE', currentPeriodStart: new Date(Date.now() - 86_400_000), currentPeriodEnd: new Date(Date.now() + 90 * 86_400_000) });
+
+  it('P7.5 · каталог допродаж: цены из таблицы, для «Старта» открыта только покупка «Старта», остальные объясняют, чего не хватает', async () => {
+    const { cookie } = await login(t, db);
+    const res = await request(t.http()).get(`/${API_PREFIX}/billing/addons`).set('Cookie', cookie).expect(200);
+    const list = res.body.addons as Array<{ code: string; priceRub: number; available: boolean; reason: string | null; needsProject: boolean }>;
+    expect(list.map((a) => [a.code, a.priceRub])).toEqual([['PASS_COMPLETIONS_500', 99], ['PASS_EXTEND_30', 99], ['COMPLETIONS_1000', 149], ['STORAGE_10GB', 149], ['FREE_EXTRAS', 99]]);
+    expect(list.filter((a) => a.available).map((a) => a.code)).toEqual(['FREE_EXTRAS']);
+    expect(list.find((a) => a.code === 'STORAGE_10GB')!.reason).toMatch(/платной подписки/);
+    expect(list.find((a) => a.code === 'PASS_EXTEND_30')!.needsProject).toBe(true);
+    await request(t.http()).get(`/${API_PREFIX}/billing/addons`).expect(401);
+  });
+
+  it('P7.5 · «+5 тем и +100 правил»: только для «Старта», выдаётся один раз при повторе уведомления, возврат отнимает', async () => {
+    const { cookie, userId } = await login(t, db);
+    const before = await ent.limitsOf(userId);
+    const res = await order(t, cookie, { kind: 'ADDON', addon: 'FREE_EXTRAS' }).expect(201);
+    const [o] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, res.body.orderId as string));
+    expect(o!.amountKop).toBe(9900);
+    expect(o!.kind).toBe('ADDON');
+    yoo.payments.get(o!.providerPaymentId!)!.status = 'succeeded';
+    for (let i = 0; i < 5; i++) await notify(t, succeeded(o!.providerPaymentId!)).expect(200);
+    const after = await ent.limitsOf(userId);
+    expect(after.ownThemes).toBe((before.ownThemes ?? 0) + 5);
+    expect(after.rulesPerProject).toBe(before.rulesPerProject + 100);
+    expect(after.watermark).toBe(true);
+    await notify(t, { event: 'refund.succeeded', object: { id: 'rf-x', payment_id: o!.providerPaymentId, status: 'succeeded' } }).expect(200);
+    expect((await ent.limitsOf(userId)).rulesPerProject).toBe(before.rulesPerProject);
+    // На подписке эта покупка не нужна.
+    await subscribe(userId);
+    await order(t, cookie, { kind: 'ADDON', addon: 'FREE_EXTRAS' }).expect(409);
+  });
+
+  it('P7.5 · «+10 ГБ»: платная подписка, покупки складываются, срок — месяц; на «Старте» отказ', async () => {
+    const { cookie, userId } = await login(t, db);
+    const refused = await order(t, cookie, { kind: 'ADDON', addon: 'STORAGE_10GB' }).expect(409);
+    expect(refused.body.error.code).toBe('ADDON_NOT_APPLICABLE');
+    await subscribe(userId);
+    const base = (await ent.limitsOf(userId)).storageBytes;
+    await buyAddon(cookie, { addon: 'STORAGE_10GB' });
+    await buyAddon(cookie, { addon: 'STORAGE_10GB' });
+    expect((await ent.limitsOf(userId)).storageBytes).toBe(base + 20 * 1024 ** 3);
+    const rows = await db.db.select().from(schema.entitlements).where(eq(schema.entitlements.userId, userId));
+    const until = rows.find((r) => r.feature === 'EXTRA_STORAGE')!.validTo!.getTime();
+    expect(until - Date.now()).toBeGreaterThan(27 * 86_400_000);
+    expect(until - Date.now()).toBeLessThan(32 * 86_400_000);
+    // Через месяц купленное место не действует.
+    expect((await ent.limitsOf(userId, new Date(Date.now() + 40 * 86_400_000))).storageBytes).toBe(base);
+  });
+
+  it('P7.5 · «Праздник»: +500 прохождений — только к сборке с действующим пропуском и до его конца; продление на 30 дней', async () => {
+    const { cookie, userId } = await login(t, db);
+    const [project] = await db.db.insert(schema.projects).values({ ownerId: userId, title: 'Праздник', slug: 'addon-pass' }).returning();
+    const noPass = await order(t, cookie, { kind: 'ADDON', addon: 'PASS_COMPLETIONS_500', projectId: project!.id }).expect(409);
+    expect(noPass.body.error.message).toMatch(/нет пропуска/);
+    await order(t, cookie, { kind: 'ADDON', addon: 'PASS_COMPLETIONS_500' }).expect(400);
+    const [other] = await db.db.insert(schema.users).values({ displayName: 'Чужой' }).returning();
+    const [theirs] = await db.db.insert(schema.projects).values({ ownerId: other!.id, title: 'Чужая', slug: 'addon-theirs' }).returning();
+    await order(t, cookie, { kind: 'ADDON', addon: 'PASS_EXTEND_30', projectId: theirs!.id }).expect(404);
+    const passOrder = await order(t, cookie, { kind: 'PASS', projectId: project!.id }).expect(201);
+    const [po] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, passOrder.body.orderId as string));
+    yoo.payments.get(po!.providerPaymentId!)!.status = 'succeeded';
+    await notify(t, succeeded(po!.providerPaymentId!)).expect(200);
+    const pass = (await ent.passOf(project!.id))!;
+    await buyAddon(cookie, { addon: 'PASS_COMPLETIONS_500', projectId: project!.id });
+    const extra = (await db.db.select().from(schema.entitlements).where(eq(schema.entitlements.projectId, project!.id))).find((r) => r.feature === 'EXTRA_COMPLETIONS')!;
+    expect(extra.quantity).toBe(500);
+    expect(extra.validTo!.getTime()).toBe(pass.to.getTime());
+    await buyAddon(cookie, { addon: 'PASS_EXTEND_30', projectId: project!.id });
+    expect((await ent.passOf(project!.id))!.to.getTime()).toBe(pass.to.getTime() + 30 * 86_400_000);
+  });
+
   it('P7.4 · пробный период: 3 дня без карты, один раз на человека, потом «Старт» и никаких списаний', async () => {
     const { cookie, userId } = await login(t, db);
     const trial = (planCode: string) => request(t.http()).post(`/${API_PREFIX}/billing/trial`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ planCode });

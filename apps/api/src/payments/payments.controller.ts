@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
 import { CurrentUser, Public, SkipCsrf } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { BillingService } from './billing.service.js';
@@ -27,6 +27,12 @@ export class PaymentsController {
   @HttpCode(201)
   create(@Body() body: OrderRequest, @CurrentUser() user: RequestUser) {
     return this.payments.createOrder(user.id, body ?? {});
+  }
+
+  /** P7.5 · дополнительные покупки; для тех, что относятся к сборке, передаётся `projectId`. */
+  @Get('billing/addons')
+  async addons(@CurrentUser() user: RequestUser, @Query('projectId') projectId?: string) {
+    return { addons: await this.payments.addons(user.id, projectId) };
   }
 
   @Get('orders')

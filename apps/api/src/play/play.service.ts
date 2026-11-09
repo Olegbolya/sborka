@@ -446,7 +446,18 @@ export class PlayService {
             .from(schema.participantSessions)
             .innerJoin(schema.projects, eq(schema.projects.id, schema.participantSessions.projectId))
             .where(and(eq(schema.projects.ownerId, p.ownerId), eq(schema.participantSessions.isPreview, false), gte(schema.participantSessions.startedAt, monthStart(now))));
-      if ((month?.n ?? 0) >= plan.limits.completionsPerMonth) throw fail(503, 'TEMPORARILY_UNAVAILABLE', 'Временно недоступно');
+      if ((month?.n ?? 0) >= plan.limits.completionsPerMonth) {
+        // P7.5: passages bought extra are spent only after the limit of the tariff; one unit goes with each start.
+        const spent = await tx.execute(sql`
+          update entitlements set quantity = quantity - 1
+          where id = (
+            select id from entitlements
+            where feature = 'EXTRA_COMPLETIONS' and quantity > 0 and valid_from <= ${now} and (valid_to is null or valid_to > ${now})
+              and ${scoped ? sql`project_id = ${p.id}` : sql`user_id = ${p.ownerId} and project_id is null`}
+            order by valid_to asc nulls last limit 1 for update)
+          returning id`);
+        if (spent.rows.length === 0) throw fail(503, 'TEMPORARILY_UNAVAILABLE', 'Временно недоступно');
+      }
       // P7.2: the start that takes the tariff to 80 % and the one that takes it to the limit — each happens once in a period, because
       // the count is read under the lock of the account.
       usage = usageNotice((month?.n ?? 0) + 1, plan.limits.completionsPerMonth, scoped ? p.title : null);

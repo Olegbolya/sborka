@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
 import { type BlockInput, DEFAULT_COLORS, ProjectDocument, ThemeTokens, textOf } from '@blokum/schema';
 import { type Db } from './client.js';
+import { ADDONS } from './addons.js';
 import { PLANS } from './plans.js';
 import {
   accessPoints,
+  addons,
   answers,
   participantSessions,
   plans,
@@ -24,6 +26,11 @@ export async function seedPlans(db: Db): Promise<number> {
     .values(PLANS.map((p) => ({ ...p, public: true })))
     .onConflictDoNothing({ target: plans.code })
     .returning({ code: plans.code });
+  // P7.5: the extra purchases are created the same way; the count returned is still that of the plans.
+  await db
+    .insert(addons)
+    .values(ADDONS.map((a) => ({ ...a, active: true })))
+    .onConflictDoNothing({ target: addons.code });
   return inserted.length;
 }
 

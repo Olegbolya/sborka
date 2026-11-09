@@ -58,6 +58,31 @@ export const plans = pgTable('plans', {
   sort: integer('sort').notNull().default(0),
 });
 
+/** P7.5 · an extra purchase (docs/04-TARIFFS.md §3): the price and the size live here, so the owner changes them in the admin without a release. */
+export const addons = pgTable('addons', {
+  code: text('code').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  priceRub: integer('price_rub').notNull(),
+  /** The effect of one purchase, read by the payment when it is confirmed. */
+  params: jsonb('params').$type<AddonParams>().notNull(),
+  active: boolean('active').notNull().default(true),
+  sort: integer('sort').notNull().default(0),
+});
+
+export type AddonEffect = 'PASS_COMPLETIONS' | 'SUBSCRIPTION_COMPLETIONS' | 'SUBSCRIPTION_STORAGE' | 'PASS_EXTEND' | 'FREE_EXTRAS';
+
+export interface AddonParams {
+  effect: AddonEffect;
+  /** How many passages (completions) or bytes of storage one purchase gives. */
+  quantity?: number;
+  /** For how long the purchase acts; `null` or missing = forever (PASS_EXTEND uses `days`, the others `months`). */
+  months?: number;
+  days?: number;
+  themes?: number;
+  rules?: number;
+}
+
 export const subscriptions = pgTable(
   'subscriptions',
   {

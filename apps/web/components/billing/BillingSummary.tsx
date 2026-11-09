@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { errorText, isApiError } from '../../lib/api-browser';
-import { type BillingState, type OrderRow, ORDER_STATUS_LABEL, dateRu, loadBilling, loadOrders, rub } from '../../lib/billing';
+import { type AddonRow, type BillingState, type OrderRow, ORDER_STATUS_LABEL, dateRu, loadAddons, loadBilling, loadOrders, rub } from '../../lib/billing';
 
-const planName = (o: OrderRow): string => (o.kind === 'PASS' ? 'Пропуск «Праздник»' : `Подписка ${o.item.period === 'YEAR' ? 'на год' : 'на месяц'}`);
+const planName = (o: OrderRow, addons: AddonRow[]): string =>
+  o.kind === 'PASS' ? 'Пропуск «Праздник»' : o.kind === 'ADDON' ? (addons.find((a) => a.code === o.item.addon)?.title ?? 'Дополнительная покупка') : `Подписка ${o.item.period === 'YEAR' ? 'на год' : 'на месяц'}`;
 
 /** P7.6 · «Тариф и оплата»: что действует сейчас, до какого числа, заказы; после возврата с оплаты ждёт подтверждения от платёжного сервиса. */
 export function BillingSummary() {
@@ -12,6 +13,7 @@ export function BillingSummary() {
   const returned = params.get('order');
   const [state, setState] = useState<BillingState | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [addons, setAddons] = useState<AddonRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [anonymous, setAnonymous] = useState(false);
 
@@ -20,10 +22,11 @@ export function BillingSummary() {
     let tries = 0;
     const load = async () => {
       try {
-        const [s, o] = await Promise.all([loadBilling(), loadOrders()]);
+        const [s, o, a] = await Promise.all([loadBilling(), loadOrders(), loadAddons().catch(() => [] as AddonRow[])]);
         if (stop) return;
         setState(s);
         setOrders(o);
+        setAddons(a);
         // Платёжный сервис сообщает об оплате с задержкой: после возврата с оплаты ещё несколько раз перечитываем.
         const waiting = returned && o.find((x) => x.id === returned)?.status === 'PENDING';
         if (waiting && tries++ < 10) setTimeout(() => void load(), 3000);
@@ -76,7 +79,7 @@ export function BillingSummary() {
           <ul className="lp-plan-list">
             {orders.map((o) => (
               <li key={o.id}>
-                {dateRu(o.createdAt)} — {planName(o)}, {rub(o.amountKop)}: {ORDER_STATUS_LABEL[o.status]}
+                {dateRu(o.createdAt)} — {planName(o, addons)}, {rub(o.amountKop)}: {ORDER_STATUS_LABEL[o.status]}
               </li>
             ))}
           </ul>

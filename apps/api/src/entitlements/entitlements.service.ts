@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, eq, gt, isNull, lte, ne, or } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
 import { type Db, PLANS, schema } from '@blokum/db';
 import { countRules, type ProjectDocument, walkBlocks } from '@blokum/schema';
 
@@ -57,7 +57,36 @@ export class EntitlementsService {
         ),
       );
     const best = subs.sort((a, b) => b.sort - a.sort)[0];
-    return this.plan(best?.planCode ?? FREE_CODE);
+    return this.withExtras(await this.plan(best?.planCode ?? FREE_CODE), userId, now);
+  }
+
+  /**
+   * P7.5 · extra purchases of the person (04-TARIFFS §3): +storage for a subscription for a month, +themes and +rules for «Старт»
+   * for good. They are rows of `entitlements` without a project; the passages bought extra are spent in `play`, not added here.
+   */
+  private async withExtras(plan: Plan, userId: string, now: Date): Promise<Plan> {
+    const rows = await this.db
+      .select({ feature: schema.entitlements.feature, quantity: schema.entitlements.quantity })
+      .from(schema.entitlements)
+      .where(
+        and(
+          eq(schema.entitlements.userId, userId),
+          isNull(schema.entitlements.projectId),
+          inArray(schema.entitlements.feature, ['EXTRA_STORAGE', 'EXTRA_THEMES', 'EXTRA_RULES']),
+          lte(schema.entitlements.validFrom, now),
+          or(isNull(schema.entitlements.validTo), gt(schema.entitlements.validTo, now)),
+        ),
+      );
+    if (rows.length === 0) return plan;
+    const sum = (feature: string): number => rows.filter((r) => r.feature === feature).reduce((a, r) => a + (r.quantity ?? 0), 0);
+    const limits = { ...plan.limits };
+    if (plan.code === FREE_CODE) {
+      if (limits.ownThemes !== null) limits.ownThemes += sum('EXTRA_THEMES');
+      limits.rulesPerProject += sum('EXTRA_RULES');
+    } else {
+      limits.storageBytes += sum('EXTRA_STORAGE') * 1024 * 1024;
+    }
+    return { ...plan, limits };
   }
 
   /** Лимиты человека (без учёта пропусков на сборки). */
@@ -77,7 +106,10 @@ export class EntitlementsService {
           lte(schema.entitlements.validFrom, now),
           or(isNull(schema.entitlements.validTo), gt(schema.entitlements.validTo, now)),
         ),
-      );
+      )
+      // After a renewal or an extension there are several rows: the term ends with the latest one.
+      .orderBy(desc(schema.entitlements.validTo))
+      .limit(1);
     return row?.to ? { from: row.from, to: row.to } : null;
   }
 

@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import { Suspense } from 'react';
+import { AddonShop } from '../../../components/billing/AddonShop';
 import { BillingSummary } from '../../../components/billing/BillingSummary';
 import { PlanCards } from '../../../components/landing/PlanCards';
 import { SitePage } from '../../../components/landing/SiteChrome';
@@ -18,6 +19,7 @@ export default async function BillingPage() {
           <Suspense fallback={<p className="lp-note">Загрузка…</p>}>
             <BillingSummary />
           </Suspense>
+          <AddonShop />
           <h2 className="lp-h2">Выбрать тариф</h2>
           <PlanCards plans={plans} titleLevel={3} />
           <p className="lp-note">Условия и порядок возврата — в <a href="/legal/offer">оферте</a>. Цены в рублях.</p>

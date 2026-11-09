@@ -173,6 +173,23 @@ describe('PL-06…PL-10 · проверки доступа и лимиты', () 
     expect(await kinds()).toEqual(['usage-100', 'usage-80']);
   }, 60_000);
 
+  it('P7.5 · купленные прохождения тратятся после месячного лимита по одному; закончились или истекли — «Временно недоступно»', async () => {
+    const p = await published();
+    const [row] = await db.db.select({ owner: schema.projects.ownerId, version: schema.projects.publishedVersionId }).from(schema.projects).where(eq(schema.projects.id, p.id));
+    await db.db.insert(schema.participantSessions).values(Array.from({ length: 30 }, () => ({ id: createId(), projectId: p.id, versionId: row!.version!, isPreview: false })));
+    await start(p.id).expect(503);
+    const day = 86_400_000;
+    await db.db.insert(schema.entitlements).values([
+      { userId: row!.owner, feature: 'EXTRA_COMPLETIONS', quantity: 2, validTo: new Date(Date.now() + 30 * day) },
+      { userId: row!.owner, feature: 'EXTRA_COMPLETIONS', quantity: 5, validFrom: new Date(Date.now() - 40 * day), validTo: new Date(Date.now() - 10 * day) },
+    ]);
+    await start(p.id).expect(201);
+    await start(p.id).expect(201);
+    await start(p.id).expect(503);
+    const left = await db.db.select({ q: schema.entitlements.quantity }).from(schema.entitlements).where(eq(schema.entitlements.userId, row!.owner));
+    expect(left.map((r) => r.q).sort()).toEqual([0, 5]);
+  }, 60_000);
+
   it('P7.2 · usageNotice: порог 80 % — округление вверх, при лимите 1 только «исчерпан», середина молчит', () => {
     expect(usageNotice(24, 30, null)?.kind).toBe('usage-80');
     expect(usageNotice(30, 30, null)?.kind).toBe('usage-100');

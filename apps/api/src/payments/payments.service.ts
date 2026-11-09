@@ -7,7 +7,7 @@ import { type PaymentProvider, PaymentProviderError } from './payment-provider.j
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
 
-export type OrderRequest = { kind?: unknown; planCode?: unknown; period?: unknown; projectId?: unknown };
+export type OrderRequest = { kind?: unknown; planCode?: unknown; period?: unknown; projectId?: unknown; addon?: unknown };
 export interface OrderView {
   id: string;
   kind: 'SUBSCRIPTION' | 'PASS' | 'ADDON';
@@ -18,15 +18,23 @@ export interface OrderView {
   paidAt: Date | null;
 }
 
-/** Прибавляет к дате месяц или год (по UTC; 31 января + месяц = последний день февраля). */
-export function addPeriod(from: Date, period: 'MONTH' | 'YEAR'): Date {
+/** The size of extra storage is kept in megabytes: the column is a 32-bit integer. */
+const MB = 1024 * 1024;
+
+/** Прибавляет к дате целое число месяцев (по UTC; 31 января + месяц = последний день февраля). */
+export function addMonths(from: Date, months: number): Date {
   const d = new Date(from.getTime());
   const day = d.getUTCDate();
   d.setUTCDate(1);
-  d.setUTCMonth(d.getUTCMonth() + (period === 'MONTH' ? 1 : 12));
+  d.setUTCMonth(d.getUTCMonth() + months);
   const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
   d.setUTCDate(Math.min(day, last));
   return d;
+}
+
+/** Прибавляет к дате месяц или год. */
+export function addPeriod(from: Date, period: 'MONTH' | 'YEAR'): Date {
+  return addMonths(from, period === 'MONTH' ? 1 : 12);
 }
 
 /**
@@ -75,6 +83,11 @@ export class PaymentsService {
       amountKop = plan.priceOnceRub * 100;
       item = { kind, planCode: 'PASS', projectId };
       description = 'Блоккер, пропуск «Праздник» на одну сборку';
+    } else if (kind === 'ADDON') {
+      const addon = await this.addonFor(userId, body.addon, body.projectId);
+      amountKop = addon.row.priceRub * 100;
+      item = { kind, addon: addon.row.code, ...(addon.projectId ? { projectId: addon.projectId } : {}) };
+      description = `Блоккер, ${addon.row.title}`;
     } else {
       throw fail(400, 'ORDER_INVALID', 'Неизвестный вид заказа.');
     }
@@ -91,6 +104,50 @@ export class PaymentsService {
       if (e instanceof PaymentProviderError) throw fail(502, 'PAYMENTS_FAILED', 'Платёжный сервис сейчас не отвечает. Попробуйте позже.');
       throw e;
     }
+  }
+
+  /** The catalogue of extra purchases with what each can be bought for right now (`reason` tells why not). */
+  async addons(userId: string, projectId?: string): Promise<Array<{ code: string; title: string; description: string; priceRub: number; needsProject: boolean; available: boolean; reason: string | null }>> {
+    const rows = await this.db.select().from(schema.addons).where(eq(schema.addons.active, true)).orderBy(schema.addons.sort);
+    const out = [];
+    for (const row of rows) {
+      let reason: string | null = null;
+      try {
+        await this.addonFor(userId, row.code, projectId, rows);
+      } catch (e) {
+        if (!(e instanceof HttpException)) throw e;
+        reason = (e.getResponse() as { error?: { message?: string } }).error?.message ?? 'Сейчас недоступно.';
+      }
+      const needsProject = row.params.effect === 'PASS_COMPLETIONS' || row.params.effect === 'PASS_EXTEND';
+      out.push({ code: row.code, title: row.title, description: row.description, priceRub: row.priceRub, needsProject, available: reason === null, reason });
+    }
+    return out;
+  }
+
+  /** Checks that the extra purchase fits the person (and the project) and returns it; every refusal says in Russian what to do. */
+  private async addonFor(userId: string, code: unknown, projectId: unknown, known?: Array<typeof schema.addons.$inferSelect>): Promise<{ row: typeof schema.addons.$inferSelect; projectId: string | null }> {
+    const [row] = known ? known.filter((a) => a.code === code) : await this.db.select().from(schema.addons).where(and(eq(schema.addons.code, typeof code === 'string' ? code : ''), eq(schema.addons.active, true)));
+    if (!row) throw fail(400, 'ORDER_INVALID', 'Такой покупки нет.');
+    const now = new Date();
+    const effect = row.params.effect;
+    if (effect === 'PASS_COMPLETIONS' || effect === 'PASS_EXTEND') {
+      const id = typeof projectId === 'string' ? projectId : '';
+      if (!id) throw fail(400, 'ADDON_NEEDS_PROJECT', 'Выберите сборку, к которой относится покупка.');
+      const [project] = await this.db.select({ id: schema.projects.id }).from(schema.projects).where(and(eq(schema.projects.id, id), eq(schema.projects.ownerId, userId), isNull(schema.projects.deletedAt)));
+      if (!project) throw fail(404, 'PROJECT_NOT_FOUND', 'Сборка не найдена.');
+      const passes = await this.db.select({ to: schema.entitlements.validTo }).from(schema.entitlements).where(and(eq(schema.entitlements.projectId, id), eq(schema.entitlements.feature, 'PASS')));
+      if (passes.length === 0) throw fail(409, 'ADDON_NOT_APPLICABLE', 'У этой сборки нет пропуска «Праздник». Сначала включите его.');
+      if (effect === 'PASS_COMPLETIONS' && !passes.some((x) => x.to === null || x.to > now)) throw fail(409, 'ADDON_NOT_APPLICABLE', 'Пропуск «Праздник» у этой сборки закончился. Продлите его.');
+      return { row, projectId: id };
+    }
+    if (effect === 'FREE_EXTRAS') {
+      const [sub] = await this.db.select({ id: schema.subscriptions.id }).from(schema.subscriptions).where(and(eq(schema.subscriptions.userId, userId), inArray(schema.subscriptions.status, ['ACTIVE', 'TRIAL']), gt(schema.subscriptions.currentPeriodEnd, now))).limit(1);
+      if (sub) throw fail(409, 'ADDON_NOT_APPLICABLE', 'Эта покупка только для тарифа «Старт».');
+      return { row, projectId: null };
+    }
+    const [paid] = await this.db.select({ id: schema.subscriptions.id }).from(schema.subscriptions).where(and(eq(schema.subscriptions.userId, userId), eq(schema.subscriptions.status, 'ACTIVE'), eq(schema.subscriptions.trial, false), gt(schema.subscriptions.currentPeriodEnd, now))).limit(1);
+    if (!paid) throw fail(409, 'ADDON_NOT_APPLICABLE', 'Эта покупка только для платной подписки.');
+    return { row, projectId: null };
   }
 
   async myOrders(userId: string): Promise<OrderView[]> {
@@ -174,10 +231,62 @@ export class PaymentsService {
           .orderBy(desc(schema.entitlements.validTo))
           .limit(1);
         const from = active?.validTo && active.validTo > now ? active.validTo : now;
-        await tx.insert(schema.entitlements).values({ userId: order.userId, projectId: item.projectId, feature: 'PASS', validFrom: now, validTo: new Date(from.getTime() + days * 86_400_000), sourceOrderId: order.id });
+        // A renewal keeps the start of the pass it continues, so the passages of the term are counted from the first day.
+        await tx.insert(schema.entitlements).values({ userId: order.userId, projectId: item.projectId, feature: 'PASS', validFrom: active?.validTo && active.validTo > now ? active.validFrom : now, validTo: new Date(from.getTime() + days * 86_400_000), sourceOrderId: order.id });
+      } else if (order.kind === 'ADDON' && (item as { addon?: string }).addon) {
+        await this.grantAddon(tx, order, item as { addon: string; projectId?: string }, now);
       }
       return { ok: true as const };
     });
+  }
+
+  /** P7.5 · what a paid extra purchase gives; the rights are rows of `entitlements` tied to the order, so a refund closes them. */
+  private async grantAddon(tx: Parameters<Parameters<Db['transaction']>[0]>[0], order: typeof schema.orders.$inferSelect, item: { addon: string; projectId?: string }, now: Date): Promise<void> {
+    const [addon] = await tx.select().from(schema.addons).where(eq(schema.addons.code, item.addon));
+    if (!addon || !order.userId) return;
+    const p = addon.params;
+    const months = (n: number): Date => addMonths(now, n);
+    const base = { userId: order.userId, validFrom: now, sourceOrderId: order.id };
+    switch (p.effect) {
+      case 'PASS_COMPLETIONS': {
+        if (!item.projectId) return;
+        const [pass] = await tx
+          .select({ to: schema.entitlements.validTo })
+          .from(schema.entitlements)
+          .where(and(eq(schema.entitlements.projectId, item.projectId), eq(schema.entitlements.feature, 'PASS'), or(isNull(schema.entitlements.validTo), gt(schema.entitlements.validTo, now))))
+          .orderBy(desc(schema.entitlements.validTo))
+          .limit(1);
+        await tx.insert(schema.entitlements).values({ ...base, projectId: item.projectId, feature: 'EXTRA_COMPLETIONS', quantity: p.quantity ?? 0, validTo: pass?.to ?? now });
+        return;
+      }
+      case 'PASS_EXTEND': {
+        if (!item.projectId) return;
+        const [plan] = await tx.select({ limits: schema.plans.limits }).from(schema.plans).where(eq(schema.plans.code, 'PASS'));
+        const days = p.days ?? plan?.limits.passDays ?? 30;
+        const [last] = await tx
+          .select({ to: schema.entitlements.validTo, from: schema.entitlements.validFrom })
+          .from(schema.entitlements)
+          .where(and(eq(schema.entitlements.projectId, item.projectId), eq(schema.entitlements.feature, 'PASS')))
+          .orderBy(desc(schema.entitlements.validTo))
+          .limit(1);
+        const running = Boolean(last?.to && last.to > now);
+        const from = running ? last!.to! : now;
+        await tx.insert(schema.entitlements).values({ ...base, projectId: item.projectId, feature: 'PASS', validFrom: running ? last!.from : now, validTo: new Date(from.getTime() + days * 86_400_000) });
+        return;
+      }
+      case 'SUBSCRIPTION_COMPLETIONS':
+        await tx.insert(schema.entitlements).values({ ...base, feature: 'EXTRA_COMPLETIONS', quantity: p.quantity ?? 0, validTo: months(p.months ?? 12) });
+        return;
+      case 'SUBSCRIPTION_STORAGE':
+        await tx.insert(schema.entitlements).values({ ...base, feature: 'EXTRA_STORAGE', quantity: Math.round((p.quantity ?? 0) / MB), validTo: months(p.months ?? 1) });
+        return;
+      case 'FREE_EXTRAS':
+        await tx.insert(schema.entitlements).values([
+          { ...base, feature: 'EXTRA_THEMES', quantity: p.themes ?? 0, validTo: null },
+          { ...base, feature: 'EXTRA_RULES', quantity: p.rules ?? 0, validTo: null },
+        ]);
+        return;
+    }
   }
 
   /** PAID → REFUNDED: права, выданные этим заказом, закрываются сразу. */
