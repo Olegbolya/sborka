@@ -29,8 +29,9 @@ check() {
   if [ "$(grep -cE '^\s*server \{' "$WORK/blokum.conf")" != "$(grep -cE '^\s*access_log .* blokum_anon;' "$WORK/blokum.conf")" ]; then
     echo "✗ $label: не во всех server есть access_log в формате blokum_anon (без IP)" >&2; exit 1
   fi
-  if grep -vE '^\s*#' "$WORK/blokum.conf" | grep -nE 'remote_addr' | grep -vE 'limit_req_zone|map \$remote_addr|X-Real-IP|binary_remote_addr'; then
-    echo "✗ $label: \$remote_addr попадает в журнал" >&2; exit 1
+  allowed='limit_req_zone|map [$]remote_addr|X-Real-IP|binary_remote_addr'
+  if grep -vE '^\s*#' "$WORK/blokum.conf" | grep -E 'remote_addr' | grep -vE "$allowed"; then
+    echo "✗ $label: remote_addr попадает в журнал" >&2; exit 1
   fi
   echo "✓ nginx -t: $label"
 }
