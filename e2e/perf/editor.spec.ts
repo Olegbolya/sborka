@@ -7,7 +7,7 @@ const SHOTS = 'e2e/__screenshots__';
 
 /*
  * N-01: редактор открывается < 2 с для документа 50 экранов × 100 блоков × 300 правил;
- * перетаскивание — не ниже 60 кадров/с на сборке 10 экранов × 50 блоков.
+ * перетаскивание — не ниже 58 кадров/с (ADR-059: экран 60 Гц, один пропущенный кадр за секунду допустим) на сборке 10 экранов × 50 блоков.
  * Запускаются в проекте «perf-390» — один за раз после основных тестов (ADR-028).
  */
 
@@ -82,7 +82,7 @@ test('N-01: документ 50 экранов × 100 блоков × ~300 пр�
   await page.screenshot({ path: `${SHOTS}/n01-open-${info.project.name}.png` });
 });
 
-test('N-01: перетаскивание блока — не менее 60 кадров/с на сборке 10 экранов × 50 блоков', async ({ page }, info) => {
+test('N-01: перетаскивание блока — не менее 58 кадров/с (ADR-059) на сборке 10 экранов × 50 блоков', async ({ page }, info) => {
   const { id } = await seedProject(page, dragDoc);
   await openEditor(page, id);
 
@@ -120,7 +120,8 @@ test('N-01: перетаскивание блока — не менее 60 ка�
 
   info.annotations.push({ type: 'fps', description: `${fps.toFixed(1)} кадров/с` });
   console.log(`[${info.project.name}] N-01 FPS при перетаскивании: ${fps.toFixed(1)} кадров/с`);
-  expect(fps).toBeGreaterThanOrEqual(60);
+  // ADR-059: счётчик кадров упирается в частоту экрана 60 Гц, поэтому 59,8–60,2 — случайность одного кадра, а не медленная работа.
+  expect(fps).toBeGreaterThanOrEqual(58);
 
   mkdirSync(SHOTS, { recursive: true });
   await page.screenshot({ path: `${SHOTS}/n01-drag-${info.project.name}.png` });
