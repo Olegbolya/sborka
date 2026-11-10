@@ -80,6 +80,9 @@ test.describe('P8.7 · возрастная категория', () => {
     await expect(toast).toContainText('Сборка опубликована');
     await expect(toast).toBeInViewport({ ratio: 1 });
     await page.screenshot({ path: `${SHOTS}/publish-message-${info.project.name}.png` });
+    // On a phone the pinned «Опубликовать изменения» must not show the title through itself.
+    const alpha = await page.locator('.ed-top .ed-btn.primary').evaluate((el) => getComputedStyle(el).opacity);
+    expect(alpha === '1').toBe(info.project.name.includes('mobile'));
   });
 
   test('PL-09 · в тёмной теме пункты выпадающего списка категории читаются (светлый текст на тёмном фоне)', async ({ page }, info) => {

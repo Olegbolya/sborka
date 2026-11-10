@@ -913,3 +913,10 @@
     bottom: 84px;
   }
 }
+@media (max-width: 767px) {
+  /* закреплённая кнопка не должна просвечивать: у недоступной цвет смешан с фоном панели, а не прозрачный */
+  .ed-top .ed-btn.primary:disabled {
+    opacity: 1;
+    background: color-mix(in srgb, var(--accent) 45%, var(--panel));
+  }
+}
