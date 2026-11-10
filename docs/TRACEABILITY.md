@@ -574,3 +574,5 @@
 | Q-04 | P6.2 | `apps/api/src/projects/qr-render.ts#renderPdf`; `apps/api/src/projects/access-points.controller.ts#downloadQrPdf` | `apps/api/test/qr.test.ts`, `e2e/qr-designer.spec.ts` |
 | Q-05 | P6.2 | `apps/api/src/projects/qr-render.ts#reads`; `apps/api/src/projects/access-points.service.ts#drawChecked` | `apps/api/test/qr.test.ts` |
 | Q-06 | P6.2 | `apps/api/src/projects/analytics.service.ts#analytics`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/qr.test.ts`, `e2e/qr-designer.spec.ts` |
+| E-13 | P3.1 | `apps/web/components/editor/LeftPanel.tsx`; `apps/web/components/editor/Editor.tsx` | `e2e/editor.spec.ts` |
+| E-15 | P3.1 | `apps/web/components/editor/Inspector.tsx` | `e2e/editor.spec.ts` |
