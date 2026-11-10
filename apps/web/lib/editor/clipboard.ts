@@ -1,4 +1,4 @@
-import { type Block, DOCUMENT_LIMITS, type Variable, createId } from '@blokum/schema';
+import { type Block, DOCUMENT_LIMITS, type Screen, type Variable, createId } from '@blokum/schema';
 import { type Recipe } from './commands';
 import { cloneWithNewIds, findBlock } from './tree';
 import { absoluteFrames } from './geometry';
@@ -106,8 +106,10 @@ export function writeClipboard(payload: ClipboardPayload): void {
 /** ASVS V8.2.3: what the person copied in the editor does not stay in the browser after they sign out. */
 export function clearClipboard(): void {
   memory = null;
+  screenMemory = null;
   try {
     localStorage.removeItem(KEY);
+    localStorage.removeItem(SCREEN_KEY);
   } catch {
     // Nothing was kept.
   }
@@ -172,3 +174,79 @@ export const pasteBlocks =
 function countBlocks(blocks: readonly Block[]): number {
   return blocks.reduce((n, b) => n + 1 + countBlocks(b.children), 0);
 }
+
+/** «Копировать экран»: the whole screen with every block, rule and the variables they use; it can go into any assembly. */
+export interface ScreenPayload {
+  kind: 'blokum-screen';
+  version: 1;
+  screen: Screen;
+  variables: Variable[];
+}
+
+const SCREEN_KEY = 'blokum.clipboard.screen';
+let screenMemory: string | null = null;
+
+export function copyScreen(doc: ProjectDocument, screenId: string): ScreenPayload | null {
+  const screen = doc.screens.find((x) => x.id === screenId);
+  if (!screen) return null;
+  const used = variableRefs(screen);
+  return {
+    kind: 'blokum-screen',
+    version: 1,
+    screen: structuredClone(screen),
+    variables: doc.variables.filter((v) => used.has(v.id)).map((v) => structuredClone(v)),
+  };
+}
+
+export function writeScreenClipboard(payload: ScreenPayload): void {
+  const text = JSON.stringify(payload);
+  screenMemory = text;
+  try {
+    localStorage.setItem(SCREEN_KEY, text);
+  } catch {
+    // The same tab still has it in memory.
+  }
+}
+
+export function readScreenClipboard(): ScreenPayload | null {
+  let text: string | null = screenMemory;
+  try {
+    text = localStorage.getItem(SCREEN_KEY) ?? text;
+  } catch {
+    // keep memory
+  }
+  if (!text) return null;
+  try {
+    const p = JSON.parse(text) as ScreenPayload;
+    return p.kind === 'blokum-screen' && p.version === 1 && p.screen && Array.isArray(p.screen.blocks) ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Pastes a copied screen after `afterScreenId`: new identifiers everywhere, variables created or linked by name and type. */
+export const pasteScreen =
+  (payload: ScreenPayload, afterScreenId: string, onCreated?: (screen: Screen) => void): Recipe =>
+  (doc) => {
+    if (doc.screens.length >= DOCUMENT_LIMITS.screens) return;
+    const at = doc.screens.findIndex((x) => x.id === afterScreenId);
+    const map = new Map<string, string>();
+    const fresh: Variable[] = [];
+    for (const variable of payload.variables) {
+      if (doc.variables.some((v) => v.id === variable.id)) continue;
+      const same = doc.variables.find((v) => v.name === variable.name && v.type === variable.type);
+      if (same) {
+        map.set(variable.id, same.id);
+        continue;
+      }
+      const taken = doc.variables.some((v) => v.name === variable.name);
+      fresh.push({ ...structuredClone(variable), name: taken ? freeName(doc, variable.name) : variable.name });
+    }
+    if (doc.variables.length + fresh.length > DOCUMENT_LIMITS.variables) return;
+    doc.variables.push(...fresh);
+    let copy = cloneWithNewIds(payload.screen);
+    if (map.size > 0) copy = renameRefs(copy, map);
+    copy.name = `${copy.name} (копия)`.slice(0, 80);
+    doc.screens.splice(at < 0 ? doc.screens.length : at + 1, 0, copy);
+    onCreated?.(copy);
+  };

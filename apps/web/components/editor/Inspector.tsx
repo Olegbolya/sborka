@@ -11,7 +11,8 @@ import {
   selectionIsGroup,
   ungroupBlocks,
 } from '../../lib/editor/arrange';
-import { flipBlocks, patchBlocks, setFrame } from '../../lib/editor/commands';
+import { copyBlocks, pasteBlocks, readClipboard, writeClipboard } from '../../lib/editor/clipboard';
+import { duplicateBlocks, flipBlocks, patchBlocks, setFrame } from '../../lib/editor/commands';
 import { selectedBlocks } from '../../lib/editor/store';
 import { PropsInspector } from './PropsInspector';
 import { BehaviorsEditor } from './BehaviorsEditor';
@@ -111,6 +112,8 @@ const ORDER: Array<[OrderMode, string, string]> = [
 function Arrange({ blocks }: { blocks: Block[] }) {
   const apply = useEditor((s) => s.apply);
   const doc = useEditor((s) => s.doc);
+  const screenId = useEditor((s) => s.selection.screenId);
+  const select = useEditor((s) => s.select);
   const ids = blocks.map((b) => b.id);
   const grouped = selectionIsGroup(doc, ids);
   return (
@@ -163,6 +166,45 @@ function Arrange({ blocks }: { blocks: Block[] }) {
             {glyph}
           </button>
         ))}
+      </div>
+      <div className="ed-actions" role="group" aria-label="Копирование">
+        <button
+          type="button"
+          className="ed-btn small"
+          title="Копирует выбранные блоки вместе с содержимым, правилами и переменными (Ctrl+C)"
+          onClick={() => {
+            const payload = copyBlocks(doc, ids);
+            if (payload) writeClipboard(payload);
+          }}
+        >
+          Копировать
+        </button>
+        <button
+          type="button"
+          className="ed-btn small"
+          title="Вставляет скопированные блоки на этот экран (Ctrl+V)"
+          onClick={() => {
+            const payload = readClipboard();
+            if (!payload) return;
+            let created: string[] = [];
+            apply(pasteBlocks(payload, screenId, 12, (made) => (created = made)), { label: 'Вставить' });
+            if (created.length) select(screenId, created);
+          }}
+        >
+          Вставить
+        </button>
+        <button
+          type="button"
+          className="ed-btn small"
+          title="Делает копию выбранных блоков рядом (Ctrl+D)"
+          onClick={() => {
+            let created: string[] = [];
+            apply(duplicateBlocks(ids, (made) => (created = made)), { label: 'Дублировать блоки' });
+            if (created.length) select(screenId, created);
+          }}
+        >
+          Дублировать
+        </button>
       </div>
       <div className="ed-actions" role="group" aria-label="Группа">
         <button

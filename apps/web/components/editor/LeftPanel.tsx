@@ -1,4 +1,5 @@
 'use client';
+import { copyScreen, pasteScreen, readScreenClipboard, writeScreenClipboard } from '../../lib/editor/clipboard';
 import { Artboard, ScreenView } from '@blokum/renderer';
 import { type Block, type Screen } from '@blokum/schema';
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from 'react';
@@ -40,6 +41,7 @@ function ScreensList() {
   const doc = useEditor((s) => s.doc);
   const currentId = useEditor((s) => s.selection.screenId);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [name, setName] = useState('');
   const apply = useEditor((s) => s.apply);
   const selectScreen = useEditor((s) => s.selectScreen);
@@ -122,6 +124,33 @@ function ScreensList() {
           disabled={doc.screens.length >= 50}
         >
           Дублировать
+        </button>
+        <button
+          type="button"
+          className="ed-btn small"
+          title="Копирует экран со всем содержимым — его можно вставить и в другую сборку"
+          onClick={() => {
+            const payload = copyScreen(doc, current.id);
+            if (payload) writeScreenClipboard(payload);
+            setCopied(true);
+          }}
+        >
+          Копировать экран
+        </button>
+        <button
+          type="button"
+          className="ed-btn small"
+          title="Вставляет скопированный экран после текущего"
+          disabled={doc.screens.length >= 50 || (!copied && readScreenClipboard() === null)}
+          onClick={() => {
+            const payload = readScreenClipboard();
+            if (!payload) return;
+            let created = '';
+            apply(pasteScreen(payload, current.id, (c) => (created = c.id)), { label: 'Вставить экран' });
+            if (created) selectScreen(created);
+          }}
+        >
+          Вставить экран
         </button>
         <button
           type="button"
