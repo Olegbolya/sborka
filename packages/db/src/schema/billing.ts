@@ -83,6 +83,14 @@ export interface AddonParams {
   rules?: number;
 }
 
+/** P7.7 · settings the administrator changes without a release (AD-12: the yearly limit of the self-employed income). */
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').$type<unknown>().notNull(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+  updatedById: text('updated_by_id').references(() => users.id, { onDelete: 'set null' }),
+});
+
 export type PromoKind = 'PERCENT' | 'FIXED' | 'FREE_PASS';
 
 /** P7.5 · promo codes (AD-05): a percent off, a fixed sum off, or a free pass «Праздник»; with a limit of uses and a term. */

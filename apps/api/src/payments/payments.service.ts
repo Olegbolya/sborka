@@ -4,6 +4,7 @@ import { type Db, schema } from '@blokum/db';
 import type { ApiConfig } from '../config.js';
 import { API_CONFIG, DB, PAYMENT_PROVIDER } from '../tokens.js';
 import { type PaymentProvider, PaymentProviderError } from './payment-provider.js';
+import { NpdIncomeService } from './npd-income.service.js';
 import { type OrderKindName, PromoService } from './promo.service.js';
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
@@ -49,6 +50,7 @@ export class PaymentsService {
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider | null,
     private readonly promos: PromoService,
+    private readonly npd: NpdIncomeService,
   ) {}
 
   private requireProvider(): PaymentProvider {
@@ -240,6 +242,13 @@ export class PaymentsService {
 
   /** PENDING → PAID ровно один раз: второй и пятый повтор уведомления упираются в условие статуса и ничего не выдают. */
   private async markPaid(orderId: string): Promise<{ ok: true; duplicate?: boolean }> {
+    const result = await this.markPaidInTx(orderId);
+    // AD-12: a new payment may carry the income over 80 % or 95 % of the limit; the warning is the extra, the payment is already done.
+    if (!result.duplicate) await this.npd.checkLimit().catch(() => undefined);
+    return result;
+  }
+
+  private async markPaidInTx(orderId: string): Promise<{ ok: true; duplicate?: boolean }> {
     return this.db.transaction(async (tx) => {
       const now = new Date();
       const [order] = await tx

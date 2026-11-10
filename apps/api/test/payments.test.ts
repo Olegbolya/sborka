@@ -492,4 +492,133 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
     expect(results.filter((r) => r.status === 200)).toHaveLength(1);
     expect(await db.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId))).toHaveLength(1);
   });
+
+  // ── P7.7 · админка платежей, возвраты, доход самозанятого ───────────────────
+  describe('P7.7 · админка платежей', () => {
+    const adm = (method: 'get' | 'post' | 'patch' | 'put', path: string, cookie: string, body?: object) => {
+      const r = request(t.http())[method](`/${API_PREFIX}/admin/payments${path}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1');
+      return body ? r.send(body) : r;
+    };
+    interface Income { year: number; limitKop: number; personKop: number; businessKop: number; totalKop: number; taxKop: number; percent: number; reached: number[] }
+    const income = async (cookie: string): Promise<Income> => (await adm('get', '/income', cookie).expect(200)).body as Income;
+    const pay = async (cookie: string, planCode = 'AUTHOR'): Promise<{ id: string; providerPaymentId: string; amountKop: number }> => {
+      const res = await order(t, cookie, { kind: 'SUBSCRIPTION', planCode, period: 'MONTH' }).expect(201);
+      const [o] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, res.body.orderId as string));
+      yoo.payments.get(o!.providerPaymentId!)!.status = 'succeeded';
+      await notify(t, succeeded(o!.providerPaymentId!)).expect(200);
+      return { id: o!.id, providerPaymentId: o!.providerPaymentId!, amountKop: o!.amountKop };
+    };
+    const adminLogin = async (): Promise<{ cookie: string; userId: string }> => {
+      const a = await login(t, db);
+      await db.db.update(schema.users).set({ role: 'ADMIN' }).where(eq(schema.users.id, a.userId));
+      return a;
+    };
+    const noticesOf = async (userId: string) => db.db.select().from(schema.notifications).where(eq(schema.notifications.userId, userId));
+
+    it('AD-05 · админка платежей только для администратора, поля проверяются', async () => {
+      const user = await login(t, db);
+      const admin = await adminLogin();
+      await adm('get', '/income', user.cookie).expect(403);
+      await adm('get', '/orders', user.cookie).expect(403);
+      await adm('put', '/income-limit', user.cookie, { rub: 5000 }).expect(403);
+      await adm('post', '/grants', user.cookie, { userId: user.userId, kind: 'SUBSCRIPTION', planCode: 'PLUS', months: 1, reason: 'тест' }).expect(403);
+      await adm('put', '/income-limit', admin.cookie, { rub: 10 }).expect(400);
+      await adm('put', '/income-limit', admin.cookie, { rub: 'много' }).expect(400);
+      await adm('get', '/orders', admin.cookie).expect(200);
+    });
+
+    it('AD-12 · доход с 1 января: физлица и юрлица/ИП отдельно, налог 4 % и 6 %; смена плательщика требует ИНН; возврат уменьшает доход', async () => {
+      const admin = await adminLogin();
+      const before = await income(admin.cookie);
+      const payer = await login(t, db);
+      const o = await pay(payer.cookie);
+      const afterPay = await income(admin.cookie);
+      expect(afterPay.personKop - before.personKop).toBe(o.amountKop);
+      expect(afterPay.businessKop).toBe(before.businessKop);
+      expect(afterPay.year).toBe(new Date().getUTCFullYear());
+      await adm('patch', `/orders/${o.id}/payer`, admin.cookie, { payerType: 'BUSINESS' }).expect(400);
+      await adm('patch', `/orders/${o.id}/payer`, admin.cookie, { payerType: 'BUSINESS', payerInn: '123' }).expect(400);
+      await adm('patch', `/orders/${o.id}/payer`, admin.cookie, { payerType: 'BUSINESS', payerInn: '7707083893' }).expect(200);
+      const asBusiness = await income(admin.cookie);
+      expect(asBusiness.businessKop - before.businessKop).toBe(o.amountKop);
+      expect(asBusiness.personKop).toBe(before.personKop);
+      expect(asBusiness.totalKop).toBe(afterPay.totalKop);
+      expect(asBusiness.taxKop - afterPay.taxKop).toBe(Math.round(o.amountKop * 0.06) - Math.round(o.amountKop * 0.04));
+      // возврат: провайдеру уходит запрос, доход уменьшается только когда провайдер подтвердил
+      await adm('post', `/orders/${o.id}/refund`, admin.cookie, { reason: '' }).expect(400);
+      const refund = await adm('post', `/orders/${o.id}/refund`, admin.cookie, { reason: 'Просьба покупателя' }).expect(201);
+      expect((refund.body as { status: string }).status).toBe('succeeded');
+      expect((await income(admin.cookie)).totalKop).toBe(asBusiness.totalKop);
+      await notify(t, { event: 'refund.succeeded', object: { id: 'rf-x', payment_id: o.providerPaymentId, status: 'succeeded' } }).expect(200);
+      const afterRefund = await income(admin.cookie);
+      expect(afterRefund.totalKop).toBe(before.totalKop);
+      await adm('post', `/orders/${o.id}/refund`, admin.cookie, { reason: 'Ещё раз' }).expect(409);
+      const log = await db.db.select({ action: schema.auditLog.action }).from(schema.auditLog).where(eq(schema.auditLog.targetId, o.id));
+      expect(log.map((l) => l.action).sort()).toEqual(['ORDER_PAYER_CHANGED', 'ORDER_REFUND_REQUESTED']);
+    });
+
+    it('AD-12 · предупреждения администраторам при 80 % и 95 % лимита: каждое один раз в год (проверено подменой сумм)', async () => {
+      const admin = await adminLogin();
+      const other = await adminLogin();
+      const base = await income(admin.cookie);
+      // лимит выставлен так, что один платёж «Автора» выводит доход на ~85 %: ниже 95 %, выше 80 %
+      const limit85 = Math.ceil((base.totalKop / 100 + 199) / 0.85);
+      await adm('put', '/income-limit', admin.cookie, { rub: limit85 * 20 }).expect(200);
+      expect((await income(admin.cookie)).reached).toEqual([]);
+      const kinds = async (u: string) => (await noticesOf(u)).map((n) => n.kind).filter((k) => k.startsWith('npd-'));
+      expect(await kinds(admin.userId)).toEqual([]);
+      await adm('put', '/income-limit', admin.cookie, { rub: limit85 }).expect(200);
+      const year = new Date().getUTCFullYear();
+      const first = await income(admin.cookie);
+      expect(first.percent).toBeLessThan(95);
+      expect(first.reached).toEqual(first.percent >= 80 ? [80] : []);
+      const payer = await login(t, db);
+      const o = await pay(payer.cookie);
+      const view = await income(admin.cookie);
+      expect(view.reached).toEqual([80]);
+      expect(await kinds(admin.userId)).toEqual([`npd-80:${year}`]);
+      expect(await kinds(other.userId)).toEqual([`npd-80:${year}`]);
+      // ещё одна оплата того же порога не повторяет предупреждение
+      await pay((await login(t, db)).cookie);
+      expect((await kinds(admin.userId)).filter((k) => k === `npd-80:${year}`)).toHaveLength(1);
+      // лимит уменьшили так, что доход перешёл 95 %
+      const limit96 = Math.floor((await income(admin.cookie)).totalKop / 100 / 0.96);
+      await adm('put', '/income-limit', admin.cookie, { rub: limit96 }).expect(200);
+      expect((await income(admin.cookie)).reached).toEqual([80, 95]);
+      expect((await kinds(admin.userId)).sort()).toEqual([`npd-80:${year}`, `npd-95:${year}`]);
+      await adm('put', '/income-limit', admin.cookie, { rub: limit96 }).expect(200);
+      expect(await kinds(admin.userId)).toHaveLength(2);
+      await adm('put', '/income-limit', admin.cookie, { rub: 2_400_000 }).expect(200);
+      expect(o.amountKop).toBeGreaterThan(0);
+    });
+
+    it('AD-05 · ручное начисление: тариф на месяцы и «Праздник» для сборки; причина обязательна; не доход; в списке заказов и в журнале', async () => {
+      const admin = await adminLogin();
+      const user = await login(t, db);
+      const owner = await login(t, db); // «Праздник» виден без подписки: у получателя тарифа PLUS он был бы ниже тарифа
+      const [mine] = await db.db.insert(schema.projects).values({ ownerId: owner.userId, title: 'Подарок', slug: 'manual-grant' }).returning();
+      const before = await income(admin.cookie);
+      const g = { userId: user.userId, kind: 'SUBSCRIPTION', planCode: 'PLUS', months: 2, reason: 'Компенсация за сбой' };
+      await adm('post', '/grants', admin.cookie, { ...g, reason: '' }).expect(400);
+      await adm('post', '/grants', admin.cookie, { ...g, months: 0 }).expect(400);
+      await adm('post', '/grants', admin.cookie, { ...g, planCode: 'FREE' }).expect(400);
+      await adm('post', '/grants', admin.cookie, { ...g, userId: '00000000-0000-0000-0000-000000000000' }).expect(404);
+      const done = (await adm('post', '/grants', admin.cookie, g).expect(201)).body as { orderId: string };
+      expect((await ent.planOf(user.userId)).code).toBe('PLUS');
+      const [o] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, done.orderId));
+      expect(o).toMatchObject({ amountKop: 0, status: 'PAID', provider: 'manual' });
+      const passOrder = (await adm('post', '/grants', admin.cookie, { userId: owner.userId, kind: 'PASS', projectId: mine!.id, reason: 'Подарок на праздник' }).expect(201)).body as { orderId: string };
+      expect((await ent.limitsOfProject(owner.userId, mine!.id)).plan.code).toBe('PASS');
+      const [foreign] = await db.db.insert(schema.projects).values({ ownerId: admin.userId, title: 'Не его', slug: 'manual-foreign' }).returning();
+      await adm('post', '/grants', admin.cookie, { userId: owner.userId, kind: 'PASS', projectId: foreign!.id, reason: 'Чужая сборка' }).expect(404);
+      expect((await income(admin.cookie)).totalKop).toBe(before.totalKop);
+      const list = (await adm('get', `/orders?q=${passOrder.orderId.slice(0, 8)}`, admin.cookie).expect(200)).body as { orders: Array<{ id: string; provider: string; user: { id: string } | null }>; total: number };
+      expect(list.orders.map((x) => x.id)).toContain(passOrder.orderId);
+      expect(list.orders.find((x) => x.id === passOrder.orderId)).toMatchObject({ provider: 'manual', user: { id: owner.userId } });
+      const logged = await db.db.select({ action: schema.auditLog.action }).from(schema.auditLog).where(eq(schema.auditLog.targetId, owner.userId));
+      expect(logged.filter((l) => l.action === 'MANUAL_GRANT')).toHaveLength(1);
+      const paidOnly = (await adm('get', '/orders?status=PAID&kind=PASS', admin.cookie).expect(200)).body as { orders: Array<{ status: string; kind: string }> };
+      expect(paidOnly.orders.every((x) => x.status === 'PAID' && x.kind === 'PASS')).toBe(true);
+    });
+  });
 });
