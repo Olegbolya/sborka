@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, HttpException, Inject, Param, Post, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import type { ApiConfig } from '../config.js';
 import { API_CONFIG } from '../tokens.js';
@@ -63,6 +63,11 @@ export class OAuthController {
       // The participant sees the login page with a Russian message, not a JSON error page.
       if (e instanceof BadRequestException) {
         res.redirect(302, `${this.config.webUrl}/login?error=oauth`);
+        return;
+      }
+      // TS-31: the account (or this VK / Яндекс account) is closed.
+      if (e instanceof HttpException && e.getStatus() === 403) {
+        res.redirect(302, `${this.config.webUrl}/login?error=blocked`);
         return;
       }
       throw e;

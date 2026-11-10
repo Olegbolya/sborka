@@ -20,6 +20,7 @@ import { AuditLogService } from '../auth/audit-log.service.js';
 import { type RequestUser } from '../auth/session.service.js';
 import { ALERTS, DB } from '../tokens.js';
 import { fail } from './errors.js';
+import { BlockedIdentitiesService } from './blocked-identities.service.js';
 import { NotificationsService } from './notifications.service.js';
 
 const HOUR_MS = 3_600_000;
@@ -46,7 +47,12 @@ interface Previous {
   closedReason?: string | null;
   mediaStatus?: string;
   userStatus?: string;
+  /** TS-31: the projects that the block of the account closed; `RESTORE` opens them again. */
+  projectIds?: string[];
 }
+
+/** The reason shown on a project that was closed because its owner's account was blocked. */
+const ACCOUNT_BLOCKED_REASON = 'Аккаунт владельца заблокирован';
 
 const text = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
 
@@ -61,6 +67,7 @@ export class ModerationService {
     @Inject(ALERTS) private readonly alerts: Alerts,
     private readonly audit: AuditLogService,
     private readonly notices: NotificationsService,
+    private readonly identities: BlockedIdentitiesService,
   ) {}
 
   // ── Queue and case ─────────────────────────────────────────────────────────
@@ -412,7 +419,14 @@ export class ModerationService {
         if (u.status === 'BLOCKED') throw fail(409, 'ALREADY', 'Аккаунт уже заблокирован.');
         await tx.update(schema.users).set({ status: 'BLOCKED' }).where(eq(schema.users.id, u.id));
         await tx.update(schema.sessions).set({ revokedAt: new Date() }).where(and(eq(schema.sessions.userId, u.id), isNull(schema.sessions.revokedAt)));
-        return { ...base, previous: { userStatus: u.status } };
+        // TS-31: every published project of the account is taken down, and the phone and VK / Яндекс identifiers are shut.
+        const closed = await tx
+          .update(schema.projects)
+          .set({ status: 'CLOSED', moderationStatus: 'FLAGGED', closedReason: ACCOUNT_BLOCKED_REASON })
+          .where(and(eq(schema.projects.ownerId, u.id), eq(schema.projects.status, 'PUBLISHED'), isNull(schema.projects.deletedAt)))
+          .returning({ id: schema.projects.id });
+        await this.identities.block(tx, u.id);
+        return { ...base, previous: { userStatus: u.status, projectIds: closed.map((c) => c.id) } };
       }
       case 'LEGAL_HOLD':
       case 'RELEASE_HOLD':
@@ -421,6 +435,13 @@ export class ModerationService {
       case 'RESTORE': {
         const prev = await this.lastRestorable(tx, 'USER', u.id);
         await tx.update(schema.users).set({ status: (prev.userStatus ?? 'ACTIVE') as 'ACTIVE' }).where(eq(schema.users.id, u.id));
+        await this.identities.release(tx, u.id);
+        if (prev.projectIds && prev.projectIds.length > 0) {
+          await tx
+            .update(schema.projects)
+            .set({ status: 'PUBLISHED', moderationStatus: 'NONE', closedReason: null })
+            .where(and(inArray(schema.projects.id, prev.projectIds), eq(schema.projects.status, 'CLOSED'), eq(schema.projects.closedReason, ACCOUNT_BLOCKED_REASON)));
+        }
         return base;
       }
       default:

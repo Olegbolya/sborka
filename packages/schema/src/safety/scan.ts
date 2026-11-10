@@ -26,7 +26,9 @@ export interface SafetyDictionary {
 /** From this weight a stop word stops the publication until a person looks (TS-04). */
 export const STOP_WORD_BLOCK_WEIGHT = 80;
 
-export type SafetyCode = 'PHISHING_FIELD' | 'PHISHING_LINK' | 'BRAND' | 'STOP_WORD' | 'STOP_WORD_BLOCK' | 'LINK_SHORTENER' | 'LINK_IP' | 'LINK_BLOCKED' | 'LINK_INVALID';
+export type SafetyCode = 'PHISHING_FIELD' | 'PHISHING_LINK' | 'BRAND' | 'STOP_WORD' | 'STOP_WORD_BLOCK' | 'LINK_SHORTENER' | 'LINK_IP' | 'LINK_BLOCKED' | 'LINK_INVALID'
+  // P9.2 · TS-06: what a new account, or an account without a confirmed phone, may not do.
+  | 'NEW_ACCOUNT_LINK' | 'PHONE_LINK' | 'NEW_ACCOUNT_LIMIT' | 'NEW_ACCOUNT_VIDEO';
 
 export interface SafetyIssue {
   code: SafetyCode;
@@ -259,4 +261,19 @@ export function externalLinks(doc: ProjectDocument): string[] {
   const urls = new Set<string>();
   for (const screen of screenFacts(doc)) for (const l of screen.links) if (/^https?:/iu.test(l.url.trim())) urls.add(l.url.trim());
   return [...urls];
+}
+
+/** The ids of the uploaded files (not the library) that the document uses, wherever they are. */
+export function usedMediaIds(doc: unknown): string[] {
+  const ids = new Set<string>();
+  const walk = (v: unknown): void => {
+    if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === 'object') {
+      const o = v as Record<string, unknown>;
+      if (o.source === 'media' && typeof o.id === 'string') ids.add(o.id);
+      for (const x of Object.values(o)) walk(x);
+    }
+  };
+  walk(doc);
+  return [...ids];
 }

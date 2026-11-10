@@ -6,6 +6,7 @@ import { type ApiConfig } from '../config.js';
 import { type HealthProbes } from '../health/health.controller.js';
 import { ALERTS, API_CONFIG, EMAIL_SENDER, HEALTH_PROBES, LINK_REPUTATION } from '../tokens.js';
 import { type LinkReputation } from './safe-browsing.js';
+import { BlockedIdentitiesService } from './blocked-identities.service.js';
 import { SafetyAdminController } from './safety-admin.controller.js';
 import { SafetyService } from './safety.service.js';
 import { AdminController } from './admin.controller.js';
@@ -37,6 +38,7 @@ export class AdminModule {
         { provide: HEALTH_PROBES, useValue: deps.probes },
         { provide: LINK_REPUTATION, useValue: deps.linkReputation ?? null },
         SafetyService,
+        BlockedIdentitiesService,
         AuditLogService,
         NotificationsService,
         FeatureFlagsService,
@@ -47,7 +49,7 @@ export class AdminModule {
         SystemContentService,
         LibraryAdminService,
       ],
-      exports: [FeatureFlagsService, ModerationService, NotificationsService, AuditLogService, SafetyService],
+      exports: [FeatureFlagsService, ModerationService, NotificationsService, AuditLogService, SafetyService, BlockedIdentitiesService],
     };
   }
 }

@@ -120,6 +120,13 @@
       "when": 1794297558476,
       "tag": "0016_safety_terms",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794309912478,
+      "tag": "0017_blocked_identities",
+      "breakpoints": true
     }
   ]
 }

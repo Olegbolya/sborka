@@ -26,7 +26,7 @@ const s = {
 };
 
 /** A-01: sign-in is only through VK ID or Яндекс ID (ADR-033); both buttons start the server-side flow. */
-export function LoginView({ failed, notConnected = false }: { failed: boolean; notConnected?: boolean }) {
+export function LoginView({ failed, notConnected = false, blocked = false }: { failed: boolean; notConnected?: boolean; blocked?: boolean }) {
   // Only the services that are connected (in production — those with the owner's keys) get a button.
   const [providers, setProviders] = useState<{ vk: boolean; yandex: boolean } | null>(null);
   useEffect(() => {
@@ -50,6 +50,11 @@ export function LoginView({ failed, notConnected = false }: { failed: boolean; n
         {failed && (
           <p role="alert" style={s.error}>
             Не получилось войти. Вход был отменён или устарел — попробуйте ещё раз.
+          </p>
+        )}
+        {blocked && (
+          <p role="alert" style={s.error}>
+            Вход и регистрация с этими данными закрыты. Если вы считаете, что это ошибка, напишите в поддержку.
           </p>
         )}
         {notConnected && (

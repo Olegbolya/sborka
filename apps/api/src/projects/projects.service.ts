@@ -512,7 +512,7 @@ export class ProjectsService {
     let verdict: PublishVerdict | undefined;
     if (this.safety) {
       const [named] = await this.db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, row.id));
-      verdict = await this.safety.check(row.ownerId, doc, named?.title ?? doc.meta.title);
+      verdict = await this.safety.check(row.ownerId, doc, named?.title ?? doc.meta.title, new Date(), row.id);
       if (verdict.errors.length > 0) {
         await this.safety.noteBlocked(row.ownerId, row.id, verdict.errors);
         throw new UnprocessableEntityException({

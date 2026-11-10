@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { BadRequestException, Inject, Injectable, Optional } from '@nestjs/common';
+import { BlockedIdentitiesService } from '../admin/blocked-identities.service.js';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { and, eq } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
@@ -64,6 +65,7 @@ export class OAuthService {
     private readonly mfa: AdminMfaService,
     private readonly audit: AuditLogService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly blocked?: BlockedIdentitiesService,
   ) {}
 
   /** A-01: builds the authorization URL and stores state+PKCE for the callback. */
@@ -148,6 +150,8 @@ export class OAuthService {
       throw new BadRequestException({ error: { code: 'OAUTH_PROFILE_FAILED', message: 'Провайдер не вернул идентификатор пользователя' } });
     }
 
+    // TS-31, TS-32: a VK / Яндекс account of a blocked person neither logs in nor registers a new account.
+    await this.blocked?.assertFree(provider === 'vk' ? 'VK' : 'YANDEX', providerUserId, 'LOGIN', ip);
     const user = await this.findOrCreateUser(provider, providerUserId, displayName);
     // AD-01: an administrator or a moderator needs the second factor; no session before it.
     if (user.status === 'ACTIVE' && this.mfa.required(user)) return { mfa: this.mfa.begin(user.id), user };
@@ -157,6 +161,8 @@ export class OAuthService {
 
   /** A-01: §2.5 links a provider identity to an existing user (account binding). */
   async linkIdentity(userId: string, provider: OAuthProvider, providerUserId: string): Promise<void> {
+    // TS-32: binding the identifier of a blocked account to another account is the same return, by a side door.
+    await this.blocked?.assertFree(provider === 'vk' ? 'VK' : 'YANDEX', providerUserId, 'LINK');
     const existing = await this.db
       .select()
       .from(schema.authIdentities)

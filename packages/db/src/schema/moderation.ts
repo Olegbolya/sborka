@@ -197,6 +197,24 @@ export const safetyTerms = pgTable(
   (t) => [uniqueIndex('safety_terms_kind_term_idx').on(t.kind, t.term)],
 );
 
+/**
+ * P9.2 · TS-31, TS-32 · what a blocked account can no longer come back with: the phone and the VK / Яндекс identifiers, kept as
+ * keyed hashes (not readable). It outlives the account row: a deleted blocked account cannot be registered again. Lifting the
+ * block (`RESTORE`) removes the rows.
+ */
+export const blockedIdentities = pgTable(
+  'blocked_identities',
+  {
+    id: id(),
+    kind: text('kind').$type<'PHONE' | 'VK' | 'YANDEX'>().notNull(),
+    hash: text('hash').notNull(),
+    /** The account whose block put this here; no foreign key, so the row stays when the account is erased. */
+    userId: text('user_id').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('blocked_identities_kind_hash_idx').on(t.kind, t.hash), index('blocked_identities_user_idx').on(t.userId)],
+);
+
 /** A message to a user in the cabinet (and by mail when the address is confirmed): moderation decisions, appeal answers. */
 export const notifications = pgTable(
   'notifications',

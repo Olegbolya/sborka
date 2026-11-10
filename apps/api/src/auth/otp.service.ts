@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, Optional, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { BlockedIdentitiesService } from '../admin/blocked-identities.service.js';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { and, count, desc, eq, gt, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
@@ -65,12 +66,15 @@ export class OtpService {
     private readonly totp: TotpService,
     private readonly auditLog: AuditLogService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly blocked?: BlockedIdentitiesService,
   ) {}
 
   /** A-01, TS-30: request an OTP code (normalises phone, checks captcha, enforces rate limits). */
   async requestCode(rawPhone: string, captchaToken: string, ip: string): Promise<void> {
     const phoneE164 = normalizePhone(rawPhone);
     await this.flags?.require('SMS_ENABLED', 'Отправка СМС временно отключена. Войдите через VK ID или Яндекс ID.');
+    // TS-31, TS-32: a number of a blocked account gets no code — neither to log in nor to register again.
+    await this.blocked?.assertFree('PHONE', phoneE164, 'LOGIN', ip);
 
     const captchaOk = await this.captcha.verify(captchaToken, ip);
     if (!captchaOk) {
@@ -127,6 +131,7 @@ export class OtpService {
 
     await this.db.update(schema.otpRequests).set({ usedAt: new Date() }).where(eq(schema.otpRequests.id, otp.id));
 
+    await this.blocked?.assertFree('PHONE', phoneE164, 'LOGIN', ip);
     const user = await this.findOrCreateUser(phoneE164);
 
     // AD-01: admins/moderators with TOTP enabled require a second factor.

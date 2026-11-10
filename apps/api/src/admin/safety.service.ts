@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import { and, asc, count, eq, gte, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, gt, gte, inArray, ne } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { externalLinks, foldDomain, REPORT_SLA_HOURS, scanDocument, type ProjectDocument, type SafetyDictionary, type SafetyIssue } from '@blokum/schema';
+import { externalLinks, foldDomain, usedMediaIds, REPORT_SLA_HOURS, scanDocument, type ProjectDocument, type SafetyDictionary, type SafetyIssue } from '@blokum/schema';
 import { AuditLogService } from '../auth/audit-log.service.js';
 import { DB, LINK_REPUTATION } from '../tokens.js';
 import { fail } from './errors.js';
@@ -12,6 +12,10 @@ const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 /** TS-03: an account younger than this has its publication looked at by a person when it names a bank, a state body or a brand. */
 export const YOUNG_ACCOUNT_DAYS = 30;
+/** TS-06: the first hours of an account, in which it publishes little and sends nobody away. */
+export const NEW_ACCOUNT_HOURS = 24;
+export const NEW_ACCOUNT_MAX_PUBLISHED = 2;
+export const NEW_ACCOUNT_MAX_VIDEO_MS = 30_000;
 /** TS-02: so many blocked attempts with a «password» field in a day are a flag for the moderators. */
 export const PHISHING_ATTEMPTS_FLAG = 3;
 
@@ -140,12 +144,13 @@ export class SafetyService {
   // ── The check of a publication (SR-01) ────────────────────────────────────
 
   /** What the dictionaries and the links say about the document the owner is going to publish. */
-  async check(ownerId: string, doc: ProjectDocument, projectTitle: string, now = new Date()): Promise<PublishVerdict> {
+  async check(ownerId: string, doc: ProjectDocument, projectTitle: string, now = new Date(), projectId?: string): Promise<PublishVerdict> {
     const dict = await this.dictionary();
     const issues = scanDocument(doc, dict, projectTitle);
     const errors = issues.filter((i) => i.severity === 'error');
+    errors.push(...(await this.newAccountLimits(ownerId, doc, now, projectId)));
     // TS-05: Yandex Safe Browsing. A failure of the service does not stop the creator — the own rules above already ran.
-    if (this.reputation && errors.every((i) => !i.code.startsWith('LINK_'))) {
+    if (this.reputation && errors.length === 0) {
       try {
         const bad = await this.reputation.check(externalLinks(doc));
         for (const b of bad) errors.push({ code: 'LINK_BLOCKED', severity: 'error', path: ['links'], term: b.url, category: 'A6', message: `Яндекс считает эту ссылку опасной (${b.url}). Ссылку на такой сайт разместить нельзя.` });
@@ -161,6 +166,42 @@ export class SafetyService {
     const hold = young && brandOnly.length > 0;
     const warnings = !young ? brandOnly.map((i) => i.message) : [];
     return { errors, reviews: young ? reviews : reviews.filter((i) => i.code !== 'BRAND'), hold, warnings };
+  }
+
+  /**
+   * TS-06 · the first 24 hours of an account: at most two published projects, no links to other sites, videos up to 30 seconds.
+   * An account without a confirmed phone (it came through VK / Яндекс without one) may not send people to other sites at all.
+   */
+  async newAccountLimits(ownerId: string, doc: ProjectDocument, now: Date, projectId?: string): Promise<SafetyIssue[]> {
+    const [owner] = await this.db.select({ createdAt: schema.users.createdAt, phone: schema.users.phoneE164 }).from(schema.users).where(eq(schema.users.id, ownerId));
+    if (!owner) return [];
+    const isNew = now.getTime() - owner.createdAt.getTime() < NEW_ACCOUNT_HOURS * HOUR_MS;
+    const out: SafetyIssue[] = [];
+    const links = externalLinks(doc);
+    if (links.length > 0 && !owner.phone) {
+      out.push({ code: 'PHONE_LINK', severity: 'error', path: ['links'], term: links[0]!, category: 'A3', message: 'Пока в аккаунте нет подтверждённого номера телефона, ссылки на другие сайты запрещены. Уберите ссылки — тогда сборку можно будет опубликовать.' });
+    } else if (links.length > 0 && isNew) {
+      out.push({ code: 'NEW_ACCOUNT_LINK', severity: 'error', path: ['links'], term: links[0]!, category: 'A3', message: 'В первые сутки после регистрации ссылки на другие сайты запрещены. Уберите ссылки или опубликуйте сборку завтра.' });
+    }
+    if (!isNew) return out;
+    const published = await this.db
+      .select({ id: schema.projects.id })
+      .from(schema.projects)
+      .where(and(eq(schema.projects.ownerId, ownerId), eq(schema.projects.status, 'PUBLISHED'), projectId ? ne(schema.projects.id, projectId) : undefined));
+    if (published.length >= NEW_ACCOUNT_MAX_PUBLISHED) {
+      out.push({ code: 'NEW_ACCOUNT_LIMIT', severity: 'error', path: ['project'], message: `В первые сутки после регистрации можно опубликовать не больше ${NEW_ACCOUNT_MAX_PUBLISHED} сборок. Попробуйте завтра.` });
+    }
+    const mediaIds = usedMediaIds(doc);
+    if (mediaIds.length > 0) {
+      const long = await this.db
+        .select({ id: schema.media.id })
+        .from(schema.media)
+        .where(and(inArray(schema.media.id, mediaIds), eq(schema.media.kind, 'VIDEO'), gt(schema.media.durationMs, NEW_ACCOUNT_MAX_VIDEO_MS)));
+      if (long.length > 0) {
+        out.push({ code: 'NEW_ACCOUNT_VIDEO', severity: 'error', path: ['media', long[0]!.id], message: `В первые сутки после регистрации видео в сборке не длиннее ${NEW_ACCOUNT_MAX_VIDEO_MS / 1000} секунд. Сократите видео или опубликуйте сборку завтра.` });
+      }
+    }
+    return out;
   }
 
   /** A blocked attempt to publish a field that asks for a password or a card: it is written down, and the third in a day is a flag (TS-02). */
