@@ -211,4 +211,15 @@ describe('P9.1 · SR-01, TS-02…TS-05 · словари и проверка п�
     answer.status = 503;
     await expect(client.check(['https://a.example/'])).rejects.toThrow('503');
   });
+  it('SR-01 · пустой экран и картинка без описания не мешают публикации, но создателю возвращаются предупреждения', async () => {
+    const user = await login('USER', 3);
+    const pic = createBlock('shape');
+    pic.style.fills = [{ kind: 'media', media: { source: 'media', id: 'photo00001' }, fit: 'cover', focal: { x: 0.5, y: 0.5 }, scale: 1 }];
+    const { id, res } = await tryPublish(user.cookie, [pic]);
+    expect(res.status).toBe(200);
+    const warnings = (res.body as { warnings: string[] }).warnings;
+    expect(warnings.some((w) => w.includes('нет описания'))).toBe(true);
+    expect(warnings.some((w) => w.includes('пустой'))).toBe(true);
+    expect((await projectRow(id)).status).toBe('PUBLISHED');
+  });
 });

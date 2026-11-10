@@ -7,10 +7,13 @@ import {
   createScreen,
   externalLinks,
   findTerms,
+  heavyMediaWarnings,
+  publishWarnings,
   foldChars,
   linkProblem,
   scanDocument,
   textForms,
+  TextStyle,
   type Block,
   type ProjectDocument,
   type SafetyDictionary,
@@ -181,5 +184,41 @@ describe('TS-05 · внешние ссылки', () => {
     const b = withText('text', 'b', { textLayer: rich('b', 'https://example.org/1') });
     const c = withText('text', 'c', { textLayer: rich('c', 'mailto:x@y.ru') });
     expect(externalLinks(docOf({ blocks: [a, b, c] }))).toEqual(['https://example.org/1']);
+  });
+});
+
+describe('SR-01 · предупреждения перед публикацией', () => {
+  const picture = (id: string, alt?: string): Block => {
+    const b = createBlock('shape', alt ? { a11y: { alt } } : {});
+    b.style.fills = [{ kind: 'media', media: { source: 'media', id }, fit: 'cover', focal: { x: 0.5, y: 0.5 }, scale: 1 }];
+    return b;
+  };
+  const codesOf = (doc: ProjectDocument) => publishWarnings(doc).map((w) => w.code);
+
+  it('SR-01 · картинка без описания и пустой экран — предупреждения; с описанием и блоками — нет', () => {
+    const bad = docOf({ blocks: [picture('photo00001')] }, { blocks: [] });
+    expect(codesOf(bad)).toEqual(['NO_ALT', 'EMPTY_SCREEN']);
+    const good = docOf({ blocks: [picture('photo00001', 'Ёлка с игрушками')] }, { blocks: [withText('text', 'Привет')] });
+    expect(codesOf(good)).toEqual([]);
+  });
+
+  it('SR-01 · низкий контраст: светло-серый на белом — предупреждение, чёрный на белом и крупный текст допустимой яркости — нет', () => {
+    const t = (fg: string, size = 18): Block => {
+      const b = withText('text', 'Текст');
+      b.style.text = TextStyle.parse({ paint: { kind: 'solid', color: { hex: fg } }, size });
+      b.style.fills = [{ kind: 'solid', color: { hex: '#FFFFFF' } }];
+      return b;
+    };
+    expect(codesOf(docOf({ blocks: [t('#CCCCCC')] }))).toEqual(['LOW_CONTRAST']);
+    expect(codesOf(docOf({ blocks: [t('#000000')] }))).toEqual([]);
+    expect(codesOf(docOf({ blocks: [t('#888888', 32)] }))).toEqual([]);
+  });
+
+  it('SR-01 · тяжёлые медиа: один файл больше 10 МБ или всё вместе больше 40 МБ — предупреждение', () => {
+    const doc = docOf({ blocks: [picture('big0000001', 'a'), picture('small00001', 'b')] });
+    expect(heavyMediaWarnings(doc, new Map([['big0000001', 12 * 1048576], ['small00001', 1000]])).map((w) => w.code)).toEqual(['HEAVY_MEDIA']);
+    expect(heavyMediaWarnings(doc, new Map([['big0000001', 9 * 1048576], ['small00001', 9 * 1048576]]))).toEqual([]);
+    const many = docOf({ blocks: ['a', 'b', 'c', 'd', 'e'].map((x) => picture(`media0000${x}`, x)) });
+    expect(heavyMediaWarnings(many, new Map(['a', 'b', 'c', 'd', 'e'].map((x) => [`media0000${x}`, 9 * 1048576] as [string, number]))).map((w) => w.code)).toEqual(['HEAVY_MEDIA']);
   });
 });

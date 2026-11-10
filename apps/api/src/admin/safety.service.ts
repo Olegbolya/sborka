@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { and, asc, count, eq, gt, gte, inArray, ne } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { externalLinks, foldDomain, usedMediaIds, REPORT_SLA_HOURS, scanDocument, type ProjectDocument, type SafetyDictionary, type SafetyIssue } from '@blokum/schema';
+import { externalLinks, foldDomain, usedMediaIds, publishWarnings, heavyMediaWarnings, REPORT_SLA_HOURS, scanDocument, type ProjectDocument, type SafetyDictionary, type SafetyIssue } from '@blokum/schema';
 import { AuditLogService } from '../auth/audit-log.service.js';
 import type { ApiConfig } from '../config.js';
 import { API_CONFIG, DB, LINK_REPUTATION } from '../tokens.js';
@@ -166,7 +166,13 @@ export class SafetyService {
     // TS-03: a brand in the text — a young account's publication waits for a person, an older account gets a warning.
     const brandOnly = reviews.filter((i) => i.code === 'BRAND');
     const hold = young && brandOnly.length > 0;
-    const warnings = !young ? brandOnly.map((i) => i.message) : [];
+    const mediaIds = usedMediaIds(doc);
+    const sizes = new Map<string, number>();
+    if (mediaIds.length > 0) {
+      for (const m of await this.db.select({ id: schema.media.id, bytes: schema.media.bytes }).from(schema.media).where(inArray(schema.media.id, mediaIds))) sizes.set(m.id, Number(m.bytes));
+    }
+    // SR-01: warnings do not stop the publication.
+    const warnings = [...(!young ? brandOnly.map((i) => i.message) : []), ...publishWarnings(doc).map((w) => w.message), ...heavyMediaWarnings(doc, sizes).map((w) => w.message)];
     return { errors, reviews: young ? reviews : reviews.filter((i) => i.code !== 'BRAND'), hold, warnings };
   }
 
