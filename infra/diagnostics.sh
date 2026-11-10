@@ -42,7 +42,7 @@ echo "── Домен, nginx и сертификат Блоккера"
 DOM="$(sed -n 's/^DOMAIN=//p' "$APP_ROOT/current/infra/server.env" 2>/dev/null | head -1)"; DOM="${DOM:-blokker.ru}"
 echo "домен: $DOM · адрес по DNS (с сервера): $(getent ahostsv4 "$DOM" 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ')"
 echo "www.$DOM: $(getent ahostsv4 "www.$DOM" 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ') · media.$DOM: $(getent ahostsv4 "media.$DOM" 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ')"
-echo "nginx: $(systemctl is-active nginx 2>&1 | head -1) · конфиг Блоккера: $(ls /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | grep -i blokum | tr '\n' ' ')"
+echo "nginx: $(systemctl is-active nginx 2>&1 | head -1) · конфиг Блоккера: $(find /etc/nginx/sites-enabled /etc/nginx/conf.d -maxdepth 1 -iname '*blokum*' -printf '%f ' 2>/dev/null)"
 echo "https у себя ($DOM): $(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 --resolve "$DOM:443:127.0.0.1" "https://$DOM/" 2>&1)"
 echo "сертификат: $(echo | timeout 5 openssl s_client -connect 127.0.0.1:443 -servername "$DOM" 2>/dev/null | openssl x509 -noout -subject -enddate 2>/dev/null | tr '\n' ' ')"
 
