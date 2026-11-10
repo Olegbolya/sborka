@@ -50,11 +50,18 @@ function collectIds(value: unknown, into: Set<string>): void {
   if (Array.isArray(value)) {
     for (const v of value) collectIds(v, into);
   } else if (value && typeof value === 'object') {
+    // A reference to a file, a library item or a font names something that exists outside the document: a copy keeps pointing at it.
+    if (isExternalRef(value)) return;
     for (const [k, v] of Object.entries(value)) {
       if ((k === 'id' || k === 'groupId') && typeof v === 'string') into.add(v);
       else collectIds(v, into);
     }
   }
+}
+
+function isExternalRef(value: object): boolean {
+  const o = value as { source?: unknown; kind?: unknown };
+  return o.source === 'media' || o.source === 'library' || o.kind === 'font';
 }
 
 function remap(value: unknown, map: Map<string, string>): unknown {

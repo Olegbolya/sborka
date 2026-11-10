@@ -278,4 +278,23 @@ describe('E-13 · дерево блоков', () => {
     const optionBlockIds = (copy.props as { options: Array<{ blockId: string }> }).options.map((o) => o.blockId);
     expect(optionBlockIds).toEqual(copy.children.map((c) => c.id));
   });
+
+  it('E-13 · копия экрана и блока сохраняет ссылки на файлы, библиотеку и шрифты: картинка не пропадает', () => {
+    const s = fresh();
+    const block = createBlock('shape');
+    block.style.fills = [{ kind: 'media', media: { source: 'media', id: 'media-file-0001' }, fit: 'cover', focal: { x: 0.5, y: 0.5 }, scale: 1 }];
+    const lib = createBlock('shape');
+    lib.style.fills = [{ kind: 'media', media: { source: 'library', id: 'library-item-01' }, fit: 'cover', focal: { x: 0.5, y: 0.5 }, scale: 1 }];
+    s.getState().apply((d) => void d.screens[0]!.blocks.push(block, lib), { label: 'Добавить блоки' });
+    let copyId = '';
+    s.getState().apply(duplicateScreen(s.getState().doc.screens[0]!.id, (c) => (copyId = c.id)), { label: 'Копия' });
+    const copy = s.getState().doc.screens.find((x) => x.id === copyId)!;
+    expect(copy.blocks[0]!.id).not.toBe(block.id);
+    const text = JSON.stringify(copy);
+    expect(text).toContain('media-file-0001');
+    expect(text).toContain('library-item-01');
+    const one = cloneWithNewIds(block);
+    expect(JSON.stringify(one)).toContain('media-file-0001');
+    expect(one.id).not.toBe(block.id);
+  });
 });
