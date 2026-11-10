@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { api, errorText, isApiError } from '../../lib/api-browser';
 import { setTitle } from '../../lib/editor/commands';
+import { AgeRatingDialog } from './AgeRatingDialog';
 import { PassDialog } from './PassDialog';
 import { useEditor, useEnv } from './context';
 
@@ -23,6 +24,7 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
   const hasUnpublished = status !== 'PUBLISHED' || publishedDoc === null || doc !== publishedDoc;
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [passReasons, setPassReasons] = useState<string[] | null>(null);
+  const [askAge, setAskAge] = useState(false);
 
   // Человек вернулся из ЮKassa: оплата подтверждается у провайдера не мгновенно, поэтому сразу говорим, что делать дальше.
   useEffect(() => {
@@ -46,13 +48,21 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
     }
   };
 
-  const publish = async () => {
+  const publish = async (ageKnown = false) => {
     setPublishing(true);
     try {
       await saver.flush();
       if (saver.state.status === 'conflict' || saver.state.status === 'error') {
         flash('Сначала нужно сохранить правки — публикация остановлена.', 'error');
         return;
+      }
+      // P8.7: no age category yet — ask for it right here instead of failing after the click.
+      if (!ageKnown) {
+        const access = await api<{ ageRating?: number | null; ageRatingRequired?: boolean }>(`/projects/${encodeURIComponent(projectId)}/access-settings`);
+        if (access.ageRatingRequired && (access.ageRating === undefined || access.ageRating === null)) {
+          setAskAge(true);
+          return;
+        }
       }
       const sent = store.getState().doc;
       const result = await api<{ review?: boolean; warnings?: string[] } | null>(`/projects/${encodeURIComponent(projectId)}/publish`, { method: 'POST' });
@@ -69,6 +79,10 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       flash(`Сборка опубликована: ${window.location.origin}/s/${slug}. QR-код можно взять в кабинете.${warning}`, 'ok');
     } catch (e) {
       const issues = isApiError(e) ? (e.issues ?? []) : [];
+      if (isApiError(e) && issues.some((i) => i.code === 'NO_AGE_RATING')) {
+        setAskAge(true);
+        return;
+      }
       if (isApiError(e) && e.status === 402 && e.code === 'PLAN_LIMIT') {
         setPassReasons(issues.length > 0 ? issues.map((i) => i.message) : [e.message]);
         return;
@@ -134,6 +148,16 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       <button type="button" className="ed-btn primary" onClick={() => void publish()} disabled={publishing || !hasUnpublished}>
         {publishing ? 'Публикуем…' : status === 'PUBLISHED' ? 'Опубликовать изменения' : 'Опубликовать'}
       </button>
+      {askAge && (
+        <AgeRatingDialog
+          projectId={projectId}
+          onClose={() => setAskAge(false)}
+          onChosen={() => {
+            setAskAge(false);
+            void publish(true);
+          }}
+        />
+      )}
       {passReasons && <PassDialog projectId={projectId} reasons={passReasons} onClose={() => setPassReasons(null)} />}
     </header>
   );

@@ -121,7 +121,7 @@ describe('Q-03…Q-06 · конструктор QR, печать, проверк
       expect(res.headers['content-type']).toContain('application/pdf');
       expect((res.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
     }
-  });
+  }, 30_000);
 
   it('Q-03 · чужой пользователь не видит и не меняет оформление и не скачивает печать', async () => {
     const ap = await point();

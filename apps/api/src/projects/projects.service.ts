@@ -677,9 +677,10 @@ export class ProjectsService {
     return passwordHash ? { ...rest, hasPassword: true } : rest;
   }
 
-  async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings> {
+  /** The settings of the owner and whether publishing needs an age category here (the editor asks for it on «Опубликовать»). */
+  async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings & { ageRatingRequired: boolean }> {
     const row = await this.assertOwner(userId, projectId);
-    return this.forOwner((row.settings ?? {}));
+    return { ...this.forOwner((row.settings ?? {})), ageRatingRequired: this.ageRatingRequired === true };
   }
 
   async updateAccessSettings(userId: string, projectId: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings> {

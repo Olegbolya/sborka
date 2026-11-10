@@ -388,7 +388,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   );
 
   const inner =
-    animated || appear || leaving ? (
+    animated || appear || leaving || (ctx.mode === 'editor' && block.animation !== undefined) ? (
       <div ref={animLayer} className="bk-anim" style={{ ...(block.animation ? animatedLayerStyle(block.animation, cssColor({ token: 'accent', alpha: 0.8 }, ctx.tokens)) : { position: 'absolute', inset: 0 }), ...(style.autoHeight ? { position: 'relative', inset: 'auto' } : {}) }}>
         {body}
       </div>

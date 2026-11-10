@@ -283,6 +283,38 @@ test.describe('P3.4 · работа с контролами', () => {
     await expect(page.getByRole('dialog', { name: 'Предпросмотр' }).locator('[data-block-id="figura_1"]')).toHaveCount(1);
   });
 
+  test('S-12…S-14 · своя анимация по кадрам: кадры настраиваются, добавляются, удаляются и проигрываются на холсте', async ({ page }, info) => {
+    const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(shapeAt('figura_1', 'Фигура', 40)));
+    await openEditor(page, id);
+    await pickInLayers(page, 'Фигура');
+    const anim = await section(page, 'animation');
+    await anim.getByLabel('Анимация появления').check();
+    await anim.getByLabel('Вид', { exact: true }).first().selectOption('keyframes');
+    const editor = anim.getByTestId('keyframes-enter');
+    await expect(editor).toBeVisible();
+    await expect.poll(async () => ((await savedBlock(page, id)).animation as { enter?: { kind: string; keyframes: unknown[] } } | undefined)?.enter).toMatchObject({ kind: 'keyframes', keyframes: [{ at: 0 }, { at: 1 }] });
+    // The last frame: turn the block around and tint it, then add a frame between.
+    await editor.getByRole('tab', { name: '100%' }).click();
+    await setNumber(editor, 'Поворот, °', '90');
+    await editor.getByTestId('keyframes-enter-add').click();
+    await expect(editor.getByRole('tab')).toHaveCount(3);
+    await expect.poll(async () => ((await savedBlock(page, id)).animation as { enter?: { keyframes: Array<{ at: number; props: Record<string, number> }> } } | undefined)?.enter?.keyframes.map((f) => [f.at, f.props.rotation ?? null])).toEqual([[0, null], [0.5, 90], [1, 90]]);
+    await editor.getByTestId('keyframes-enter-remove').click();
+    await expect(editor.getByRole('tab')).toHaveCount(2);
+    await expect(editor.getByTestId('keyframes-enter-remove')).toBeDisabled();
+    // «Проиграть» runs the frames on the block of the canvas: it changes while playing and returns to rest.
+    await setNumber(anim, 'Длительность, мс', '1500');
+    const layer = page.locator('[data-block-id="figura_1"] .bk-anim');
+    await editor.getByTestId('keyframes-enter-play').click();
+    await expect.poll(async () => layer.evaluate((el) => el.getAnimations().length > 0 || (el as HTMLElement).style.opacity !== ''), { timeout: 1500 }).toBe(true);
+    await expect.poll(async () => layer.evaluate((el) => el.getAnimations().length === 0 && (el as HTMLElement).style.opacity === ''), { timeout: 5000 }).toBe(true);
+    await page.screenshot({ path: `e2e/__screenshots__/keyframes-${info.project.name}.png` });
+    // Other kinds drop the frames.
+    await anim.getByLabel('Вид', { exact: true }).first().selectOption('fade');
+    await expect(anim.getByTestId('keyframes-enter')).toHaveCount(0);
+    await expect.poll(async () => ((await savedBlock(page, id)).animation as { enter: Record<string, unknown> } | undefined)?.enter.keyframes).toBeUndefined();
+  });
+
   test('S-04 · фото в заливке: загрузка в окне выбора, потом выбор из медиатеки; в предпросмотре — картинка', async ({ page }) => {
     const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(shapeAt('figura_1', 'Фигура', 40)));
     await openEditor(page, id);

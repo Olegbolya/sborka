@@ -793,6 +793,7 @@ export const ANIMATION_SPEC: Field[] = [
           ['rotate', 'Вращение'],
           ['typewriter', 'Печатная машинка'],
           ['snowflake', 'Падение снежинкой'],
+          ['keyframes', 'Своя анимация (кадры)'],
         ],
       },
       {
@@ -833,6 +834,7 @@ export const ANIMATION_SPEC: Field[] = [
           ['shake', 'Тряска'],
           ['blink', 'Мерцание'],
           ['heartbeat', 'Сердцебиение'],
+          ['keyframes', 'Своя анимация (кадры)'],
         ],
       },
       { t: 'num', key: 'speed', label: 'Скорость', min: 0.1, max: 10, step: 0.1 },
@@ -856,6 +858,7 @@ export const ANIMATION_SPEC: Field[] = [
           ['glow', 'Свечение'],
           ['bounce', 'Подпрыгивание'],
           ['vibrate', 'Вибрация телефона'],
+          ['keyframes', 'Своя анимация (кадры)'],
         ],
       },
     ],

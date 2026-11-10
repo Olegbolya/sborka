@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { ModerationNotice } from '../../../../components/admin/ModerationNotice';
 import { PassOffer } from '../../../../components/billing/PassOffer';
 import { AnalyticsTab } from '../../../../components/cabinet/AnalyticsTab';
+import { AgeRatingPicker } from '../../../../components/shared/AgeRatingPicker';
 
 type Tab = 'responses' | 'analytics' | 'access' | 'settings' | 'export' | 'operator';
 
@@ -101,6 +102,30 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error(body.error?.message ?? body.message ?? `Ошибка ${res.status}`);
   }
   return res.json() as Promise<T>;
+}
+
+/** PL-09 · the age category is always at hand on the page of the work: one click saves it (the same choice is in «Настройки доступа»). */
+function AgeRatingCard({ projectId, rating, onSaved, setError }: { projectId: string; rating: number | null | undefined; onSaved: (rating: number) => void; setError: (e: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const missing = rating === undefined || rating === null;
+  const pick = async (next: 0 | 6 | 12 | 16 | 18): Promise<void> => {
+    setBusy(true);
+    setError('');
+    try {
+      await apiFetch(`/projects/${projectId}/access-settings`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Blokum-CSRF': '1' }, body: JSON.stringify({ ageRating: next }) });
+      onSaved(next);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section data-testid="age-rating-card" style={{ border: `1px solid ${missing ? 'var(--accent, #e4572e)' : '#e5e2dc'}`, borderRadius: 12, padding: 14, margin: '0 0 16px', background: missing ? '#fff7f3' : '#fff' }}>
+      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Возрастная категория{missing ? ' — не выбрана, без неё сборку не опубликовать' : ''}</div>
+      <AgeRatingPicker value={rating} disabled={busy} onPick={(r) => void pick(r)} />
+    </section>
+  );
 }
 
 function formatDuration(ms: number | null): string {
@@ -1035,6 +1060,8 @@ export default function ProjectDetailPage() {
       </p>
 
       <ModerationNotice projectId={projectId} />
+
+      <AgeRatingCard projectId={projectId} rating={project.settings.ageRating} setError={setError} onSaved={(ageRating) => setProject({ ...project, settings: { ...project.settings, ageRating, ...(ageRating === 18 ? { age18: true } : {}) } })} />
 
       {error && <div style={s.error}>{error}</div>}
 

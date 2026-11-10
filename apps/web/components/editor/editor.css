@@ -861,3 +861,37 @@
     box-shadow: -8px 0 8px -4px var(--panel);
   }
 }
+.ed-keyframes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border, #e5e2dc);
+  border-radius: 8px;
+}
+.ed-kf-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.ed-kf-strip,
+.ed-kf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ed-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border, #d6d2ca);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ed-chip.is-on {
+  background: var(--accent, #e4572e);
+  border-color: var(--accent, #e4572e);
+  color: #fff;
+}

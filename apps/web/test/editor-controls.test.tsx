@@ -1,8 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { BLOCK_TYPES, type Block, BlockAnimation, BlockStyle, Color, MediaRef, UnitPoint, createBlock, createDocument } from '@blokum/schema';
+import { ANIMATABLE, BLOCK_TYPES, type Block, BlockAnimation, BlockStyle, Color, MediaRef, UnitPoint, createBlock, createDocument } from '@blokum/schema';
 import { type ReactNode } from 'react';
 import { EditorProvider } from '../components/editor/context';
+import { FRAME_PROPS } from '../components/editor/KeyframesEditor';
 import { AnimationInspector, StyleInspector, groupsFor } from '../components/editor/StylePanels';
 import { MediaCatalog } from '../lib/editor/media';
 import { type Saver } from '../lib/editor/saver';
@@ -135,11 +136,32 @@ describe('P3.4 · контролы инспектора против схемы'
     for (const title of ['Обычное', 'Наведение', 'Нажато', 'Выбрано', 'Правильно', 'Неправильно', 'Недоступно', 'Перетаскивается', 'Над зоной']) expect(html).toContain(title);
   });
 
-  it('S-12…S-14 · анимации: контролы покрывают все ключи схемы, кроме ключевых кадров и контура движения (их редакторы позже)', () => {
+  it('S-12…S-14 · анимации: контролы покрывают все ключи схемы, кроме контура движения (его редактор позже); кадры — отдельным редактором', () => {
     const later = (k: string) => /(^|\.)keyframes(\.|$)/.test(k) || k === 'loop.path';
     const schema = [...schemaKeys(BlockAnimation as unknown as ZodLike, '')].filter((k) => !later(k)).sort();
     expect(schema).toEqual([...new Set(animationKeys())].sort());
     expect(ANIMATION_SPEC).toHaveLength(3);
+  });
+
+  it.each(['enter', 'loop', 'press'] as const)('S-12…S-14 · %s: «Своя анимация» открывает редактор кадров со всеми свойствами и цветом', (slot) => {
+    const block = createBlock('text');
+    block.animation = { [slot]: { kind: 'keyframes', keyframes: [{ at: 0, props: { opacity: 0 } }, { at: 1, props: { opacity: 1 }, fill: { hex: '#ff0000' } }] } };
+    const e = env();
+    e.store.getState().apply((d) => void d.screens[0]!.blocks.push(block), { label: 'x' });
+    const html = renderToStaticMarkup(
+      <EditorProvider value={e}>
+        <AnimationInspector blocks={[e.store.getState().doc.screens[0]!.blocks[0]!]} />
+      </EditorProvider>,
+    );
+    const seen = controlsIn(html);
+    const wanted = [`${slot}.keyframes.at`, `${slot}.keyframes.fill`, ...FRAME_PROPS.map((p) => `${slot}.keyframes.props.${p.key}`)];
+    expect(wanted.filter((k) => !seen.has(k))).toEqual([]);
+    expect(html).toContain(`data-testid="keyframes-${slot}-play"`);
+    expect(html).toContain(`data-testid="keyframes-${slot}-add"`);
+  });
+
+  it('S-12…S-14 · свойства кадра — это все числовые свойства схемы, кроме ширины и высоты', () => {
+    expect(FRAME_PROPS.map((p) => p.key).sort()).toEqual(ANIMATABLE.filter((k) => k !== 'w' && k !== 'h').sort());
   });
 
   it.each(BLOCK_TYPES)('S-12…S-14 · %s: на странице есть контрол для каждого ключа анимации', (type) => {

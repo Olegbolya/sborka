@@ -17,6 +17,7 @@ import {
 import { ANIMATION_SPEC, EDGES, type Field, GROUP_HINTS, GROUP_SPECS, MEDIA_TYPES } from '../../lib/editor/style-specs';
 import { ColorInput, NumberInput, Section, SelectInput, SliderInput, TextInput, Toggle } from './controls';
 import { useEditor, useEnv } from './context';
+import { DEFAULT_FRAMES, type Frames, KeyframesEditor, type Slot } from './KeyframesEditor';
 import { MediaField } from './MediaPicker';
 import { OptionsEditor, ScreenField, TransitionPresetField, VariableField } from './PropsFields';
 
@@ -587,13 +588,39 @@ export function AnimationInspector({ blocks }: { blocks: Block[] }) {
   const apply = useEditor((s) => s.apply);
   const tokens = useEditor((s) => s.doc.theme.tokens);
   const ids = blocks.map((b) => b.id);
+  /** «Своя анимация» always has frames (two to start from); frames of other kinds are dropped so no stale tint is drawn. */
+  const settled = (animation: Record<string, unknown>): Record<string, unknown> => {
+    const out = { ...animation };
+    for (const slot of ['enter', 'loop', 'press'] as const) {
+      const a = out[slot] as { kind?: string; keyframes?: Frames } | undefined;
+      if (!a) continue;
+      if (a.kind === 'keyframes') out[slot] = { ...a, keyframes: a.keyframes ?? DEFAULT_FRAMES };
+      else if (a.keyframes) {
+        const { keyframes: _dropped, ...rest } = a;
+        out[slot] = rest;
+      }
+    }
+    return out;
+  };
   const level: Level = {
     values: blocks.map((b) => b.animation ?? {}),
     write: (change) =>
-      apply(editAnimation(ids, change as never), { label: 'Анимация', mergeKey: `animation:${ids.join(',')}` }),
+      apply(editAnimation(ids, (cur) => settled(change(cur) as Record<string, unknown>)), { label: 'Анимация', mergeKey: `animation:${ids.join(',')}` }),
     tokens,
   };
   const own = blocks.some((b) => b.animation !== undefined);
+  /** The frames editor shows when every selected block has its own animation of that slot (they are edited together from the first one). */
+  const framesOf = (slot: Slot): { frames: Frames; durationMs: number } | null => {
+    if (!blocks.every((b) => b.animation?.[slot]?.kind === 'keyframes')) return null;
+    const a = blocks[0]!.animation![slot] as { keyframes?: Frames; durationMs?: number; speed?: number };
+    const durationMs = slot === 'enter' ? (a.durationMs ?? 600) : slot === 'loop' ? 2000 / (a.speed ?? 1) : 300;
+    return { frames: a.keyframes ?? DEFAULT_FRAMES, durationMs };
+  };
+  const setFrames = (slot: Slot) => (next: Frames) =>
+    apply(
+      editAnimation(ids, (cur) => ({ ...cur, [slot]: { ...(cur[slot] as object), keyframes: next } })),
+      { label: 'Кадры анимации', mergeKey: `animation-frames:${slot}:${ids.join(',')}` },
+    );
   return (
     <Section
       id="animation"
@@ -609,6 +636,12 @@ export function AnimationInspector({ blocks }: { blocks: Block[] }) {
       open={own}
     >
       <Fields fields={ANIMATION_SPEC} level={level} prefix="" />
+      {(['enter', 'loop', 'press'] as const).map((slot) => {
+        const f = framesOf(slot);
+        return f ? (
+          <KeyframesEditor key={slot} slot={slot} frames={f.frames} durationMs={f.durationMs} blockId={ids[0] ?? null} tokens={tokens} onChange={setFrames(slot)} />
+        ) : null;
+      })}
     </Section>
   );
 }
