@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Put, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { AccessPointsService } from './access-points.service.js';
+import { PRINT_LAYOUTS, type PrintLayout } from './qr-render.js';
 import { WEB_URL } from './projects.tokens.js';
 
 /** P6.2 · D-02 · Q-01…Q-07: Access points and QR. */
@@ -66,5 +67,27 @@ export class AccessPointsController {
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Content-Disposition', `attachment; filename="qr-${id}.svg"`);
     res.end(svg);
+  }
+
+  /** Q-04: Download a sheet for print as PDF. Query: layout=a4|a6|cards. */
+  @Get(':id/qr.pdf')
+  async downloadQrPdf(@Param('id') id: string, @Query('layout') layout: string | undefined, @CurrentUser() user: RequestUser, @Res() res: Response) {
+    const chosen = (PRINT_LAYOUTS as readonly string[]).includes(layout ?? '') ? (layout as PrintLayout) : 'a4';
+    const buf = await this.svc.generateQrPdf(user.id, id, this.webUrl, chosen);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="qr-${id}-${chosen}.pdf"`);
+    res.end(buf);
+  }
+
+  /** Q-03: The look of the code. */
+  @Get(':id/qr-style')
+  qrStyle(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.svc.qrStyle(user.id, id);
+  }
+
+  /** Q-03, Q-05: Save the look; a look that cannot be read is refused. */
+  @Put(':id/qr-style')
+  setQrStyle(@Param('id') id: string, @Body() body: unknown, @CurrentUser() user: RequestUser) {
+    return this.svc.setQrStyle(user.id, id, this.webUrl, body);
   }
 }

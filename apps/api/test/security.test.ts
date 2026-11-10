@@ -43,6 +43,7 @@ const BY_ID = new Set([
   'GET /projects/:projectId/responses', 'GET /projects/:projectId/responses/export.csv', 'GET /projects/:projectId/responses/export.xlsx',
   'GET /projects/:projectId/responses/:id', 'DELETE /projects/:projectId/responses/:id', 'POST /projects/:projectId/responses/:id/viewed',
   'GET /projects/:projectId/analytics',
+  'GET /projects/:projectId/access-points/:id/qr.pdf', 'GET /projects/:projectId/access-points/:id/qr-style', 'PUT /projects/:projectId/access-points/:id/qr-style',
   'GET /projects/:projectId/access-points', 'POST /projects/:projectId/access-points', 'POST /projects/:projectId/access-points/:id/active',
   'DELETE /projects/:projectId/access-points/:id', 'GET /projects/:projectId/access-points/:id/qr.png', 'GET /projects/:projectId/access-points/:id/qr.svg',
   'POST /themes/from-project/:projectId', 'GET /themes/:id', 'PUT /themes/:id', 'DELETE /themes/:id', 'POST /themes/:id/duplicate', 'POST /themes/:id/default',

@@ -20,7 +20,7 @@ export interface Analytics {
   /** The totals of the days: from the daily summaries (they outlive the raw answers). */
   totals: { opens: number; starts: number; completions: number; completionRate: number | null; avgDurationMs: number | null };
   byDay: Array<{ day: string; opens: number; starts: number; completions: number }>;
-  byAccessPoint: Array<{ id: string; label: string; kind: string; opens: number; starts: number; completions: number }>;
+  byAccessPoint: Array<{ id: string; label: string; kind: string; opens: number; starts: number; completions: number; byDay: Array<{ day: string; opens: number; starts: number; completions: number }> }>;
   byDevice: Array<{ device: string; starts: number; completions: number }>;
   /** The funnel by screens: how many passages reached a screen and how many ended there; the average time on the screen is taken from the answers given on it. */
   funnel: Array<{ screenId: string; name: string; reached: number; leftHere: number; avgTimeMs: number | null }>;
@@ -164,7 +164,7 @@ export class AnalyticsService implements OnModuleInit, OnModuleDestroy {
     const points = await this.db.select({ id: schema.accessPoints.id, label: schema.accessPoints.label, kind: schema.accessPoints.kind }).from(schema.accessPoints).where(eq(schema.accessPoints.projectId, projectId));
     const byAccessPoint = points.map((p) => {
       const mine = rows.filter((r) => r.accessPointId === p.id);
-      return { id: p.id, label: p.label || (p.kind === 'QR' ? 'QR-код' : 'Ссылка'), kind: p.kind, opens: sum(mine, 'opens'), starts: sum(mine, 'starts'), completions: sum(mine, 'completions') };
+      return { id: p.id, label: p.label || (p.kind === 'QR' ? 'QR-код' : 'Ссылка'), kind: p.kind, opens: sum(mine, 'opens'), starts: sum(mine, 'starts'), completions: sum(mine, 'completions'), byDay: mine.map((r) => ({ day: r.day, opens: r.opens, starts: r.starts, completions: r.completions })) };
     });
 
     const raw = await this.rawParts(projectId, new Date(`${lo}T00:00:00Z`), new Date(Date.parse(`${hi}T00:00:00Z`) + DAY_MS));

@@ -1,4 +1,5 @@
 'use client';
+import { QrDesigner } from '../../../../components/cabinet/QrDesigner';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -71,6 +72,13 @@ interface ResponseDetail extends ResponseSummary {
   /** The screens the participant went through, in order. */
   path?: string[];
   source?: { kind: 'LINK' | 'QR'; label: string };
+}
+
+interface PointStats {
+  opens: number;
+  starts: number;
+  completions: number;
+  byDay: Array<{ day: string; opens: number; starts: number; completions: number }>;
 }
 
 interface AccessPoint {
@@ -340,13 +348,46 @@ function ResponsesTab({ projectId, setError }: { projectId: string; setError: (e
   );
 }
 
+/** Q-06 · opens, starts and completions of one access point and a bar per day for the last 30 days. */
+function PointNumbers({ stats }: { stats: PointStats | undefined }) {
+  if (!stats) return null;
+  const top = Math.max(1, ...stats.byDay.map((d) => d.opens + d.starts));
+  return (
+    <div data-testid="point-stats" style={{ marginTop: 10, fontSize: 12 }}>
+      <div style={{ color: 'var(--muted)' }}>
+        За 30 дней: открытий {stats.opens} · начали {stats.starts} · прошли до конца {stats.completions}
+      </div>
+      {stats.byDay.length > 0 && (
+        <div role="img" aria-label={`Открытия и начатые прохождения по дням: ${stats.byDay.map((d) => `${d.day} — ${d.opens} и ${d.starts}`).join('; ')}`} style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 36, marginTop: 6 }}>
+          {stats.byDay.map((d) => (
+            <div key={d.day} title={`${d.day}: открытий ${d.opens}, начали ${d.starts}, прошли ${d.completions}`} style={{ flex: '1 1 0', maxWidth: 14, height: `${Math.max(6, ((d.opens + d.starts) / top) * 100)}%`, background: 'var(--accent, #e4572e)', opacity: 0.75, borderRadius: 2 }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AccessTab({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
   const [points, setPoints] = useState<AccessPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [newLabel, setNewLabel] = useState('');
   const [creating, setCreating] = useState(false);
   const [version, setVersion] = useState(0);
+  const [designing, setDesigning] = useState<string | null>(null);
+  const [stats, setStats] = useState<Record<string, PointStats>>({});
   const reload = useCallback(() => setVersion((v) => v + 1), []);
+
+  // Q-06: the numbers of every access point for the last 30 days.
+  useEffect(() => {
+    let active = true;
+    const to = new Date().toISOString().slice(0, 10);
+    const from = new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10);
+    apiFetch<{ byAccessPoint: Array<PointStats & { id: string }> }>(`/projects/${projectId}/analytics?from=${from}&to=${to}`)
+      .then((data) => { if (active) setStats(Object.fromEntries(data.byAccessPoint.map((p) => [p.id, p]))); })
+      .catch(() => { /* the numbers are a nice-to-have here: the tab works without them */ });
+    return () => { active = false; };
+  }, [projectId, version]);
 
   useEffect(() => {
     let active = true;
@@ -419,6 +460,14 @@ function AccessTab({ projectId, setError }: { projectId: string; setError: (e: s
                     <a href={`/api/v1/projects/${projectId}/access-points/${ap.id}/qr.svg`} download={`qr-${ap.code}.svg`} style={{ ...s.btnSecondary, textDecoration: 'none', fontSize: 11 }}>
                       QR SVG
                     </a>
+                    {([['a4', 'PDF: лист A4'], ['a6', 'PDF: 4 листа A6'], ['cards', 'PDF: визитки 10 шт.']] as const).map(([layout, label]) => (
+                      <a key={layout} href={`/api/v1/projects/${projectId}/access-points/${ap.id}/qr.pdf?layout=${layout}`} download={`qr-${ap.code}-${layout}.pdf`} style={{ ...s.btnSecondary, textDecoration: 'none', fontSize: 11 }}>
+                        {label}
+                      </a>
+                    ))}
+                    <button style={{ ...s.btnSecondary, fontSize: 11 }} onClick={() => setDesigning(designing === ap.id ? null : ap.id)} aria-expanded={designing === ap.id}>
+                      Оформление QR
+                    </button>
                     <button style={{ ...s.btnSecondary, fontSize: 11 }} onClick={() => void navigator.clipboard.writeText(ap.url)}>
                       Скопировать ссылку
                     </button>
@@ -431,6 +480,8 @@ function AccessTab({ projectId, setError }: { projectId: string; setError: (e: s
                   <button style={s.btnDanger} onClick={() => void deletePoint(ap.id)}>Удалить</button>
                 </div>
               </div>
+              <PointNumbers stats={stats[ap.id]} />
+              {designing === ap.id && <QrDesigner projectId={projectId} pointId={ap.id} />}
             </div>
           ))}
 
