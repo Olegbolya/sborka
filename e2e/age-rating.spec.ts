@@ -81,4 +81,20 @@ test.describe('P8.7 · возрастная категория', () => {
     await expect(toast).toBeInViewport({ ratio: 1 });
     await page.screenshot({ path: `${SHOTS}/publish-message-${info.project.name}.png` });
   });
+
+  test('PL-09 · в тёмной теме пункты выпадающего списка категории читаются (светлый текст на тёмном фоне)', async ({ page }, info) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await loginAndOnboard(page, freshUser('Автор'));
+    const { id } = await seedProject(page);
+    await page.goto(`/cabinet/projects/${id}`);
+    await page.getByRole('button', { name: 'Настройки доступа' }).click();
+    const colours = await page.locator('#age-rating option').nth(1).evaluate((o) => {
+      const cs = getComputedStyle(o);
+      return { fg: cs.color, bg: cs.backgroundColor };
+    });
+    expect(colours).toEqual({ fg: 'rgb(243, 239, 231)', bg: 'rgb(20, 19, 17)' });
+    mkdirSync(SHOTS, { recursive: true });
+    await page.locator('#age-rating').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/age-rating-dark-${info.project.name}.png` });
+  });
 });
