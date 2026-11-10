@@ -3,7 +3,8 @@ import { and, asc, count, eq, gt, gte, inArray, ne } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { externalLinks, foldDomain, usedMediaIds, REPORT_SLA_HOURS, scanDocument, type ProjectDocument, type SafetyDictionary, type SafetyIssue } from '@blokum/schema';
 import { AuditLogService } from '../auth/audit-log.service.js';
-import { DB, LINK_REPUTATION } from '../tokens.js';
+import type { ApiConfig } from '../config.js';
+import { API_CONFIG, DB, LINK_REPUTATION } from '../tokens.js';
 import { fail } from './errors.js';
 import { ModerationService, SYSTEM_ACTOR } from './moderation.service.js';
 import { type LinkReputation } from './safe-browsing.js';
@@ -55,6 +56,7 @@ export class SafetyService {
     private readonly audit: AuditLogService,
     private readonly moderation: ModerationService,
     @Optional() @Inject(LINK_REPUTATION) private readonly reputation?: LinkReputation | null,
+    @Optional() @Inject(API_CONFIG) private readonly config?: ApiConfig,
   ) {}
 
   // ── The dictionaries in the admin (TS-04, TS-05) ──────────────────────────
@@ -173,9 +175,11 @@ export class SafetyService {
    * An account without a confirmed phone (it came through VK / Яндекс without one) may not send people to other sites at all.
    */
   async newAccountLimits(ownerId: string, doc: ProjectDocument, now: Date, projectId?: string): Promise<SafetyIssue[]> {
+    // Off only in the e2e run (NEW_ACCOUNT_HOURS=0): its test accounts have no phone and publish many projects. The API tests check the rules.
+    if (this.config?.newAccountHours === 0) return [];
     const [owner] = await this.db.select({ createdAt: schema.users.createdAt, phone: schema.users.phoneE164 }).from(schema.users).where(eq(schema.users.id, ownerId));
     if (!owner) return [];
-    const isNew = now.getTime() - owner.createdAt.getTime() < NEW_ACCOUNT_HOURS * HOUR_MS;
+    const isNew = now.getTime() - owner.createdAt.getTime() < (this.config?.newAccountHours ?? NEW_ACCOUNT_HOURS) * HOUR_MS;
     const out: SafetyIssue[] = [];
     const links = externalLinks(doc);
     if (links.length > 0 && !owner.phone) {

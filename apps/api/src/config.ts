@@ -39,6 +39,8 @@ export interface ApiConfig {
   yookassa?: { shopId: string; secretKey: string };
   /** TS-05 · key of Yandex Safe Browsing; without it links are checked only against the own rules and the stop-list of domains. */
   safeBrowsingKey?: string;
+  /** TS-06: how long an account counts as new; 24 by default. 0 turns the whole TS-06 check off; only the e2e run sets it (one phone-less test account publishes many projects with links). */
+  newAccountHours?: number;
   mediaDir: string;
   /** P4.3: base URL for serving media files (media.blokker.ru in production, /api/v1/media in dev). */
   mediaBaseUrl: string;
@@ -92,6 +94,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     playLimits: { startsPerHourPerIp: Number(env.PLAY_STARTS_PER_HOUR_PER_IP ?? 120), answersPerMinutePerSession: Number(env.PLAY_ANSWERS_PER_MINUTE ?? 240), reportsPerHourPerIp: Number(env.REPORTS_PER_HOUR_PER_IP ?? 5) },
     ...(env.BACKUP_DIR ? { backupDir: env.BACKUP_DIR } : {}),
     ...(env.YOOKASSA_SHOP_ID?.trim() && env.YOOKASSA_SECRET_KEY?.trim() ? { yookassa: { shopId: env.YOOKASSA_SHOP_ID.trim(), secretKey: env.YOOKASSA_SECRET_KEY.trim() } } : {}),
+    ...(env.NEW_ACCOUNT_HOURS !== undefined && Number.isFinite(Number(env.NEW_ACCOUNT_HOURS)) && Number(env.NEW_ACCOUNT_HOURS) >= 0 ? { newAccountHours: Number(env.NEW_ACCOUNT_HOURS) } : {}),
     ...(env.YANDEX_SAFEBROWSING_KEY?.trim() ? { safeBrowsingKey: env.YANDEX_SAFEBROWSING_KEY.trim() } : {}),
     mediaDir: env.MEDIA_DIR ?? (production ? '/srv/blokum/media' : `${env.DATA_ROOT ?? '/tmp'}/blokum-media`),
     mediaBaseUrl: env.MEDIA_BASE_URL ?? `http://${env.API_HOST ?? '127.0.0.1'}:${parsed}/api/v1/media`,
