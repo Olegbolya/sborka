@@ -6,7 +6,7 @@ import { seedProject } from './helpers/editor';
 const SHOTS = 'e2e/__screenshots__';
 
 test.describe('Q-03…Q-06 · конструктор QR', () => {
-  test('Q-03 · оформление QR: цвета, форма, рамка с подписью сохраняются; плохой контраст не даёт сохранить; есть PDF и статистика точки', async ({ page }, info) => {
+  test('Q-03, Q-04, Q-06 · оформление QR: цвета, форма, рамка с подписью сохраняются; плохой контраст не даёт сохранить; есть PDF и статистика точки', async ({ page }, info) => {
     await loginAndOnboard(page, freshUser('Автор'));
     const { id } = await seedProject(page);
     await page.goto(`/cabinet/projects/${id}`);

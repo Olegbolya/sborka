@@ -570,7 +570,7 @@
 | PL-19 | P5.7 | `e2e/perf/player-budget.spec.ts` (бюджет JS и LCP) | `e2e/perf/player-budget.spec.ts`, `e2e/perf/lighthouse.spec.ts` |
 | N-01 | P3.15 | `apps/web/components/editor/Canvas.tsx` | `e2e/perf/editor.spec.ts` |
 | D-09 | P7.6 | `apps/web/components/billing/BillingSummary.tsx`; `apps/web/components/billing/PlanActions.tsx` | `e2e/billing-pass.spec.ts`, `e2e/billing-addons.spec.ts`, `e2e/payments-admin.spec.ts` |
-| Q-03 | P6.2 | `apps/api/src/projects/qr-render.ts#parseQrStyle,colourProblem,buildSvg,renderPng`; `apps/api/src/projects/access-points.service.ts#setQrStyle`; `apps/web/components/cabinet/QrDesigner.tsx` | `apps/api/test/qr.test.ts`, `e2e/qr-designer.spec.ts` |
+| Q-03 | P6.2 | `apps/api/src/projects/qr-render.ts#parseQrStyle`; `apps/api/src/projects/qr-render.ts#colourProblem`; `apps/api/src/projects/qr-render.ts#buildSvg`; `apps/api/src/projects/qr-render.ts#renderPng`; `apps/api/src/projects/access-points.service.ts#setQrStyle`; `apps/web/components/cabinet/QrDesigner.tsx` | `apps/api/test/qr.test.ts`, `e2e/qr-designer.spec.ts` |
 | Q-04 | P6.2 | `apps/api/src/projects/qr-render.ts#renderPdf`; `apps/api/src/projects/access-points.controller.ts#downloadQrPdf` | `apps/api/test/qr.test.ts`, `e2e/qr-designer.spec.ts` |
 | Q-05 | P6.2 | `apps/api/src/projects/qr-render.ts#reads`; `apps/api/src/projects/access-points.service.ts#drawChecked` | `apps/api/test/qr.test.ts` |
 | Q-06 | P6.2 | `apps/api/src/projects/analytics.service.ts#analytics`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/qr.test.ts`, `e2e/qr-designer.spec.ts` |
