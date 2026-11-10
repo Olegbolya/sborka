@@ -8,7 +8,8 @@ import {
 } from '@nestjs/common';
 import { and, asc, desc, eq, inArray, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { createDocument, createId, createSlug, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
+import { AGE_RATINGS, createDocument, createId, createSlug, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
+import { AGE_RATING_REQUIRED } from './projects.tokens.js';
 import { HttpException, Inject, Optional } from '@nestjs/common';
 import { SafetyService, type PublishVerdict } from '../admin/safety.service.js';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
@@ -17,7 +18,7 @@ import { DB } from '../tokens.js';
 import { hashPassword } from '../play/secrets.js';
 
 /** The settings of access the cabinet may write (PL-06…PL-10); the password goes separately and is stored as a hash. */
-const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'singleAttempt', 'restartOnReload', 'closedText'] as const;
+const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'ageRating', 'singleAttempt', 'restartOnReload', 'closedText'] as const;
 
 export interface ProjectSettings {
   /** PL-06 · at most so many started and/or completed passages. */
@@ -32,6 +33,8 @@ export interface ProjectSettings {
   hasPassword?: boolean;
   /** PL-09 · the screen «Вам есть 18 лет?» before the first screen. */
   age18?: boolean;
+  /** P8.7 · the age category (436-ФЗ): 0, 6, 12, 16 or 18. */
+  ageRating?: number | null;
   /** PL-10 · one passage per device. */
   singleAttempt?: boolean;
   /** PL-11 · after a reload the passage begins again from the first screen instead of continuing. */
@@ -101,6 +104,7 @@ export class ProjectsService {
     private readonly entitlements: EntitlementsService,
     @Optional() private readonly flags?: FeatureFlagsService,
     @Optional() private readonly safety?: SafetyService,
+    @Optional() @Inject(AGE_RATING_REQUIRED) private readonly ageRatingRequired?: boolean,
   ) {}
 
   async createProject(userId: string, requestedTitle?: string, templateId?: string): Promise<ProjectDetail> {
@@ -497,6 +501,17 @@ export class ProjectsService {
       throw new BadRequestException({ error: { code: 'INVALID_DOCUMENT', message: `Сборка не прошла проверку: ${parsed.error.issues[0]?.message ?? 'неверная структура'}` } });
     }
     const doc = parsed.data;
+    // P8.7 · SR-01: no publication without an age category (05-LEGAL.md §2.4).
+    const rating = ((row.settings ?? {}) as ProjectSettings).ageRating;
+    if (this.ageRatingRequired && (rating === undefined || rating === null)) {
+      throw new UnprocessableEntityException({
+        error: {
+          code: 'PUBLISH_BLOCKED',
+          message: 'Сборку нельзя опубликовать: выберите возрастную категорию (0+, 6+, 12+, 16+ или 18+) в настройках доступа сборки.',
+          issues: [{ code: 'NO_AGE_RATING', message: 'Не выбрана возрастная категория.', path: ['settings', 'ageRating'] }],
+        },
+      });
+    }
     const errors = validateDocument(doc).filter((i) => i.severity === 'error');
     if (errors.length > 0) {
       throw new UnprocessableEntityException({
@@ -681,8 +696,13 @@ export class ProjectsService {
       const v = incoming[key];
       if (v !== undefined && v !== null && typeof v !== 'boolean') throw bad();
     }
+    if (incoming.ageRating !== undefined && incoming.ageRating !== null && !(AGE_RATINGS as readonly unknown[]).includes(incoming.ageRating)) {
+      throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Возрастная категория — 0+, 6+, 12+, 16+ или 18+.' } });
+    }
     if (incoming.closedText !== undefined && incoming.closedText !== null && (typeof incoming.closedText !== 'string' || incoming.closedText.length > 1000)) throw bad();
     const merged: ProjectSettings = { ...((row.settings ?? {}) as ProjectSettings), ...(incoming as Partial<ProjectSettings>) };
+    // P8.7: an «18+» project always asks the age before the start — the creator cannot switch the question off.
+    if (merged.ageRating === 18) merged.age18 = true;
     for (const key of ['maxStarts', 'maxCompletions'] as const) {
       const v = merged[key];
       if (v !== undefined && v !== null && (!Number.isInteger(v) || v < 1 || v > 10_000_000)) {

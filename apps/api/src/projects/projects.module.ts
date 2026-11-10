@@ -11,13 +11,13 @@ import { DraftsController } from './drafts.controller.js';
 import { SystemTemplatesService } from './system-templates.service.js';
 import { TemplatesController } from './templates.controller.js';
 import { ElementsController } from './elements.controller.js';
-import { WEB_URL } from './projects.tokens.js';
+import { AGE_RATING_REQUIRED, WEB_URL } from './projects.tokens.js';
 
 export { WEB_URL };
 
 @Module({})
 export class ProjectsModule {
-  static register(webUrl: string): DynamicModule {
+  static register(webUrl: string, ageRatingRequired = false): DynamicModule {
     return {
       module: ProjectsModule,
       providers: [
@@ -28,6 +28,7 @@ export class ProjectsModule {
         DraftsService,
         SystemTemplatesService,
         { provide: WEB_URL, useValue: webUrl },
+        { provide: AGE_RATING_REQUIRED, useValue: ageRatingRequired },
       ],
       controllers: [ProjectsController, TemplatesController, ElementsController, DraftsController, ResponsesController, AccessPointsController],
       exports: [ProjectsService, SystemTemplatesService],

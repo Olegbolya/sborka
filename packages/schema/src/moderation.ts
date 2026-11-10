@@ -77,6 +77,10 @@ export const DATA_REQUEST_KINDS = [
 ] as const;
 export type DataRequestKind = (typeof DATA_REQUEST_KINDS)[number]['code'];
 
+/** P8.7 · 436-ФЗ: the age category a creator must choose before publishing; 18 also puts the «18+» question before the start. */
+export const AGE_RATINGS = [0, 6, 12, 16, 18] as const;
+export type AgeRating = (typeof AGE_RATINGS)[number];
+
 /** The alerts before a legal term runs out (05-LEGAL.md §7): six hours and one hour. */
 export const DEADLINE_ALERT_HOURS = [6, 1] as const;
 

@@ -39,6 +39,8 @@ export interface ApiConfig {
   yookassa?: { shopId: string; secretKey: string };
   /** TS-05 · key of Yandex Safe Browsing; without it links are checked only against the own rules and the stop-list of domains. */
   safeBrowsingKey?: string;
+  /** P8.7: a project is not published without an age category. On in production; the test runs publish hundreds of projects and leave it off. */
+  requireAgeRating?: boolean;
   /** TS-06: how long an account counts as new; 24 by default. 0 turns the whole TS-06 check off; only the e2e run sets it (one phone-less test account publishes many projects with links). */
   newAccountHours?: number;
   mediaDir: string;
@@ -95,6 +97,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     ...(env.BACKUP_DIR ? { backupDir: env.BACKUP_DIR } : {}),
     ...(env.YOOKASSA_SHOP_ID?.trim() && env.YOOKASSA_SECRET_KEY?.trim() ? { yookassa: { shopId: env.YOOKASSA_SHOP_ID.trim(), secretKey: env.YOOKASSA_SECRET_KEY.trim() } } : {}),
     ...(env.NEW_ACCOUNT_HOURS !== undefined && Number.isFinite(Number(env.NEW_ACCOUNT_HOURS)) && Number(env.NEW_ACCOUNT_HOURS) >= 0 ? { newAccountHours: Number(env.NEW_ACCOUNT_HOURS) } : {}),
+    requireAgeRating: env.REQUIRE_AGE_RATING !== undefined ? env.REQUIRE_AGE_RATING !== '0' : production,
     ...(env.YANDEX_SAFEBROWSING_KEY?.trim() ? { safeBrowsingKey: env.YANDEX_SAFEBROWSING_KEY.trim() } : {}),
     mediaDir: env.MEDIA_DIR ?? (production ? '/srv/blokum/media' : `${env.DATA_ROOT ?? '/tmp'}/blokum-media`),
     mediaBaseUrl: env.MEDIA_BASE_URL ?? `http://${env.API_HOST ?? '127.0.0.1'}:${parsed}/api/v1/media`,

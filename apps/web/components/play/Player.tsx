@@ -211,7 +211,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
           ← Назад
         </button>
       )}
-      <PlayFooter slug={boot.view.slug} watermark={boot.view.watermark} />
+      <PlayFooter slug={boot.view.slug} watermark={boot.view.watermark} ageRating={boot.view.ageRating ?? null} />
     </Artboard>
   );
 }

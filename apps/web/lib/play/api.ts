@@ -21,6 +21,8 @@ export interface PlayOpen {
   fonts: Record<string, { family: string; styles: Record<string, string> }>;
   /** PL-16 · the mark «Сделано в Блоккере — создать свою». */
   watermark: boolean;
+  /** P8.7 · the age mark (0, 6, 12, 16, 18) or null. */
+  ageRating?: number | null;
   /** PL-18 · «Реклама», the advertiser and the erid. */
   ad: { advertiser: string; inn?: string; erid: string } | null;
   /** The proof of the password (PL-08). */

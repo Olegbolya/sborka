@@ -75,6 +75,17 @@ inject_secret() {
 }
 inject_secret YOOKASSA_SECRET_KEY "${YOOKASSA_SECRET_KEY:-}"
 
+# Режим «до запуска» в .env.prod следует за infra/server.env: когда владелец снимает пароль с сайта, служебные галереи /dev
+# закрываются тем же деплоем, а не остаются открытыми всем.
+# shellcheck source=/dev/null
+want_pre="$(set +u; unset PRELAUNCH; . "$APP_ROOT/setup/infra/server.env" >/dev/null 2>&1; echo "${PRELAUNCH:-1}")"
+if [ "$want_pre" = 0 ] || [ "$want_pre" = 1 ]; then
+  if ! grep -qx "PRELAUNCH=$want_pre" "$ENV_FILE"; then
+    sed -i '/^PRELAUNCH=/d' "$ENV_FILE"; printf 'PRELAUNCH=%s\n' "$want_pre" >> "$ENV_FILE"
+    echo "→ в .env.prod режим «до запуска»: PRELAUNCH=$want_pre"
+  fi
+fi
+
 # До запуска (PRELAUNCH=1: весь сайт закрыт паролем) служебные галереи /dev открыты владельцу для проверки;
 # после запуска флажок снимается сам.
 sed -i '/^BLOKUM_DEV_PAGES=/d' "$ENV_FILE"

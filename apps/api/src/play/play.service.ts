@@ -39,6 +39,8 @@ export interface PlayOpen {
   fonts: Record<string, { family: string; styles: Record<string, string> }>;
   /** PL-16 · the tariff of the creator asks for the mark «Сделано в Блоккере — создать свою». */
   watermark: boolean;
+  /** P8.7 · the age mark in the footer: 0, 6, 12, 16, 18, or null when the creator has not chosen one. */
+  ageRating: number | null;
   /** PL-18 · an advertising project says so: who advertises and the erid. */
   ad: { advertiser: string; inn?: string; erid: string } | null;
   /** Given after the right password: the browser keeps it for the tab and sends it with later calls (PL-08). */
@@ -103,8 +105,9 @@ const PASSWORD_TRIES = 10;
 const PASSWORD_WINDOW_MS = 10 * 60 * 1000;
 
 /** PL-16, PL-18 · what the player must show whatever the creator drew: the tariff's mark and the advertising label. */
-function marks(p: { isAdvertising: boolean; adMarking: { advertiser: string; inn?: string; erid: string } | null }, watermark: boolean): Pick<PlayOpen, 'watermark' | 'ad'> {
-  return { watermark, ad: p.isAdvertising && p.adMarking ? p.adMarking : null };
+function marks(p: { isAdvertising: boolean; adMarking: { advertiser: string; inn?: string; erid: string } | null; settings?: unknown }, watermark: boolean): Pick<PlayOpen, 'watermark' | 'ad' | 'ageRating'> {
+  const rating = (p.settings as { ageRating?: unknown } | null | undefined)?.ageRating;
+  return { watermark, ad: p.isAdvertising && p.adMarking ? p.adMarking : null, ageRating: typeof rating === 'number' ? rating : null };
 }
 
 export function deviceTypeOf(userAgent: string | undefined): 'PHONE' | 'TABLET' | 'DESKTOP' | 'UNKNOWN' {
@@ -179,7 +182,7 @@ export class PlayService {
   /** The open project of a published version for a participant who is already in it (resuming a passage). */
   async openFor(projectId: string, versionId: string): Promise<PlayOpen> {
     const [row] = await this.db
-      .select({ slug: schema.projects.slug, ownerId: schema.projects.ownerId, title: schema.projects.title, isAdvertising: schema.projects.isAdvertising, adMarking: schema.projects.adMarking, document: schema.projectVersions.document })
+      .select({ slug: schema.projects.slug, ownerId: schema.projects.ownerId, title: schema.projects.title, isAdvertising: schema.projects.isAdvertising, adMarking: schema.projects.adMarking, settings: schema.projects.settings, document: schema.projectVersions.document })
       .from(schema.projectVersions)
       .innerJoin(schema.projects, eq(schema.projects.id, schema.projectVersions.projectId))
       .where(and(eq(schema.projectVersions.id, versionId), eq(schema.projects.id, projectId)));

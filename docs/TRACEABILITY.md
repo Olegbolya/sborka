@@ -521,6 +521,8 @@
 | TS-30 | P9.2 | `apps/api/src/auth/otp.service.ts#checkRateLimits`; `apps/api/src/config.ts#smsDailyBudget` | `apps/api/test/blocking.test.ts` |
 | TS-31 | P9.2 | `packages/db/src/schema/moderation.ts#blockedIdentities`; `packages/db/migrations/0017_blocked_identities.sql`; `apps/api/src/admin/blocked-identities.service.ts`; `apps/api/src/admin/moderation.service.ts#act`; `apps/api/src/auth/oauth.controller.ts#callback` | `apps/api/test/blocking.test.ts` |
 | TS-32 | P9.2 | `apps/api/src/admin/blocked-identities.service.ts#assertFree`; `apps/api/src/auth/otp.service.ts`; `apps/api/src/auth/oauth.service.ts` | `apps/api/test/blocking.test.ts` |
+| PL-09 | P8.7 | `apps/api/src/projects/projects.service.ts#updateAccessSettings,publish`; `apps/api/src/play/play.service.ts#marks`; `apps/web/app/cabinet/projects/[id]/page.tsx`; `apps/web/components/play/PlayFooter.tsx`; `apps/web/components/landing/SiteChrome.tsx` | `apps/api/test/age-rating.test.ts`, `e2e/age-rating.spec.ts` |
+| PL-18 | P8.7 | `apps/api/src/play/play.service.ts#marks`; `apps/web/components/play/Player.tsx` | `apps/api/test/play-marks.test.ts`, `e2e/play-safety.spec.ts` |
 | TS-22 | P4.5 | `apps/worker/src/media/nsfw.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/phash.test.ts` |
 | TS-23 | P4.5 | `apps/worker/src/media/phash.ts`; `apps/worker/src/media/processor.ts`; `packages/db/src/schema/moderation.ts#mediaBlockedHashes`; `apps/api/src/admin/moderation.service.ts` | `apps/worker/test/phash.test.ts` |
 | TS-24 | P4.5 | `packages/renderer/src/blocks/media.tsx#MediaStub`; `apps/api/src/play/play.service.ts#mediaOf`; `apps/web/lib/play/api.ts#playMediaResolver` | `packages/renderer/test/blocks.test.tsx`; `apps/api/test/play.test.ts` |

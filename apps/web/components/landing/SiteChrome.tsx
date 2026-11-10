@@ -32,6 +32,9 @@ export function SiteFooter() {
           <p>
             <a href="/legal/contacts">Реквизиты исполнителя и контакты</a>
           </p>
+          <p data-testid="site-age-mark">
+            <span aria-label="Возрастная категория сайта 18+">18+</span> · сборки создают пользователи, у каждой свой возрастной знак
+          </p>
         </div>
         <nav aria-label="Разделы" className="lp-footer-col">
           <strong>Сайт</strong>

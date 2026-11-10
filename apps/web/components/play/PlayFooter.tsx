@@ -110,12 +110,20 @@ function ReportDialog({ slug, onClose }: { slug: string; onClose: () => void }) 
 }
 
 /** PL-16 · on every screen: «Создано пользователем · Пожаловаться» (on no tariff it goes away) and, on «Старт», the mark of the service. */
-export function PlayFooter({ slug, watermark }: { slug: string; watermark: boolean }) {
+export function PlayFooter({ slug, watermark, ageRating = null }: { slug: string; watermark: boolean; ageRating?: number | null }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <footer className="pl-footer" data-testid="play-footer">
         <span>
+          {ageRating !== null ? (
+            <>
+              <span data-testid="play-age" aria-label={`Возрастная категория ${ageRating}+`}>
+                {ageRating}+
+              </span>{' '}
+              ·{' '}
+            </>
+          ) : null}
           Создано пользователем ·{' '}
           <button type="button" className="pl-link" onClick={() => setOpen(true)}>
             Пожаловаться

@@ -28,6 +28,7 @@ interface ProjectSettings {
   password?: string;
   hasPassword?: boolean;
   age18?: boolean | null;
+  ageRating?: number | null;
   singleAttempt?: boolean | null;
   restartOnReload?: boolean | null;
   closedText?: string | null;
@@ -636,9 +637,32 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
       </div>
 
       <div>
+        <label style={s.label} htmlFor="age-rating">Возрастная категория</label>
+        <select
+          id="age-rating"
+          style={{ ...s.inputFull, maxWidth: 300 }}
+          value={settings.ageRating ?? ''}
+          onChange={(e) => {
+            const rating = e.target.value === '' ? null : Number(e.target.value);
+            update('ageRating', rating);
+            if (rating === 18) update('age18', true);
+          }}
+        >
+          <option value="">Не выбрана</option>
+          <option value="0">0+ — для всех</option>
+          <option value="6">6+</option>
+          <option value="12">12+</option>
+          <option value="16">16+</option>
+          <option value="18">18+ — только для взрослых</option>
+        </select>
+        <p style={s.hint}>Без категории сборку нельзя опубликовать. Знак показывается участнику внизу экрана. Для 18+ вопрос про возраст включается сам.</p>
+      </div>
+
+      <div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
           <input
             type="checkbox"
+            disabled={settings.ageRating === 18}
             checked={settings.age18 ?? false}
             onChange={(e) => update('age18', e.target.checked)}
             aria-label="Вопрос про возраст 18+"
