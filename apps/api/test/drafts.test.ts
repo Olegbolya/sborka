@@ -73,8 +73,18 @@ describe('E-17…E-19 · Черновик, версии, конфликты', ()
     await t?.app.close();
     await db?.drop();
   });
+  /** E-19: the history of snapshots belongs to the paid tariffs, so the author of these tests has one (the «Старт» case has its own test). */
+  const subscribe = async (planCode: 'AUTHOR' | 'PLUS' | 'PRO' = 'AUTHOR'): Promise<void> => {
+    for (const u of await db.db.select({ id: schema.users.id }).from(schema.users)) {
+      const has = await db.db.select({ id: schema.subscriptions.id }).from(schema.subscriptions).where(eq(schema.subscriptions.userId, u.id));
+      if (has.length === 0) {
+        await db.db.insert(schema.subscriptions).values({ userId: u.id, planCode, period: 'MONTH', status: 'ACTIVE', currentPeriodStart: new Date(Date.now() - 86_400_000), currentPeriodEnd: new Date(Date.now() + 29 * 86_400_000) });
+      }
+    }
+  };
   beforeEach(async () => {
     cookie = await loginViaOtp();
+    await subscribe();
   });
 
   const create = async (c = cookie): Promise<{ id: string; draftVersionNumber: number; document: ProjectDocument }> =>
@@ -231,5 +241,65 @@ describe('E-18 · разбор If-Match', () => {
   });
   it('пусто, ноль, дробь, текст — ошибка', () => {
     for (const bad of [undefined, '', '0', '1.5', 'abc']) expect(() => parseIfMatch(bad)).toThrow();
+  });
+});
+
+describe('E-19 · срок истории версий по тарифу', () => {
+  const pg = pgSkipGuard();
+  let t: TestApp;
+  let db: TestDb;
+  let loginViaOtp: (phone?: string) => Promise<string>;
+
+  beforeAll(async () => {
+    try {
+      ({ t, db, loginViaOtp } = await makeAppWithAuth());
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ECONNREFUSED') { pg.skip(); return; }
+      throw e;
+    }
+  });
+  afterAll(async () => {
+    await t?.app.close();
+    await db?.drop();
+  });
+
+  const create = async (c: string): Promise<{ id: string; draftVersionNumber: number; document: ProjectDocument }> =>
+    (await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', c).set('X-Blokum-CSRF', '1').send({ title: 'История' }).expect(200)).body as { id: string; draftVersionNumber: number; document: ProjectDocument };
+  const edit = async (c: string, p: { id: string; draftVersionNumber: number; document: ProjectDocument }): Promise<void> => {
+    const doc = structuredClone(p.document);
+    doc.screens[0]!.blocks.push(createBlock('text', { name: 'Правка' }));
+    await request(t.http()).put(`/${API_PREFIX}/projects/${p.id}/draft`).set('Cookie', c).set('X-Blokum-CSRF', '1').set('If-Match', String(p.draftVersionNumber)).send({ document: doc }).expect(200);
+  };
+  const versions = async (c: string, id: string): Promise<Array<{ id: string; kind: string }>> => (await request(t.http()).get(`/${API_PREFIX}/projects/${id}/versions`).set('Cookie', c).expect(200)).body as Array<{ id: string; kind: string }>;
+  const subscribe = async (phone: string, planCode: 'AUTHOR' | 'PLUS'): Promise<void> => {
+    const [u] = await db.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.phoneE164, phone));
+    await db.db.insert(schema.subscriptions).values({ userId: u!.id, planCode, period: 'MONTH', status: 'ACTIVE', currentPeriodStart: new Date(Date.now() - 86_400_000), currentPeriodEnd: new Date(Date.now() + 29 * 86_400_000) });
+  };
+
+  it('E-19 · на «Старте» снимков черновика нет в истории, на платном тарифе — есть', async () => {
+    const free = await loginViaOtp('+79051110001');
+    const p = await create(free);
+    await edit(free, p);
+    expect(await versions(free, p.id)).toHaveLength(0);
+
+    await subscribe('+79051110001', 'AUTHOR');
+    expect(await versions(free, p.id)).toHaveLength(1);
+  });
+
+  it('E-19 · снимок старше срока тарифа не показывается и не открывается; на более длинном тарифе — снова виден', async () => {
+    const cookie = await loginViaOtp('+79051110002');
+    await subscribe('+79051110002', 'AUTHOR'); // 7 дней
+    const p = await create(cookie);
+    await edit(cookie, p);
+    const [snap] = await versions(cookie, p.id);
+    await db.db.update(schema.projectVersions).set({ createdAt: new Date(Date.now() - 20 * 86_400_000) }).where(eq(schema.projectVersions.id, snap!.id));
+    expect(await versions(cookie, p.id)).toHaveLength(0);
+    const refused = await request(t.http()).get(`/${API_PREFIX}/projects/${p.id}/versions/${snap!.id}`).set('Cookie', cookie).expect(403);
+    expect(refused.body.error.code).toBe('HISTORY_LIMIT');
+    await request(t.http()).post(`/${API_PREFIX}/projects/${p.id}/restore/${snap!.id}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({}).expect(403);
+
+    await db.db.delete(schema.subscriptions);
+    await subscribe('+79051110002', 'PLUS'); // 30 дней
+    expect(await versions(cookie, p.id)).toHaveLength(1);
   });
 });

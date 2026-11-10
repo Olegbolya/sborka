@@ -4,10 +4,11 @@ import { and, asc, desc, eq, isNull, max, ne } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { ProjectDocument, assertDocumentSize, createId } from '@blokum/schema';
 import { DB } from '../tokens.js';
+import { EntitlementsService } from '../entitlements/entitlements.service.js';
 
 /** A snapshot is made from the previous draft when the last one is older than this (E-19). */
 export const SNAPSHOT_EVERY_MS = 10 * 60 * 1000;
-/** Snapshots kept per project; the oldest are dropped. The per-tariff limit joins with Entitlements (P7.1). */
+/** Snapshots kept per project; the oldest are dropped. How far back the person can look is the tariff's (`versionHistoryDays`, E-19). */
 export const SNAPSHOTS_KEPT = 50;
 
 export interface VersionItem {
@@ -39,7 +40,21 @@ export function parseIfMatch(header: string | undefined): number | '*' {
 /** P3.2 · E-17…E-19: the draft of a project — saving with a revision check, history of snapshots, restoring. */
 @Injectable()
 export class DraftsService {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly entitlements: EntitlementsService,
+  ) {}
+
+  /** E-19 · the earliest moment a snapshot of the draft can still be seen on the tariff of the owner; `null` — no snapshots at all. */
+  private async historyFrom(ownerId: string, projectId: string, now = new Date()): Promise<Date | null> {
+    const { plan } = await this.entitlements.limitsOfProject(ownerId, projectId, now);
+    const days = plan.limits.versionHistoryDays;
+    return days > 0 ? new Date(now.getTime() - days * 86_400_000) : null;
+  }
+
+  private inHistory(kind: VersionItem['kind'], createdAt: Date, from: Date | null): boolean {
+    return kind === 'PUBLISHED' || (from !== null && createdAt >= from);
+  }
 
   /** E-17/E-18: replaces the draft if the editor worked on the current revision (or asked to overwrite). */
   async saveDraft(userId: string, projectId: string, ifMatch: string | undefined, input: unknown): Promise<{ revision: number; savedAt: Date }> {
@@ -65,7 +80,13 @@ export class DraftsService {
     });
   }
 
-  /** E-19: snapshots and published versions, newest first. */
+  private async assertInHistory(userId: string, projectId: string, kind: VersionItem['kind'], createdAt: Date): Promise<void> {
+    if (!this.inHistory(kind, createdAt, await this.historyFrom(userId, projectId))) {
+      throw new ForbiddenException({ error: { code: 'HISTORY_LIMIT', message: 'Эта версия старше срока хранения истории на вашем тарифе. Срок указан на странице «Тарифы».' } });
+    }
+  }
+
+  /** E-19: snapshots and published versions, newest first. Snapshots older than the tariff keeps are not shown. */
   async listVersions(userId: string, projectId: string): Promise<VersionItem[]> {
     const project = await this.owned(userId, projectId);
     const rows = await this.db
@@ -73,7 +94,8 @@ export class DraftsService {
       .from(schema.projectVersions)
       .where(and(eq(schema.projectVersions.projectId, projectId), project.draftVersionId ? ne(schema.projectVersions.id, project.draftVersionId) : undefined))
       .orderBy(desc(schema.projectVersions.number));
-    return rows;
+    const from = await this.historyFrom(userId, projectId);
+    return rows.filter((r) => this.inHistory(r.kind, r.createdAt, from));
   }
 
   /** E-19: the document of one version, for the preview in the history window. */
@@ -87,6 +109,7 @@ export class DraftsService {
         .limit(1)
     )[0];
     if (!row) throw new NotFoundException({ error: { code: 'VERSION_NOT_FOUND', message: 'Такой версии нет' } });
+    await this.assertInHistory(userId, projectId, row.kind, row.createdAt);
     return { id: row.id, number: row.number, kind: row.kind, createdAt: row.createdAt, document: row.document as unknown as ProjectDocument };
   }
 
@@ -103,6 +126,7 @@ export class DraftsService {
           .limit(1)
       )[0];
       if (!target || target.id === draft.id) throw new NotFoundException({ error: { code: 'VERSION_NOT_FOUND', message: 'Такой версии нет' } });
+      await this.assertInHistory(userId, projectId, target.kind, target.createdAt);
       await this.snapshot(tx, projectId, draft, userId);
       const revision = await this.nextNumber(tx, projectId);
       const doc = this.parseDocument(target.document);

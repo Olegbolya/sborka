@@ -70,7 +70,7 @@ export function HistoryDialog({ onClose }: { onClose: () => void }) {
         </p>
       )}
       {versions === null && !error && <p className="ed-hint">Загружаем…</p>}
-      {versions?.length === 0 && <p className="ed-hint">Пока нет сохранённых версий: первый снимок появится после первой правки.</p>}
+      {versions?.length === 0 && <p className="ed-hint">Пока нет версий, которые можно показать. Снимки черновика хранятся 7, 30 или 90 дней — по тарифу, а на «Старте» показываются только опубликованные версии.</p>}
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         {versions && versions.length > 0 && (
           <ul className="ed-list" aria-label="Версии" style={{ flex: '1 1 260px' }}>

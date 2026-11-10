@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
+import { subscribeOwner } from './helpers/plan';
 import { hit, nextButton, openEditor, saveStatus, screensList, seedProject, serverDraft, stage, textBlock, openTab, tap, ensurePanel } from './helpers/editor';
 
 const SHOTS = 'e2e/__screenshots__';
@@ -287,6 +288,7 @@ test.describe('E-18 · конфликт двух вкладок', () => {
 test.describe('E-19 · история версий', () => {
   test('E-19 · снимок прежнего черновика: просмотр и восстановление; заменённый черновик остаётся в истории', async ({ page }) => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A')));
+    await subscribeOwner(id, 'AUTHOR'); // история снимков — на платных тарифах (E-19)
     await openEditor(page, id);
     await tap(page, 'Текст A');
     await page.keyboard.press('Control+d');
@@ -315,6 +317,18 @@ test.describe('E-19 · история версий', () => {
     await expect(stage(page).locator('.ed-hit')).toHaveCount(2);
     await expect.poll(async () => (await serverDraft(page, id)).doc.screens[0]!.blocks.length).toBe(2);
     await expect(saveStatus(page)).toHaveText('Сохранено');
+  });
+
+  test('E-19 · на «Старте» снимки черновика не показываются и сказано почему', async ({ page }) => {
+    const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A')));
+    await openEditor(page, id);
+    await tap(page, 'Текст A');
+    await page.keyboard.press('Control+d');
+    await expect(saveStatus(page)).toHaveText('Сохранено');
+    await page.getByRole('button', { name: 'История' }).click();
+    const dialog = page.getByRole('dialog', { name: 'История версий' });
+    await expect(dialog.getByText(/на «Старте» показываются только опубликованные версии/)).toBeVisible();
+    await expect(dialog.getByRole('list', { name: 'Версии' }).getByRole('button')).toHaveCount(0);
   });
 
   test('E-19 · без изменений история пуста и это понятно сказано', async ({ page }) => {
