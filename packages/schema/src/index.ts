@@ -29,3 +29,4 @@ export * from './color-math.js';
 export * from './theme-from-palette.js';
 export * from './report-categories.js';
 export * from './moderation.js';
+export * from './safety/index.js';

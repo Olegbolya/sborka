@@ -1,4 +1,4 @@
-import { bigserial, boolean, index, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
+import { bigserial, boolean, index, integer, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from './users.js';
 import { createdAt, id, ts } from './columns.js';
 import {
@@ -172,6 +172,29 @@ export const mediaBlockedHashes = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('media_blocked_hashes_phash_idx').on(t.phash)],
+);
+
+/**
+ * P9.1 · TS-04, TS-05 · dictionaries the administrators edit: stop words of categories A/B with weights (`STOP`) and the stop-list
+ * of domains for links (`DOMAIN`). The publication check reads them; a change goes to the audit log.
+ */
+export const safetyTerms = pgTable(
+  'safety_terms',
+  {
+    id: id(),
+    kind: text('kind').$type<'STOP' | 'DOMAIN'>().notNull(),
+    /** A stem of a word or phrase («гарантирован доход»), or a domain («evil.example»). */
+    term: text('term').notNull(),
+    /** Category of docs/06-TRUST-SAFETY.md §2 for a stop word: `A` or `B`; empty for a domain. */
+    category: text('category').$type<'A' | 'B'>(),
+    /** 1–100; from 80 the publication waits for a person (STOP_WORD_BLOCK_WEIGHT). */
+    weight: integer('weight').notNull().default(50),
+    active: boolean('active').notNull().default(true),
+    note: text('note').notNull().default(''),
+    createdById: text('created_by_id'),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('safety_terms_kind_term_idx').on(t.kind, t.term)],
 );
 
 /** A message to a user in the cabinet (and by mail when the address is confirmed): moderation decisions, appeal answers. */

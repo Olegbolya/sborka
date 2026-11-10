@@ -31,7 +31,7 @@ export interface ValidationIssue {
 
 type Path = Array<string | number>;
 
-function* walkActions(actions: readonly Action[], path: Path): Generator<[Action, Path]> {
+export function* walkActions(actions: readonly Action[], path: Path): Generator<[Action, Path]> {
   for (const [i, a] of actions.entries()) {
     const p = [...path, i];
     yield [a, p];
@@ -54,14 +54,14 @@ function* actionConditions(a: Action): Generator<Condition> {
   if (a.kind === 'repeat') yield* walkConditions(a.while);
 }
 
-interface RuleSite {
+export interface RuleSite {
   rule: Rule;
   path: Path;
   /** Screen the rule lives on; undefined for document-level rules. */
   screen?: Screen;
 }
 
-function collectRules(doc: ProjectDocument): RuleSite[] {
+export function collectRules(doc: ProjectDocument): RuleSite[] {
   const sites: RuleSite[] = doc.rules.map((rule, i) => ({ rule, path: ['rules', i] }));
   doc.screens.forEach((screen, si) => {
     screen.rules.forEach((rule, i) => sites.push({ rule, screen, path: ['screens', si, 'rules', i] }));

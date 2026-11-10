@@ -296,7 +296,7 @@ export class ModerationService {
       await this.notices.notify({
         userId: result.change.ownerId,
         kind: `MODERATION_${action}`,
-        title: this.noticeTitle(action, result.change.projectTitle),
+        title: reasonCode === 'AUTO_REVIEW' ? `Сборка «${result.change.projectTitle ?? ''}» ждёт проверки модератором` : this.noticeTitle(action, result.change.projectTitle),
         body: this.noticeBody(action, reason.message, note, reasonCode, result.change.projectTitle),
         projectId: result.change.projectId ?? null,
       });
@@ -326,7 +326,8 @@ export class ModerationService {
     // Category A: the answer to a blocked account has no details (§5).
     if (action === 'BLOCK_USER' && reasonCode.startsWith('A')) return 'Аккаунт заблокирован за нарушение правил сервиса.';
     const parts = [message, `Комментарий модератора: ${note}`];
-    if (action === 'UNPUBLISH') parts.push('Исправьте сборку и нажмите «Исправил — проверить снова» на странице сборки в кабинете.');
+    if (action === 'UNPUBLISH' && reasonCode === 'AUTO_REVIEW') parts.push('Ничего делать не нужно: как только модератор посмотрит сборку, она снова станет доступна или мы напишем, что нужно исправить.');
+    else if (action === 'UNPUBLISH') parts.push('Исправьте сборку и нажмите «Исправил — проверить снова» на странице сборки в кабинете.');
     if (action === 'BLOCK_PROJECT') parts.push('Решение можно обжаловать: откройте сборку в кабинете и нажмите «Обжаловать». Его пересмотрит другой модератор.');
     if (action === 'RESTORE' && project) parts.push('Сборка снова доступна.');
     return parts.join('\n\n');

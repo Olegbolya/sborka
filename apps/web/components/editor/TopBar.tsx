@@ -55,11 +55,18 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
         return;
       }
       const sent = store.getState().doc;
-      await api(`/projects/${encodeURIComponent(projectId)}/publish`, { method: 'POST' });
+      const result = await api<{ review?: boolean; warnings?: string[] } | null>(`/projects/${encodeURIComponent(projectId)}/publish`, { method: 'POST' });
       setPublishedDoc(sent);
+      // P9.1 (TS-03): a new account that names a bank or a state body waits for a moderator — the link does not open yet.
+      if (result?.review) {
+        onStatus('CLOSED');
+        flash('Сборка отправлена на проверку модератору: в ней названы организации или есть слова, которые мы смотрим вручную. Ссылка заработает, как только проверка закончится — обычно в течение суток. Мы напишем в уведомлениях.', 'ok');
+        return;
+      }
       onStatus('PUBLISHED');
       const { slug } = await api<{ slug: string }>(`/projects/${encodeURIComponent(projectId)}`);
-      flash(`Сборка опубликована: ${window.location.origin}/s/${slug}. QR-код можно взять в кабинете.`, 'ok');
+      const warning = result?.warnings && result.warnings.length > 0 ? ` Обратите внимание: ${result.warnings[0]}` : '';
+      flash(`Сборка опубликована: ${window.location.origin}/s/${slug}. QR-код можно взять в кабинете.${warning}`, 'ok');
     } catch (e) {
       const issues = isApiError(e) ? (e.issues ?? []) : [];
       if (isApiError(e) && e.status === 402 && e.code === 'PLAN_LIMIT') {

@@ -38,6 +38,7 @@ import { ReportsModule } from './reports/reports.module.js';
 import { PlansController } from './plans/plans.controller.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { type PaymentProvider } from './payments/payment-provider.js';
+import { type LinkReputation, YandexSafeBrowsing } from './admin/safe-browsing.js';
 import { AdminModule } from './admin/admin.module.js';
 import type { IMediaQueue } from './media/media-jobs.js';
 import { ProjectsModule } from './projects/projects.module.js';
@@ -62,6 +63,8 @@ export interface AppDeps {
   extraProviders?: Provider[];
   /** P7.3: override of the payment provider (tests); `null` — payments are off. */
   paymentProvider?: PaymentProvider | null;
+  /** P9.1 (TS-05): reputation of links; `null` — not checked. Default: Yandex Safe Browsing when the key is set. */
+  linkReputation?: LinkReputation | null;
 }
 
 @Module({})
@@ -73,7 +76,7 @@ export class AppModule {
     const emailSender: EmailSender | null = deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender();
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), PaymentsModule.register(config, deps.paymentProvider), LibraryModule, EditorModule],
+      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes, linkReputation: deps.linkReputation !== undefined ? deps.linkReputation : config.safeBrowsingKey ? new YandexSafeBrowsing(config.safeBrowsingKey) : null }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), PaymentsModule.register(config, deps.paymentProvider), LibraryModule, EditorModule],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),

@@ -4,7 +4,10 @@ import { AuditLogService } from '../auth/audit-log.service.js';
 import { type EmailSender } from '../auth/email-sender.js';
 import { type ApiConfig } from '../config.js';
 import { type HealthProbes } from '../health/health.controller.js';
-import { ALERTS, API_CONFIG, EMAIL_SENDER, HEALTH_PROBES } from '../tokens.js';
+import { ALERTS, API_CONFIG, EMAIL_SENDER, HEALTH_PROBES, LINK_REPUTATION } from '../tokens.js';
+import { type LinkReputation } from './safe-browsing.js';
+import { SafetyAdminController } from './safety-admin.controller.js';
+import { SafetyService } from './safety.service.js';
 import { AdminController } from './admin.controller.js';
 import { AdminUsersService } from './admin-users.service.js';
 import { CreatorModerationController } from './creator-moderation.controller.js';
@@ -23,15 +26,17 @@ import { SystemService } from './system.service.js';
 @Global()
 @Module({})
 export class AdminModule {
-  static register(deps: { alerts: Alerts; emailSender: EmailSender | null; config: ApiConfig; probes: HealthProbes }): DynamicModule {
+  static register(deps: { alerts: Alerts; emailSender: EmailSender | null; config: ApiConfig; probes: HealthProbes; linkReputation?: LinkReputation | null }): DynamicModule {
     return {
       module: AdminModule,
-      controllers: [AdminController, CreatorModerationController],
+      controllers: [AdminController, CreatorModerationController, SafetyAdminController],
       providers: [
         { provide: ALERTS, useValue: deps.alerts },
         { provide: EMAIL_SENDER, useValue: deps.emailSender },
         { provide: API_CONFIG, useValue: deps.config },
         { provide: HEALTH_PROBES, useValue: deps.probes },
+        { provide: LINK_REPUTATION, useValue: deps.linkReputation ?? null },
+        SafetyService,
         AuditLogService,
         NotificationsService,
         FeatureFlagsService,
@@ -42,7 +47,7 @@ export class AdminModule {
         SystemContentService,
         LibraryAdminService,
       ],
-      exports: [FeatureFlagsService, ModerationService, NotificationsService, AuditLogService],
+      exports: [FeatureFlagsService, ModerationService, NotificationsService, AuditLogService, SafetyService],
     };
   }
 }

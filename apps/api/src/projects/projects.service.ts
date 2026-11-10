@@ -10,6 +10,7 @@ import { and, asc, desc, eq, inArray, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createDocument, createId, createSlug, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
 import { HttpException, Inject, Optional } from '@nestjs/common';
+import { SafetyService, type PublishVerdict } from '../admin/safety.service.js';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { DB } from '../tokens.js';
@@ -73,6 +74,12 @@ export interface ProjectDetail extends Omit<ProjectSummary, 'starts' | 'completi
   completions: number;
 }
 
+/** What the creator is told after a publication (P9.1): `review` — it waits for a moderator; `warnings` — what a person will look at. */
+export interface PublishResult {
+  review: boolean;
+  warnings: string[];
+}
+
 function sha256(doc: ProjectDocument): string {
   return createHash('sha256').update(JSON.stringify(doc)).digest('hex');
 }
@@ -93,6 +100,7 @@ export class ProjectsService {
     @Inject(DB) private readonly db: Db,
     private readonly entitlements: EntitlementsService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly safety?: SafetyService,
   ) {}
 
   async createProject(userId: string, requestedTitle?: string, templateId?: string): Promise<ProjectDetail> {
@@ -464,13 +472,11 @@ export class ProjectsService {
     };
   }
 
-  async setProjectStatus(userId: string, projectId: string, status: 'PUBLISHED' | 'CLOSED' | 'DRAFT'): Promise<void> {
+  async setProjectStatus(userId: string, projectId: string, status: 'PUBLISHED' | 'CLOSED' | 'DRAFT'): Promise<PublishResult | undefined> {
     const row = await this.assertOwner(userId, projectId);
-    if (status === 'PUBLISHED') {
-      await this.publish(row);
-      return;
-    }
+    if (status === 'PUBLISHED') return this.publish(row);
     await this.db.update(schema.projects).set({ status }).where(eq(schema.projects.id, projectId));
+    return undefined;
   }
 
   /**
@@ -478,7 +484,7 @@ export class ProjectsService {
    * published version — the player reads that copy, so later edits of the draft or of a theme reach participants only at
    * the next publication.
    */
-  private async publish(row: { id: string; ownerId: string; settings: Record<string, unknown> | null; operatorInfo: Record<string, unknown> | null; dpaAcceptedAt: Date | null; operatorAckAt?: Date | null }): Promise<void> {
+  private async publish(row: { id: string; ownerId: string; settings: Record<string, unknown> | null; operatorInfo: Record<string, unknown> | null; dpaAcceptedAt: Date | null; operatorAckAt?: Date | null }): Promise<PublishResult> {
     await this.flags?.require('PUBLISHING_ENABLED', 'Публикация сборок временно отключена.');
     const [project] = await this.db.select({ draftVersionId: schema.projects.draftVersionId }).from(schema.projects).where(eq(schema.projects.id, row.id));
     const [draft] = project?.draftVersionId
@@ -500,6 +506,23 @@ export class ProjectsService {
           issues: errors.map((i) => ({ code: i.code, message: i.message, path: i.path })),
         },
       });
+    }
+    // P9.1 · SR-01, TS-02…TS-05: dictionaries and links. What stops the publication is told to the creator; what a person must look at is
+    // opened as a case after the publication.
+    let verdict: PublishVerdict | undefined;
+    if (this.safety) {
+      const [named] = await this.db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, row.id));
+      verdict = await this.safety.check(row.ownerId, doc, named?.title ?? doc.meta.title);
+      if (verdict.errors.length > 0) {
+        await this.safety.noteBlocked(row.ownerId, row.id, verdict.errors);
+        throw new UnprocessableEntityException({
+          error: {
+            code: 'PUBLISH_BLOCKED',
+            message: `Сборку нельзя опубликовать: ${verdict.errors[0]!.message}`,
+            issues: verdict.errors.map((i) => ({ code: i.code, message: i.message, path: i.path })),
+          },
+        });
+      }
     }
     const violations = await this.entitlements.publishViolations(row.ownerId, row.id, doc, (row.settings ?? {}));
     if (violations.length > 0) {
@@ -526,6 +549,8 @@ export class ProjectsService {
         .set({ status: 'PUBLISHED', publishedVersionId: versionId, publishedAt: new Date(), themeId: doc.theme.themeId ?? null })
         .where(eq(schema.projects.id, row.id));
     });
+    if (verdict && this.safety) await this.safety.afterPublish(row.id, verdict);
+    return { review: verdict?.hold ?? false, warnings: verdict?.warnings ?? [] };
   }
 
   /** PL-23: check that operator info and DPA are set if document has B-19 contacts blocks. */
