@@ -266,6 +266,19 @@ describe('A-02, D1/D4/D9 · Онбординг и согласия', () => {
     expect(types).toContain('TOS');
   });
 
+  it('A-02 · перезапуск API не плодит версии документа: файл сверяется с последней версией, а не с первой', async () => {
+    if (skip()) return;
+    const { LegalDocumentService } = await import('../src/auth/legal-document.service.js');
+    const svc = t.app.get(LegalDocumentService);
+    // Документ уже менялся раньше: первая версия не совпадает с файлом.
+    await db.db.update(schema.legalDocuments).set({ contentSha256: 'старая-версия' }).where(eq(schema.legalDocuments.type, 'COOKIES'));
+    await svc.onModuleInit();
+    await svc.onModuleInit();
+    await svc.onModuleInit();
+    const versions = await svc.getVersions('COOKIES');
+    expect(versions.length).toBe(2);
+  });
+
   it('A-02 · POST /auth/onboarding/consent → недопустимый documentId → 400', async () => {
     if (skip()) return;
     const cookie = await loginViaOtp('+79991230007');

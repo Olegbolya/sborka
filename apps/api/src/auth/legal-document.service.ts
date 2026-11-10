@@ -49,21 +49,17 @@ export class LegalDocumentService implements OnModuleInit {
       const contentSha256 = sha256(bodyMd);
 
       const existing = await this.db
-        .select({ id: schema.legalDocuments.id, contentSha256: schema.legalDocuments.contentSha256 })
+        .select({ id: schema.legalDocuments.id, version: schema.legalDocuments.version, contentSha256: schema.legalDocuments.contentSha256 })
         .from(schema.legalDocuments)
         .where(eq(schema.legalDocuments.type, type))
+        .orderBy(desc(schema.legalDocuments.version))
         .limit(1);
 
       if (existing[0]) {
+        // The file is compared with the LATEST version only: with an older one a new version would appear on every start,
+        // and every person would be asked for the consents again after each deploy.
         if (existing[0].contentSha256 === contentSha256) continue;
-        // Content changed: insert new version (higher than existing max).
-        const currentVersion = await this.db
-          .select({ version: schema.legalDocuments.version })
-          .from(schema.legalDocuments)
-          .where(eq(schema.legalDocuments.type, type))
-          .orderBy(desc(schema.legalDocuments.version))
-          .limit(1);
-        const nextVersion = (currentVersion[0]?.version ?? 0) + 1;
+        const nextVersion = existing[0].version + 1;
         await this.db.insert(schema.legalDocuments).values({ id: generateId(), type, version: nextVersion, title, bodyMd, contentSha256 });
       } else {
         await this.db.insert(schema.legalDocuments).values({ id: generateId(), type, version: 1, title, bodyMd, contentSha256 });
