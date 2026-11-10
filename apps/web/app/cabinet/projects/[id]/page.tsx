@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ModerationNotice } from '../../../../components/admin/ModerationNotice';
 import { PassOffer } from '../../../../components/billing/PassOffer';
+import { AnalyticsTab } from '../../../../components/cabinet/AnalyticsTab';
 
-type Tab = 'responses' | 'access' | 'settings' | 'export' | 'operator';
+type Tab = 'responses' | 'analytics' | 'access' | 'settings' | 'export' | 'operator';
 
 interface ProjectDetail {
   id: string;
@@ -953,6 +954,7 @@ export default function ProjectDetailPage() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'responses', label: `Ответы (${project.completions})` },
+    { key: 'analytics', label: 'Аналитика' },
     { key: 'access', label: 'Точки доступа' },
     { key: 'settings', label: 'Настройки доступа' },
     { key: 'operator', label: 'Оператор ПД' },
@@ -988,6 +990,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {tab === 'responses' && <ResponsesTab projectId={projectId} setError={setError} />}
+      {tab === 'analytics' && <AnalyticsTab projectId={projectId} setError={setError} />}
       {tab === 'access' && <AccessTab projectId={projectId} setError={setError} />}
       {tab === 'settings' && <SettingsTab projectId={projectId} settings={project.settings} setError={setError} />}
       {tab === 'operator' && <OperatorTab projectId={projectId} setError={setError} />}

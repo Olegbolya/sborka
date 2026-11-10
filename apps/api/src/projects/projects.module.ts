@@ -1,7 +1,9 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { ProjectsController } from './projects.controller.js';
 import { ProjectsService } from './projects.service.js';
+import { AnalyticsService } from './analytics.service.js';
 import { ResponsesService } from './responses.service.js';
+import { AnalyticsController } from './analytics.controller.js';
 import { ResponsesController } from './responses.controller.js';
 import { AccessPointsService } from './access-points.service.js';
 import { AccessPointsController } from './access-points.controller.js';
@@ -23,6 +25,7 @@ export class ProjectsModule {
       providers: [
         ProjectsService,
         ResponsesService,
+        AnalyticsService,
         AccessPointsService,
         ExportService,
         DraftsService,
@@ -30,7 +33,7 @@ export class ProjectsModule {
         { provide: WEB_URL, useValue: webUrl },
         { provide: AGE_RATING_REQUIRED, useValue: ageRatingRequired },
       ],
-      controllers: [ProjectsController, TemplatesController, ElementsController, DraftsController, ResponsesController, AccessPointsController],
+      controllers: [ProjectsController, TemplatesController, ElementsController, DraftsController, ResponsesController, AnalyticsController, AccessPointsController],
       exports: [ProjectsService, SystemTemplatesService],
     };
   }
