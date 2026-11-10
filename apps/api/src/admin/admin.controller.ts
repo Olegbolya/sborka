@@ -136,6 +136,23 @@ export class AdminController {
     await this.legal.closeAuthority(user, id, ip);
   }
 
+  @Get('data-requests')
+  dataRequests() {
+    return this.legal.dataRequests();
+  }
+
+  @Post('data-requests/:id/extend')
+  @HttpCode(204)
+  async extendDataRequest(@Param('id') id: string, @Body() body: Body, @CurrentUser() user: RequestUser, @Ip() ip: string) {
+    await this.legal.extendDataRequest(user, id, body?.reason, ip);
+  }
+
+  @Post('data-requests/:id/close')
+  @HttpCode(204)
+  async closeDataRequest(@Param('id') id: string, @Body() body: Body, @CurrentUser() user: RequestUser, @Ip() ip: string) {
+    await this.legal.closeDataRequest(user, id, body?.resolution, ip);
+  }
+
   // ── Only administrators ────────────────────────────────────────────────────
 
   @Roles('ADMIN')

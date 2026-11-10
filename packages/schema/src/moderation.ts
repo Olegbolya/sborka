@@ -67,6 +67,35 @@ export const APPEAL_SELF_REVIEW_HOURS = 24;
 /** Hours the moderators have to answer a copyright holder's notice (§4.3, 149-ФЗ ст. 15.7). */
 export const COPYRIGHT_CLAIM_HOURS = 24;
 
+/** P8.5 · 152-ФЗ ст. 14, 20: the answer to a person's request — 10 working days, once extended by 5 with a reason. */
+export const DATA_REQUEST_WORKING_DAYS = 10;
+export const DATA_REQUEST_EXTENSION_DAYS = 5;
+export const DATA_REQUEST_KINDS = [
+  { code: 'ACCESS', label: 'Узнать, какие мои данные обрабатываются' },
+  { code: 'DELETE', label: 'Удалить мои данные' },
+  { code: 'WITHDRAW', label: 'Отозвать согласие на обработку' },
+] as const;
+export type DataRequestKind = (typeof DATA_REQUEST_KINDS)[number]['code'];
+
+/** The alerts before a legal term runs out (05-LEGAL.md §7): six hours and one hour. */
+export const DEADLINE_ALERT_HOURS = [6, 1] as const;
+
+/**
+ * The date `days` working days after `from`, by Moscow time: Saturdays and Sundays are skipped. Public holidays are not known
+ * here, so the term can only come out earlier than the law allows, never later.
+ */
+export function addWorkingDays(from: Date, days: number): Date {
+  const MSK = 3 * 3_600_000;
+  const d = new Date(from.getTime());
+  let left = days;
+  while (left > 0) {
+    d.setTime(d.getTime() + 86_400_000);
+    const weekday = new Date(d.getTime() + MSK).getUTCDay();
+    if (weekday !== 0 && weekday !== 6) left -= 1;
+  }
+  return d;
+}
+
 /** AD-07 · emergency switches (§7): the key and the words shown in the admin. */
 export const FEATURE_FLAGS = [
   { key: 'REGISTRATION_ENABLED', label: 'Регистрация новых пользователей' },

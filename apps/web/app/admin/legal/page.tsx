@@ -7,7 +7,7 @@ import { CASE_STATUS, CLAIM_STATUS, dateTime, remainingText } from '../../../lib
 interface Claim {
   id: string;
   status: string;
-  claimant: { name?: string };
+  claimant: { name?: string; kind?: string; email?: string; phone?: string; document?: string; address?: string; representative?: string };
   objectDescription: string;
   urls: string[];
   projectId: string | null;
@@ -46,6 +46,9 @@ function ClaimCard({ c, onDone }: { c: Claim; onDone: () => void }) {
         {c.open ? <span style={{ color: c.overdue ? '#dc2626' : 'inherit', fontWeight: 600 }}>{remainingText(c.remainingMs)}</span> : null}
         {c.strikes > 0 ? <span style={css.muted}>снятий по этой сборке: {c.strikes}</span> : null}
       </div>
+      <p style={css.muted}>
+        {[c.claimant.kind === 'ORG' ? 'организация' : c.claimant.kind === 'PERSON' ? 'человек' : '', c.claimant.email, c.claimant.phone, c.claimant.document, c.claimant.address, c.claimant.representative ? `представитель: ${c.claimant.representative}` : ''].filter(Boolean).join(' · ')}
+      </p>
       <p style={{ margin: '6px 0' }}>{c.objectDescription}</p>
       <p style={css.muted}>{c.urls.join(' · ')}{c.projectId ? ` · сборка ${c.projectId}` : ''} · получено {dateTime(c.receivedAt)}</p>
       {c.resolution ? <p style={css.muted}>Ответ: {c.resolution}</p> : null}
@@ -64,6 +67,59 @@ function ClaimCard({ c, onDone }: { c: Claim; onDone: () => void }) {
             ) : null}
             <button type="button" style={css.btnDanger} disabled={busy} onClick={() => void run(() => api(`/admin/copyright-claims/${c.id}/resolve`, { method: 'POST', body: { outcome: 'REMOVED', note, ...(mediaId ? { mediaId } : {}) } }), 'Материал снят')}>Снять материал</button>
             <button type="button" style={css.btnLight} disabled={busy} onClick={() => void run(() => api(`/admin/copyright-claims/${c.id}/resolve`, { method: 'POST', body: { outcome: 'REJECTED_WITH_PROOF', note } }), 'Ответ с доказательствами записан')}>Ответить с доказательствами</button>
+          </div>
+        </>
+      ) : null}
+    </article>
+  );
+}
+
+interface DataRequest {
+  id: string;
+  kind: string;
+  subjectContact: string;
+  projectId: string | null;
+  details: string;
+  status: string;
+  receivedAt: string;
+  dueAt: string;
+  remainingMs: number;
+  overdue: boolean;
+  resolution: string | null;
+  extendedAt: string | null;
+  extensionReason: string | null;
+}
+
+const DATA_KIND: Record<string, string> = { ACCESS: 'Узнать о своих данных', DELETE: 'Удалить данные', WITHDRAW: 'Отозвать согласие' };
+
+function DataRequestCard({ r, onDone }: { r: DataRequest; onDone: () => void }) {
+  const [text, setText] = useState('');
+  const { busy, error, ok, run } = useAction(onDone);
+  const open = r.status !== 'CLOSED';
+  return (
+    <article style={css.card} aria-label={`Запрос ${r.id}`} data-testid="data-request">
+      <div style={css.row}>
+        <strong>{DATA_KIND[r.kind] ?? r.kind}</strong>
+        <Badge color={!open ? '#6b665d' : r.overdue ? '#dc2626' : '#d97706'}>{CASE_STATUS[r.status] ?? r.status}</Badge>
+        {open ? <span style={{ color: r.overdue ? '#dc2626' : 'inherit', fontWeight: 600 }}>{remainingText(r.remainingMs)}</span> : null}
+      </div>
+      <p style={{ margin: '6px 0' }}>{r.details}</p>
+      <p style={css.muted}>
+        {r.subjectContact}{r.projectId ? ` · сборка ${r.projectId}` : ''} · получен {dateTime(r.receivedAt)} · ответить до {dateTime(r.dueAt)}
+      </p>
+      {r.extendedAt ? <p style={css.muted}>Срок продлён {dateTime(r.extendedAt)}: {r.extensionReason}</p> : null}
+      {r.resolution ? <p style={css.muted}>Ответ: {r.resolution}</p> : null}
+      {open ? (
+        <>
+          <Notice error={error} ok={ok} />
+          <Field label="Что отвечено человеку — или причина продления срока">
+            <textarea style={{ ...css.input, minHeight: 50 }} value={text} onChange={(e) => setText(e.target.value)} />
+          </Field>
+          <div style={css.row}>
+            <button type="button" style={css.btn} disabled={busy} onClick={() => void run(() => api(`/admin/data-requests/${r.id}/close`, { method: 'POST', body: { resolution: text } }), 'Запрос закрыт')}>Закрыть с ответом</button>
+            {!r.extendedAt ? (
+              <button type="button" style={css.btnLight} disabled={busy} onClick={() => void run(() => api(`/admin/data-requests/${r.id}/extend`, { method: 'POST', body: { reason: text } }), 'Срок продлён на 5 рабочих дней')}>Продлить на 5 рабочих дней</button>
+            ) : null}
           </div>
         </>
       ) : null}
@@ -103,6 +159,7 @@ function AuthorityCard({ r, onDone }: { r: Authority; onDone: () => void }) {
 export default function LegalPage() {
   const claims = useLoad(() => api<Claim[]>('/admin/copyright-claims'));
   const authority = useLoad(() => api<Authority[]>('/admin/authority-requests'));
+  const dataRequests = useLoad(() => api<DataRequest[]>('/admin/data-requests'));
   const [claim, setClaim] = useState({ claimant: '', objectDescription: '', urls: '', statement: '', projectId: '' });
   const [req, setReq] = useState({ source: '', number: '', subject: '', receivedAt: toLocalInput(new Date()), dueAt: toLocalInput(new Date(Date.now() + 24 * 3_600_000)) });
   const addClaim = useAction(claims.reload);
@@ -159,6 +216,11 @@ export default function LegalPage() {
         </div>
         <p><button type="submit" style={css.btn} disabled={addReq.busy}>Записать</button></p>
       </form>
+      <h1 style={{ ...css.h1, marginTop: 36 }}>Запросы людей о персональных данных</h1>
+      <p style={css.muted}>Приходят с формы «Запрос о персональных данных». Срок ответа — 10 рабочих дней, один раз его можно продлить на 5 с объяснением причины.</p>
+      {dataRequests.error ? <p role="alert" style={css.error}>{dataRequests.error}</p> : null}
+      {dataRequests.data?.length === 0 ? <p style={css.muted}>Запросов нет.</p> : null}
+      {dataRequests.data?.map((r) => <DataRequestCard key={r.id} r={r} onDone={dataRequests.reload} />)}
     </main>
   );
 }

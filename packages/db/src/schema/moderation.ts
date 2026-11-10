@@ -54,6 +54,8 @@ export const copyrightClaims = pgTable(
     dueAt: ts('due_at').notNull(),
     resolvedAt: ts('resolved_at'),
     resolution: text('resolution'),
+    /** P8.4: the public form is limited by the address it came from (a hash, not the address). */
+    ipHash: text('ip_hash'),
   },
   (t) => [index('copyright_claims_status_due_idx').on(t.status, t.dueAt)],
 );
@@ -104,6 +106,11 @@ export const dataSubjectRequests = pgTable(
     receivedAt: ts('received_at').notNull().defaultNow(),
     dueAt: ts('due_at').notNull(),
     closedAt: ts('closed_at'),
+    /** P8.5: what was answered; the one motivated extension (152-ФЗ ст. 20: +5 working days); the hash of the sender's address. */
+    resolution: text('resolution'),
+    extendedAt: ts('extended_at'),
+    extensionReason: text('extension_reason'),
+    ipHash: text('ip_hash'),
   },
   (t) => [index('data_subject_requests_due_idx').on(t.status, t.dueAt)],
 );

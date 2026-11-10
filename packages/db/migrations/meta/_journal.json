@@ -127,6 +127,13 @@
       "when": 1794309912478,
       "tag": "0017_blocked_identities",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794318670052,
+      "tag": "0018_legal_requests",
+      "breakpoints": true
     }
   ]
 }
