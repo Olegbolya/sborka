@@ -283,6 +283,27 @@ test.describe('P3.4 · работа с контролами', () => {
     await expect(page.getByRole('dialog', { name: 'Предпросмотр' }).locator('[data-block-id="figura_1"]')).toHaveCount(1);
   });
 
+  test('S-13 · движение по контуру: контур появляется сам, правится, проигрывается на холсте и снимается при смене вида', async ({ page }, info) => {
+    const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(shapeAt('figura_1', 'Фигура', 40)));
+    await openEditor(page, id);
+    await pickInLayers(page, 'Фигура');
+    const anim = await section(page, 'animation');
+    await anim.getByLabel('Постоянная анимация').check();
+    await anim.getByLabel('Вид', { exact: true }).nth(0).selectOption('followPath');
+    const box = anim.getByTestId('motion-path');
+    await expect(box).toBeVisible();
+    await expect.poll(async () => ((await savedBlock(page, id)).animation as { loop?: { kind: string; path?: string } } | undefined)?.loop).toMatchObject({ kind: 'followPath', path: expect.stringContaining('M 0 0') as unknown as string });
+    await box.getByLabel('Контур движения (SVG)', { exact: true }).fill('M 0 0 L 120 0 L 120 60');
+    await expect.poll(async () => ((await savedBlock(page, id)).animation as { loop?: { path?: string } } | undefined)?.loop?.path).toBe('M 0 0 L 120 0 L 120 60');
+    const layer = page.locator('[data-block-id="figura_1"] .bk-anim');
+    await box.getByTestId('motion-path-play').click();
+    await expect.poll(async () => layer.evaluate((el) => el.getAnimations().length > 0 || (el as HTMLElement).style.cssText.includes('--bk-ax')), { timeout: 1500 }).toBe(true);
+    await page.screenshot({ path: `e2e/__screenshots__/motion-path-${info.project.name}.png` });
+    await anim.getByLabel('Вид', { exact: true }).nth(0).selectOption('pulse');
+    await expect(anim.getByTestId('motion-path')).toHaveCount(0);
+    await expect.poll(async () => ((await savedBlock(page, id)).animation as { loop?: { path?: string } } | undefined)?.loop?.path).toBeUndefined();
+  });
+
   test('S-12…S-14 · своя анимация по кадрам: кадры настраиваются, добавляются, удаляются и проигрываются на холсте', async ({ page }, info) => {
     const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(shapeAt('figura_1', 'Фигура', 40)));
     await openEditor(page, id);

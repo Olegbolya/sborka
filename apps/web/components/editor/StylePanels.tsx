@@ -17,7 +17,7 @@ import {
 import { ANIMATION_SPEC, EDGES, type Field, GROUP_HINTS, GROUP_SPECS, MEDIA_TYPES } from '../../lib/editor/style-specs';
 import { ColorInput, NumberInput, Section, SelectInput, SliderInput, TextInput, Toggle } from './controls';
 import { useEditor, useEnv } from './context';
-import { DEFAULT_FRAMES, type Frames, KeyframesEditor, type Slot } from './KeyframesEditor';
+import { DEFAULT_FRAMES, DEFAULT_MOTION_PATH, type Frames, KeyframesEditor, type Slot, playMotionPath } from './KeyframesEditor';
 import { MediaField } from './MediaPicker';
 import { OptionsEditor, ScreenField, TransitionPresetField, VariableField } from './PropsFields';
 
@@ -592,8 +592,15 @@ export function AnimationInspector({ blocks }: { blocks: Block[] }) {
   const settled = (animation: Record<string, unknown>): Record<string, unknown> => {
     const out = { ...animation };
     for (const slot of ['enter', 'loop', 'press'] as const) {
-      const a = out[slot] as { kind?: string; keyframes?: Frames } | undefined;
+      const a = out[slot] as { kind?: string; keyframes?: Frames; path?: string } | undefined;
       if (!a) continue;
+      if (slot === 'loop') {
+        if (a.kind === 'followPath') out[slot] = { ...a, path: a.path ?? DEFAULT_MOTION_PATH };
+        else if (a.path !== undefined) {
+          const { path: _path, ...rest } = a;
+          out[slot] = rest;
+        }
+      }
       if (a.kind === 'keyframes') out[slot] = { ...a, keyframes: a.keyframes ?? DEFAULT_FRAMES };
       else if (a.keyframes) {
         const { keyframes: _dropped, ...rest } = a;
@@ -636,6 +643,26 @@ export function AnimationInspector({ blocks }: { blocks: Block[] }) {
       open={own}
     >
       <Fields fields={ANIMATION_SPEC} level={level} prefix="" />
+      {blocks.every((b) => b.animation?.loop?.kind === 'followPath') && (
+        <div className="ed-keyframes" data-testid="motion-path">
+          <strong>Контур движения</strong>
+          <SvgImportField label="Импортировать из SVG" onImport={(d) => level.write((cur) => ({ ...(cur as object), loop: { ...((cur as { loop?: object }).loop ?? {}), path: d } }))} />
+          <TextInput
+            control="loop.path"
+            label="Контур движения (SVG)"
+            value={(() => {
+              const paths = new Set(blocks.map((b) => b.animation?.loop?.path));
+              return paths.size === 1 ? ([...paths][0] ?? '') : null;
+            })()}
+            max={20000}
+            onChange={(d) => level.write((cur) => ({ ...(cur as object), loop: { ...((cur as { loop?: object }).loop ?? {}), path: d } }))}
+          />
+          <button type="button" className="ed-btn" data-testid="motion-path-play" onClick={() => playMotionPath(ids[0] ?? '', blocks[0]?.animation?.loop?.path ?? DEFAULT_MOTION_PATH, tokens)}>
+            Проиграть
+          </button>
+          <p className="ed-hint">Путь задаётся в единицах холста от начальной точки: блок пройдёт по нему и начнёт заново. Контур можно взять из файла SVG.</p>
+        </div>
+      )}
       {(['enter', 'loop', 'press'] as const).map((slot) => {
         const f = framesOf(slot);
         return f ? (

@@ -1,6 +1,6 @@
 'use client';
 import { type Block, type Color, type ThemeTokens } from '@blokum/schema';
-import { type ANIM_VARS, customKeyframes, runPlan } from '@blokum/renderer';
+import { type ANIM_VARS, customKeyframes, loopPlan, runPlan } from '@blokum/renderer';
 import { useState } from 'react';
 import { ColorInput, NumberInput } from './controls';
 
@@ -158,4 +158,21 @@ export function KeyframesEditor({
       )}
     </div>
   );
+}
+
+/** What «движение по контуру» starts with: a loop to the right and back (units of the canvas, from the first point). */
+export const DEFAULT_MOTION_PATH = 'M 0 0 C 0 -40 80 -40 80 0 C 80 40 0 40 0 0';
+
+/** Plays one lap of the motion path on the block of the canvas. */
+export function playMotionPath(blockId: string, path: string, tokens: Pick<ThemeTokens, 'colors'>): boolean {
+  const layer = document.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"] .bk-anim`);
+  if (!layer) return false;
+  const plan = loopPlan({ kind: 'followPath', speed: 1, amplitude: 1, pauseMs: 0, path }, tokens, false);
+  if (!plan) return false;
+  const controls = runPlan(layer, { ...plan, repeat: 0, repeatDelay: 0 });
+  void controls.finished.then(() => {
+    controls.cancel();
+    for (const name of Object.keys(plan.keyframes)) layer.style.removeProperty(name);
+  });
+  return true;
 }

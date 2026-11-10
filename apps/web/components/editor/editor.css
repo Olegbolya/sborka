@@ -101,6 +101,19 @@
   color: #b91c1c;
   background: color-mix(in srgb, #b91c1c 8%, var(--bg));
 }
+.ed-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  width: max-content;
+  max-width: min(720px, calc(100vw - 24px));
+  flex-basis: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  font-size: 14px;
+  line-height: 1.45;
+}
 .ed-banner.ok {
   border-color: #15803d;
   color: #166534;
@@ -894,4 +907,9 @@
   background: var(--accent, #e4572e);
   border-color: var(--accent, #e4572e);
   color: #fff;
+}
+@media (max-width: 767px) {
+  .ed-toast {
+    bottom: 84px;
+  }
 }

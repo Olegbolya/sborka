@@ -834,6 +834,7 @@ export const ANIMATION_SPEC: Field[] = [
           ['shake', 'Тряска'],
           ['blink', 'Мерцание'],
           ['heartbeat', 'Сердцебиение'],
+          ['followPath', 'Движение по контуру'],
           ['keyframes', 'Своя анимация (кадры)'],
         ],
       },

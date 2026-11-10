@@ -136,7 +136,7 @@ describe('P3.4 · контролы инспектора против схемы'
     for (const title of ['Обычное', 'Наведение', 'Нажато', 'Выбрано', 'Правильно', 'Неправильно', 'Недоступно', 'Перетаскивается', 'Над зоной']) expect(html).toContain(title);
   });
 
-  it('S-12…S-14 · анимации: контролы покрывают все ключи схемы, кроме контура движения (его редактор позже); кадры — отдельным редактором', () => {
+  it('S-12…S-14 · анимации: контролы покрывают все ключи схемы, кроме контура движения и кадров — у них отдельные редакторы', () => {
     const later = (k: string) => /(^|\.)keyframes(\.|$)/.test(k) || k === 'loop.path';
     const schema = [...schemaKeys(BlockAnimation as unknown as ZodLike, '')].filter((k) => !later(k)).sort();
     expect(schema).toEqual([...new Set(animationKeys())].sort());
@@ -158,6 +158,21 @@ describe('P3.4 · контролы инспектора против схемы'
     expect(wanted.filter((k) => !seen.has(k))).toEqual([]);
     expect(html).toContain(`data-testid="keyframes-${slot}-play"`);
     expect(html).toContain(`data-testid="keyframes-${slot}-add"`);
+  });
+
+  it('S-13 · «Движение по контуру»: показаны поле контура, импорт из SVG и «Проиграть»', () => {
+    const block = createBlock('text');
+    block.animation = { loop: { kind: 'followPath', speed: 1, amplitude: 1, pauseMs: 0, path: 'M 0 0 L 50 0' } } as never;
+    const e = env();
+    e.store.getState().apply((d) => void d.screens[0]!.blocks.push(block), { label: 'x' });
+    const html = renderToStaticMarkup(
+      <EditorProvider value={e}>
+        <AnimationInspector blocks={[e.store.getState().doc.screens[0]!.blocks[0]!]} />
+      </EditorProvider>,
+    );
+    expect(controlsIn(html).has('loop.path')).toBe(true);
+    expect(html).toContain('data-testid="motion-path-play"');
+    expect(html).toContain('Импортировать из SVG');
   });
 
   it('S-12…S-14 · свойства кадра — это все числовые свойства схемы, кроме ширины и высоты', () => {

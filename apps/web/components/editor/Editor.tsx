@@ -323,7 +323,7 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
   return (
     <>
       {message && (
-        <p role={message.kind === 'error' ? 'alert' : 'status'} className={`ed-banner ${message.kind === 'ok' ? 'ok' : ''}`} style={{ margin: 8 }}>
+        <p role={message.kind === 'error' ? 'alert' : 'status'} className={`ed-banner ed-toast ${message.kind === 'ok' ? 'ok' : ''}`} data-testid="editor-message">
           {message.text}
         </p>
       )}

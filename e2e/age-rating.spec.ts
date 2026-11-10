@@ -75,5 +75,10 @@ test.describe('P8.7 · возрастная категория', () => {
     await expect(dialog).toBeHidden();
     await expect.poll(async () => ((await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { status: string }).status, { timeout: 15_000 }).toBe('PUBLISHED');
     expect(((await (await page.request.get(`/api/v1/projects/${id}/access-settings`)).json()) as { ageRating: number }).ageRating).toBe(12);
+    // The answer to «Опубликовать» must be seen on any screen: a message over the editor, not squeezed under the panels.
+    const toast = page.getByTestId('editor-message');
+    await expect(toast).toContainText('Сборка опубликована');
+    await expect(toast).toBeInViewport({ ratio: 1 });
+    await page.screenshot({ path: `${SHOTS}/publish-message-${info.project.name}.png` });
   });
 });
