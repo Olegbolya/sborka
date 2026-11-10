@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm'
 import { type Db, schema } from '@blokum/db';
 import { RETENTION, yearsAgo } from '@blokum/schema';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
+import { FeatureFlagsService } from './feature-flags.service.js';
 import { LocalStorageService, servedKey } from '../media/storage.js';
 import { API_CONFIG, DB } from '../tokens.js';
 import { type ApiConfig } from '../config.js';
@@ -37,6 +38,7 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly entitlements: EntitlementsService,
+    private readonly flags: FeatureFlagsService,
     @Inject(API_CONFIG) config: ApiConfig,
   ) {
     this.storage = config.mediaDir ? new LocalStorageService(config.mediaDir) : null;
@@ -70,6 +72,7 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
     note('ORDERS', await this.purgeOrders(now), `Заказы и платежи: ${RETENTION.ordersYears} лет`);
     note('AUDIT', await this.purgeAudit(now), `Журнал аудита: ${RETENTION.auditYears} года`);
     note('LOGINS', await this.purgeLogins(now), `Журнал входов: ${RETENTION.loginsYears} год`);
+    note('ORI_META', await this.purgeCommsMeta(now), `Журнал ОРИ: сведения о передаче сообщений — ${RETENTION.oriMetaYears} года`);
     for (const d of done) await this.db.insert(schema.destructionLog).values({ kind: d.kind, count: d.count, basis: d.basis, details: { at: now.toISOString() } });
     return done;
   }
@@ -81,11 +84,14 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
       .from(schema.projects)
       .innerJoin(schema.users, eq(schema.users.id, schema.projects.ownerId))
       .where(and(eq(schema.projects.legalHold, false), eq(schema.users.legalHold, false)));
+    // P8.9: while the mode of the organizer of dissemination is on, the content of messages (the answers) is kept at least six months.
+    const oriFloor = (await this.flags.isEnabled('ORI_MODE')) ? RETENTION.oriContentDays : 0;
     let total = 0;
     for (const p of rows) {
       const plan = (await this.entitlements.limitsOfProject(p.ownerId, p.id, now)).plan.limits.answersRetentionDays;
       const own = (p.settings as { answersRetentionDays?: unknown } | null)?.answersRetentionDays;
-      const days = typeof own === 'number' && Number.isFinite(own) && own >= 1 ? Math.min(plan, Math.floor(own)) : plan;
+      const wanted = typeof own === 'number' && Number.isFinite(own) && own >= 1 ? Math.min(plan, Math.floor(own)) : plan;
+      const days = Math.max(wanted, oriFloor);
       const cutoff = new Date(now.getTime() - days * DAY_MS);
       const old = await this.db
         .select({ id: schema.participantSessions.id })
@@ -181,6 +187,26 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
       .where(and(isNotNull(schema.consentRecords.withdrawnAt), lt(schema.consentRecords.withdrawnAt, cutoff)))
       .returning({ id: schema.consentRecords.id });
     return gone.length;
+  }
+
+  /** The facts of message transfer: three years. They are written only while the mode is on, but once written they are kept by the term even after it is off. */
+  private async purgeCommsMeta(now: Date): Promise<number> {
+    const gone = await this.db
+      .delete(schema.commsMetaLog)
+      .where(lt(schema.commsMetaLog.createdAt, yearsAgo(now, RETENTION.oriMetaYears)))
+      .returning({ id: schema.commsMetaLog.id });
+    return gone.length;
+  }
+
+  /** P8.9 · for the authorized bodies: the journal of the facts of message transfer, filtered by a project or a creator. */
+  async commsMeta(filter: { projectId?: string; recipientId?: string; limit?: number } = {}) {
+    const where = [filter.projectId ? eq(schema.commsMetaLog.projectId, filter.projectId) : undefined, filter.recipientId ? eq(schema.commsMetaLog.recipientId, filter.recipientId) : undefined].filter((c) => c !== undefined);
+    return this.db
+      .select()
+      .from(schema.commsMetaLog)
+      .where(where.length ? and(...where) : undefined)
+      .orderBy(desc(schema.commsMetaLog.createdAt))
+      .limit(Math.min(Math.max(filter.limit ?? 200, 1), 1000));
   }
 
   private async purgeOrders(now: Date): Promise<number> {

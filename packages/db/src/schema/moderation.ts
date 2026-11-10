@@ -256,3 +256,25 @@ export const destructionLog = pgTable(
   },
   (t) => [index('destruction_log_created_idx').on(t.createdAt)],
 );
+
+/**
+ * P8.9 · the journal of the organizer of dissemination of information (149-ФЗ ст. 10.1), written only while the switch `ORI_MODE` is on:
+ * the fact of a message from a participant to a creator — when, from which passage, to whom, how large. The content stays in the answers
+ * and is kept at least six months (`contentUntil`); this row — three years.
+ */
+export const commsMetaLog = pgTable(
+  'comms_meta_log',
+  {
+    id: id(),
+    kind: text('kind').notNull(),
+    projectId: text('project_id').notNull(),
+    recipientId: text('recipient_id').notNull(),
+    sessionId: text('session_id').notNull(),
+    senderIpHash: text('sender_ip_hash'),
+    senderDevice: text('sender_device'),
+    bytes: integer('bytes').notNull(),
+    contentUntil: ts('content_until').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('comms_meta_created_idx').on(t.createdAt), index('comms_meta_project_idx').on(t.projectId, t.createdAt)],
+);

@@ -277,8 +277,10 @@ describe('P9.3 · AD-02, AD-03, AD-04, AD-07, AD-09, AD-11 · админка м�
     const admin = await login('ADMIN');
     const p = await publishedBy(owner.cookie);
     const flags = (await call(t, admin.cookie, 'get', '/admin/flags').expect(200)).body as Array<{ key: string; enabled: boolean }>;
-    expect(flags.map((f) => f.key)).toEqual(['REGISTRATION_ENABLED', 'UPLOADS_ENABLED', 'PUBLISHING_ENABLED', 'PLAYER_ENABLED', 'EXTERNAL_LINKS_ENABLED', 'SMS_ENABLED']);
-    expect(flags.every((f) => f.enabled)).toBe(true);
+    expect(flags.map((f) => f.key)).toEqual(['REGISTRATION_ENABLED', 'UPLOADS_ENABLED', 'PUBLISHING_ENABLED', 'PLAYER_ENABLED', 'EXTERNAL_LINKS_ENABLED', 'SMS_ENABLED', 'ORI_MODE']);
+    // P8.9: аварийные выключатели включены, режим ОРИ по умолчанию выключен.
+    expect(flags.filter((f) => f.key !== 'ORI_MODE').every((f) => f.enabled)).toBe(true);
+    expect(flags.find((f) => f.key === 'ORI_MODE')?.enabled).toBe(false);
     await call(t, admin.cookie, 'put', '/admin/flags/PLAYER_ENABLED', { enabled: false, note: '' }).expect(422);
     await call(t, admin.cookie, 'put', '/admin/flags/NO_SUCH', { enabled: false, note: 'проверка' }).expect(404);
 

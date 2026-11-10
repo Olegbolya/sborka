@@ -8,6 +8,7 @@ interface Flag {
   key: string;
   label: string;
   enabled: boolean;
+  usual: boolean;
   note: string;
   updatedAt: string | null;
 }
@@ -20,7 +21,7 @@ function FlagRow({ f, onDone }: { f: Flag; onDone: () => void }) {
     <article style={css.card} aria-label={f.label} data-testid={`flag-${f.key}`}>
       <div style={css.row}>
         <strong>{f.label}</strong>
-        <Badge color={f.enabled ? '#16a34a' : '#dc2626'}>{f.enabled ? 'Включено' : 'Выключено'}</Badge>
+        <Badge color={f.enabled === f.usual ? '#16a34a' : '#dc2626'}>{f.enabled ? 'Включено' : 'Выключено'}</Badge>
         {f.updatedAt ? <span style={css.muted}>{dateTime(f.updatedAt)}{f.note ? ` · ${f.note}` : ''}</span> : null}
       </div>
       <Notice error={error} ok={ok} />

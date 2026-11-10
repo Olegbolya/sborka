@@ -22,7 +22,7 @@ import {
   scoreTotals,
   startFlow,
 } from '@blokum/engine';
-import { type Block, type ProjectDocument, plainText, walkBlocks } from '@blokum/schema';
+import { RETENTION, type Block, type ProjectDocument, plainText, walkBlocks } from '@blokum/schema';
 import { type ApiConfig } from '../config.js';
 import { API_CONFIG, DB } from '../tokens.js';
 
@@ -105,7 +105,7 @@ export class PlaySessionsService {
    */
   async answer(sessionId: string, body: { blockId?: unknown; value?: unknown; clientEventId?: unknown; clientTs?: unknown; timeOnScreenMs?: unknown }): Promise<{ stored: boolean; answer: AnswerValue }> {
     this.throttle(sessionId);
-    const { session, doc } = await this.load(sessionId);
+    const { session, doc, ownerId } = await this.load(sessionId);
     if (session.status !== 'IN_PROGRESS') throw fail(409, 'SESSION_FINISHED', 'Прохождение уже завершено.');
     const { block, screenId } = this.questionOf(doc, body.blockId);
     if (typeof body.clientEventId !== 'string' || body.clientEventId.length < 6 || body.clientEventId.length > 64) throw fail(400, 'INVALID_INPUT', 'Нет номера события');
@@ -123,6 +123,8 @@ export class PlaySessionsService {
       throw fail(422, e.code, e.message);
     }
     const instant = doc.settings.feedbackMode === 'instant' && hasKey(block);
+    // P8.9: while the mode of the organizer of dissemination is on, every message of a participant to a creator is entered in its journal.
+    const ori = this.flags ? await this.flags.isEnabled('ORI_MODE') : false;
     return this.db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'session:' + sessionId}))`);
       const [again] = await tx.select({ id: schema.answers.id }).from(schema.answers).where(and(eq(schema.answers.sessionId, sessionId), eq(schema.answers.clientEventId, body.clientEventId as string)));
@@ -140,6 +142,19 @@ export class PlaySessionsService {
         await tx.insert(schema.answers).values({ sessionId, screenId, blockId: block.id, source: 'QUESTION', value: answer, clientEventId: body.clientEventId as string, clientTs, timeOnScreenMs: typeof body.timeOnScreenMs === 'number' ? Math.max(0, Math.round(body.timeOnScreenMs)) : null });
       }
       await tx.update(schema.participantSessions).set({ lastActivityAt: new Date() }).where(eq(schema.participantSessions.id, sessionId));
+      if (ori) {
+        const at = new Date();
+        await tx.insert(schema.commsMetaLog).values({
+          kind: 'ANSWER',
+          projectId: session.projectId,
+          recipientId: ownerId,
+          sessionId,
+          senderIpHash: session.ipHash,
+          senderDevice: session.deviceType,
+          bytes: Buffer.byteLength(JSON.stringify(answer), 'utf8'),
+          contentUntil: new Date(at.getTime() + RETENTION.oriContentDays * 86_400_000),
+        });
+      }
       return { stored: true, answer };
     });
   }

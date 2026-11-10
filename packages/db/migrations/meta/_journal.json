@@ -141,6 +141,13 @@
       "when": 1794321325660,
       "tag": "0019_destruction_log",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794325519711,
+      "tag": "0020_comms_meta_log",
+      "breakpoints": true
     }
   ]
 }

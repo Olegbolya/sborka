@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { type Alerts } from '@blokum/observability';
 import { type Db, schema } from '@blokum/db';
-import { FEATURE_FLAGS, type FeatureFlagKey } from '@blokum/schema';
+import { FEATURE_FLAGS, flagDefault, type FeatureFlagKey } from '@blokum/schema';
 import { AuditLogService } from '../auth/audit-log.service.js';
 import { ALERTS, DB } from '../tokens.js';
 import { fail } from './errors.js';
@@ -13,6 +13,8 @@ export interface FlagView {
   key: FeatureFlagKey;
   label: string;
   enabled: boolean;
+  /** The usual state: on for the emergency switches, off for the modes (ORI_MODE). */
+  usual: boolean;
   note: string;
   updatedAt: Date | null;
   updatedById: string | null;
@@ -40,7 +42,7 @@ export class FeatureFlagsService {
   }
 
   async isEnabled(key: FeatureFlagKey, now = Date.now()): Promise<boolean> {
-    return (await this.values(now)).get(key) ?? true;
+    return (await this.values(now)).get(key) ?? flagDefault(key);
   }
 
   /** Stops the request with a Russian message when the switch is off. */
@@ -53,14 +55,14 @@ export class FeatureFlagsService {
     const byKey = new Map(rows.map((r) => [r.key, r]));
     return FEATURE_FLAGS.map((f) => {
       const row = byKey.get(f.key);
-      return { key: f.key, label: f.label, enabled: row?.enabled ?? true, note: row?.note ?? '', updatedAt: row?.updatedAt ?? null, updatedById: row?.updatedById ?? null };
+      return { key: f.key, label: f.label, enabled: row?.enabled ?? flagDefault(f.key), usual: flagDefault(f.key), note: row?.note ?? '', updatedAt: row?.updatedAt ?? null, updatedById: row?.updatedById ?? null };
     });
   }
 
   async set(key: string, enabled: boolean, note: string, actorId: string, ip?: string): Promise<FlagView> {
     const flag = FEATURE_FLAGS.find((f) => f.key === key);
     if (!flag) throw fail(404, 'NOT_FOUND', 'Такого выключателя нет');
-    if (!enabled && note.trim().length < 3) throw fail(422, 'NOTE_REQUIRED', 'Напишите, почему выключаете: хотя бы пара слов.');
+    if (!enabled && flagDefault(key) && note.trim().length < 3) throw fail(422, 'NOTE_REQUIRED', 'Напишите, почему выключаете: хотя бы пара слов.');
     const now = new Date();
     await this.db
       .insert(schema.featureFlags)
@@ -71,6 +73,6 @@ export class FeatureFlagsService {
     // §7: every switch is told to the owner.
     await this.alerts.raise(`feature-flag:${key}`, `Выключатель «${flag.label}»: ${enabled ? 'включён' : 'выключен'}`, note.trim() || undefined, enabled ? 'warning' : 'critical');
     const [row] = await this.db.select().from(schema.featureFlags).where(eq(schema.featureFlags.key, key));
-    return { key: flag.key, label: flag.label, enabled: row!.enabled, note: row!.note, updatedAt: row!.updatedAt, updatedById: row!.updatedById };
+    return { key: flag.key, label: flag.label, enabled: row!.enabled, usual: flagDefault(flag.key), note: row!.note, updatedAt: row!.updatedAt, updatedById: row!.updatedById };
   }
 }

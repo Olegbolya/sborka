@@ -91,6 +91,9 @@ export const RETENTION = {
   ordersYears: 5,
   /** The audit journal of administrators. */
   auditYears: 3,
+  /** P8.9 · the journal of the organizer of dissemination: facts of message transfer — three years, the content of messages — six months. */
+  oriMetaYears: 3,
+  oriContentDays: 183,
   /** The journal of sign-ins (hash of the IP address, device). */
   loginsYears: 1,
 } as const;
@@ -129,5 +132,9 @@ export const FEATURE_FLAGS = [
   { key: 'PLAYER_ENABLED', label: 'Прохождение сборок (плеер)' },
   { key: 'EXTERNAL_LINKS_ENABLED', label: 'Переходы по внешним ссылкам' },
   { key: 'SMS_ENABLED', label: 'Отправка СМС' },
+  /** P8.9 · the mode of the organizer of dissemination of information (149-ФЗ ст. 10.1): off until the owner decides after a consultation. */
+  { key: 'ORI_MODE', label: 'Режим ОРИ: журнал передачи сообщений', off: true },
 ] as const;
+/** A switch that was never touched is on, except the ones marked `off` (they are modes, not emergency stops). */
+export const flagDefault = (key: string): boolean => !FEATURE_FLAGS.some((f) => f.key === key && 'off' in f && f.off);
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[number]['key'];

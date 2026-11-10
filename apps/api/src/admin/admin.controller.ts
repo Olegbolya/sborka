@@ -176,6 +176,13 @@ export class AdminController {
     return this.retention.journal();
   }
 
+  /** P8.9 · the journal of the organizer of dissemination (empty while the mode is off). */
+  @Roles('ADMIN')
+  @Get('comms-meta')
+  commsMeta(@Query('projectId') projectId?: string, @Query('recipientId') recipientId?: string) {
+    return this.retention.commsMeta({ ...(projectId ? { projectId } : {}), ...(recipientId ? { recipientId } : {}) });
+  }
+
   @Roles('ADMIN')
   @Get('flags')
   listFlags() {
