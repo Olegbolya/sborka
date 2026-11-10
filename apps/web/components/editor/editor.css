@@ -49,6 +49,8 @@
   background: var(--bg);
   cursor: pointer;
   white-space: nowrap;
+  color: inherit;
+  text-decoration: none;
 }
 .ed-btn:hover:not(:disabled) {
   background: var(--hover);

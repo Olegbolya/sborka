@@ -116,6 +116,9 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       <button type="button" className="ed-btn" onClick={onLogic} title="Переменные, баллы и результаты теста">
         Логика
       </button>
+      <a className="ed-btn" data-testid="project-settings-link" href={`/cabinet/projects/${encodeURIComponent(projectId)}?tab=settings`} title="Доступ, лимиты, пароль, сроки и возрастная категория сборки (откроется в кабинете)">
+        Настройки
+      </a>
       <button type="button" className="ed-btn" onClick={onLessons} title="Короткие уроки: как собрать сборку шаг за шагом">
         Уроки
       </button>

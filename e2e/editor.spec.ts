@@ -341,6 +341,17 @@ test.describe('E-19 · история версий', () => {
   });
 });
 
+test.describe('E-16 · настройки сборки из редактора', () => {
+  test('E-16 · кнопка «Настройки» в верхней панели ведёт в кабинет на вкладку настроек доступа', async ({ page }) => {
+    const { id } = await seedProject(page);
+    await openEditor(page, id);
+    await page.getByTestId('project-settings-link').click();
+    await page.waitForURL(new RegExp(`/cabinet/projects/${id}\\?tab=settings`));
+    await expect(page.getByRole('button', { name: 'Настройки доступа' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Настройки доступа' })).toHaveCSS('font-weight', '600');
+  });
+});
+
 test.describe('E-16 · публикация', () => {
   test('E-16 · «Опубликовать» сохраняет правки и публикует; кнопка недоступна, пока нет новых правок, и снова доступна после правки', async ({ page }) => {
     const { id } = await seedProject(page, (d) => d.screens[0]!.blocks.push(textBlock('tekst_a', 'Текст A')));
@@ -409,4 +420,12 @@ test.describe('E-14 · пустые списки объясняют, что де
     await dialog.getByRole('tab', { name: /^Ветвление/ }).click();
     await expect(dialog.getByTestId('branches-empty')).toContainText('Нет → сразу показать финальный экран');
   });
+});
+
+test('E-16 · верхняя панель с кнопкой «Настройки» помещается на 390 и 1440', async ({ page }, info) => {
+  const { id } = await seedProject(page);
+  await openEditor(page, id);
+  await expect(page.getByTestId('project-settings-link')).toBeVisible();
+  mkdirSync(SHOTS, { recursive: true });
+  await page.screenshot({ path: `${SHOTS}/topbar-settings-${info.project.name}.png` });
 });

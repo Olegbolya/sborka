@@ -983,6 +983,12 @@ export default function ProjectDetailPage() {
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('responses');
 
+  // E-16: the «Настройки» button of the editor leads here, to the tab it names (`?tab=settings`).
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get('tab');
+    if (wanted === 'responses' || wanted === 'analytics' || wanted === 'access' || wanted === 'settings' || wanted === 'export' || wanted === 'operator') setTab(wanted);
+  }, []);
+
   useEffect(() => {
     apiFetch<ProjectDetail>(`/projects/${projectId}`)
       .then(setProject)
