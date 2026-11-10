@@ -107,6 +107,11 @@ if [ -f "$SERVER_ENV" ]; then
     sed -i '/^YANDEX_CLIENT_ID=/d' "$ENV_FILE"; printf 'YANDEX_CLIENT_ID=%s\n' "$want_ya" >> "$ENV_FILE"
     echo "→ в .env.prod записан ID приложения Яндекс ID"
   fi
+  want_vk="$(sed -n 's/^VK_CLIENT_ID=//p' "$SERVER_ENV" | head -1)"
+  if [ -n "$want_vk" ] && ! grep -qx "VK_CLIENT_ID=$want_vk" "$ENV_FILE"; then
+    sed -i '/^VK_CLIENT_ID=/d' "$ENV_FILE"; printf 'VK_CLIENT_ID=%s\n' "$want_vk" >> "$ENV_FILE"
+    echo "→ в .env.prod записан ID приложения VK ID"
+  fi
 fi
 
 # ── Node 22 (у BST по умолчанию Node 20 — его не меняем) ──────────────────────

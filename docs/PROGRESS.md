@@ -14,7 +14,7 @@
 
 ## Вопросы владельцу
 
-- **Вход на сайте (Яндекс ID):** создать приложение на oauth.yandex.ru (Redirect URI `https://blokker.ru/api/v1/auth/oauth/yandex/callback`, право «логин, имя и фамилия»), ID приложения владелец создал 10.11.2026; он записан в `infra/server.env` (`YANDEX_CLIENT_ID`, не секрет), деплой сам переносит его в `.env.prod` и перезапускает API (ADR-037). Секретный ключ не нужен. VK ID — так же, когда будет ключ (`VK_CLIENT_ID`).
+- **Вход на сайте (Яндекс ID):** создать приложение на oauth.yandex.ru (Redirect URI `https://blokker.ru/api/v1/auth/oauth/yandex/callback`, право «логин, имя и фамилия»), ID приложения владелец создал 10.11.2026; он записан в `infra/server.env` (`YANDEX_CLIENT_ID`, не секрет), деплой сам переносит его в `.env.prod` и перезапускает API (ADR-037). Секретный ключ не нужен. VK ID — так же: ID приложения 54888388 записан в `infra/server.env` (`VK_CLIENT_ID`) 10.11.2026.
 - **После деплоя** с новым шаблоном nginx один раз: `sudo bash ~/blokum/setup/infra/server-setup.sh` (ссылки `/s/*`, `/q/*` открываются без пароля).
 - **A-записи `blokker.ru` (куплен 02.11) —** сделать у регистратора: `blokker.ru`, `www.blokker.ru`, `media.blokker.ru` → `95.105.7.135`; затем ещё раз `sudo bash ~/blokum/setup/infra/server-setup.sh` — он получит сертификат. Сейчас деплой показывает: DNS для `blokker.ru` не найден.
 - Удалить на GitHub тестовые ветки `ci-check-broken-test`, `ci-check-secret`, `check/p1.10-visual-break`, а также отработанные `wip/p1.9c` и `visual-baselines/p1.10` (Code → Branches → корзина): сессия не может удалять ветки.
