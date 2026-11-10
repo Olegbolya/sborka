@@ -1,0 +1,65 @@
+name: Нагрузочный тест
+
+# Ручной запуск: Actions → «Нагрузочный тест» → Run workflow (N-02, docs/LOAD-TEST.md).
+# 200 участников проходят три эталонные сборки на blokker.ru; до и после проверяется здоровье Блоккера и BST.
+# Запускать только в согласованное с владельцем окно и только когда на сервере подняты лимиты запусков с одного адреса.
+on:
+  workflow_dispatch:
+    inputs:
+      slugs:
+        description: 'Адреса трёх эталонных сборок через запятую'
+        required: true
+      vus:
+        description: 'Сколько участников одновременно'
+        default: '200'
+      hold:
+        description: 'Сколько держать нагрузку (2m, 5m)'
+        default: '2m'
+
+permissions:
+  contents: read
+
+jobs:
+  load:
+    name: Нагрузка на blokker.ru
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Здоровье до теста
+        run: |
+          curl -fsS https://blokker.ru/api/v1/health | tee /tmp/before-blokker.json
+          echo
+          curl -sS -o /dev/null -w 'BST (mybst.ru): HTTP %{http_code}, %{time_total} с\n' https://mybst.ru/ | tee /tmp/before-bst.txt
+      - name: Установить k6
+        run: |
+          curl -fsSL https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz | tar xz
+          ./k6-v0.54.0-linux-amd64/k6 version
+      - name: Нагрузка
+        run: |
+          ./k6-v0.54.0-linux-amd64/k6 run --summary-export=/tmp/summary.json \
+            -e BASE_URL=https://blokker.ru -e API_PREFIX=/api/v1 \
+            -e SLUGS='${{ inputs.slugs }}' -e VUS='${{ inputs.vus }}' -e HOLD='${{ inputs.hold }}' \
+            infra/load/play.js 2>&1 | tee /tmp/k6.txt
+      - name: Здоровье после теста
+        if: always()
+        run: |
+          curl -fsS https://blokker.ru/api/v1/health | tee /tmp/after-blokker.json
+          echo
+          curl -sS -o /dev/null -w 'BST (mybst.ru): HTTP %{http_code}, %{time_total} с\n' https://mybst.ru/ | tee /tmp/after-bst.txt
+      - name: Итог
+        if: always()
+        run: |
+          {
+            echo '### Нагрузочный тест (N-02)'
+            echo '```'
+            grep -E "✓|✗|http_req_duration|player_request_ms|passages_|iterations|http_reqs|http_req_failed" /tmp/k6.txt || true
+            echo '---'
+            cat /tmp/before-bst.txt /tmp/after-bst.txt 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test
+          path: /tmp/*.json
