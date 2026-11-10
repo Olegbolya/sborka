@@ -71,6 +71,7 @@ export function ColorsEditor() {
         />
       ))}
       <div className="ed-colorrow">
+        {/* ui-language-ok: имя цвета темы — латиница по правилам схемы */}
         <input type="text" aria-label="Имя нового цвета" placeholder="Например, hero_1" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
         <button type="button" className="ed-btn small" disabled={name.trim() === ''} onClick={add}>
           Добавить цвет

@@ -24,6 +24,7 @@ steps.push(
   ['node', ['scripts/check-render-boundary.mjs']],
   ['node', ['scripts/check-licenses.mjs']],
   ['node', ['scripts/check-legal.mjs']],
+  ['node', ['scripts/check-ui-language.mjs']],
   ['node', ['scripts/check-progress.mjs']],
 );
 if (withE2e && pkg?.scripts?.e2e) steps.push(['pnpm', ['-s', 'e2e']]);

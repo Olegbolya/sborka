@@ -94,7 +94,7 @@ export class OAuthService {
   async processCallback(provider: OAuthProvider, code: string, state: string, ip: string, ua: string, deviceId?: string): Promise<{ token: string; user: RequestUser } | { mfa: string; user: RequestUser }> {
     const stateData = await this.stateStore.get(state);
     if (!stateData || stateData.provider !== provider) {
-      throw new BadRequestException({ error: { code: 'INVALID_OAUTH_STATE', message: 'Неверный или устаревший параметр state' } });
+      throw new BadRequestException({ error: { code: 'INVALID_OAUTH_STATE', message: 'Неверный или устаревший ответ сервиса входа. Попробуйте войти ещё раз' } });
     }
     await this.stateStore.delete(state);
 
@@ -120,7 +120,7 @@ export class OAuthService {
     };
     // VK ID wants the device and the state back; Yandex ID needs neither (PKCE replaces the secret key).
     if (live && provider === 'vk') {
-      if (!deviceId) throw new BadRequestException({ error: { code: 'OAUTH_TOKEN_FAILED', message: 'VK ID не вернул device_id' } });
+      if (!deviceId) throw new BadRequestException({ error: { code: 'OAUTH_TOKEN_FAILED', message: 'VK ID не вернул идентификатор устройства' } });
       tokenParams.device_id = deviceId;
       tokenParams.state = state;
     }
@@ -135,7 +135,7 @@ export class OAuthService {
     const tokenBody = await tokenRes.json() as { access_token?: string };
     const accessToken = tokenBody.access_token;
     if (!accessToken) {
-      throw new BadRequestException({ error: { code: 'OAUTH_TOKEN_FAILED', message: 'Провайдер не вернул access_token' } });
+      throw new BadRequestException({ error: { code: 'OAUTH_TOKEN_FAILED', message: 'Сервис входа не вернул ключ доступа' } });
     }
 
     const profileRes = live && provider === 'vk'

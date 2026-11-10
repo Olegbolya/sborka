@@ -48,7 +48,7 @@ export class ConsentController {
   @HttpCode(200)
   async recordConsents(@Body() body: RecordConsentsDto, @CurrentUser() user: RequestUser, @Req() req: Request): Promise<{ ok: true }> {
     if (!Array.isArray(body.documentIds)) {
-      throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'documentIds должен быть массивом' } });
+      throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Список документов должен быть массивом' } });
     }
     const fwd = req.headers['x-forwarded-for'];
     const ip = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim() ?? req.socket.remoteAddress ?? '';

@@ -158,7 +158,7 @@ export class OtpService {
       .limit(1);
 
     if (!recentOtp) {
-      throw new UnauthorizedException({ error: { code: 'OTP_NOT_VERIFIED', message: 'Сначала выполните вход по SMS-коду' } });
+      throw new UnauthorizedException({ error: { code: 'OTP_NOT_VERIFIED', message: 'Сначала выполните вход по СМС-коду' } });
     }
 
     const [userRow] = await this.db.select().from(schema.users).where(eq(schema.users.phoneE164, phoneE164)).limit(1);

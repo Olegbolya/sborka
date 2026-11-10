@@ -51,7 +51,7 @@ export class MediaController {
   ) {
     const totalBytes = Number(body?.['totalBytes'] ?? 0);
     if (!Number.isInteger(totalBytes) || totalBytes <= 0) {
-      throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'totalBytes должен быть положительным числом' } });
+      throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Общий размер файла должен быть положительным числом' } });
     }
     const sessionId = await this.media.startSession(user.id, totalBytes);
     return { sessionId };

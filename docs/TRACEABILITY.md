@@ -436,6 +436,7 @@
 | N-03 | P9.5 | `infra/backup.sh`, `infra/restore-check.sh`, `infra/server-setup.sh` | `.github/workflows/backup-check.yml` |
 
 | PL-20 | P5.5 | `playwright.config.ts`, `.github/workflows/browsers.yml` | `e2e/browsers.spec.ts` |
+| N-05 | P8.10 | `scripts/check-ui-language.mjs`, `scripts/verify.mjs` | `apps/web/test/ui-language.test.ts` |
 | N-06 | P9.4 | `scripts/check-foreign-services.mjs`, `apps/web/lib/security-headers.ts` | `apps/web/test/security-headers.test.ts` |
 | AD-07 | P9.6 | `apps/api/src/admin/feature-flags.service.ts`, `apps/web/app/admin/flags/page.tsx`, `apps/web/app/out/page.tsx` | `apps/api/test/moderation.test.ts` |
 | 05-LEGAL §2.2 | P10.7 | `apps/web/lib/analytics.ts`, `apps/web/components/landing/CookieBanner.tsx`, `apps/web/lib/security-headers.ts`, `apps/web/proxy.ts` | `e2e/analytics.spec.ts`, `apps/web/test/analytics.test.ts` |

@@ -40,7 +40,7 @@ export default function SystemPage() {
           </div>
           <div style={css.card} aria-label="Резервные копии">
             <strong>Резервные копии</strong>
-            {!s.backups.configured ? <p style={css.muted}>Папка копий не задана (переменная BACKUP_DIR). Копии появятся с задачей P9.5.</p> : s.backups.newest ? <p style={{ margin: '6px 0 0' }}>Последняя: {s.backups.newest.name} · {dateTime(s.backups.newest.at)} · {(s.backups.newest.sizeBytes / 1_048_576).toFixed(1)} МБ</p> : <p style={{ color: '#dc2626' }}>В папке копий пусто.</p>}
+            {!s.backups.configured ? <p style={css.muted}>Папка копий не задана в настройках сервера.</p> : s.backups.newest ? <p style={{ margin: '6px 0 0' }}>Последняя: {s.backups.newest.name} · {dateTime(s.backups.newest.at)} · {(s.backups.newest.sizeBytes / 1_048_576).toFixed(1)} МБ</p> : <p style={{ color: '#dc2626' }}>В папке копий пусто.</p>}
           </div>
           <div style={css.card} aria-label="Работа для людей">
             <strong>Ждёт решения</strong>
