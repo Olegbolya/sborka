@@ -563,3 +563,10 @@
 | D-05 | P6.5 | `apps/api/src/projects/analytics.service.ts#rollup`; `apps/api/src/projects/analytics.service.ts#analytics`; `apps/api/src/projects/analytics.controller.ts`; `apps/web/components/cabinet/AnalyticsTab.tsx`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/analytics.test.ts`, `e2e/analytics.spec.ts` |
 | E-08 | копирование с содержимым | `apps/web/lib/editor/clipboard.ts#copyScreen,pasteScreen,readScreenClipboard`; `apps/web/components/editor/LeftPanel.tsx`; `apps/web/components/editor/Inspector.tsx` | `apps/web/test/clipboard-screen.test.ts`, `e2e/copy.spec.ts` |
 | N-02 | P11.1 | `infra/load/play.js`; `.github/workflows/load-test.yml`; `docs/LOAD-TEST.md` | `e2e/load-reference.spec.ts` (сборки проходятся); замер p95 — `docs/LOAD-TEST.md` |
+| E-16 | P3.1 | `apps/web/components/editor/TopBar.tsx` | `e2e/editor.spec.ts` |
+| E-19 | P3.2 | `apps/web/components/editor/HistoryDialog.tsx` | `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
+| E-20 | P3.13 | `apps/web/components/editor/PreviewDialog.tsx` | `apps/web/test/editor-preview.test.ts`, `e2e/preview.spec.ts` |
+| SR-01 | P9.1 | `apps/api/src/admin/safety.service.ts`; `packages/schema/src/safety/` | `packages/schema/test/safety.test.ts`, `apps/api/test/safety.test.ts` |
+| PL-19 | P5.7 | `e2e/perf/player-budget.spec.ts` (бюджет JS и LCP) | `e2e/perf/player-budget.spec.ts`, `e2e/perf/lighthouse.spec.ts` |
+| N-01 | P3.15 | `apps/web/components/editor/Canvas.tsx` | `e2e/perf/editor.spec.ts` |
+| D-09 | P7.6 | `apps/web/components/billing/BillingSummary.tsx`; `apps/web/components/billing/PlanActions.tsx` | `e2e/billing-pass.spec.ts`, `e2e/billing-addons.spec.ts`, `e2e/payments-admin.spec.ts` |
