@@ -239,3 +239,20 @@ export const notifications = pgTable(
   },
   (t) => [index('notifications_user_idx').on(t.userId, t.createdAt)],
 );
+
+/**
+ * P8.8 · the journal of destruction (152-ФЗ ст. 21, приказ РКН № 179): what was destroyed, how much, when and on what ground.
+ * It holds no personal data itself — only kinds, counts and identifiers of projects.
+ */
+export const destructionLog = pgTable(
+  'destruction_log',
+  {
+    id: id(),
+    kind: text('kind').notNull(),
+    count: integer('count').notNull(),
+    basis: text('basis').notNull(),
+    details: jsonb('details').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: createdAt(),
+  },
+  (t) => [index('destruction_log_created_idx').on(t.createdAt)],
+);

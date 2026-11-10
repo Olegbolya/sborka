@@ -17,6 +17,7 @@ import { LegalLogsService } from './legal-logs.service.js';
 import { LibraryAdminService } from './library-admin.service.js';
 import { ModerationService } from './moderation.service.js';
 import { NotificationsService } from './notifications.service.js';
+import { RetentionService } from './retention.service.js';
 import { SystemContentService } from './system-content.service.js';
 import { SystemService } from './system.service.js';
 
@@ -45,6 +46,7 @@ export class AdminModule {
         ModerationService,
         AdminUsersService,
         LegalLogsService,
+        RetentionService,
         SystemService,
         SystemContentService,
         LibraryAdminService,

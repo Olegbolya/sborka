@@ -18,7 +18,7 @@ import { DB } from '../tokens.js';
 import { hashPassword } from '../play/secrets.js';
 
 /** The settings of access the cabinet may write (PL-06…PL-10); the password goes separately and is stored as a hash. */
-const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'ageRating', 'singleAttempt', 'restartOnReload', 'closedText'] as const;
+const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'ageRating', 'singleAttempt', 'restartOnReload', 'closedText', 'answersRetentionDays'] as const;
 
 export interface ProjectSettings {
   /** PL-06 · at most so many started and/or completed passages. */
@@ -35,6 +35,8 @@ export interface ProjectSettings {
   age18?: boolean;
   /** P8.7 · the age category (436-ФЗ): 0, 6, 12, 16 or 18. */
   ageRating?: number | null;
+  /** P8.8 · the creator keeps the answers for fewer days than the plan allows. */
+  answersRetentionDays?: number | null;
   /** PL-10 · one passage per device. */
   singleAttempt?: boolean;
   /** PL-11 · after a reload the passage begins again from the first screen instead of continuing. */
@@ -698,6 +700,9 @@ export class ProjectsService {
     }
     if (incoming.ageRating !== undefined && incoming.ageRating !== null && !(AGE_RATINGS as readonly unknown[]).includes(incoming.ageRating)) {
       throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Возрастная категория — 0+, 6+, 12+, 16+ или 18+.' } });
+    }
+    if (incoming.answersRetentionDays !== undefined && incoming.answersRetentionDays !== null && (!Number.isInteger(incoming.answersRetentionDays) || (incoming.answersRetentionDays as number) < 1 || (incoming.answersRetentionDays as number) > 3650)) {
+      throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Срок хранения ответов — от 1 до 3650 дней.' } });
     }
     if (incoming.closedText !== undefined && incoming.closedText !== null && (typeof incoming.closedText !== 'string' || incoming.closedText.length > 1000)) throw bad();
     const merged: ProjectSettings = { ...((row.settings ?? {}) as ProjectSettings), ...(incoming as Partial<ProjectSettings>) };

@@ -8,6 +8,7 @@ import { FeatureFlagsService } from './feature-flags.service.js';
 import { LegalLogsService } from './legal-logs.service.js';
 import { LibraryAdminService } from './library-admin.service.js';
 import { type ActInput, ModerationService } from './moderation.service.js';
+import { RetentionService } from './retention.service.js';
 import { SystemContentService } from './system-content.service.js';
 import { SystemService } from './system.service.js';
 
@@ -28,6 +29,7 @@ export class AdminController {
     private readonly system: SystemService,
     private readonly content: SystemContentService,
     private readonly libAdmin: LibraryAdminService,
+    private readonly retention: RetentionService,
   ) {}
 
   // ── Moderation ─────────────────────────────────────────────────────────────
@@ -165,6 +167,13 @@ export class AdminController {
   @Get('audit')
   audit(@Query() query: Record<string, string>) {
     return this.system.audit(query);
+  }
+
+  /** P8.8 · the journal of destruction of data (confirmation of destruction). */
+  @Roles('ADMIN')
+  @Get('destruction-log')
+  destructionLog() {
+    return this.retention.journal();
   }
 
   @Roles('ADMIN')

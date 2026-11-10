@@ -81,6 +81,27 @@ export type DataRequestKind = (typeof DATA_REQUEST_KINDS)[number]['code'];
 export const AGE_RATINGS = [0, 6, 12, 16, 18] as const;
 export type AgeRating = (typeof AGE_RATINGS)[number];
 
+/** 05-LEGAL.md §5 · retention terms. Years are counted by the calendar, days by 24 hours. */
+export const RETENTION = {
+  /** Deleted projects and accounts, and the media of deleted projects: restorable for so many days, then removed for good. */
+  deletedDays: 30,
+  /** The consent journal: the term of the consent (until it is withdrawn or the subject is deleted) and so many years more. */
+  consentYearsAfter: 3,
+  /** Orders and payments. */
+  ordersYears: 5,
+  /** The audit journal of administrators. */
+  auditYears: 3,
+  /** The journal of sign-ins (hash of the IP address, device). */
+  loginsYears: 1,
+} as const;
+
+/** The date `years` calendar years before `now`. */
+export function yearsAgo(now: Date, years: number): Date {
+  const d = new Date(now.getTime());
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  return d;
+}
+
 /** The alerts before a legal term runs out (05-LEGAL.md §7): six hours and one hour. */
 export const DEADLINE_ALERT_HOURS = [6, 1] as const;
 

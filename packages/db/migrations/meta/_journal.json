@@ -134,6 +134,13 @@
       "when": 1794318670052,
       "tag": "0018_legal_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794321325660,
+      "tag": "0019_destruction_log",
+      "breakpoints": true
     }
   ]
 }
