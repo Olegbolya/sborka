@@ -24,7 +24,9 @@ import { ConsentController, LegalController } from './auth/consent.controller.js
 import { AccountService } from './auth/account.service.js';
 import { AccountController } from './auth/account.controller.js';
 import { TotpService } from './auth/totp.service.js';
+import { AdminLoginController } from './auth/admin-login.controller.js';
 import { AdminMfaService } from './auth/admin-mfa.service.js';
+import { AdminPasswordService } from './auth/admin-password.service.js';
 import { AuditLogService } from './auth/audit-log.service.js';
 import type { CaptchaVerifier } from './auth/captcha.js';
 import type { OtpSender } from './auth/otp-sender.js';
@@ -85,6 +87,7 @@ export class AppModule {
         LegalController,
         PlansController,
         AccountController,
+        AdminLoginController,
         ...(production ? [] : [DevOAuthController]),
         ...(deps.extraControllers ?? []),
       ],
@@ -92,6 +95,7 @@ export class AppModule {
         ...(config.phoneLogin ? [OtpService] : []),
         OAuthService,
         AdminMfaService,
+        AdminPasswordService,
         LegalDocumentService,
         ConsentService,
         AccountService,

@@ -100,3 +100,20 @@ export const otpRequests = pgTable(
   },
   (t) => [index('otp_phone_created_idx').on(t.phoneE164, t.createdAt), index('otp_ip_created_idx').on(t.ipHash, t.createdAt)],
 );
+
+/** AD-01 · login and password of an administrator or a moderator (the second factor stays the authenticator code). The password is kept only as a scrypt hash. */
+export const adminCredentials = pgTable('admin_credentials', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  login: text('login').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  /** Wrong passwords in a row; set back to 0 by a right one. */
+  failedCount: integer('failed_count').notNull().default(0),
+  /** The door is shut until this time after too many wrong passwords. */
+  lockedUntil: ts('locked_until'),
+  /** How many times in a row the door was shut: every next shutting lasts twice as long. */
+  lockLevel: integer('lock_level').notNull().default(0),
+  createdAt: createdAt(),
+  passwordChangedAt: ts('password_changed_at'),
+});

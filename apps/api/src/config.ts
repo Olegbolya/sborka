@@ -28,6 +28,8 @@ export interface ApiConfig {
   adminPhone: string;
   /** AD-01 · accounts promoted to ADMIN at sign-in through a provider: `vk:<id>`, `yandex:<id>` (ADR-033). */
   adminAccounts?: string[];
+  /** AD-01 · login and password of the first administrator from the server environment: the account is made once at start-up (the password is then changed in the admin and this value is ignored). */
+  adminBootstrap?: { login: string; password: string };
   /** AD-01: AES-256-GCM key (64 hex chars = 32 bytes) for encrypting TOTP secrets. */
   totpSecretKey: string;
   /** TS-13 · limits of frequency on the public side, by the hash of the address. */
@@ -92,6 +94,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     phoneLogin: env.PHONE_LOGIN === '1',
     adminPhone: env.ADMIN_PHONE ?? '',
     adminAccounts: (env.ADMIN_ACCOUNTS ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean),
+    ...(env.ADMIN_LOGIN?.trim() && env.ADMIN_PASSWORD ? { adminBootstrap: { login: env.ADMIN_LOGIN.trim().toLowerCase(), password: env.ADMIN_PASSWORD } } : {}),
     totpSecretKey: env.TOTP_SECRET_KEY ?? 'a'.repeat(64),
     playLimits: { startsPerHourPerIp: Number(env.PLAY_STARTS_PER_HOUR_PER_IP ?? 120), answersPerMinutePerSession: Number(env.PLAY_ANSWERS_PER_MINUTE ?? 240), reportsPerHourPerIp: Number(env.REPORTS_PER_HOUR_PER_IP ?? 5) },
     ...(env.BACKUP_DIR ? { backupDir: env.BACKUP_DIR } : {}),

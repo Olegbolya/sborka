@@ -50,11 +50,13 @@ jobs:
           DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           SIMULATE: ${{ inputs.simulate_broken_api && '1' || '0' }}
           YOOKASSA_SECRET_KEY: ${{ secrets.YOOKASSA_SECRET_KEY }}
+          ADMIN_LOGIN: ${{ secrets.ADMIN_LOGIN }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           # Переменные передаются через stdin, чтобы токен не попадал в список процессов на сервере.
           set +e
           {
-            printf 'export GH_TOKEN=%q REPO=%q DEPLOY_SHA=%q SIMULATE_BROKEN_API=%q YOOKASSA_SECRET_KEY=%q\n' "$GH_TOKEN" "$GITHUB_REPOSITORY" "$DEPLOY_SHA" "$SIMULATE" "$YOOKASSA_SECRET_KEY"
+            printf 'export GH_TOKEN=%q REPO=%q DEPLOY_SHA=%q SIMULATE_BROKEN_API=%q YOOKASSA_SECRET_KEY=%q ADMIN_LOGIN=%q ADMIN_PASSWORD=%q\n' "$GH_TOKEN" "$GITHUB_REPOSITORY" "$DEPLOY_SHA" "$SIMULATE" "$YOOKASSA_SECRET_KEY" "$ADMIN_LOGIN" "$ADMIN_PASSWORD"
             cat infra/deploy.sh
           } | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$SERVER" 'bash -s' 2>&1 | tee deploy.log
           status=${PIPESTATUS[1]}

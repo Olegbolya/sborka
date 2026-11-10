@@ -32,7 +32,7 @@ async function toApiError(res: Response): Promise<ApiError> {
   } catch {
     // The body is not JSON; keep the general text.
   }
-  if (res.status === 401) message = 'Войдите, чтобы продолжить.';
+  if (res.status === 401 && code !== 'INVALID_CREDENTIALS') message = 'Войдите, чтобы продолжить.';
   return new ApiError(res.status, code, message, revision, issues);
 }
 

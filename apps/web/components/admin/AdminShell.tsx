@@ -24,6 +24,7 @@ const LINKS: Array<{ href: string; label: string; admin?: boolean }> = [
   { href: '/admin/flags', label: 'Выключатели', admin: true },
   { href: '/admin/system', label: 'Состояние', admin: true },
   { href: '/admin/audit', label: 'Журнал аудита', admin: true },
+  { href: '/admin/security', label: 'Безопасность' },
 ];
 
 /** AD-01 · the frame of the admin: only moderators and administrators get in (the API checks it on every request as well). */
@@ -41,7 +42,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return (
       <main style={css.page}>
         <h1 style={css.h1}>Нужен вход</h1>
-        <p>Админка открыта только после входа. <Link href="/login" style={{ color: 'var(--accent)' }}>Войти</Link></p>
+        <p>Админка открыта только после входа. <Link href="/login/admin" style={{ color: 'var(--accent)' }}>Войти по логину и паролю</Link> · <Link href="/login" style={{ color: 'var(--accent)' }}>через VK ID или Яндекс ID</Link></p>
       </main>
     );
   }

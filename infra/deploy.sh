@@ -74,6 +74,9 @@ inject_secret() {
   echo "→ в .env.prod обновлён секрет $1 (значение не выводится)"
 }
 inject_secret YOOKASSA_SECRET_KEY "${YOOKASSA_SECRET_KEY:-}"
+# AD-01: первый администратор по логину и паролю — создаётся один раз при запуске API; пароль потом меняется в админке.
+inject_secret ADMIN_LOGIN "${ADMIN_LOGIN:-}"
+inject_secret ADMIN_PASSWORD "${ADMIN_PASSWORD:-}"
 
 # Режим «до запуска» в .env.prod следует за infra/server.env: когда владелец снимает пароль с сайта, служебные галереи /dev
 # закрываются тем же деплоем, а не остаются открытыми всем.
