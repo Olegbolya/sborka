@@ -30,7 +30,7 @@ test.describe('P7.7 · админка платежей', () => {
     await expect(page.getByRole('heading', { name: 'Заказы' })).toBeVisible();
   });
 
-  test('P7.7 · обычный пользователь не видит админку платежей', async ({ page }) => {
+  test('AD-05 · обычный пользователь не видит админку платежей', async ({ page }) => {
     await loginAndOnboard(page, freshUser('Не админ'));
     expect((await page.request.get('/api/v1/admin/payments/income')).status()).toBe(403);
   });
