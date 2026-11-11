@@ -87,20 +87,20 @@
 }
 .pl-footer {
   position: absolute;
-  left: 0;
   right: 0;
   bottom: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   gap: 2px;
-  padding: 3px 8px calc(3px + env(safe-area-inset-bottom, 0px));
+  padding: 3px 8px;
   background: none;
-  color: #1d1b18;
-  text-shadow: 0 0 3px rgb(255 255 255 / 0.9), 0 0 6px rgb(255 255 255 / 0.7);
+  /* Белый с «разностью» — читается и на тёмной, и на светлой картинке, плашки нет. */
+  color: #fff;
+  mix-blend-mode: difference;
   font-size: 11px;
   line-height: 1.3;
-  text-align: center;
+  text-align: right;
   pointer-events: none;
   z-index: 19;
 }

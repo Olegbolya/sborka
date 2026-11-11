@@ -53,8 +53,7 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
     overflowX: 'hidden',
     backgroundColor: value.tokens.colors.background ?? '#FFFFFF',
   };
-  // On a published page the screen reaches the bottom of the window (the footer lies at its edge); the preview frame keeps the screen's own height.
-  const focusBoard = { ...board, ...(unit === undefined ? { minHeight: '100dvh' } : {}), [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
+  const focusBoard = { ...board, [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
   return (
     <RenderContext.Provider value={value}>
       <div className="bk-stage" style={stage}>

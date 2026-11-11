@@ -124,7 +124,7 @@ export function PlayFooter({ slug, watermark, ageRating = null }: { slug: string
               ·{' '}
             </>
           ) : null}
-          Создано пользователем ·{' '}
+          {watermark ? 'Создано пользователем · ' : null}
           <button type="button" className="pl-link" onClick={() => setOpen(true)}>
             Пожаловаться
           </button>
