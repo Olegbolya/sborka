@@ -1,11 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { collapsePanels, openEditor, seedProject } from './helpers/editor';
+import { createBlock } from '../packages/schema/dist/index.js';
+import { collapsePanels, ensurePanel, openEditor, openTab, saveStatus, seedProject, serverDraft } from './helpers/editor';
 
 /**
  * E-21 · Перо, карандаш, редактирование узлов.
  * Acceptance: pen draws closed shape with 6 nodes, node edit, fill + stroke.
  */
+/** A group of the right panel, opened. */
+const section = async (page: Page, id: string): Promise<Locator> => {
+  const s = page.locator(`[data-section="${id}"]`);
+  await s.scrollIntoViewIfNeeded();
+  if ((await s.getAttribute('open')) === null) await s.locator('summary').click();
+  return s;
+};
+
 test.describe('E-21 · Перо и редактирование узлов', () => {
   test.beforeEach(async ({ page }) => {
     await loginAndOnboard(page, freshUser('Автор'));
@@ -37,62 +46,57 @@ test.describe('E-21 · Перо и редактирование узлов', () 
       await stage.click({ position: { x: stageBox!.width * x, y: stageBox!.height * y } });
     }
 
-    // Close path by pressing Enter
+    // Enter closes the contour: one shape block appears with a closed path of exactly 6 nodes
     await page.keyboard.press('Enter');
+    await expect(page.getByTestId('pen-overlay')).toHaveCount(0);
+    await expect(page.getByTestId('selection-box')).toBeVisible();
+    const shapeOf = async () => {
+      await expect(saveStatus(page)).toHaveText('Сохранено');
+      const blocks = (await serverDraft(page, id)).doc.screens[0]!.blocks as Array<{ type: string; style: { shape: { kind: string; d: string; closed: boolean }; fills?: unknown[]; stroke?: { width?: number } } }>;
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0]!.type).toBe('shape');
+      return blocks[0]!.style;
+    };
+    const drawn = await shapeOf();
+    expect(drawn.shape.kind).toBe('path');
+    expect(drawn.shape.closed).toBe(true);
+    const nodeCount = (d: string) => (d.match(/[MLC]/gi) ?? []).length;
+    expect(nodeCount(drawn.shape.d)).toBe(6);
 
-    // Wait for the pen overlay to disappear (path was committed)
-    await expect(page.getByTestId('pen-overlay')).toBeHidden({ timeout: 3000 }).catch(() => {
-      // overlay may be gone entirely after commit
-    });
-
-    // A shape block should be created and selected
-    await expect(page.getByTestId('selection-box')).toBeVisible({ timeout: 3000 });
-
-    // Double-click the selection box area to enter node editing mode
-    const selBox = page.getByTestId('selection-box');
-    const selBounds = await selBox.boundingBox();
-    if (selBounds) {
-      await page.mouse.dblclick(selBounds.x + selBounds.width / 2, selBounds.y + selBounds.height / 2);
-    }
-
-    // Node editor should appear
-    await expect(page.getByTestId('node-editor')).toBeVisible({ timeout: 3000 });
-
-    // Drag the first node to a slightly different position
-    const node0 = page.getByTestId('node-0');
-    await expect(node0).toBeVisible();
-    const nodeBounds = await node0.boundingBox();
-    if (nodeBounds) {
-      await page.mouse.move(nodeBounds.x + nodeBounds.width / 2, nodeBounds.y + nodeBounds.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(nodeBounds.x + nodeBounds.width / 2 + 20, nodeBounds.y + nodeBounds.height / 2 + 10);
-      await page.mouse.up();
-    }
-
-    // Exit node editing
+    // A double click on the shape enters node editing; dragging node 3 changes the contour but keeps 6 nodes
+    const selBounds = (await page.getByTestId('selection-box').boundingBox())!;
+    await page.mouse.dblclick(selBounds.x + selBounds.width / 2, selBounds.y + selBounds.height / 2);
+    await expect(page.getByTestId('node-editor')).toBeVisible();
+    await page.getByTestId('node-3').scrollIntoViewIfNeeded();
+    const node0 = (await page.getByTestId('node-3').boundingBox())!;
+    await page.mouse.move(node0.x + node0.width / 2, node0.y + node0.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(node0.x + node0.width / 2 + 24, node0.y + node0.height / 2 + 12, { steps: 4 });
+    await page.mouse.up();
     await page.keyboard.press('Escape');
-    await expect(page.getByTestId('node-editor')).toBeHidden({ timeout: 2000 }).catch(() => {});
+    await expect(page.getByTestId('node-editor')).toHaveCount(0);
+    await expect.poll(async () => ((await serverDraft(page, id)).doc.screens[0]!.blocks[0] as { style: { shape: { d: string } } }).style.shape.d, { timeout: 15_000 }).not.toBe(drawn.shape.d);
+    const edited = await shapeOf();
+    expect(nodeCount(edited.shape.d)).toBe(6);
 
-    // Switch back to select tool and ensure shape is selected
+    // Fill and stroke are set in the inspector and land in the document
     await page.getByTestId('tool-select').click();
-    const selBox2 = page.getByTestId('selection-box');
-    if (!(await selBox2.isVisible())) {
-      // re-select the block by clicking on it
-      const stageBox2 = await stage.boundingBox();
-      if (stageBox2) await stage.click({ position: { x: stageBox2.width * 0.5, y: stageBox2.height * 0.4 } });
-    }
-
-    // Apply fill color: open the fill section in the inspector
-    const fillSection = page.locator('[data-section="fills"]');
-    if (await fillSection.isVisible()) {
-      await fillSection.click();
-    } else {
-      // The section may already be open
-    }
-
-    // Verify shape remains on canvas (selection box visible means block is selected)
-    // The fill/stroke apply in inspector is tested in inspector tests (P3.4)
-    // — here we confirm the shape exists and is selectable
-    await expect(page.getByTestId('selection-box')).toBeVisible({ timeout: 3000 });
+    // Escape leaves node editing and drops the selection: the shape is picked again in the layers
+    await openTab(page, 'Слои');
+    await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: createBlock('shape').name, exact: true }).click();
+    await ensurePanel(page, 'right');
+    await openTab(page, 'Оформление');
+    const fills = await section(page, 'fills');
+    await fills.getByRole('button', { name: 'Добавить' }).click();
+    await fills.getByLabel('Цвет: источник').selectOption('hex');
+    await fills.getByLabel('Цвет: HEX').fill('#00aa55');
+    const stroke = await section(page, 'stroke');
+    const width = stroke.getByLabel('Толщина', { exact: true });
+    await width.fill('4');
+    await expect(width).toHaveValue('4');
+    const styled = await shapeOf();
+    expect(JSON.stringify(styled.fills)).toContain('#00aa55');
+    expect(styled.stroke?.width).toBe(4);
+    expect(styled.shape.d).toBe(edited.shape.d);
   });
 });
