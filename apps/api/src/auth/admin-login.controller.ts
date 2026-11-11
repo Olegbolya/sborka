@@ -28,7 +28,7 @@ export class AdminLoginController {
     const secure = this.config.databaseUrl.includes('ssl') || process.env.NODE_ENV === 'production';
     // The same half-finished sign-in as after a provider: the cookie is read by the second step.
     res.setHeader('Set-Cookie', `${MFA_COOKIE}=${pending}; Path=/api/v1/auth/oauth; HttpOnly; SameSite=Lax; Max-Age=600${secure ? '; Secure' : ''}`);
-    return { next: '/login/2fa' };
+    return { next: '/login/2fa?to=admin' };
   }
 
   @Roles('ADMIN', 'MODERATOR')

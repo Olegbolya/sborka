@@ -83,7 +83,8 @@ export class AdminPasswordService implements OnModuleInit {
       console.error(`AD-01: пароль первого администратора из окружения не принят: ${problem ?? 'логин короче 3 знаков'}`);
       return;
     }
-    const [exists] = await this.db.select({ userId: schema.adminCredentials.userId }).from(schema.adminCredentials).where(eq(schema.adminCredentials.login, boot.login));
+    // Only the very first start: once an administrator has a password (or it was moved to another account) nothing is made again.
+    const [exists] = await this.db.select({ userId: schema.adminCredentials.userId }).from(schema.adminCredentials).limit(1);
     if (exists) return;
     const userId = generateId();
     await this.db.insert(schema.users).values({ id: userId, displayName: boot.login, role: 'ADMIN', status: 'ACTIVE' });

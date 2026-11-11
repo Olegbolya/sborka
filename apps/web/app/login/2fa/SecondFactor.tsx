@@ -22,6 +22,9 @@ const s = {
 };
 
 /** AD-01 · the second step of the sign-in of an administrator or a moderator: the code of the authenticator (the first time — its setup). */
+/** Where the sign-in ends: an administrator who came through the login and password page lands in the admin; everybody else in the cabinet. */
+const landing = (): string => (new URLSearchParams(window.location.search).get('to') === 'admin' ? '/admin' : '/onboarding');
+
 export function SecondFactor() {
   const [start, setStart] = useState<Start | null>(null);
   const [code, setCode] = useState('');
@@ -42,7 +45,7 @@ export function SecondFactor() {
     try {
       const res = await api<{ backupCodes?: string[] }>('/auth/oauth/mfa/verify', { method: 'POST', body: { code } });
       if (res.backupCodes) setBackup(res.backupCodes);
-      else window.location.replace('/onboarding');
+      else window.location.replace(landing());
     } catch (e) {
       if (isApiError(e) && e.status === 401) setExpired(true);
       else setError(errorText(e));
@@ -76,7 +79,7 @@ export function SecondFactor() {
               <li key={c}>{c}</li>
             ))}
           </ul>
-          <button type="button" style={s.btn} onClick={() => window.location.replace('/onboarding')}>
+          <button type="button" style={s.btn} onClick={() => window.location.replace(landing())}>
             Я сохранил(а) коды
           </button>
         </div>

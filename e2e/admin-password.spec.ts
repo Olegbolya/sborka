@@ -43,7 +43,9 @@ test.describe('AD-01 · вход администратора по логину 
     await page.getByLabel('Код', { exact: true }).fill(totpCode(secret));
     await page.getByRole('button', { name: 'Подтвердить' }).click();
     await page.getByRole('button', { name: 'Я сохранил(а) коды' }).click();
-    await page.waitForURL(/\/(onboarding|cabinet\/projects)/);
+    // The administrator lands in the admin, not in the cabinet.
+    await page.waitForURL(/\/admin$/);
+    await expect(page.getByRole('heading', { name: 'Главная' }).or(page.getByRole('link', { name: 'Безопасность' }))).toBeVisible();
     expect(((await (await page.request.get('/api/v1/auth/me')).json()) as { role: string }).role).toBe('ADMIN');
 
     await page.goto('/admin/security');

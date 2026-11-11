@@ -95,7 +95,7 @@ describe('AD-01 · вход администратора по логину и п
 
   it('AD-01 · верный пароль открывает только второй шаг: сессии нет, потом код из приложения даёт сессию администратора', async () => {
     const ok = await login(PASSWORD).expect(200);
-    expect(ok.body).toEqual({ next: '/login/2fa' });
+    expect(ok.body).toEqual({ next: '/login/2fa?to=admin' });
     expect(pair(cookiesOf(ok), 'session')).toBeUndefined();
     const mfa = pair(cookiesOf(ok), 'bk_mfa')!;
     expect(mfa).toBeDefined();
