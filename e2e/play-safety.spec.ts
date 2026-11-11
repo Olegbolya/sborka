@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { nextButton, seedProject, textBlock } from './helpers/editor';
@@ -41,6 +42,16 @@ test.describe('P5.6 · безопасность участника', () => {
     const footer = p.getByTestId('play-footer');
     await expect(footer).toContainText('Создано пользователем');
     await expect(p.getByTestId('play-watermark')).toHaveText('Сделано в Блоккере — создать свою');
+    // Подвал без белой плашки, лежит на самой странице сборки у её нижнего края и во всю её ширину
+    const look = await footer.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const b = el.closest('.bk-artboard')!.getBoundingClientRect();
+      return { background: getComputedStyle(el).backgroundColor, bottom: Math.round(b.bottom - r.bottom), left: Math.round(r.left - b.left), right: Math.round(b.right - r.right), tall: b.height >= window.innerHeight - 1 };
+    });
+    expect(look).toEqual({ background: 'rgba(0, 0, 0, 0)', bottom: 0, left: 0, right: 0, tall: true });
+    await footer.scrollIntoViewIfNeeded();
+    mkdirSync('e2e/__screenshots__', { recursive: true });
+    await p.screenshot({ path: `e2e/__screenshots__/play-footer-${info.project.name}.png` });
     await footer.getByRole('button', { name: 'Пожаловаться' }).click();
     const dialog = p.getByTestId('report-dialog');
     await expect(dialog.getByRole('button', { name: 'Отправить' })).toBeDisabled();

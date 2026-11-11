@@ -40,6 +40,18 @@ export function fleeTarget(box: Box, pointer: { x: number; y: number }, distance
     const score = Math.hypot(tx + box.w / 2 - pointer.x, ty + box.h / 2 - pointer.y);
     if (!best || score > best.score + 1e-6) best = { x: tx, y: ty, score };
   }
+  // In a corner or against an edge every step away is cut short and the block would stay under the finger: it then
+  // jumps to the farthest place of the area (the corners and the middles of the sides).
+  if (best!.score < distance) {
+    const xs = [area.x, area.x + (area.w - box.w) / 2, area.x + area.w - box.w];
+    const ys = [area.y, area.y + (area.h - box.h) / 2, area.y + area.h - box.h];
+    for (const ty of ys) {
+      for (const tx of xs) {
+        const score = Math.hypot(tx + box.w / 2 - pointer.x, ty + box.h / 2 - pointer.y);
+        if (score > best!.score + 1e-6) best = { x: tx, y: ty, score };
+      }
+    }
+  }
   return { x: best!.x, y: best!.y };
 }
 

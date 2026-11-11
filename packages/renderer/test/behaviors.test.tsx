@@ -273,6 +273,24 @@ describe('BH-02 · BH-08: указатель на экране', () => {
 });
 
 
+describe('BH-02: убегающая кнопка рисуется поверх остальных', () => {
+  it('BH-02: в плеере убегающий блок поднят над соседями — не прячется за картинками и фигурами; обычный блок не тронут', () => {
+    const runner = block('button', { id: 'knopka_net', z: 1, behaviors: [{ kind: 'flee', distance: 80, speed: 1, times: 5 }] });
+    const plain = block('shape', { id: 'figura01', z: 1 });
+    const m = mount(
+      <>
+        <BlockView block={runner} />
+        <BlockView block={plain} />
+      </>,
+      { views: new Map([[runner.id, view(runner.id)], [plain.id, view(plain.id)]]) },
+    );
+    const z = (id: string) => Number(m.host.querySelector<HTMLElement>(`[data-block-id="${id}"]`)!.style.zIndex);
+    expect(z('knopka_net')).toBeGreaterThan(z('figura01'));
+    expect(z('figura01')).toBe(1);
+    m.unmount();
+  });
+});
+
 describe('SC-05: сдвиг без перерисовки экрана', () => {
   const doc = ProjectDocument.parse({ schemaVersion: 1, screens: [{ id: 'ekran1', name: 'Э', blocks: [{ id: 'sharik01', type: 'shape', name: 'Шарик', frame: { x: 10, y: 20, w: 20, h: 20 } }] }] });
 

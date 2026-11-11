@@ -100,6 +100,16 @@ describe('BH-02: убегает от пальца', () => {
     expect(v.y + 40).toBeLessThanOrEqual(500);
   });
 
+  it('BH-02: прижатая к углу кнопка не остаётся под пальцем, а перепрыгивает в дальнюю часть области', () => {
+    const area = { x: 0, y: 0, w: 390, h: 844 };
+    const to = fleeTarget({ x: 0, y: 0, w: 40, h: 40 }, { x: 20, y: 20 }, 80, area, createRng(1));
+    expect(Math.hypot(to.x + 20 - 20, to.y + 20 - 20)).toBeGreaterThan(80);
+    expect(to.x).toBeGreaterThanOrEqual(0);
+    expect(to.y).toBeGreaterThanOrEqual(0);
+    expect(to.x + 40).toBeLessThanOrEqual(390);
+    expect(to.y + 40).toBeLessThanOrEqual(844);
+  });
+
   it('BH-02: геометрия — направление от пальца', () => {
     const to = fleeTarget({ x: 100, y: 100, w: 20, h: 20 }, { x: 90, y: 110 }, 50, { x: 0, y: 0, w: 390, h: 844 }, createRng(1));
     expect(to.x).toBeGreaterThan(100);

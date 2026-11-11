@@ -53,7 +53,7 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
     overflowX: 'hidden',
     backgroundColor: value.tokens.colors.background ?? '#FFFFFF',
   };
-  const focusBoard = { ...board, [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
+  const focusBoard = { ...board, minHeight: '100dvh', [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
   return (
     <RenderContext.Provider value={value}>
       <div className="bk-stage" style={stage}>

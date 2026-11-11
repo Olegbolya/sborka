@@ -98,6 +98,8 @@ const TAP_TRIGGERS = new Set(['tap', 'doubleTap', 'longPress']);
 const MEDIA_TYPES = new Set(['image', 'gif', 'video', 'animation', 'audio']);
 /** Behaviors that move a block every frame: such blocks get their own compositor layer. */
 const MOVING = new Set(['drag', 'flee', 'move', 'follow']);
+/** How far a fleeing block is lifted above the others of its screen (BH-02). */
+const FLEE_LIFT = 1000;
 
 /** A block the participant presses: a button, or any block with its own «нажатие» rule (PL-21). */
 export const isPressable = (block: Block): boolean =>
@@ -229,7 +231,8 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
     ...(view && (view.copy || block.behaviors.some((b) => MOVING.has(b.kind))) ? { willChange: 'translate' } : {}),
     width: u(w),
     ...(style.autoHeight ? { minHeight: u(h) } : { height: u(h) }),
-    zIndex: block.z,
+    // A fleeing button runs over the screen: it must not hide behind pictures and shapes that lie above it.
+    zIndex: ctx.mode === 'player' && block.behaviors.some((b) => b.kind === 'flee') ? block.z + FLEE_LIFT : block.z,
     ...(transform ? { transform, transformOrigin: css.transformOrigin } : {}),
     ...css.root,
     ...(ctx.mode === 'editor' && block.initiallyHidden ? { opacity: (typeof css.root.opacity === 'number' ? css.root.opacity : 1) * 0.35 } : {}),
