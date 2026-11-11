@@ -2,7 +2,8 @@ import { mkdirSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { BLOCK_TYPES, createBlock } from '../packages/schema/dist/index.js';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { blockCenter, box, drag, hit, openEditor, saveStatus, seedProject, serverDraft, openTab } from './helpers/editor';
+import { PHOTO_PNG } from './helpers/files';
+import { blockCenter, box, drag, ensurePanel, hit, openEditor, saveStatus, seedProject, serverDraft, openTab } from './helpers/editor';
 
 const SHOTS = 'e2e/__screenshots__';
 
@@ -403,6 +404,51 @@ test.describe('P3.4 · работа с контролами', () => {
     for (const g of ['size', 'shape', 'radius', 'fills', 'stroke', 'shadows', 'glow', 'effects', 'filters', 'padding', 'text', 'transform3d', 'mask', 'animation']) {
       await expect(page.locator(`[data-section="${g}"]`)).toHaveCount(1);
     }
+  });
+
+  test('S-11 · визуальное кадрирование: рамка и фокус-точка на файле — мышью и стрелками, числа ниже те же, можно убрать', async ({ page }, info) => {
+    const { id } = await seedProject(page, () => undefined);
+    await openEditor(page, id);
+    await openTab(page, 'Добавить');
+    await page.getByRole('button', { name: 'Из медиатеки', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Выбор файла' });
+    await dialog.getByLabel('Загрузить файл').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: PHOTO_PNG });
+    await expect(dialog).toBeHidden();
+    await expect(saveStatus(page)).toHaveText('Сохранено');
+    await pickInLayers(page, 'Изображение');
+    await ensurePanel(page, 'right');
+    const media = await section(page, 'media');
+    const framer = media.getByTestId('media-framer');
+    await expect(framer).toBeVisible();
+    await expect(media.getByTestId('media-framer-reset')).toBeDisabled();
+    // Стрелками: верхний левый угол вправо и вниз, затем нижний правый угол влево.
+    await framer.getByRole('button', { name: 'Левый верхний угол кадра' }).focus();
+    await page.keyboard.press('Shift+ArrowRight');
+    await page.keyboard.press('Shift+ArrowDown');
+    await framer.getByRole('button', { name: 'Правый нижний угол кадра' }).focus();
+    await page.keyboard.press('Shift+ArrowLeft');
+    await expect.poll(async () => ((await savedBlock(page, id)).style.media as { crop?: { x: number; y: number; w: number; h: number } } | undefined)?.crop).toEqual({ x: 0.1, y: 0.1, w: 0.8, h: 0.9 });
+    await expect(media.getByLabel('Слева', { exact: true })).toHaveValue('10');
+    await expect(media.getByLabel('Ширина', { exact: true })).toHaveValue('80');
+    // Мышью: рамку целиком потянуть влево до края, фокус-точку — в угол.
+    const crop = framer.getByTestId('media-framer-crop');
+    const frame = await crop.boundingBox();
+    expect(frame).not.toBeNull();
+    await page.mouse.move(frame!.x + frame!.width / 2, frame!.y + frame!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(frame!.x - 500, frame!.y + frame!.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await expect.poll(async () => ((await savedBlock(page, id)).style.media as { crop?: { x: number } } | undefined)?.crop?.x).toBe(0);
+    const focal = await framer.getByTestId('media-framer-focal').boundingBox();
+    const box = await framer.locator('.ed-framer-box').boundingBox();
+    await page.mouse.move(focal!.x + focal!.width / 2, focal!.y + focal!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x - 50, box!.y - 50, { steps: 5 });
+    await page.mouse.up();
+    await expect.poll(async () => (await savedBlock(page, id)).style.media).toMatchObject({ focal: { x: 0, y: 0 } });
+    await page.screenshot({ path: `${SHOTS}/media-framer-${info.project.name}.png` });
+    await media.getByTestId('media-framer-reset').click();
+    await expect.poll(async () => ((await savedBlock(page, id)).style.media as { crop?: unknown } | undefined)?.crop).toBeUndefined();
   });
 
   test('S-05 · обводка со своим шаблоном штриха; S-06 свечение; S-08 фильтры', async ({ page }, info) => {

@@ -18,6 +18,7 @@ import { ANIMATION_SPEC, EDGES, type Field, GROUP_HINTS, GROUP_SPECS, MEDIA_TYPE
 import { ColorInput, NumberInput, Section, SelectInput, SliderInput, TextInput, Toggle } from './controls';
 import { useEditor, useEnv } from './context';
 import { DEFAULT_FRAMES, DEFAULT_MOTION_PATH, type Frames, KeyframesEditor, type Slot, playMotionPath } from './KeyframesEditor';
+import { type Crop, type Focal, MediaFramer } from './MediaFramer';
 import { MediaField } from './MediaPicker';
 import { OptionsEditor, ScreenField, TransitionPresetField, VariableField } from './PropsFields';
 
@@ -448,6 +449,22 @@ function GroupSection({ group, blocks, state, only, title, sectionId, open }: { 
   }
   return (
     <Section id={sectionId ?? group} title={title ?? spec.title} hint={only ? undefined : GROUP_HINTS[group]} own={own} onReset={reset} {...(open !== undefined ? { open } : {})}>
+      {group === 'media' && !only && blocks.length === 1 && (
+        <MediaFramer
+          block={blocks[0]!}
+          crop={(values[0] as { crop?: Crop } | undefined)?.crop ?? null}
+          focal={(values[0] as { focal?: Focal } | undefined)?.focal ?? { x: 0.5, y: 0.5 }}
+          onCrop={(crop) =>
+            write((cur) => {
+              const next = { ...(cur as Record<string, unknown>) };
+              if (crop) next.crop = crop;
+              else delete next.crop;
+              return next;
+            })
+          }
+          onFocal={(focal) => write((cur) => ({ ...(cur as Record<string, unknown>), focal }))}
+        />
+      )}
       <Fields fields={fields} level={level} prefix={group} />
     </Section>
   );

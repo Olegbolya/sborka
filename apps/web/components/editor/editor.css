@@ -920,3 +920,81 @@
     background: color-mix(in srgb, var(--accent) 45%, var(--panel));
   }
 }
+
+.ed-framer {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ed-framer-box {
+  position: relative;
+  width: 100%;
+  max-height: 320px;
+  background: repeating-conic-gradient(rgb(128 128 128 / 0.18) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+.ed-framer-box > img,
+.ed-framer-box > video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+.ed-framer-crop {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--accent, #e4572e);
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.45);
+  cursor: move;
+  outline: none;
+}
+.ed-framer-crop:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.ed-framer-grip {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  display: grid;
+  place-items: center;
+}
+.ed-framer-grip::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #fff;
+  border: 2px solid var(--accent, #e4572e);
+  box-sizing: border-box;
+}
+.ed-framer-grip.g-nw { left: 0; top: 0; cursor: nwse-resize; }
+.ed-framer-grip.g-n { left: 50%; top: 0; cursor: ns-resize; }
+.ed-framer-grip.g-ne { left: 100%; top: 0; cursor: nesw-resize; }
+.ed-framer-grip.g-e { left: 100%; top: 50%; cursor: ew-resize; }
+.ed-framer-grip.g-se { left: 100%; top: 100%; cursor: nwse-resize; }
+.ed-framer-grip.g-s { left: 50%; top: 100%; cursor: ns-resize; }
+.ed-framer-grip.g-sw { left: 0; top: 100%; cursor: nesw-resize; }
+.ed-framer-grip.g-w { left: 0; top: 50%; cursor: ew-resize; }
+.ed-framer-grip:focus-visible,
+.ed-framer-focal:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+.ed-framer-focal {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.9);
+  border: 3px solid var(--accent, #e4572e);
+  box-sizing: border-box;
+  cursor: grab;
+}
