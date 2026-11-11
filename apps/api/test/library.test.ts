@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
@@ -310,6 +313,33 @@ describe('LB-01, LB-04, AD-10 · Библиотека платформы', () =>
 
     const empty = await request(t.http()).get(`/${API_PREFIX}/library/collections/${collectionId}/items?search=несуществует`).set('Cookie', userCookie).expect(200);
     expect((empty.body as unknown[]).length).toBe(0);
+  });
+
+  it('LB-02 · GET /library/items/:id/file — файл единицы для вошедшего; в списке есть тип и размер; снятая единица и анонимный — отказ', async () => {
+    if (skip()) return;
+    const adminCookie = await loginAsAdmin();
+    const colRes = await request(t.http()).post(`/${API_PREFIX}/admin/library/collections`).set('Cookie', adminCookie).set('X-Blokum-CSRF', '1').send({ kind: 'STICKERS', title: 'Файлы LB-02' }).expect(201);
+    const collectionId = (colRes.body as { id: string }).id;
+    const [admin] = await db.db.select({ id: schema.users.id }).from(schema.users).limit(1);
+    const mediaId = createId();
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    mkdirSync(path.join(os.tmpdir(), admin!.id), { recursive: true });
+    writeFileSync(path.join(os.tmpdir(), admin!.id, mediaId), png);
+    await db.db.insert(schema.media).values({ id: mediaId, ownerId: admin!.id, kind: 'IMAGE', status: 'READY', mime: 'image/png', bytes: png.length, width: 640, height: 480, sha256: 'e'.repeat(64), variants: {} });
+    const item = (await request(t.http()).post(`/${API_PREFIX}/admin/library/items`).set('Cookie', adminCookie).set('X-Blokum-CSRF', '1').send({ collectionId, mediaId, title: 'Файловая единица', license: 'CC0', author: 'Авт', source: 'src' }).expect(201)).body as { id: string };
+    const userCookie = await loginViaOtp();
+    const counted = (await request(t.http()).get(`/${API_PREFIX}/library/collections`).set('Cookie', userCookie).expect(200)).body as Array<{ id: string; itemCount: number }>;
+    expect(counted.find((c) => c.id === collectionId)?.itemCount).toBe(1);
+    await request(t.http()).get(`/${API_PREFIX}/library/items/${item.id}/file`).expect(401);
+    const file = await request(t.http()).get(`/${API_PREFIX}/library/items/${item.id}/file`).set('Cookie', userCookie).expect(200);
+    expect(file.headers['content-type']).toContain('image/png');
+    const list = (await request(t.http()).get(`/${API_PREFIX}/library/collections/${collectionId}/items`).set('Cookie', userCookie).expect(200)).body as Array<{ id: string; kind: string; width: number; height: number }>;
+    expect(list.find((i) => i.id === item.id)).toMatchObject({ kind: 'IMAGE', width: 640, height: 480 });
+    const byIds = (await request(t.http()).get(`/${API_PREFIX}/library/items?ids=${item.id},net-takoj`).set('Cookie', userCookie).expect(200)).body as Array<{ id: string }>;
+    expect(byIds.map((i) => i.id)).toEqual([item.id]);
+    await request(t.http()).delete(`/${API_PREFIX}/admin/library/items/${item.id}`).set('Cookie', adminCookie).set('X-Blokum-CSRF', '1').send({ reason: 'Проверка файла' }).expect(204);
+    expect((await request(t.http()).get(`/${API_PREFIX}/library/items?ids=${item.id}`).set('Cookie', userCookie).expect(200)).body).toEqual([]);
+    await request(t.http()).get(`/${API_PREFIX}/library/items/${item.id}/file`).set('Cookie', userCookie).expect(404);
   });
 
   // ── LB-05 · ZIP-импорт ───────────────────────────────────────────────────

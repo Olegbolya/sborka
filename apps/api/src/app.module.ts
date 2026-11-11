@@ -78,7 +78,7 @@ export class AppModule {
     const emailSender: EmailSender | null = deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender();
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes, linkReputation: deps.linkReputation !== undefined ? deps.linkReputation : config.safeBrowsingKey ? new YandexSafeBrowsing(config.safeBrowsingKey) : null }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl, config.requireAgeRating === true, config.mediaDir), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), PaymentsModule.register(config, deps.paymentProvider), LibraryModule, EditorModule],
+      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes, linkReputation: deps.linkReputation !== undefined ? deps.linkReputation : config.safeBrowsingKey ? new YandexSafeBrowsing(config.safeBrowsingKey) : null }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl, config.requireAgeRating === true, config.mediaDir), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), PaymentsModule.register(config, deps.paymentProvider), LibraryModule.register(config), EditorModule],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),

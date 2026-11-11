@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { schema } from '@blokum/db';
@@ -47,7 +50,7 @@ async function makeAppWithAuth(): Promise<{ t: TestApp; db: TestDb; loginViaOtp:
 }
 
 import sharp from 'sharp';
-import { createBlock, createScreen, type ProjectDocument } from '@blokum/schema';
+import { createBlock, createId, createScreen, type ProjectDocument } from '@blokum/schema';
 
 const call = (t: TestApp, cookie: string, method: 'post' | 'put' | 'patch' | 'get', url: string, body?: unknown) => {
   const r = request(t.http())[method](`/${API_PREFIX}${url}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1');
@@ -111,6 +114,31 @@ describe('PL-01…PL-05 · публикация и открытие плеера
     await pub(t, `/play/${p.slug}`).expect(404);
     const versions = await db.db.select().from(schema.projectVersions).where(eq(schema.projectVersions.projectId, p.id));
     expect(versions.filter((v) => v.kind === 'PUBLISHED')).toHaveLength(0);
+  });
+
+  it('LB-02, LB-04 · файл единицы библиотеки в опубликованной сборке виден участнику; снятая единица — «Недоступно»', async () => {
+    const [admin] = await db.db.select({ id: schema.users.id }).from(schema.users).limit(1);
+    const mediaId = createId();
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    mkdirSync(path.join(os.tmpdir(), admin!.id), { recursive: true });
+    writeFileSync(path.join(os.tmpdir(), admin!.id, mediaId), png);
+    await db.db.insert(schema.media).values({ id: mediaId, ownerId: admin!.id, kind: 'IMAGE', status: 'READY', mime: 'image/png', bytes: png.length, width: 1, height: 1, sha256: 'd'.repeat(64), variants: {} });
+    const collectionId = createId();
+    await db.db.insert(schema.libraryCollections).values({ id: collectionId, kind: 'STICKERS', title: 'Стикеры плеера' });
+    const itemId = createId();
+    await db.db.insert(schema.libraryItems).values({ id: itemId, collectionId, mediaId, title: 'Звезда', license: 'CC0', author: 'Автор', source: 'владелец', rightsConfirmedById: admin!.id });
+    const p = await project((d) => void d.screens[0]!.blocks.push(createBlock('image', { props: { media: { source: 'library', id: itemId } } })));
+    await call(t, cookie, 'post', `/projects/${p.id}/publish`).expect(200);
+    const open = await pub(t, `/play/${p.slug}`).expect(200);
+    expect(open.body.media[itemId]).toMatchObject({ kind: 'IMAGE', mime: 'image/png' });
+    const file = await pub(t, `/play/${p.slug}/media/${itemId}`).expect(200);
+    expect(file.headers['content-type']).toContain('image/png');
+    // Чужая единица, которой нет в сборке, не отдаётся.
+    const other = createId();
+    await db.db.insert(schema.libraryItems).values({ id: other, collectionId, mediaId, title: 'Не в сборке', license: 'CC0', author: 'Автор', source: 'владелец', rightsConfirmedById: admin!.id });
+    await pub(t, `/play/${p.slug}/media/${other}`).expect(404);
+    await db.db.update(schema.libraryItems).set({ active: false }).where(eq(schema.libraryItems.id, itemId));
+    await pub(t, `/play/${p.slug}/media/${itemId}`).expect(404);
   });
 
   it('PL-15 · опубликованное видно участнику без ключа ответов, баллов и меток результатов', async () => {

@@ -15,6 +15,7 @@ import {
 } from '../../lib/editor/commands';
 import { api, errorText } from '../../lib/api-browser';
 import { AddPanel } from './AddPanel';
+import { LibraryPanel } from './LibraryPanel';
 import { useEditor, useEnv } from './context';
 
 const THUMB = 0.22;
@@ -453,20 +454,6 @@ function TemplatesPanel() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/** LB-03 · вкладка «Библиотека»: пустое состояние — библиотека заполняется администратором. */
-function LibraryPanel() {
-  return (
-    <div className="ed-section" data-testid="library-panel">
-      <p className="ed-hint">Библиотека пополняется</p>
-      <div className="ed-actions">
-        <a href="/cabinet/media" className="ed-btn small">
-          Загрузить своё
-        </a>
-      </div>
     </div>
   );
 }

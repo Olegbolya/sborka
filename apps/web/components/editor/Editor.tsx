@@ -91,6 +91,8 @@ export function Editor({ projectId }: { projectId: string }) {
         const media = new MediaCatalog();
         // The library is read in the background: a fill with a photo is drawn when its list arrives.
         void media.load().catch(() => undefined);
+        // Files of the platform library that the document already uses: their kind is needed to draw them (LB-02, LB-04).
+        void media.loadLibraryRefs(store.getState().doc).catch(() => undefined);
         setLoaded({ store, saver, media, status: p.status, restored });
       } catch (e) {
         if (cancelled) return;

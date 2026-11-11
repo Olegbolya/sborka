@@ -20,17 +20,17 @@ const BLOCK_OF_MEDIA: Partial<Record<MediaKind, BlockType>> = {
 };
 const WIDTH_ON_SCREEN = 300;
 
-/** E-14 · «Добавить»: the kinds of blocks by group with a search, and a file from the media library as a ready block. */
-export function AddPanel() {
+/**
+ * Adding to the screen: the container that is the only thing selected receives the new block, otherwise the screen does.
+ * `addMedia` makes a ready block of the right kind and proportions for a file of the creator's library or of the platform's.
+ */
+export function useAddBlocks() {
   const { media } = useEnv();
-  useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
   const apply = useEditor((s) => s.apply);
   const select = useEditor((s) => s.select);
   const doc = useEditor((s) => s.doc);
   const screenId = useEditor((s) => s.selection.screenId);
   const selected = useEditor((s) => s.selection.blockIds);
-  const [query, setQuery] = useState('');
-  const [picking, setPicking] = useState(false);
   const screen = doc.screens.find((s) => s.id === screenId) ?? doc.screens[0]!;
 
   // A container that is the only thing selected receives the new block; otherwise the screen does.
@@ -51,13 +51,29 @@ export function AddPanel() {
   };
 
   const addMedia = (ref: MediaRef) => {
-    setPicking(false);
-    const item = ref.source === 'media' ? media.items().find((m) => m.id === ref.id) : undefined;
-    const type = (item && BLOCK_OF_MEDIA[item.kind]) ?? 'image';
+    const item = ref.source === 'media' ? media.items().find((m) => m.id === ref.id) : ref.source === 'library' ? media.libraryItem(ref.id) : undefined;
+    const kind = item && 'kind' in item ? item.kind : null;
+    const type = (kind && BLOCK_OF_MEDIA[kind]) ?? 'image';
     const ratio = item?.width && item.height ? item.height / item.width : 0.75;
     const w = type === 'audio' ? 200 : WIDTH_ON_SCREEN;
     const h = type === 'audio' ? 56 : Math.max(24, Math.min(600, Math.round(w * ratio)));
     add(type, { frame: { x: Math.round((390 - w) / 2), y: 100, w, h }, props: { media: ref } });
+  };
+
+  return { screen, selected, target, add, addMedia };
+}
+
+/** E-14 · «Добавить»: the kinds of blocks by group with a search, and a file from the media library as a ready block. */
+export function AddPanel() {
+  const { media } = useEnv();
+  useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
+  const [query, setQuery] = useState('');
+  const [picking, setPicking] = useState(false);
+
+  const { screen, selected, target, add, addMedia: addPicked } = useAddBlocks();
+  const addMedia = (ref: MediaRef) => {
+    setPicking(false);
+    addPicked(ref);
   };
 
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);

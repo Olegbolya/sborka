@@ -50,7 +50,8 @@ export const playMediaUrl = (slug: string, id: string): string => `/api/v1/play/
 /** The player draws only the files the published document refers to: a reference becomes an address and a kind. */
 export function playMediaResolver(view: Pick<PlayOpen, 'slug' | 'media'>): (ref: MediaRef) => MediaSource | null {
   return (ref) => {
-    if (ref.source !== 'media') return null;
+    // Files of the platform library (LB-02) are served by the same address as the project's own: the server finds the item by its number.
+    if (ref.source !== 'media' && ref.source !== 'library') return null;
     const known = view.media[ref.id];
     if (!known) return null;
     // TS-24: propagate stub marker so the renderer shows the appropriate placeholder.

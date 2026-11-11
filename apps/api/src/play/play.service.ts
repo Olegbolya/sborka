@@ -269,6 +269,18 @@ export class PlayService {
     const p = await this.published({ slug });
     // Проверяем, что mediaId упоминается в документе либо принадлежит шрифту этого проекта
     const inDoc = JSON.stringify(p.doc).includes(`"${mediaId}"`);
+    // LB-02 · an item of the platform library the project refers to: the file is the library's, not the owner's; a withdrawn item is not served (LB-04).
+    if (inDoc) {
+      const [lib] = await this.db
+        .select({ active: schema.libraryItems.active, ownerId: schema.media.ownerId, id: schema.media.id, mime: schema.media.mime, status: schema.media.status, variants: schema.media.variants })
+        .from(schema.libraryItems)
+        .innerJoin(schema.media, eq(schema.media.id, schema.libraryItems.mediaId))
+        .where(and(eq(schema.libraryItems.id, mediaId), isNull(schema.media.deletedAt)));
+      if (lib) {
+        if (!lib.active || !lib.ownerId || lib.status === 'BLOCKED' || lib.status === 'REJECTED') throw unavailable();
+        return { path: this.storage.getPath(servedKey(lib.ownerId, lib.id, lib.variants)), mime: lib.mime };
+      }
+    }
     if (!inDoc) {
       // TH-04: также проверяем, является ли mediaId WOFF2-файлом шрифта владельца
       const fontRows = await this.db
