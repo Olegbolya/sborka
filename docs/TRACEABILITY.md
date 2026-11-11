@@ -513,6 +513,7 @@
 | RG-09 | P3.12 | `packages/themes/examples/rg-09.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
 | RG-10 | P3.12 | `packages/themes/examples/rg-10.json` | `apps/web/test/reference-games.test.ts`, `e2e/reference-games.spec.ts`, `packages/themes/test/reference-games-generic.test.ts` |
 | S-16 | P3.12 | `apps/web/components/editor/Inspector.tsx` | `e2e/reference-build.spec.ts` |
+| S-16 | P3.4 | `apps/web/components/editor/Inspector.tsx` | `e2e/inspector.spec.ts` |
 | AC-20 | P3.12 | `packages/engine/src/runtime/runtime.ts`, `packages/renderer/src/components/BlockView.tsx` | `packages/engine/test/debug.test.ts`, `packages/renderer/test/flow-order.test.tsx` |
 | TS-02 | P9.1 | `packages/schema/src/safety/normalize.ts`; `packages/schema/src/safety/match.ts`; `packages/schema/src/safety/scan.ts`; `packages/schema/src/safety/phishing-terms.ts`; `apps/api/src/admin/safety.service.ts#check,noteBlocked`; `apps/api/src/projects/projects.service.ts#publish` | `packages/schema/test/safety.test.ts`, `apps/api/test/safety.test.ts` |
 | TS-03 | P9.1 | `packages/schema/src/safety/normalize.ts`; `packages/schema/src/safety/match.ts`; `packages/schema/src/safety/scan.ts`; `packages/schema/src/safety/brand-terms.ts`; `apps/api/src/admin/safety.service.ts#check,afterPublish`; `packages/schema/src/moderation.ts#AUTO_REVIEW` | `packages/schema/test/safety.test.ts`, `apps/api/test/safety.test.ts` |

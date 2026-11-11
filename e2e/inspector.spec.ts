@@ -336,6 +336,27 @@ test.describe('P3.4 · работа с контролами', () => {
     await expect.poll(async () => ((await savedBlock(page, id)).animation as { enter: Record<string, unknown> } | undefined)?.enter.keyframes).toBeUndefined();
   });
 
+  test('S-16 · видимость: «скрыт в начале» гасит блок в предпросмотре, условие показа включается и снимается', async ({ page }) => {
+    const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(shapeAt('figura_1', 'Фигура', 40)));
+    await openEditor(page, id);
+    await pickInLayers(page, 'Фигура');
+    const visibility = page.getByTestId('visibility-section');
+    await visibility.getByLabel('Скрыт, пока правило его не покажет').check();
+    await expect.poll(async () => (await savedBlock(page, id)).initiallyHidden).toBe(true);
+    await page.getByRole('button', { name: 'Предпросмотр' }).click();
+    const preview = page.getByRole('dialog', { name: 'Предпросмотр' });
+    await expect(preview).toBeVisible();
+    await expect(preview.locator('[data-block-id="figura_1"]:visible')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await visibility.getByLabel('Скрыт, пока правило его не покажет').uncheck();
+    await expect.poll(async () => (await savedBlock(page, id)).initiallyHidden).toBe(false);
+    await visibility.getByLabel('Показывать по условию').check();
+    await expect.poll(async () => (await savedBlock(page, id)).visibleIf).toBeTruthy();
+    await expect(visibility.getByLabel('Показывать, если: что проверяем')).toBeVisible();
+    await visibility.getByLabel('Показывать по условию').uncheck();
+    await expect.poll(async () => (await savedBlock(page, id)).visibleIf).toBeUndefined();
+  });
+
   test('S-04 · фото в заливке: загрузка в окне выбора, потом выбор из медиатеки; в предпросмотре — картинка', async ({ page }) => {
     const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(shapeAt('figura_1', 'Фигура', 40)));
     await openEditor(page, id);
