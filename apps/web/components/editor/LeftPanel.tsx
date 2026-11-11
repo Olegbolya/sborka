@@ -2,7 +2,7 @@
 import { copyScreen, pasteScreen, readScreenClipboard, writeScreenClipboard } from '../../lib/editor/clipboard';
 import { Artboard, ScreenView } from '@blokum/renderer';
 import { type Block, type Screen } from '@blokum/schema';
-import { type ReactNode, useEffect, useState, useSyncExternalStore } from 'react';
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { withGroupMates } from '../../lib/editor/arrange';
 import { stackOf } from '../../lib/editor/tree';
 import {
@@ -19,19 +19,49 @@ import { useEditor, useEnv } from './context';
 
 const THUMB = 0.22;
 
+/** A thumbnail draws the blocks of its screen only once it has come near the visible part of the list (a document of 50 screens opens without drawing all of them). */
+function useNearViewport(): [(node: HTMLElement | null) => void, boolean] {
+  const [near, setNear] = useState(false);
+  const watcher = useRef<IntersectionObserver | null>(null);
+  const ref = (node: HTMLElement | null): void => {
+    watcher.current?.disconnect();
+    watcher.current = null;
+    if (!node || near) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setNear(true);
+      return;
+    }
+    watcher.current = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setNear(true);
+          watcher.current?.disconnect();
+        }
+      },
+      { rootMargin: '300px' },
+    );
+    watcher.current.observe(node);
+  };
+  return [ref, near];
+}
+
 function Thumbnail({ screen }: { screen: Screen }) {
   const { media } = useEnv();
   useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
   const tokens = useEditor((s) => s.doc.theme.tokens);
+  const [ref, near] = useNearViewport();
   return (
     <span
+      ref={ref}
       className="ed-thumb"
       aria-hidden="true"
       style={{ width: 390 * THUMB, height: screen.height * THUMB, maxHeight: 120 }}
     >
-      <Artboard mode="thumbnail" unit={THUMB} tokens={tokens} media={media.resolver}>
-        <ScreenView screen={screen} />
-      </Artboard>
+      {near && (
+        <Artboard mode="thumbnail" unit={THUMB} tokens={tokens} media={media.resolver}>
+          <ScreenView screen={screen} />
+        </Artboard>
+      )}
     </span>
   );
 }
