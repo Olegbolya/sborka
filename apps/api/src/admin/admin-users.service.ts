@@ -7,6 +7,13 @@ import { ModerationService } from './moderation.service.js';
 
 const like = (q: string) => `%${q.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
 
+/** A phone typed in any way («8 999 123-45-67», «+7 (999) 123-45-67») as the digits stored in `phone_e164` (without «+», «8» in front → «7»); null if it does not look like a phone. */
+export const phoneDigits = (q: string): string | null => {
+  const digits = q.replace(/\D/g, '');
+  if (digits.length < 4) return null;
+  return digits.length === 11 && digits.startsWith('8') ? `7${digits.slice(1)}` : digits;
+};
+
 /** AD-02 · users: search, profile with projects, payments and the history of decisions. */
 @Injectable()
 export class AdminUsersService {
@@ -18,6 +25,7 @@ export class AdminUsersService {
   async search(qRaw: unknown) {
     const q = typeof qRaw === 'string' ? qRaw.trim() : '';
     if (q.length < 2) throw fail(422, 'QUERY', 'Введите хотя бы два знака: имя, номер, почту или номер в VK ID / Яндекс ID.');
+    const phone = phoneDigits(q);
     const byIdentity = this.db.select({ id: schema.authIdentities.userId }).from(schema.authIdentities).where(eq(schema.authIdentities.providerUserId, q));
     const rows = await this.db
       .select({
@@ -38,6 +46,7 @@ export class AdminUsersService {
             ilike(schema.users.displayName, like(q)),
             ilike(schema.users.email, like(q)),
             ilike(schema.users.phoneE164, like(q)),
+            ...(phone ? [ilike(schema.users.phoneE164, like(phone))] : []),
             sql`${schema.users.id} in (${byIdentity})`,
           ),
         ),
@@ -76,6 +85,12 @@ export class AdminUsersService {
       .where(eq(schema.orders.userId, id))
       .orderBy(desc(schema.orders.createdAt))
       .limit(100);
+    const subscriptions = await this.db
+      .select({ planCode: schema.subscriptions.planCode, status: schema.subscriptions.status, currentPeriodStart: schema.subscriptions.currentPeriodStart, currentPeriodEnd: schema.subscriptions.currentPeriodEnd })
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.userId, id))
+      .orderBy(desc(schema.subscriptions.currentPeriodEnd))
+      .limit(10);
     const [sessions] = await this.db.select({ n: count() }).from(schema.sessions).where(and(eq(schema.sessions.userId, id), isNull(schema.sessions.revokedAt)));
     const history = await this.moderation.history({ ownerId: id });
     const projectHistory = (await Promise.all(projects.map((p) => this.moderation.history({ projectId: p.id })))).flat();
@@ -89,6 +104,7 @@ export class AdminUsersService {
       identities: identities.map((i) => ({ provider: i.provider, providerUserId: i.providerUserId })),
       projects,
       orders,
+      subscriptions,
       activeSessions: sessions?.n ?? 0,
       complaints: complaints[0]?.n ?? 0,
       history: [...history, ...projectHistory].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),

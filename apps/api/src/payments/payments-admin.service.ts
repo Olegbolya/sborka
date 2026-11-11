@@ -1,5 +1,5 @@
 import { HttpException, Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, gt, like, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, like, or, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { AuditLogService } from '../auth/audit-log.service.js';
 import { DB } from '../tokens.js';
@@ -121,12 +121,25 @@ export class PaymentsAdminService {
    * A plan for some months or a pass for a project, given by the administrator with a reason (a gift, a compensation, a failed
    * payment). It is kept as a free order «manual», so it is in the list, and it is not income.
    */
+  /** The person of a grant: by the number of the account, or by the phone typed in any way («8 996 336-97-34», «+7 996…»). */
+  private async resolveUser(typed: string): Promise<string> {
+    const [byId] = await this.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.id, typed));
+    if (byId) return byId.id;
+    const digits = typed.replace(/\D/g, '');
+    const phone = digits.length === 11 && digits.startsWith('8') ? `7${digits.slice(1)}` : digits;
+    if (typed !== '' && phone.length >= 10 && /^[\d\s()+-]+$/.test(typed)) {
+      const found = await this.db.select({ id: schema.users.id }).from(schema.users).where(and(sql`${schema.users.deletedAt} is null`, eq(sql`regexp_replace(${schema.users.phoneE164}, '\\D', '', 'g')`, phone))).limit(2);
+      if (found.length === 1) return found[0]!.id;
+      if (found.length > 1) throw fail(409, 'AMBIGUOUS', 'Этот номер указан у нескольких аккаунтов: возьмите номер пользователя из раздела «Пользователи».');
+    }
+    throw fail(404, 'NOT_FOUND', 'Пользователь не найден. Введите телефон, как в аккаунте, или откройте человека в разделе «Пользователи» и начислите там. Если человек входил через VK ID или Яндекс ID без телефона, ищите по имени.');
+  }
+
   async grant(actorId: string, body: Record<string, unknown>, ip?: string): Promise<{ orderId: string }> {
     const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
     if (reason.length < 3 || reason.length > 300) throw fail(400, 'INVALID_INPUT', 'Напишите причину начисления — от 3 до 300 знаков.');
-    const userId = typeof body.userId === 'string' ? body.userId : '';
-    const [user] = await this.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.id, userId));
-    if (!user) throw fail(404, 'NOT_FOUND', 'Пользователь не найден.');
+    const typed = typeof body.userId === 'string' ? body.userId.trim() : '';
+    const userId = await this.resolveUser(typed);
     const now = new Date();
     const kind = body.kind;
     return this.db.transaction(async (tx) => {
@@ -137,8 +150,16 @@ export class PaymentsAdminService {
         const [plan] = await tx.select({ code: schema.plans.code, priceOnceRub: schema.plans.priceOnceRub }).from(schema.plans).where(eq(schema.plans.code, planCode));
         if (!plan || plan.priceOnceRub !== null || plan.code === 'FREE') throw fail(400, 'INVALID_INPUT', 'Такого тарифа нет.');
         const [order] = await tx.insert(schema.orders).values({ userId, kind: 'SUBSCRIPTION', item: { kind: 'SUBSCRIPTION', planCode, period: 'MONTH', manual: true, months, reason, byAdmin: actorId }, amountKop: 0, status: 'PAID', provider: 'manual', paidAt: now }).returning({ id: schema.orders.id });
-        await tx.insert(schema.subscriptions).values({ userId, planCode, period: 'MONTH', status: 'ACTIVE', currentPeriodStart: now, currentPeriodEnd: addMonths(now, months) });
-        await this.audit.log({ actorId, action: 'MANUAL_GRANT', targetType: 'USER', targetId: userId, ...(ip ? { ip } : {}), meta: { kind, planCode, months, reason, orderId: order!.id } });
+        // «Продлить»: if the same tariff is still running, the new months start when it ends; otherwise they start now.
+        const [running] = await tx
+          .select({ end: schema.subscriptions.currentPeriodEnd })
+          .from(schema.subscriptions)
+          .where(and(eq(schema.subscriptions.userId, userId), eq(schema.subscriptions.planCode, planCode), inArray(schema.subscriptions.status, ['ACTIVE', 'TRIAL']), gt(schema.subscriptions.currentPeriodEnd, now)))
+          .orderBy(desc(schema.subscriptions.currentPeriodEnd))
+          .limit(1);
+        const from = running?.end ?? now;
+        await tx.insert(schema.subscriptions).values({ userId, planCode, period: 'MONTH', status: 'ACTIVE', currentPeriodStart: from, currentPeriodEnd: addMonths(from, months) });
+        await this.audit.log({ actorId, action: 'MANUAL_GRANT', targetType: 'USER', targetId: userId, ...(ip ? { ip } : {}), meta: { kind, planCode, months, reason, orderId: order!.id, from: from.toISOString() } });
         return { orderId: order!.id };
       }
       if (kind === 'PASS') {

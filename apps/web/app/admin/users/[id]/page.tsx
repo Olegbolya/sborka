@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '../../../../lib/api-browser';
 import { ActionForm } from '../../../../components/admin/ActionForm';
+import { GrantForm } from '../../../../components/admin/GrantForm';
 import { useMe } from '../../../../components/admin/AdminShell';
 import { Badge, Notice, css, useAction, useLoad } from '../../../../components/admin/ui';
 import { ORDER_STATUS, PROJECT_STATUS, PROVIDER_LABEL, ROLE_LABEL, USER_STATUS, dateTime, rubles } from '../../../../lib/admin/format';
@@ -12,9 +13,22 @@ interface Profile {
   identities: Array<{ provider: string; providerUserId: string }>;
   projects: Array<{ id: string; title: string; status: string; moderationStatus: string; legalHold: boolean; updatedAt: string }>;
   orders: Array<{ id: string; kind: string; amountKop: number; status: string; createdAt: string; paidAt: string | null }>;
+  subscriptions: Array<{ planCode: string; status: string; currentPeriodStart: string; currentPeriodEnd: string }>;
   activeSessions: number;
   complaints: number;
   history: Array<{ id: string; targetType: string; action: string; actionLabel: string; reasonLabel: string; note: string; actorId: string; createdAt: string }>;
+}
+
+const PLAN_TITLE: Record<string, string> = { FREE: 'Бесплатный', AUTHOR: 'Автор', PLUS: 'Плюс', PRO: 'Про' };
+
+/** The tariff that works now and the one that ends last, in words. */
+function currentPlan(list: Profile['subscriptions']): string {
+  const now = Date.now();
+  const running = list.filter((x) => (x.status === 'ACTIVE' || x.status === 'TRIAL') && new Date(x.currentPeriodStart).getTime() <= now && new Date(x.currentPeriodEnd).getTime() > now);
+  const last = list.filter((x) => x.status === 'ACTIVE' || x.status === 'TRIAL').sort((a, b) => b.currentPeriodEnd.localeCompare(a.currentPeriodEnd))[0];
+  if (running.length === 0) return last && new Date(last.currentPeriodEnd).getTime() > now ? `Сейчас бесплатный; «${PLAN_TITLE[last.planCode] ?? last.planCode}» начнётся ${dateTime(last.currentPeriodStart)}.` : 'Бесплатный: платных тарифов нет.';
+  const top = running.sort((a, b) => b.currentPeriodEnd.localeCompare(a.currentPeriodEnd))[0]!;
+  return `Сейчас: «${PLAN_TITLE[top.planCode] ?? top.planCode}», действует до ${dateTime(last && last.planCode === top.planCode ? last.currentPeriodEnd : top.currentPeriodEnd)}.`;
 }
 
 /** AD-02 · profile: accounts, projects, payments, the history of decisions, and the decision form. */
@@ -58,6 +72,10 @@ export default function UserPage() {
           ) : null}
         </div>
       ))}
+
+      <h2 style={css.h2}>Тариф</h2>
+      <p style={css.muted} data-testid="user-plan">{currentPlan(data.subscriptions)}</p>
+      {me.role === 'ADMIN' ? <GrantForm userId={user.id} onDone={reload} /> : null}
 
       <h2 style={css.h2}>Платежи</h2>
       {data.orders.length === 0 ? <p style={css.muted}>Платежей нет.</p> : (

@@ -620,5 +620,22 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
       const paidOnly = (await adm('get', '/orders?status=PAID&kind=PASS', admin.cookie).expect(200)).body as { orders: Array<{ status: string; kind: string }> };
       expect(paidOnly.orders.every((x) => x.status === 'PAID' && x.kind === 'PASS')).toBe(true);
     });
+
+    it('AD-05 · начисление по телефону в любом написании; повторное начисление того же тарифа продлевает его после конца действующего', async () => {
+      const admin = await adminLogin();
+      const user = await login(t, db);
+      const digits = `7${String(Date.now()).slice(-10)}`;
+      await db.db.update(schema.users).set({ phoneE164: `+${digits}` }).where(eq(schema.users.id, user.userId));
+      const typed = `8 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9)}`;
+      await adm('post', '/grants', admin.cookie, { userId: '8 000 000-00-00', kind: 'SUBSCRIPTION', planCode: 'PRO', months: 1, reason: 'нет такого' }).expect(404);
+      await adm('post', '/grants', admin.cookie, { userId: typed, kind: 'SUBSCRIPTION', planCode: 'PRO', months: 1, reason: 'По телефону' }).expect(201);
+      await adm('post', '/grants', admin.cookie, { userId: `+${digits}`, kind: 'SUBSCRIPTION', planCode: 'PRO', months: 2, reason: 'Продление' }).expect(201);
+      expect((await ent.planOf(user.userId)).code).toBe('PRO');
+      const subs = await db.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, user.userId)).orderBy(schema.subscriptions.currentPeriodStart);
+      expect(subs).toHaveLength(2);
+      expect(subs[1]!.currentPeriodStart.getTime()).toBe(subs[0]!.currentPeriodEnd.getTime());
+      const found = (await request(t.http()).get(`/${API_PREFIX}/admin/users?q=${encodeURIComponent(typed)}`).set('Cookie', admin.cookie).expect(200)).body as Array<{ id: string }>;
+      expect(found.map((x) => x.id)).toContain(user.userId);
+    });
   });
 });
