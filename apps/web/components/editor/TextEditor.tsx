@@ -29,7 +29,7 @@ const Placeholder = (label: (kind: string, ref: string) => string) =>
 const textOf = (rt: RichText | undefined): string => JSON.stringify(rt ?? { paragraphs: [] });
 
 /** B-01 · the text of a block: bold, italic, underline, strikethrough, a link, lists, variables. The document holds it as `textLayer`. */
-export function TextEditor({ block }: { block: Block }) {
+export function TextEditor({ block, autoFocus = false }: { block: Block; autoFocus?: boolean }) {
   const { store } = useEnv();
   const apply = useEditor((s) => s.apply);
   const variables = useEditor((s) => s.doc.variables);
@@ -53,6 +53,7 @@ export function TextEditor({ block }: { block: Block }) {
   const last = useRef(textOf(block.textLayer));
   const editor = useTipTap({
     immediatelyRender: false,
+    autofocus: autoFocus ? 'end' : false,
     extensions: [
       StarterKit.configure({
         heading: false,

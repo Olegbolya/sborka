@@ -9,6 +9,7 @@ import { drawOrder } from '../../lib/editor/tree';
 import { useEditor, useEnv } from './context';
 import { EmptyScreenHint } from './EmptyScreenHint';
 import { NodeEditor, PenOverlay, PencilOverlay } from './PenTool';
+import { TextEditor } from './TextEditor';
 
 const ARTBOARD = 390;
 export const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 3, 4] as const;
@@ -62,6 +63,8 @@ export function Canvas() {
   const [toolMode, setToolMode] = useState<'select' | 'pen' | 'pencil'>('select');
   /** E-21 · block id being edited in node-edit mode (null = not editing). */
   const [nodeEditId, setNodeEditId] = useState<string | null>(null);
+  /** B-01 · the block whose text is being typed right on the canvas. */
+  const [textEditId, setTextEditId] = useState<string | null>(null);
 
   useEffect(() => {
     const el = wrap.current;
@@ -317,6 +320,7 @@ export function Canvas() {
     const u = unionOf(picked.map((b) => boundsOf(frames.get(b.id)!)));
     return u ? { ...u, rotation: 0, single: null } : null;
   })();
+  const textEditing = textEditId ? (picked.length === 1 && picked[0]!.id === textEditId && frames.has(textEditId) ? picked[0]! : null) : null;
   const allLocked = picked.length > 0 && picked.every((b) => b.locked);
 
   const percent = Math.round(unit * 100);
@@ -432,7 +436,10 @@ export function Canvas() {
                   // E-21: double-click on a path shape enters node editing mode
                   if (block.type === 'shape' && block.style?.shape?.kind === 'path') {
                     setNodeEditId(block.id);
+                    return;
                   }
+                  // B-01: any block with a text (a text, a button, a question…) is typed right where it stands
+                  if (!block.locked && (block.type === 'text' || block.textLayer)) setTextEditId(block.id);
                 }}
               />
             );
@@ -528,6 +535,25 @@ export function Canvas() {
               screenHeight={screen.height}
               onDone={() => setToolMode('select')}
             />
+          )}
+          {toolMode === 'select' && textEditing && (
+            <div
+              className="ed-inline"
+              data-testid="inline-text"
+              style={{ left: px(frames.get(textEditing.id)!.x), top: px(frames.get(textEditing.id)!.y), minWidth: Math.max(px(frames.get(textEditing.id)!.w), 240) }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.stopPropagation();
+                  setTextEditId(null);
+                }
+              }}
+            >
+              <TextEditor key={textEditing.id} block={textEditing} autoFocus />
+              <button type="button" className="ed-btn small" onClick={() => setTextEditId(null)}>
+                Готово
+              </button>
+            </div>
           )}
           {toolMode === 'select' && nodeEditId && (
             <NodeEditor

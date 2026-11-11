@@ -217,6 +217,45 @@ test.describe('P3.5 · содержимое блоков', () => {
     expect(JSON.stringify(runs)).not.toContain('Первый');
   });
 
+  test('B-01 · двойной щелчок по блоку с текстом открывает правку прямо на холсте: у текста и у кнопки', async ({ page }, info) => {
+    const id = await open(page);
+    for (const [type, typed] of [['text', 'Прямо на холсте'], ['button', 'Жми сюда']] as const) {
+      await add(page, type);
+      const name = createBlock(type).name;
+      await hit(page, name).dblclick();
+      const inline = page.getByTestId('inline-text');
+      await expect(inline).toBeVisible();
+      const field = inline.getByRole('textbox', { name: 'Текст блока' });
+      await expect(field).toBeFocused();
+      await page.keyboard.press('Control+A');
+      await page.keyboard.type(typed);
+      await page.keyboard.press('Control+A');
+      await inline.getByRole('button', { name: 'Жирный' }).click();
+      mkdirSync('e2e/__screenshots__', { recursive: true });
+      await page.screenshot({ path: `e2e/__screenshots__/blocks-inline-${type}-${info.project.name}.png` });
+      await page.keyboard.press('Escape');
+      await expect(inline).toBeHidden();
+    }
+    await expect
+      .poll(async () => JSON.stringify((await serverDraft(page, id)).doc.screens[0]!.blocks), { timeout: 15_000 })
+      .toContain('Жми сюда');
+    const blocks = (await serverDraft(page, id)).doc.screens[0]!.blocks as Saved[];
+    expect(blocks[0]!.textLayer.paragraphs[0].runs).toEqual([{ t: 'Прямо на холсте', b: true }]);
+    expect(blocks[1]!.textLayer.paragraphs[0].runs).toEqual([{ t: 'Жми сюда', b: true }]);
+    await page.getByRole('button', { name: 'Отменить' }).click();
+    await expect(page.getByTestId('inline-text')).toHaveCount(0);
+  });
+
+  test('B-01 · заблокированный блок не открывает правку текста на холсте', async ({ page }) => {
+    const name = createBlock('text').name;
+    const id = await open(page, (doc) => {
+      doc.screens[0]!.blocks.push(createBlock('text', { locked: true }));
+    });
+    expect(id).toBeTruthy();
+    await hit(page, name).dblclick();
+    await expect(page.getByTestId('inline-text')).toHaveCount(0);
+  });
+
   test('B-02 · изображение из медиатеки добавляется готовым блоком с пропорциями файла', async ({ page }) => {
     const id = await open(page);
     await openTab(page, 'Добавить');
