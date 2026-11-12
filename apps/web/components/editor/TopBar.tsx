@@ -53,7 +53,12 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
     try {
       await saver.flush();
       if (saver.state.status === 'conflict' || saver.state.status === 'error') {
-        flash('Сначала нужно сохранить правки — публикация остановлена.', 'error');
+        flash(
+          saver.state.status === 'conflict'
+            ? 'Не опубликовано: эту сборку изменили в другом окне или на другом устройстве, поэтому ваши правки пока не сохранены. Выберите версию, которую оставить (в окне с выбором на экране), и нажмите «Опубликовать» ещё раз.'
+            : `Не опубликовано: правки не сохранились (${saver.state.text}). Проверьте интернет и войдите заново, если нужно. Когда сверху появится «Сохранено», нажмите «Опубликовать» ещё раз.`,
+          'error',
+        );
         return;
       }
       // P8.7: no age category yet — ask for it right here instead of failing after the click.

@@ -5,7 +5,7 @@ import { adminLogin, freshUser, loginAndOnboard } from './helpers/auth';
 import { openEditor, openTab, saveStatus, seedProject, serverDraft, textBlock } from './helpers/editor';
 
 /** The administrators of this browser project who fill the library (scripts/e2e-api.sh). */
-const libraryAdminId = (info: { project: { name: string } }): string => (info.project.name.startsWith('mobile') ? '700000000040' : '700000000039');
+const libraryAdminId = (info: { project: { name: string } }): string => (info.project.name.startsWith('mobile') ? '700000000042' : '700000000041');
 const CSRF = { 'X-Blokum-CSRF': '1' };
 
 /** A real font file that every checkout has: Geist, the font of Next.js. */
