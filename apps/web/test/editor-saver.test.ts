@@ -12,6 +12,7 @@ import {
   SaveError,
   Saver,
   type SaverDeps,
+  withWholeScreenHeights,
 } from '../lib/editor/saver';
 
 const doc = (title: string): ProjectDocument => createDocument({ title });
@@ -295,5 +296,14 @@ describe('E-17/E-18 · разбор ответов сервера', () => {
     expect(toSaveFailure(new ApiError(502, 'X', 'м'))).toEqual({ kind: 'network' });
     expect(toSaveFailure(new TypeError('Failed to fetch'))).toEqual({ kind: 'network' });
     expect(toSaveFailure(new ApiError(400, 'INVALID_DOCUMENT', 'Сборка не прошла проверку'))).toEqual({ kind: 'rejected', message: 'Сборка не прошла проверку' });
+  });
+});
+
+describe('E-17 · дробная высота экрана не уходит на сервер', () => {
+  it('E-17: 583,1 округляется до 583, целая высота и сам документ не копируются', () => {
+    const d = doc('Высота');
+    const fractional = { ...d, screens: d.screens.map((s) => ({ ...s, height: 583.1 })) };
+    expect(withWholeScreenHeights(fractional).screens[0]!.height).toBe(583);
+    expect(withWholeScreenHeights(d)).toBe(d);
   });
 });

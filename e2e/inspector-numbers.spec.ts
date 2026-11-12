@@ -40,6 +40,15 @@ test.describe('E-15 · числовые поля: границы не мешаю
     await expect(field).toHaveValue('700');
     await expect(hint).toHaveCount(0);
 
+    // Дробное число не доходит до сборки: высота экрана — целое (иначе сервер отвечает «нужно целое число», публикация встаёт).
+    await field.fill('583.1');
+    await field.blur();
+    await expect(field).toHaveValue('583');
+    await expect(page.getByTestId('save-status')).toHaveText('Сохранено');
+    await field.fill('700');
+    await field.blur();
+    await expect(page.getByTestId('save-status')).toHaveText('Сохранено');
+
     // Пояснение: 700 единиц холста шириной 390 — это 646 px на телефоне шириной 360 и 739 px на телефоне шириной 412.
     await expect(page.getByTestId('screen-height-hint')).toContainText('360\u00a0px — 646\u00a0px, 390\u00a0px — 700\u00a0px, 412\u00a0px — 739\u00a0px');
   });

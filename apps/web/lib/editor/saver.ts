@@ -1,5 +1,11 @@
 import { type ProjectDocument } from '@blokum/schema';
 
+/** Высота экрана — целое число; черновик с дробной высотой (583,1) сервер не принимает, поэтому округляем перед отправкой. */
+export function withWholeScreenHeights(doc: ProjectDocument): ProjectDocument {
+  if (doc.screens.every((s) => Number.isInteger(s.height))) return doc;
+  return { ...doc, screens: doc.screens.map((s) => (Number.isInteger(s.height) ? s : { ...s, height: Math.round(s.height) })) };
+}
+
 /** E-17: pause after the last change before the document goes to the server. */
 export const AUTOSAVE_DELAY_MS = 1000;
 /** After a failed attempt without network the next one is tried after this pause (and at once when the network is back). */
@@ -95,7 +101,8 @@ export class Saver {
   }
 
   /** The document changed: schedule saving. */
-  changed(doc: ProjectDocument): void {
+  changed(input: ProjectDocument): void {
+    const doc = withWholeScreenHeights(input);
     this.latest = doc;
     this.dirty = true;
     if (this.view.status === 'conflict') return; // waits for the choice; the newest document is kept

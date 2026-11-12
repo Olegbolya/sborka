@@ -45,7 +45,8 @@ export function Section({ id, title, own, onReset, resetLabel = 'Сбросит�
 
 const clamp = (n: number, min?: number, max?: number): number => Math.min(max ?? Number.POSITIVE_INFINITY, Math.max(min ?? Number.NEGATIVE_INFINITY, n));
 const precision = (step: number): number => (String(step).split('.')[1]?.length ?? 0) + 1;
-const roundTo = (n: number, step: number): number => Number(n.toFixed(precision(step)));
+// Целый шаг — целое число: сервер не принимает «583,1» там, где нужно целое (высота экрана, слой).
+const roundTo = (n: number, step: number): number => (Number.isInteger(step) ? Math.round(n) : Number(n.toFixed(precision(step))));
 
 /**
  * Набор числа в поле. Пока человек печатает, число не подгоняется под границы (иначе «583» при минимуме 400 не набрать:
