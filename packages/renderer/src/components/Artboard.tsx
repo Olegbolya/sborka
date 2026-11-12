@@ -52,6 +52,7 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
     justifyContent: 'center',
     overflowX: 'hidden',
     backgroundColor: value.tokens.colors.background ?? '#FFFFFF',
+    ...(unit === undefined ? { '--bk-screen-min': '100dvh' } : {}),
   };
   const focusBoard = { ...board, [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
   return (

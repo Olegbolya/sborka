@@ -26,6 +26,8 @@ export function ScreenView({ screen }: { screen: Screen }): ReactNode {
     }
   }
   const style: CSSProperties = { position: 'relative', width: u(ARTBOARD_WIDTH), height: u(screen.height), overflow: 'hidden', isolation: 'isolate' };
+  // PL-16: in the published player a screen shorter than the window fills it with its own background (the variable is set by the Artboard there); previews keep the real height.
+  style.minHeight = 'var(--bk-screen-min, 0px)';
   return (
     <section className="bk-screen" data-screen-id={screen.id} aria-label={screen.name} style={style}>
       {layers.map((layer, i) =>

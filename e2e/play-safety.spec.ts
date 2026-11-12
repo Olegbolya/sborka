@@ -49,6 +49,9 @@ test.describe('P5.6 · безопасность участника', () => {
       return { background: getComputedStyle(el).backgroundColor, bottom: Math.round(b.bottom - r.bottom) + 0, right: Math.round(b.right - r.right) + 0 };
     });
     expect(look).toEqual({ background: 'rgba(0, 0, 0, 0)', bottom: 0, right: 0 });
+    // Экран ниже окна телефона занимает всё окно: полосы страницы под ним нет
+    const screenHeight = await p.locator('.bk-screen').evaluate((el) => el.getBoundingClientRect().height);
+    expect(screenHeight).toBeGreaterThanOrEqual(p.viewportSize()!.height - 1);
     await footer.scrollIntoViewIfNeeded();
     mkdirSync('e2e/__screenshots__', { recursive: true });
     await p.screenshot({ path: `e2e/__screenshots__/play-footer-${info.project.name}.png` });
