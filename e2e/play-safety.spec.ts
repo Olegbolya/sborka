@@ -46,7 +46,7 @@ test.describe('P5.6 · безопасность участника', () => {
     const look = await footer.evaluate((el) => {
       const r = el.getBoundingClientRect();
       const b = el.closest('.bk-artboard')!.getBoundingClientRect();
-      return { background: getComputedStyle(el).backgroundColor, bottom: Math.round(b.bottom - r.bottom), right: Math.round(b.right - r.right) };
+      return { background: getComputedStyle(el).backgroundColor, bottom: Math.round(b.bottom - r.bottom) + 0, right: Math.round(b.right - r.right) + 0 };
     });
     expect(look).toEqual({ background: 'rgba(0, 0, 0, 0)', bottom: 0, right: 0 });
     await footer.scrollIntoViewIfNeeded();
