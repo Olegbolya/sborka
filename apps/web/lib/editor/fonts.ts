@@ -36,26 +36,30 @@ const set = (next: State): void => {
   listeners.forEach((l) => l());
 };
 
-/** `@font-face` of the font: the style key «700i» is the weight 700 italic. */
-export function faceCss(font: EditorFont): string {
-  return font.faces
-    .map(({ style, url }) => {
-      const italic = style.endsWith('i');
-      return `@font-face { font-family: "${fontFamilyName(font.id)}"; src: url("${url}") format("woff2"); font-weight: ${italic ? style.slice(0, -1) : style}; font-style: ${italic ? 'italic' : 'normal'}; font-display: swap; }`;
-    })
-    .join('\n');
+/** Weight and slant of a face: the style key «700i» is the weight 700 italic. */
+export function faceDescriptors(style: string): { weight: string; style: string } {
+  const italic = style.endsWith('i');
+  return { weight: italic ? style.slice(0, -1) : style, style: italic ? 'italic' : 'normal' };
 }
 
-/** The canvas and the preview draw text with `bk-font-{id}`: the faces are put into the page once and replaced when the list changes. */
+const added: FontFace[] = [];
+
+/**
+ * The canvas and the preview draw text with `bk-font-{id}`. The faces are added through the FontFace API
+ * (an inline `<style>` is refused by the page policy) and replaced when the list changes.
+ */
 function applyFaces(s: State): void {
-  if (typeof document === 'undefined') return;
-  let el = document.getElementById('bk-editor-fonts');
-  if (!el) {
-    el = document.createElement('style');
-    el.id = 'bk-editor-fonts';
-    document.head.appendChild(el);
+  if (typeof document === 'undefined' || typeof FontFace === 'undefined') return;
+  for (const face of added.splice(0)) document.fonts.delete(face);
+  for (const font of [...s.mine, ...s.library]) {
+    for (const { style, url } of font.faces) {
+      const d = faceDescriptors(style);
+      const face = new FontFace(fontFamilyName(font.id), `url("${url}") format("woff2")`, { weight: d.weight, style: d.style, display: 'swap' });
+      face.load().catch(() => undefined);
+      document.fonts.add(face);
+      added.push(face);
+    }
   }
-  el.textContent = [...s.mine, ...s.library].map(faceCss).join('\n');
 }
 
 const fromOwn = (f: FontDto): EditorFont => ({
