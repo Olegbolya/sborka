@@ -90,11 +90,17 @@ test.describe('E-20 · предпросмотр', () => {
   test('E-20 · прохождение в предпросмотре не создаёт ни прохождений, ни ответов', async ({ page }) => {
     const { id } = await seedTwoScreens(page);
     await openEditor(page, id);
+    // Всё, что предпросмотр шлёт участнику-серверу (сессия, ответы, завершение), съедало бы лимиты и попадало бы в аналитику.
+    const toPlayer: string[] = [];
+    page.on('request', (r) => {
+      if (/\/api\/v1\/(play|sessions)\b/.test(r.url()) && r.method() !== 'GET') toPlayer.push(`${r.method()} ${r.url()}`);
+    });
     await page.getByRole('button', { name: 'Предпросмотр' }).click();
     const frame = page.getByRole('dialog', { name: 'Предпросмотр' }).locator('[data-preview="true"]');
     await frame.getByRole('button', { name: 'Дальше' }).click();
     await frame.getByRole('button', { name: 'Закончить' }).click();
     await expect(page.getByTestId('preview-end')).toBeVisible();
+    expect(toPlayer).toEqual([]);
     const project = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { starts: number; completions: number };
     expect(project).toMatchObject({ starts: 0, completions: 0 });
     const responses = (await (await page.request.get(`/api/v1/projects/${id}/responses`)).json()) as { items: unknown[] };
