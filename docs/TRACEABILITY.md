@@ -530,12 +530,12 @@
 | TS-22 | P4.5 | `apps/worker/src/media/nsfw.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/phash.test.ts` |
 | TS-23 | P4.5 | `apps/worker/src/media/phash.ts`; `apps/worker/src/media/processor.ts`; `packages/db/src/schema/moderation.ts#mediaBlockedHashes`; `apps/api/src/admin/moderation.service.ts` | `apps/worker/test/phash.test.ts` |
 | TS-24 | P4.5 | `packages/renderer/src/blocks/media.tsx#MediaStub`; `apps/api/src/play/play.service.ts#mediaOf`; `apps/web/lib/play/api.ts#playMediaResolver` | `packages/renderer/test/blocks.test.tsx`; `apps/api/test/play.test.ts` |
-| TH-04 | P4.6 | `apps/api/src/fonts/fonts.controller.ts`; `apps/api/src/fonts/fonts.service.ts`; `apps/api/src/play/play.service.ts#fontsOf`; `apps/web/lib/fonts/api.ts`; `apps/web/lib/play/api.ts#fontFaceCSS`; `apps/web/app/s/[slug]/page.tsx` | `apps/api/test/fonts.test.ts` |
+| TH-04 | P4.6 | `apps/api/src/fonts/fonts.controller.ts`; `apps/api/src/fonts/fonts.service.ts`; `apps/api/src/play/play.service.ts#fontsOf`; `apps/web/lib/fonts/api.ts`; `apps/web/lib/play/api.ts#fontFaceCSS`; `apps/web/app/s/[slug]/page.tsx`; `apps/web/components/editor/FontPicker.tsx`; `apps/web/lib/editor/fonts.ts` | `apps/api/test/fonts.test.ts`; `apps/web/test/editor-fonts.test.ts`; `e2e/fonts.spec.ts` |
 | TS-26 | P4.6 | `apps/api/src/fonts/font-processor.ts`; `apps/api/src/fonts/fonts.service.ts` | `apps/api/test/fonts.test.ts` |
 | LB-01 | P4.7 | `apps/api/src/library/library.service.ts`; `apps/api/src/library/library.controller.ts`; `apps/api/src/library/library.module.ts` | `apps/api/test/library.test.ts` |
-| LB-02 | P4.7 | `apps/api/src/library/library.service.ts#listItems` | `apps/api/test/library.test.ts` |
+| LB-02 | P4.7 | `apps/api/src/library/library.service.ts#listItems`; `apps/api/src/library/library.service.ts#fonts` | `apps/api/test/library.test.ts`; `e2e/fonts.spec.ts` |
 | LB-03 | P4.7 | `apps/web/components/editor/LeftPanel.tsx#LibraryPanel` | `e2e/library.spec.ts` |
-| LB-04 | P4.7 | `apps/api/src/play/play.service.ts#mediaOf`; `apps/api/src/admin/library-admin.service.ts#withdrawItem` | `apps/api/test/library.test.ts` |
+| LB-04 | P4.7 | `apps/api/src/play/play.service.ts#mediaOf`; `apps/api/src/admin/library-admin.service.ts#withdrawItem`; `apps/api/src/play/play.service.ts#fontsOf` | `apps/api/test/library.test.ts`; `apps/api/test/play.test.ts` |
 | LB-05 | P4.7 | `apps/api/src/admin/library-admin.service.ts#importZip`; `apps/api/src/admin/admin.controller.ts` | `apps/api/test/library.test.ts` |
 | AD-10 | P4.7 | `apps/api/src/admin/library-admin.service.ts`; `apps/api/src/admin/admin.controller.ts` | `apps/api/test/library.test.ts` |
 | E-21 | P3.9 | `apps/web/components/editor/PenTool.tsx`; `apps/web/components/editor/Canvas.tsx`; `apps/web/lib/editor/style-specs.ts`; `apps/web/components/editor/StylePanels.tsx` | `e2e/pen-tool.spec.ts` |

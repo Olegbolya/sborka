@@ -19,6 +19,7 @@ import { ColorInput, NumberInput, Section, SelectInput, SliderInput, TextInput, 
 import { useEditor, useEnv } from './context';
 import { DEFAULT_FRAMES, DEFAULT_MOTION_PATH, type Frames, KeyframesEditor, type Slot, playMotionPath } from './KeyframesEditor';
 import { type Crop, type Focal, MediaFramer } from './MediaFramer';
+import { FontPicker } from './FontPicker';
 import { MediaField } from './MediaPicker';
 import { OptionsEditor, ScreenField, TransitionPresetField, VariableField } from './PropsFields';
 
@@ -132,6 +133,8 @@ export function FieldView({ field, level, prefix }: { field: Field; level: Level
           onChange={(v) => here.write(() => v)}
         />
       );
+    case 'font':
+      return <FontPicker control={id} label={field.label} value={typeof shared === 'string' ? shared : null} onChange={(v) => here.write(() => v)} />;
     case 'svg-import':
       return <SvgImportField label={field.label} onImport={(d) => here.write(() => d)} />;
     case 'point': {

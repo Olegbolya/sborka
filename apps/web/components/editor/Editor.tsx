@@ -7,6 +7,7 @@ import { type ClipboardPayload, type PasteChoice, type PastePlan, copyBlocks, pa
 import { PasteVariablesDialog } from './PasteVariablesDialog';
 import { applyTheme, duplicateBlocks, moveBlocksBy, removeBlocks } from '../../lib/editor/commands';
 import { findBlock } from '../../lib/editor/tree';
+import { loadEditorFonts } from '../../lib/editor/fonts';
 import { MediaCatalog } from '../../lib/editor/media';
 import { IdbQueue, browserSaverDeps, loadProject } from '../../lib/editor/remote';
 import { InspectorFocus } from '../../lib/editor/focus';
@@ -93,6 +94,8 @@ export function Editor({ projectId }: { projectId: string }) {
         void media.load().catch(() => undefined);
         // Files of the platform library that the document already uses: their kind is needed to draw them (LB-02, LB-04).
         void media.loadLibraryRefs(store.getState().doc).catch(() => undefined);
+        // «Мои шрифты» and the fonts of the library: the text of the canvas is drawn with them (TH-04, LB-02).
+        void loadEditorFonts().catch(() => undefined);
         setLoaded({ store, saver, media, status: p.status, restored });
       } catch (e) {
         if (cancelled) return;

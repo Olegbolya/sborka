@@ -25,7 +25,7 @@ const OWN_SESSION = new Set([
   'GET /auth/me', 'GET /auth/sessions', 'DELETE /auth/sessions',
   'GET /notifications', 'GET /media', 'POST /media', 'POST /media/sessions', 'GET /projects', 'POST /projects', 'GET /templates', 'GET /themes', 'POST /themes', 'POST /themes/from-image',
   'GET /fonts', 'POST /fonts', 'GET /orders', 'POST /orders', 'GET /billing/me', 'GET /billing/addons', 'POST /billing/trial', 'POST /promo/check',
-  'GET /library/collections', 'GET /library/collections/:id/items', 'GET /library/items', 'GET /library/items/:id/file',
+  'GET /library/collections', 'GET /library/collections/:id/items', 'GET /library/items', 'GET /library/items/:id/file', 'GET /library/fonts', 'GET /library/fonts/:id/:style/file',
   'POST /editor/svg-import',
   'GET /templates/mine', 'POST /templates', 'GET /elements', 'POST /elements',
 ]);

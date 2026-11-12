@@ -1,4 +1,4 @@
-import { api, upload } from '../api-browser.js';
+import { api, upload } from '../api-browser';
 
 /** Основание использования шрифта: свободная лицензия, купленная веб-лицензия, собственная работа. */
 export type FontLicense = 'OFL' | 'PURCHASED_WEB' | 'OWN_WORK';

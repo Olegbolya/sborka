@@ -23,6 +23,8 @@ export type Field =
   /** A point inside the block, 0…1 on each axis, shown in percent: one object `{x, y}` or two fields (`keys`). */
   | { t: 'point'; key: string; label: string; keys?: readonly [string, string] }
   | { t: 'text'; key: string; label: string; max?: number }
+  /** An uploaded or library font: the key holds its number (TH-04, LB-02). */
+  | { t: 'font'; key: string; label: string }
   /** A reference to a file of the media library. */
   | { t: 'media'; key: string; label: string; kinds?: ReadonlyArray<'IMAGE' | 'GIF' | 'VIDEO' | 'AUDIO' | 'LOTTIE'> }
   /** Several of top / right / bottom / left. */
@@ -481,7 +483,7 @@ export const GROUP_SPECS: Record<StyleGroup, { title: string; fields: Field[] }>
           font: {
             title: 'Свой шрифт',
             make: () => ({ kind: 'font', id: 'font_unset' }),
-            fields: [{ t: 'text', key: 'id', label: 'Идентификатор шрифта', max: 64 }],
+            fields: [{ t: 'font', key: 'id', label: 'Название шрифта' }],
           },
         },
       },

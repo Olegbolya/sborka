@@ -141,6 +141,33 @@ describe('PL-01…PL-05 · публикация и открытие плеера
     await pub(t, `/play/${p.slug}/media/${itemId}`).expect(404);
   });
 
+  it('LB-02, TH-04 · шрифт библиотеки, выбранный в тексте, виден участнику с файлом; снятый — без шрифта и файла', async () => {
+    const [admin] = await db.db.select({ id: schema.users.id }).from(schema.users).limit(1);
+    const mediaId = createId();
+    mkdirSync(path.join(os.tmpdir(), admin!.id), { recursive: true });
+    writeFileSync(path.join(os.tmpdir(), admin!.id, mediaId), Buffer.from('wOF2-test'));
+    await db.db.insert(schema.media).values({ id: mediaId, ownerId: admin!.id, kind: 'FONT_SOURCE', status: 'READY', mime: 'font/woff2', bytes: 9, sha256: 'f'.repeat(64), variants: {} });
+    const fontId = createId();
+    await db.db.insert(schema.fonts).values({ id: fontId, ownerId: admin!.id, family: 'Тестовый Шрифт', styles: { '400': { mediaId } }, hasCyrillic: true, license: 'OFL' });
+    const collectionId = createId();
+    await db.db.insert(schema.libraryCollections).values({ id: collectionId, kind: 'FONTS', title: 'Шрифты проверки' });
+    const itemId = createId();
+    await db.db.insert(schema.libraryItems).values({ id: itemId, collectionId, fontId, title: 'Тестовый Шрифт', license: 'OFL', author: 'Автор', source: 'владелец', rightsConfirmedById: admin!.id });
+    const p = await project((d) => void d.screens[0]!.blocks.push(createBlock('text', { style: { text: { font: { kind: 'font', id: fontId } } } })));
+    await call(t, cookie, 'post', `/projects/${p.id}/publish`).expect(200);
+    const open = await pub(t, `/play/${p.slug}`).expect(200);
+    expect(open.body.fonts[fontId]).toEqual({ family: `bk-font-${fontId}`, styles: { '400': mediaId } });
+    const file = await pub(t, `/play/${p.slug}/media/${mediaId}`).expect(200);
+    expect(file.headers['content-type']).toContain('font/woff2');
+    // Шрифт, которого нет в сборке, файл не отдаёт.
+    const other = createId();
+    await db.db.insert(schema.fonts).values({ id: other, ownerId: admin!.id, family: 'Чужой', styles: { '400': { mediaId: createId() } }, hasCyrillic: true, license: 'OFL' });
+    await pub(t, `/play/${p.slug}/media/${other}`).expect(404);
+    await db.db.update(schema.libraryItems).set({ active: false }).where(eq(schema.libraryItems.id, itemId));
+    expect((await pub(t, `/play/${p.slug}`).expect(200)).body.fonts).toEqual({});
+    await pub(t, `/play/${p.slug}/media/${mediaId}`).expect(404);
+  });
+
   it('PL-15 · опубликованное видно участнику без ключа ответов, баллов и меток результатов', async () => {
     const p = await project();
     await call(t, cookie, 'post', `/projects/${p.id}/publish`).expect(200);

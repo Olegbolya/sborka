@@ -24,6 +24,25 @@ export class LibraryController {
     return this.library.listItems(id, { search, tags: tagArr });
   }
 
+  /** LB-02 · the fonts of the library (all, or ?ids=a,b): the editor offers them in «Шрифт». */
+  @Get('fonts')
+  fonts(@Query('ids') ids?: string) {
+    return this.library.fonts(ids === undefined ? undefined : ids.split(',').map((x) => x.trim()).filter(Boolean));
+  }
+
+  /** LB-02 · one weight of a library font as WOFF2 («400», «700i»). */
+  @Get('fonts/:id/:style/file')
+  async fontFile(@Param('id') id: string, @Param('style') style: string, @Res() res: Response): Promise<void> {
+    const { path, mime } = await this.library.fontFile(id, style);
+    await new Promise<void>((resolve, reject) => {
+      res.sendFile(
+        path,
+        { headers: { 'Content-Type': mime, 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': 'inline' }, dotfiles: 'allow' },
+        (err) => (err ? reject(err) : resolve()),
+      );
+    });
+  }
+
   /** LB-02 · items by numbers (?ids=a,b): what the editor needs to draw the library files that the document refers to. */
   @Get('items')
   items(@Query('ids') ids?: string) {

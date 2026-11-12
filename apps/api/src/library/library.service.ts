@@ -31,6 +31,18 @@ export interface LibraryItemDto {
   createdAt: Date;
 }
 
+/** LB-02, TH-04 · a font of the library: the editor draws it with `@font-face` and offers it in «Шрифт». */
+export interface LibraryFontDto {
+  /** The number of the font: the document refers to it as `{kind:'font', id}`. */
+  id: string;
+  itemId: string;
+  title: string;
+  family: string;
+  hasCyrillic: boolean;
+  /** The weights found in the file: «400», «700i»… */
+  styles: string[];
+}
+
 /** LB-01, LB-02 · публичный API библиотеки платформы (только для авторизованных пользователей). */
 @Injectable()
 export class LibraryService {
@@ -48,6 +60,37 @@ export class LibraryService {
       .where(and(eq(schema.libraryItems.id, itemId), eq(schema.libraryItems.active, true), isNull(schema.media.deletedAt)));
     if (!row || !row.ownerId || row.status === 'BLOCKED' || row.status === 'REJECTED') throw fail(404, 'NOT_FOUND', 'Файл библиотеки не найден');
     return { path: this.storage.getPath(servedKey(row.ownerId, row.mediaId, row.variants)), mime: row.mime };
+  }
+
+  /** LB-02 · the active fonts of the library (all, or those with these numbers). */
+  async fonts(ids?: string[]): Promise<LibraryFontDto[]> {
+    const conditions = [eq(schema.libraryItems.active, true), isNull(schema.fonts.deletedAt)];
+    if (ids) conditions.push(inArray(schema.fonts.id, ids.length > 0 ? ids.slice(0, 100) : ['-']));
+    const rows = await this.db
+      .select({ item: schema.libraryItems.id, title: schema.libraryItems.title, font: schema.fonts })
+      .from(schema.libraryItems)
+      .innerJoin(schema.fonts, eq(schema.fonts.id, schema.libraryItems.fontId))
+      .where(and(...conditions))
+      .orderBy(asc(schema.libraryItems.title))
+      .limit(200);
+    return rows.map((r) => ({ id: r.font.id, itemId: r.item, title: r.title, family: r.font.family, hasCyrillic: r.font.hasCyrillic, styles: Object.keys(r.font.styles) }));
+  }
+
+  /** LB-02 · the WOFF2 file of one weight of an active library font (the editor of a signed-in person). */
+  async fontFile(fontId: string, style: string): Promise<{ path: string; mime: string }> {
+    const [row] = await this.db
+      .select({ styles: schema.fonts.styles })
+      .from(schema.libraryItems)
+      .innerJoin(schema.fonts, eq(schema.fonts.id, schema.libraryItems.fontId))
+      .where(and(eq(schema.fonts.id, fontId), eq(schema.libraryItems.active, true), isNull(schema.fonts.deletedAt)));
+    const mediaId = row?.styles[style]?.mediaId;
+    if (!mediaId) throw fail(404, 'NOT_FOUND', 'Шрифт библиотеки не найден');
+    const [m] = await this.db
+      .select({ ownerId: schema.media.ownerId, mime: schema.media.mime, status: schema.media.status, variants: schema.media.variants })
+      .from(schema.media)
+      .where(and(eq(schema.media.id, mediaId), isNull(schema.media.deletedAt)));
+    if (!m || !m.ownerId || m.status === 'BLOCKED' || m.status === 'REJECTED') throw fail(404, 'NOT_FOUND', 'Шрифт библиотеки не найден');
+    return { path: this.storage.getPath(servedKey(m.ownerId, mediaId, m.variants)), mime: m.mime };
   }
 
   /** LB-01 · список активных коллекций. */

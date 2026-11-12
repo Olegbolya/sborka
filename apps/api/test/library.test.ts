@@ -342,6 +342,33 @@ describe('LB-01, LB-04, AD-10 · Библиотека платформы', () =>
     await request(t.http()).get(`/${API_PREFIX}/library/items/${item.id}/file`).set('Cookie', userCookie).expect(404);
   });
 
+  it('LB-02 · GET /library/fonts — шрифты библиотеки для вошедшего, файл начертания; снятый шрифт и анонимный — отказ', async () => {
+    if (skip()) return;
+    const [admin] = await db.db.select({ id: schema.users.id }).from(schema.users).limit(1);
+    const mediaId = createId();
+    mkdirSync(path.join(os.tmpdir(), admin!.id), { recursive: true });
+    writeFileSync(path.join(os.tmpdir(), admin!.id, mediaId), Buffer.from('wOF2-test'));
+    await db.db.insert(schema.media).values({ id: mediaId, ownerId: admin!.id, kind: 'FONT_SOURCE', status: 'READY', mime: 'font/woff2', bytes: 9, sha256: 'f'.repeat(64), variants: {} });
+    const fontId = createId();
+    await db.db.insert(schema.fonts).values({ id: fontId, ownerId: admin!.id, family: 'Тестовый Шрифт', styles: { '400': { mediaId } }, hasCyrillic: true, license: 'OFL' });
+    const collectionId = createId();
+    await db.db.insert(schema.libraryCollections).values({ id: collectionId, kind: 'FONTS', title: 'Шрифты проверки' });
+    const itemId = createId();
+    await db.db.insert(schema.libraryItems).values({ id: itemId, collectionId, fontId, title: 'Тестовый Шрифт', license: 'OFL', author: 'Автор', source: 'владелец', rightsConfirmedById: admin!.id });
+    const userCookie = await loginViaOtp();
+    await request(t.http()).get(`/${API_PREFIX}/library/fonts`).expect(401);
+    const all = (await request(t.http()).get(`/${API_PREFIX}/library/fonts`).set('Cookie', userCookie).expect(200)).body as Array<{ id: string; family: string; hasCyrillic: boolean; styles: string[] }>;
+    expect(all.find((f) => f.id === fontId)).toMatchObject({ family: 'Тестовый Шрифт', hasCyrillic: true, styles: ['400'] });
+    expect(((await request(t.http()).get(`/${API_PREFIX}/library/fonts?ids=${fontId},net-takogo`).set('Cookie', userCookie).expect(200)).body as Array<{ id: string }>).map((f) => f.id)).toEqual([fontId]);
+    await request(t.http()).get(`/${API_PREFIX}/library/fonts/${fontId}/400/file`).expect(401);
+    const file = await request(t.http()).get(`/${API_PREFIX}/library/fonts/${fontId}/400/file`).set('Cookie', userCookie).expect(200);
+    expect(file.headers['content-type']).toContain('font/woff2');
+    await request(t.http()).get(`/${API_PREFIX}/library/fonts/${fontId}/700/file`).set('Cookie', userCookie).expect(404);
+    await db.db.update(schema.libraryItems).set({ active: false }).where(eq(schema.libraryItems.id, itemId));
+    expect(((await request(t.http()).get(`/${API_PREFIX}/library/fonts?ids=${fontId}`).set('Cookie', userCookie).expect(200)).body as unknown[])).toEqual([]);
+    await request(t.http()).get(`/${API_PREFIX}/library/fonts/${fontId}/400/file`).set('Cookie', userCookie).expect(404);
+  });
+
   // ── LB-05 · ZIP-импорт ───────────────────────────────────────────────────
 
   it('LB-05 · POST /admin/library/import — ZIP без CSV-манифеста → 422', async () => {

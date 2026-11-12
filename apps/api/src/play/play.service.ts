@@ -290,7 +290,12 @@ export class PlayService {
       const fontHasMedia = fontRows.some((row) =>
         Object.values(row.styles as Record<string, { mediaId: string }>).some((s) => s.mediaId === mediaId),
       );
-      if (!fontHasMedia) throw unavailable();
+      if (!fontHasMedia) {
+        // LB-02 · the file of a library font that the published document uses
+        const lib = await this.libraryFontFile(p.doc, mediaId);
+        if (lib) return lib;
+        throw unavailable();
+      }
     }
     const [m] = await this.db
       .select({ mime: schema.media.mime, status: schema.media.status, variants: schema.media.variants })
@@ -298,6 +303,24 @@ export class PlayService {
       .where(and(eq(schema.media.id, mediaId), eq(schema.media.ownerId, p.ownerId), isNull(schema.media.deletedAt)));
     if (!m || m.status === 'BLOCKED' || m.status === 'REJECTED') throw unavailable();
     return { path: this.storage.getPath(servedKey(p.ownerId, mediaId, m.variants)), mime: m.mime };
+  }
+
+  /** LB-02 · the WOFF2 file `mediaId` if it belongs to an active library font that the document uses. */
+  private async libraryFontFile(doc: ProjectDocument, mediaId: string): Promise<{ path: string; mime: string } | null> {
+    const text = JSON.stringify(doc);
+    const rows = await this.db
+      .select({ id: schema.fonts.id, styles: schema.fonts.styles })
+      .from(schema.libraryItems)
+      .innerJoin(schema.fonts, eq(schema.fonts.id, schema.libraryItems.fontId))
+      .where(and(eq(schema.libraryItems.active, true), isNull(schema.fonts.deletedAt)));
+    const hit = rows.find((r) => text.includes(`"${r.id}"`) && Object.values(r.styles as Record<string, { mediaId: string }>).some((s) => s.mediaId === mediaId));
+    if (!hit) return null;
+    const [m] = await this.db
+      .select({ ownerId: schema.media.ownerId, mime: schema.media.mime, status: schema.media.status, variants: schema.media.variants })
+      .from(schema.media)
+      .where(and(eq(schema.media.id, mediaId), isNull(schema.media.deletedAt)));
+    if (!m || !m.ownerId || m.status === 'BLOCKED' || m.status === 'REJECTED') return null;
+    return { path: this.storage.getPath(servedKey(m.ownerId, mediaId, m.variants)), mime: m.mime };
   }
 
   /**
@@ -322,10 +345,17 @@ export class PlayService {
     };
     walk(doc);
     if (fontIds.size === 0) return {};
-    const rows = await this.db
+    const own = await this.db
       .select({ id: schema.fonts.id, family: schema.fonts.family, styles: schema.fonts.styles })
       .from(schema.fonts)
       .where(and(eq(schema.fonts.ownerId, ownerId), inArray(schema.fonts.id, [...fontIds]), isNull(schema.fonts.deletedAt)));
+    // LB-02 · fonts of the platform library; a withdrawn one is not served (the text falls back to the system font, LB-04)
+    const lib = await this.db
+      .select({ id: schema.fonts.id, family: schema.fonts.family, styles: schema.fonts.styles })
+      .from(schema.libraryItems)
+      .innerJoin(schema.fonts, eq(schema.fonts.id, schema.libraryItems.fontId))
+      .where(and(inArray(schema.fonts.id, [...fontIds]), eq(schema.libraryItems.active, true), isNull(schema.fonts.deletedAt)));
+    const rows = [...own, ...lib.filter((l) => !own.some((o) => o.id === l.id))];
     return Object.fromEntries(
       rows.map((row) => {
         const styles = row.styles as Record<string, { mediaId: string }>;

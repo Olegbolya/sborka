@@ -1048,3 +1048,11 @@
   background: var(--bg);
   box-shadow: 0 6px 24px rgb(0 0 0 / 22%);
 }
+
+/* TH-04 · a warning under a field (a font without Cyrillic, an error of the upload) */
+.ed-warn {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--danger, #b3261e);
+}
