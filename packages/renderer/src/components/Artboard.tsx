@@ -12,6 +12,11 @@ export interface ArtboardProps extends Partial<RenderContextValue> {
    * the phone width and stays a 480 px column on a computer (E-02). Never `transform: scale`.
    */
   unit?: number;
+  /**
+   * Published player (PL-16): height of the screen in units. On a phone a screen shorter than the window is enlarged to fill it —
+   * the sides are cropped a little, the page shows no strip under the screen (the rule is in `app/globals.css`).
+   */
+  coverHeight?: number;
   children: ReactNode;
 }
 
@@ -30,7 +35,7 @@ export const PLAYER_UNIT = `calc(min(100vw, ${MAX_PLAYER_WIDTH}px) / ${ARTBOARD_
  * The artboard (E-01, E-02): defines the size of one unit through a CSS variable and provides the render
  * context. In the player the theme background fills the whole window around the column.
  */
-export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNode {
+export function Artboard({ unit, coverHeight, children, ...context }: ArtboardProps): ReactNode {
   const value: RenderContextValue = { ...defaultRenderContext, ...context };
   const unitValue = unit === undefined ? PLAYER_UNIT : `${unit}px`;
   const board: CSSProperties & Record<string, string> = { [UNIT_VAR]: unitValue, position: 'relative', width: u(ARTBOARD_WIDTH), flex: 'none' };
@@ -54,11 +59,12 @@ export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNo
     alignItems: 'flex-start',
     overflowX: 'hidden',
     backgroundColor: value.tokens.colors.background ?? '#FFFFFF',
+    ...(coverHeight !== undefined && unit === undefined ? { '--bk-cover-h': String(coverHeight) } : {}),
   };
   const focusBoard = { ...board, [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
   return (
     <RenderContext.Provider value={value}>
-      <div className="bk-stage" style={stage}>
+      <div className="bk-stage" data-cover={coverHeight !== undefined && unit === undefined ? '' : undefined} style={stage}>
         {layers.map((layer, i) =>
           layer.kind === 'paint' ? (
             <div key={i} aria-hidden style={{ position: 'fixed', inset: 0, ...layer.style }} />

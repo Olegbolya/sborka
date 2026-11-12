@@ -35,20 +35,51 @@ const participant = async (browser: Browser, baseURL: string) => {
 };
 
 test.describe('P5.6 · безопасность участника', () => {
-  test('PL-16 · на самом низком экране (400) подпись остаётся поверх экрана справа снизу и не вылезает за него', async ({ page, browser }, info) => {
+  test('PL-16 · экран ниже окна телефона: растягивается на всё окно (полосы под ним нет), подпись и «Назад» лежат на экране', async ({ page, browser }, info) => {
+    const phone = info.project.name.startsWith('mobile');
+    const { slug } = await published(page, 700);
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.goto(`/s/${slug}`);
+    await expect(p.locator('.bk-player-screen[data-live="true"]')).toBeVisible();
+    const geometry = () =>
+      p.evaluate(() => {
+        const sc = document.querySelector('.bk-screen')!.getBoundingClientRect();
+        const f = document.querySelector('[data-testid="play-footer"]')!.getBoundingClientRect();
+        return { screenBottom: Math.round(sc.bottom), screenTop: Math.round(sc.top), windowHeight: window.innerHeight, windowWidth: window.innerWidth, footerRight: Math.round(f.right), footerBottom: Math.round(f.bottom), pageScrolls: document.documentElement.scrollHeight > window.innerHeight + 1 };
+      });
+    const g = await geometry();
+    if (!phone) {
+      // На компьютере колонка 480 и экран остаются как есть: 700 единиц × 480/390
+      expect(g.screenBottom - g.screenTop).toBe(Math.round((700 * 480) / 390));
+      await ctx.close();
+      return;
+    }
+    // Экран 700 в окне 844: увеличение 844/700 = 1,2 (не больше 1,25) — нижний край экрана совпадает с нижним краем окна
+    expect(g.screenBottom).toBeGreaterThanOrEqual(g.windowHeight - 1);
+    expect(g.screenBottom).toBeLessThanOrEqual(g.windowHeight + 1);
+    expect(g.pageScrolls).toBe(false);
+    // Подпись у видимого края окна, не у обрезанного
+    expect(g.footerRight).toBeLessThanOrEqual(g.windowWidth + 1);
+    expect(g.footerRight).toBeGreaterThanOrEqual(g.windowWidth - 2);
+    expect(g.footerBottom).toBeGreaterThanOrEqual(g.windowHeight - 2);
+    await p.screenshot({ path: `e2e/__screenshots__/play-cover-${info.project.name}.png` });
+    await ctx.close();
+  });
+
+  test('PL-16 · на самом низком экране (400) увеличение ограничено 1,25: подпись остаётся в окне', async ({ page, browser }, info) => {
+    const phone = info.project.name.startsWith('mobile');
     const { slug } = await published(page, 400);
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
     await p.goto(`/s/${slug}`);
     await expect(p.locator('.bk-player-screen[data-live="true"]')).toBeVisible();
     const box = await p.evaluate(() => {
-      const f = document.querySelector('[data-testid="play-footer"]')!.getBoundingClientRect();
       const sc = document.querySelector('.bk-screen')!.getBoundingClientRect();
-      return { top: Math.round(f.top - sc.top), bottom: Math.round(sc.bottom - f.bottom) + 0, right: Math.round(sc.right - f.right) + 0, screen: Math.round(sc.height / (sc.width / 390)) };
+      const f = document.querySelector('[data-testid="play-footer"]')!.getBoundingClientRect();
+      return { scale: sc.height / 400 / (Math.min(window.innerWidth, 480) / 390), footerRight: Math.round(f.right), windowWidth: window.innerWidth, footerBottom: Math.round(f.bottom), screenBottom: Math.round(sc.bottom) };
     });
-    expect(box.screen).toBe(400);
-    expect(box.top).toBeGreaterThanOrEqual(0);
-    expect(box).toMatchObject({ bottom: 0, right: 0 });
-    await p.screenshot({ path: `e2e/__screenshots__/play-footer-400-${info.project.name}.png` });
+    expect(box.scale).toBeLessThanOrEqual(phone ? 1.26 : 1.01);
+    expect(box.footerRight).toBeLessThanOrEqual(box.windowWidth + 1);
+    expect(box.footerBottom).toBe(box.screenBottom);
     await ctx.close();
   });
 
@@ -73,7 +104,8 @@ test.describe('P5.6 · безопасность участника', () => {
       const sc = document.querySelector('.bk-screen')!.getBoundingClientRect();
       return { bottom: Math.round(sc.bottom - r.bottom) + 0, right: Math.round(sc.right - r.right) + 0 };
     });
-    expect(onScreen).toEqual({ bottom: 0, right: 0 });
+    expect(onScreen.bottom).toBe(0);
+    expect(onScreen.right).toBeGreaterThanOrEqual(0);
     await footer.scrollIntoViewIfNeeded();
     mkdirSync('e2e/__screenshots__', { recursive: true });
     await p.screenshot({ path: `e2e/__screenshots__/play-footer-${info.project.name}.png` });

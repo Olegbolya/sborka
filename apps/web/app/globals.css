@@ -57,3 +57,12 @@ select optgroup {
   background-color: var(--bg);
   color: var(--fg);
 }
+
+/* PL-16: на телефоне экран ниже окна увеличивается до высоты окна — полосы под экраном нет, края слегка обрезаются (до 20 % ширины). */
+@media (max-width: 480px) {
+  .bk-stage[data-cover],
+  .bk-stage[data-cover] .bk-artboard {
+    /* Увеличение — не больше чем в 1,25 раза, иначе у очень низкого экрана срезалась бы половина ширины. */
+    --u: max(calc(100vw / 390), min(calc(100dvh / var(--bk-cover-h)), calc(100vw / 390 * 1.25))) !important;
+  }
+}

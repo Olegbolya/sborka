@@ -187,7 +187,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
   };
 
   return (
-    <Artboard mode="player" tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} linkHref={outHref}>
+    <Artboard mode="player" {...(passage.screen ? { coverHeight: passage.screen.height } : {})} tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} linkHref={outHref}>
       {boot.view.ad && <AdBanner ad={boot.view.ad} />}
       {passage.screen ? (
         <PlayerScreen key={`${passage.screen.id}:${passage.screenKey}`} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} entryOverlay={passage.entryOverlay} />
