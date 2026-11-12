@@ -12,8 +12,6 @@ export interface ArtboardProps extends Partial<RenderContextValue> {
    * the phone width and stays a 480 px column on a computer (E-02). Never `transform: scale`.
    */
   unit?: number;
-  /** Published player only (PL-16): a screen shorter than the window is stretched to it. */
-  fillWindow?: boolean;
   children: ReactNode;
 }
 
@@ -32,7 +30,7 @@ export const PLAYER_UNIT = `calc(min(100vw, ${MAX_PLAYER_WIDTH}px) / ${ARTBOARD_
  * The artboard (E-01, E-02): defines the size of one unit through a CSS variable and provides the render
  * context. In the player the theme background fills the whole window around the column.
  */
-export function Artboard({ unit, fillWindow, children, ...context }: ArtboardProps): ReactNode {
+export function Artboard({ unit, children, ...context }: ArtboardProps): ReactNode {
   const value: RenderContextValue = { ...defaultRenderContext, ...context };
   const unitValue = unit === undefined ? PLAYER_UNIT : `${unit}px`;
   const board: CSSProperties & Record<string, string> = { [UNIT_VAR]: unitValue, position: 'relative', width: u(ARTBOARD_WIDTH), flex: 'none' };
@@ -52,9 +50,10 @@ export function Artboard({ unit, fillWindow, children, ...context }: ArtboardPro
     minHeight: '100dvh',
     display: 'flex',
     justifyContent: 'center',
+    // The artboard is as tall as the screen, not the window: the footer lies on the screen's own bottom-right corner (PL-16).
+    alignItems: 'flex-start',
     overflowX: 'hidden',
     backgroundColor: value.tokens.colors.background ?? '#FFFFFF',
-    ...(fillWindow && unit === undefined ? { '--bk-screen-min': '100dvh' } : {}),
   };
   const focusBoard = { ...board, [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
   return (

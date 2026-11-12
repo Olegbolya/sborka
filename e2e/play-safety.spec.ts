@@ -12,8 +12,9 @@ const call = (page: Page, method: 'post' | 'patch', url: string, data: unknown =
 
 const LINK = 'https://example.ru/stranica?a=1';
 
-async function published(page: Page) {
+async function published(page: Page, height?: number) {
   const { id } = await seedProject(page, (d) => {
+    if (height !== undefined) (d.screens[0] as { height?: number }).height = height;
     d.screens[0]!.blocks.push(
       { id: 'imya_pole', type: 'textInput', name: 'Имя', frame: { x: 20, y: 100, w: 300, h: 80 }, props: {} },
       {
@@ -34,6 +35,23 @@ const participant = async (browser: Browser, baseURL: string) => {
 };
 
 test.describe('P5.6 · безопасность участника', () => {
+  test('PL-16 · на самом низком экране (400) подпись остаётся поверх экрана справа снизу и не вылезает за него', async ({ page, browser }, info) => {
+    const { slug } = await published(page, 400);
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.goto(`/s/${slug}`);
+    await expect(p.locator('.bk-player-screen[data-live="true"]')).toBeVisible();
+    const box = await p.evaluate(() => {
+      const f = document.querySelector('[data-testid="play-footer"]')!.getBoundingClientRect();
+      const sc = document.querySelector('.bk-screen')!.getBoundingClientRect();
+      return { top: Math.round(f.top - sc.top), bottom: Math.round(sc.bottom - f.bottom) + 0, right: Math.round(sc.right - f.right) + 0, screen: Math.round(sc.height / (sc.width / 390)) };
+    });
+    expect(box.screen).toBe(400);
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box).toMatchObject({ bottom: 0, right: 0 });
+    await p.screenshot({ path: `e2e/__screenshots__/play-footer-400-${info.project.name}.png` });
+    await ctx.close();
+  });
+
   test('PL-16, TS-11 · подвал и водяной знак на экране; жалоба уходит с категорией и попадает в базу с приоритетом', async ({ page, browser }, info) => {
     const { slug } = await published(page);
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
@@ -49,9 +67,13 @@ test.describe('P5.6 · безопасность участника', () => {
       return { background: getComputedStyle(el).backgroundColor, bottom: Math.round(b.bottom - r.bottom) + 0, right: Math.round(b.right - r.right) + 0 };
     });
     expect(look).toEqual({ background: 'rgba(0, 0, 0, 0)', bottom: 0, right: 0 });
-    // Экран ниже окна телефона занимает всё окно: полосы страницы под ним нет
-    const screenHeight = await p.locator('.bk-screen').evaluate((el) => el.getBoundingClientRect().height);
-    expect(screenHeight).toBeGreaterThanOrEqual(p.viewportSize()!.height - 1);
+    // Подвал лежит на самом экране: его нижний правый угол совпадает с нижним правым углом экрана
+    const onScreen = await footer.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const sc = document.querySelector('.bk-screen')!.getBoundingClientRect();
+      return { bottom: Math.round(sc.bottom - r.bottom) + 0, right: Math.round(sc.right - r.right) + 0 };
+    });
+    expect(onScreen).toEqual({ bottom: 0, right: 0 });
     await footer.scrollIntoViewIfNeeded();
     mkdirSync('e2e/__screenshots__', { recursive: true });
     await p.screenshot({ path: `e2e/__screenshots__/play-footer-${info.project.name}.png` });
