@@ -36,6 +36,8 @@ test.describe('A6 · вход администратора', () => {
       await page.waitForURL(/\/(onboarding|cabinet\/projects)/);
       const me = (await (await page.request.get('/api/v1/auth/me')).json()) as { role: string };
       expect(me.role).toBe('ADMIN');
+      // Страница ещё может переходить сама (кабинет → онбординг): без ожидания следующий переход на /login обрывается.
+      await page.waitForLoadState('networkidle');
 
       // Второй вход: ключ не показывают, спрашивают код.
       await page.context().clearCookies();
