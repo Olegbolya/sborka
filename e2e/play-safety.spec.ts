@@ -36,7 +36,7 @@ const participant = async (browser: Browser, baseURL: string) => {
 
 test.describe('P5.6 · безопасность участника', () => {
   test('PL-16 · экран ниже окна телефона: растягивается на всё окно (полосы под ним нет), подпись и «Назад» лежат на экране', async ({ page, browser }, info) => {
-    const phone = info.project.name.startsWith('mobile');
+    const phone = (info.project.use.viewport?.width ?? 1440) <= 480;
     const { slug } = await published(page, 700);
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
     await p.goto(`/s/${slug}`);
@@ -67,7 +67,7 @@ test.describe('P5.6 · безопасность участника', () => {
   });
 
   test('PL-16 · на самом низком экране (400) увеличение ограничено 1,25: подпись остаётся в окне', async ({ page, browser }, info) => {
-    const phone = info.project.name.startsWith('mobile');
+    const phone = (info.project.use.viewport?.width ?? 1440) <= 480;
     const { slug } = await published(page, 400);
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
     await p.goto(`/s/${slug}`);
