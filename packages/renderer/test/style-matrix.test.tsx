@@ -31,6 +31,8 @@ interface PropertySpec {
 }
 
 const u = (n: number) => `calc(${n} * var(--u))`;
+/** Vertical sizes follow `--uy`, which falls back to `--u` (PL-16). */
+const uy = (n: number) => `calc(${n} * var(--uy, var(--u)))`;
 const solid = (hex: string) => ({ kind: 'solid' as const, color: { hex } });
 const video = [{ kind: 'media' as const, media: { source: 'media' as const, id: 'video-matrica' } }];
 
@@ -41,7 +43,7 @@ const SPECS: PropertySpec[] = [
     input: { frame: { x: 12, y: 34, w: 56, h: 78, rotation: 30, flipX: true }, style: { autoHeight: true, lockAspect: true } },
     check: ({ root }) => {
       const s = styleOf(root);
-      for (const part of [`left:${u(12)}`, `top:${u(34)}`, `width:${u(56)}`, `min-height:${u(78)}`, 'rotate(30deg)', 'scale(-1, 1)']) expect(s).toContain(part);
+      for (const part of [`left:${u(12)}`, `top:${uy(34)}`, `width:${u(56)}`, `min-height:${uy(78)}`, 'rotate(30deg)', 'scale(-1, 1)']) expect(s).toContain(part);
       expect(s).not.toMatch(/(^|;)height:/);
     },
   },

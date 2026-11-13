@@ -35,7 +35,7 @@ const participant = async (browser: Browser, baseURL: string) => {
 };
 
 test.describe('P5.6 · безопасность участника', () => {
-  test('PL-16 · экран ниже окна телефона: растягивается на всё окно (полосы под ним нет), подпись и «Назад» лежат на экране', async ({ page, browser }, info) => {
+  test('PL-16 · экран ниже окна телефона: растягивается по вертикали на всё окно (полосы под ним нет, по бокам ничего не обрезано), подпись и «Назад» лежат на экране', async ({ page, browser }, info) => {
     const phone = (info.project.use.viewport?.width ?? 1440) <= 480;
     const { slug } = await published(page, 700);
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
@@ -45,7 +45,7 @@ test.describe('P5.6 · безопасность участника', () => {
       p.evaluate(() => {
         const sc = document.querySelector('.bk-screen')!.getBoundingClientRect();
         const f = document.querySelector('[data-testid="play-footer"]')!.getBoundingClientRect();
-        return { screenBottom: Math.round(sc.bottom), screenTop: Math.round(sc.top), windowHeight: window.innerHeight, windowWidth: window.innerWidth, footerRight: Math.round(f.right), footerBottom: Math.round(f.bottom), pageScrolls: document.documentElement.scrollHeight > window.innerHeight + 1 };
+        return { screenBottom: Math.round(sc.bottom), screenTop: Math.round(sc.top), screenLeft: Math.round(sc.left), screenRight: Math.round(sc.right), windowHeight: window.innerHeight, windowWidth: window.innerWidth, footerRight: Math.round(f.right), footerBottom: Math.round(f.bottom), pageScrolls: document.documentElement.scrollHeight > window.innerHeight + 1 };
       });
     const g = await geometry();
     if (!phone) {
@@ -54,7 +54,9 @@ test.describe('P5.6 · безопасность участника', () => {
       await ctx.close();
       return;
     }
-    // Экран 700 в окне 844: увеличение 844/700 = 1,2 (не больше 1,25) — нижний край экрана совпадает с нижним краем окна
+    // Экран 700 в окне 844: растяжение 844/700 = 1,2 (не больше 1,5) — нижний край экрана совпадает с нижним краем окна, ширина экрана равна ширине окна
+    expect(g.screenLeft).toBe(0);
+    expect(g.screenRight).toBe(g.windowWidth);
     expect(g.screenBottom).toBeGreaterThanOrEqual(g.windowHeight - 1);
     expect(g.screenBottom).toBeLessThanOrEqual(g.windowHeight + 1);
     expect(g.pageScrolls).toBe(false);
@@ -66,7 +68,7 @@ test.describe('P5.6 · безопасность участника', () => {
     await ctx.close();
   });
 
-  test('PL-16 · на самом низком экране (400) увеличение ограничено 1,25: подпись остаётся в окне', async ({ page, browser }, info) => {
+  test('PL-16 · на самом низком экране (400) растяжение ограничено 1,5: подпись остаётся в окне', async ({ page, browser }, info) => {
     const phone = (info.project.use.viewport?.width ?? 1440) <= 480;
     const { slug } = await published(page, 400);
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
@@ -75,9 +77,10 @@ test.describe('P5.6 · безопасность участника', () => {
     const box = await p.evaluate(() => {
       const sc = document.querySelector('.bk-screen')!.getBoundingClientRect();
       const f = document.querySelector('[data-testid="play-footer"]')!.getBoundingClientRect();
-      return { scale: sc.height / 400 / (Math.min(window.innerWidth, 480) / 390), footerRight: Math.round(f.right), windowWidth: window.innerWidth, footerBottom: Math.round(f.bottom), screenBottom: Math.round(sc.bottom) };
+      return { scale: sc.height / 400 / (Math.min(window.innerWidth, 480) / 390), width: Math.round(sc.width), windowWidth0: window.innerWidth, footerRight: Math.round(f.right), windowWidth: window.innerWidth, footerBottom: Math.round(f.bottom), screenBottom: Math.round(sc.bottom) };
     });
-    expect(box.scale).toBeLessThanOrEqual(phone ? 1.26 : 1.01);
+    expect(box.scale).toBeLessThanOrEqual(phone ? 1.51 : 1.01);
+    if (phone) expect(box.width).toBe(box.windowWidth0);
     expect(box.footerRight).toBeLessThanOrEqual(box.windowWidth + 1);
     expect(box.footerBottom).toBe(box.screenBottom);
     await ctx.close();

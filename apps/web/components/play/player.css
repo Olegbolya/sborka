@@ -87,8 +87,7 @@
 }
 .pl-footer {
   position: absolute;
-  /* Увеличенный экран шире окна: подпись остаётся у видимого края, а не у обрезанного. */
-  right: max(0px, calc((390 * var(--u) - 100vw) / 2));
+  right: 0;
   bottom: 0;
   display: flex;
   flex-direction: column;

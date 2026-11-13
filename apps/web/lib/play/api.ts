@@ -23,6 +23,8 @@ export interface PlayOpen {
   watermark: boolean;
   /** P8.7 · the age mark (0, 6, 12, 16, 18) or null. */
   ageRating?: number | null;
+  /** PL-11 · the creator allows the «← Назад» button. */
+  showBack?: boolean;
   /** PL-18 · «Реклама», the advertiser and the erid. */
   ad: { advertiser: string; inn?: string; erid: string } | null;
   /** The proof of the password (PL-08). */

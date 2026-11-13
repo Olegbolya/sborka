@@ -4,7 +4,7 @@ import { type Block, type Screen, walkBlocks } from '@blokum/schema';
 import { type CSSProperties, type ReactNode } from 'react';
 import { useRenderContext } from '../context.js';
 import { fillLayers } from '../style/style-to-css.js';
-import { ARTBOARD_WIDTH, u } from '../units.js';
+import { ARTBOARD_WIDTH, u, uy } from '../units.js';
 import { BlockView } from './BlockView.js';
 
 /**
@@ -25,7 +25,7 @@ export function ScreenView({ screen }: { screen: Screen }): ReactNode {
       if (v.copy && v.parentId === null && proto) copies.push({ id: v.id, block: proto });
     }
   }
-  const style: CSSProperties = { position: 'relative', width: u(ARTBOARD_WIDTH), height: u(screen.height), overflow: 'hidden', isolation: 'isolate' };
+  const style: CSSProperties = { position: 'relative', width: u(ARTBOARD_WIDTH), height: uy(screen.height), overflow: 'hidden', isolation: 'isolate' };
   return (
     <section className="bk-screen" data-screen-id={screen.id} aria-label={screen.name} style={style}>
       {layers.map((layer, i) =>

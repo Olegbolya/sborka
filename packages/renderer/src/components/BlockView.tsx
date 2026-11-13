@@ -9,7 +9,7 @@ import { cssColor } from '../theme/color.js';
 import { useRenderContext } from '../context.js';
 import { applyRuntimeView } from '../style/apply-view.js';
 import { type FillLayer, styleToCss } from '../style/style-to-css.js';
-import { u } from '../units.js';
+import { u, uy } from '../units.js';
 import { PathTextView, RichTextView } from './RichTextView.js';
 import { blockContent } from '../blocks/content.js';
 import { mergeHandlers } from '../behaviors/pointer.js';
@@ -161,7 +161,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
     if (!register || inFlow) return;
     return register(instanceId, (nx, ny) => {
       const el = rootEl.current;
-      if (el) el.style.translate = nx !== fx || ny !== fy ? `${u(nx - fx)} ${u(ny - fy)}` : '';
+      if (el) el.style.translate = nx !== fx || ny !== fy ? `${u(nx - fx)} ${uy(ny - fy)}` : '';
     });
   }, [register, instanceId, inFlow, fx, fy]);
   const [reducedMotion] = useState(prefersReducedMotion);
@@ -226,11 +226,11 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const root: CSSProperties = {
     // The place from the document stays in left/top; movement by scenarios and behaviors is a `translate`, which
     // the browser composes without layout and repaint (SC-05: 50 moving blocks at ≥ 50 fps on a slow phone).
-    ...(inFlow ? { position: 'relative', flex: 'none', ...(view?.order !== undefined ? { order: view.order } : {}) } : { position: 'absolute', left: u(block.frame.x), top: u(block.frame.y) }),
-    ...(x !== block.frame.x || y !== block.frame.y ? { translate: `${u(x - block.frame.x)} ${u(y - block.frame.y)}` } : {}),
+    ...(inFlow ? { position: 'relative', flex: 'none', ...(view?.order !== undefined ? { order: view.order } : {}) } : { position: 'absolute', left: u(block.frame.x), top: uy(block.frame.y) }),
+    ...(x !== block.frame.x || y !== block.frame.y ? { translate: `${u(x - block.frame.x)} ${uy(y - block.frame.y)}` } : {}),
     ...(view && (view.copy || block.behaviors.some((b) => MOVING.has(b.kind))) ? { willChange: 'translate' } : {}),
     width: u(w),
-    ...(style.autoHeight ? { minHeight: u(h) } : { height: u(h) }),
+    ...(style.autoHeight ? { minHeight: uy(h) } : { height: uy(h) }),
     // A fleeing button runs over the screen: it must not hide behind pictures and shapes that lie above it.
     zIndex: ctx.mode === 'player' && block.behaviors.some((b) => b.kind === 'flee') ? block.z + FLEE_LIFT : block.z,
     ...(transform ? { transform, transformOrigin: css.transformOrigin } : {}),

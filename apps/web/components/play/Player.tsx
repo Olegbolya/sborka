@@ -118,7 +118,9 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
             return;
           }
           // PL-11: the author asked to begin from the first screen after a reload: the kept passage is left, a new one begins below.
-          if (saved.restartOnReload && saved.status === 'IN_PROGRESS') {
+          // The creator published again since this browser began: whoever comes back (a QR code a day later) sees the new version, not the old one kept in the browser.
+          const outdated = Boolean(view.versionId) && Boolean(saved.view?.versionId) && saved.view.versionId !== view.versionId;
+          if (outdated || (saved.restartOnReload && saved.status === 'IN_PROGRESS')) {
             try {
               window.localStorage.removeItem(sessionKey(view.projectId));
             } catch {
@@ -150,7 +152,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
       }
       bootRef.current.setSession(res.session.sessionId);
     })();
-  }, [view.projectId]);
+  }, [view.projectId, view.versionId]);
 
   // The variables of scenarios change without a change of screen: the place is saved a moment after they settle.
   useEffect(() => {
@@ -206,7 +208,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
           {passage.message}
         </p>
       )}
-      {passage.canGoBack && (
+      {passage.canGoBack && boot.view.showBack === true && (
         <button type="button" className="pl-back" onClick={() => boot.session.back()}>
           ← Назад
         </button>

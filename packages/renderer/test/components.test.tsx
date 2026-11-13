@@ -25,7 +25,7 @@ describe('E-01 · E-02: артборд и единица размера', () => 
 
   it('E-01: экран — 390 единиц шириной и своей высоты, фон темы или свой', () => {
     const host = render(<ScreenView screen={screenOf([], { height: 1200 })} />);
-    expect(styleOf(host.querySelector('.bk-screen'))).toContain('height:calc(1200 * var(--u))');
+    expect(styleOf(host.querySelector('.bk-screen'))).toContain('height:calc(1200 * var(--uy, var(--u)))');
     expect(styleOf(host.querySelector('.bk-screen-bg'))).toContain('linear-gradient(#F6F4EF, #F6F4EF)');
     const own = render(<ScreenView screen={screenOf([], { background: [{ kind: 'solid', color: { hex: '#000000' } }] })} />);
     expect(styleOf(own.querySelector('.bk-screen-bg'))).toContain('linear-gradient(#000000, #000000)');
@@ -47,9 +47,9 @@ describe('E-03: свободное позиционирование блоков
     const s = styleOf(render(<BlockView block={b} />).querySelector('.bk-block'));
     expect(s).toContain('position:absolute');
     expect(s).toContain('left:calc(20 * var(--u))');
-    expect(s).toContain('top:calc(40 * var(--u))');
+    expect(s).toContain('top:calc(40 * var(--uy, var(--u)))');
     expect(s).toContain('width:calc(100 * var(--u))');
-    expect(s).toContain('height:calc(60 * var(--u))');
+    expect(s).toContain('height:calc(60 * var(--uy, var(--u)))');
     expect(s).toContain('transform:rotate(15deg) scale(-1, 1)');
   });
 
@@ -58,7 +58,7 @@ describe('E-03: свободное позиционирование блоков
     const box = block('container', { children: [inner], style: { autoHeight: true } });
     const host = render(<BlockView block={box} />);
     expect(host.querySelector('[data-type="container"] .bk-content [data-block-id="vnutri01"]')).not.toBeNull();
-    expect(styleOf(host.querySelector('[data-type="container"]'))).toContain('min-height:calc(200 * var(--u))');
+    expect(styleOf(host.querySelector('[data-type="container"]'))).toContain('min-height:calc(200 * var(--uy, var(--u)))');
   });
 
   it.each(['image', 'zone', 'shape', 'video', 'container', 'button'] as const)('B-01: текстовый слой у блока «%s»', (type) => {

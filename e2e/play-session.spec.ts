@@ -34,6 +34,8 @@ async function published(page: Page, shape: (d: { screens: Array<{ id: string; n
     shape(d as never);
   });
   expect((await post(page, `/projects/${id}/publish`)).ok()).toBe(true);
+  // Кнопка «← Назад» включается автором в настройках проекта (PL-11).
+  expect((await page.request.patch(`/api/v1/projects/${id}/access-settings`, { data: { showBack: true }, headers: { origin: new URL(page.url()).origin } })).ok()).toBe(true);
   const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
   return { id, slug };
 }

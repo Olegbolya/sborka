@@ -41,6 +41,8 @@ export interface PlayOpen {
   watermark: boolean;
   /** P8.7 · the age mark in the footer: 0, 6, 12, 16, 18, or null when the creator has not chosen one. */
   ageRating: number | null;
+  /** PL-11 · the creator allows the «← Назад» button in the player. */
+  showBack: boolean;
   /** PL-18 · an advertising project says so: who advertises and the erid. */
   ad: { advertiser: string; inn?: string; erid: string } | null;
   /** Given after the right password: the browser keeps it for the tab and sends it with later calls (PL-08). */
@@ -105,9 +107,9 @@ const PASSWORD_TRIES = 10;
 const PASSWORD_WINDOW_MS = 10 * 60 * 1000;
 
 /** PL-16, PL-18 · what the player must show whatever the creator drew: the tariff's mark and the advertising label. */
-function marks(p: { isAdvertising: boolean; adMarking: { advertiser: string; inn?: string; erid: string } | null; settings?: unknown }, watermark: boolean): Pick<PlayOpen, 'watermark' | 'ad' | 'ageRating'> {
+function marks(p: { isAdvertising: boolean; adMarking: { advertiser: string; inn?: string; erid: string } | null; settings?: unknown }, watermark: boolean): Pick<PlayOpen, 'watermark' | 'ad' | 'ageRating' | 'showBack'> {
   const rating = (p.settings as { ageRating?: unknown } | null | undefined)?.ageRating;
-  return { watermark, ad: p.isAdvertising && p.adMarking ? p.adMarking : null, ageRating: typeof rating === 'number' ? rating : null };
+  return { watermark, ad: p.isAdvertising && p.adMarking ? p.adMarking : null, ageRating: typeof rating === 'number' ? rating : null, showBack: (p.settings as { showBack?: unknown } | null | undefined)?.showBack === true };
 }
 
 export function deviceTypeOf(userAgent: string | undefined): 'PHONE' | 'TABLET' | 'DESKTOP' | 'UNKNOWN' {

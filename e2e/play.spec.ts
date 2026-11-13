@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { nextButton, seedProject, textBlock } from './helpers/editor';
+import { nextButton, seedProject, serverDraft, textBlock } from './helpers/editor';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -21,7 +21,7 @@ const question = (id: string, texts: string[]) => ({
 });
 
 /** A published project with a question that has a key; the participant is a browser with no cookies at all. */
-async function published(page: Page, shape: (d: { screens: Array<{ id: string; name: string; blocks: unknown[] }>; meta: Record<string, unknown> }) => void = () => undefined) {
+async function published(page: Page, shape: (d: { screens: Array<{ id: string; name: string; blocks: unknown[] }>; meta: Record<string, unknown> }) => void = () => undefined, options: { showBack?: boolean } = {}) {
   const { id } = await seedProject(page, (d) => {
     d.screens[0]!.blocks.push(textBlock('privet_1', 'Привет, участник', 20, 40, 300, 60), question('vopros_1', ['Да, верно', 'Нет, неверно']), nextButton('knopka_1', 'Дальше', 330));
     d.screens.push({ id: 'ekran_dva', name: 'Второй', blocks: [textBlock('vtoroj_t', 'Это второй экран', 20, 60, 300, 60), nextButton('knopka_2', 'Закончить', 200)] });
@@ -29,6 +29,8 @@ async function published(page: Page, shape: (d: { screens: Array<{ id: string; n
     shape(d as never);
   });
   expect((await post(page, `/projects/${id}/publish`)).ok()).toBe(true);
+  // Автор разрешил кнопку «← Назад»: без этого она скрыта (PL-11).
+  if (options.showBack !== false) expect((await patch(page, `/projects/${id}/access-settings`, { showBack: true })).ok()).toBe(true);
   const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
   return { id, slug };
 }
@@ -239,6 +241,39 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
     await expect(p.getByRole('button', { name: 'Закончить' })).toBeVisible();
     await p.reload();
     await expect(p.getByRole('button', { name: 'Закончить' })).toBeVisible();
+    await ctx.close();
+  });
+
+  test('PL-11 · «← Назад» скрыта, пока автор не включил её в настройках проекта', async ({ page, browser }, info) => {
+    const { id, slug } = await published(page, undefined, { showBack: false });
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.goto(`/s/${slug}`);
+    await p.getByText('Да, верно', { exact: true }).click();
+    await p.getByRole('button', { name: 'Дальше' }).click();
+    await expect(p.getByText('Это второй экран')).toBeVisible();
+    await expect(p.getByRole('button', { name: '← Назад' })).toHaveCount(0);
+    expect((await patch(page, `/projects/${id}/access-settings`, { showBack: true })).ok()).toBe(true);
+    await p.reload();
+    await expect(p.getByRole('button', { name: '← Назад' })).toBeVisible();
+    await ctx.close();
+  });
+
+  test('PL-11 · QR через день после новой публикации: участник видит новую версию, а не ту, что запомнил браузер', async ({ page, browser }, info) => {
+    const { id, slug } = await published(page);
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.goto(`/s/${slug}`);
+    await expect(p.getByText('Привет, участник')).toBeVisible();
+    // Автор меняет текст и публикует заново.
+    const { revision, doc } = await serverDraft(page, id);
+    const first = doc.screens[0]!.blocks.find((b) => (b as { id: string }).id === 'privet_1') as { textLayer?: unknown; name: string };
+    first.textLayer = { paragraphs: [{ kind: 'p', runs: [{ t: 'Новый текст после правки' }] }] };
+    const saved = await page.request.put(`/api/v1/projects/${id}/draft`, { data: { document: doc }, headers: { origin: origin(page), 'if-match': String(revision) } });
+    expect(saved.ok(), await saved.text()).toBe(true);
+    expect((await post(page, `/projects/${id}/publish`)).ok()).toBe(true);
+    // Тот же браузер возвращается по ссылке.
+    await p.goto(`/s/${slug}`);
+    await expect(p.getByText('Новый текст после правки')).toBeVisible();
+    await expect(p.getByText('Привет, участник')).toHaveCount(0);
     await ctx.close();
   });
 

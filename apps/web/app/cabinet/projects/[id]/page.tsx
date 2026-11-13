@@ -34,6 +34,7 @@ interface ProjectSettings {
   ageRating?: number | null;
   singleAttempt?: boolean | null;
   restartOnReload?: boolean | null;
+  showBack?: boolean | null;
   closedText?: string | null;
 }
 
@@ -773,6 +774,14 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           После перезагрузки страницы проходить заново с первого экрана
         </label>
         <p style={s.hint}>Если выключено, участник продолжит с того места, где остановился</p>
+      </div>
+
+      <div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+          <input type="checkbox" checked={settings.showBack ?? false} onChange={(e) => update('showBack', e.target.checked)} aria-label="Показывать кнопку «Назад»" />
+          Показывать участнику кнопку «← Назад»
+        </label>
+        <p style={s.hint}>Кнопка лежит поверх экрана и может испортить ваш дизайн. Если выключена, возвращаться можно только вашими кнопками</p>
       </div>
 
       <div>
