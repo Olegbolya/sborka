@@ -63,6 +63,8 @@ test.describe('E-21 · Перо и редактирование узлов', () 
     const nodeCount = (d: string) => (d.match(/[MLC]/gi) ?? []).length;
     expect(nodeCount(drawn.shape.d)).toBe(6);
 
+    // На телефоне шторка свойств закрывает часть холста: человек сначала сворачивает её, потом нажимает на фигуру.
+    await collapsePanels(page);
     // A double click on the shape enters node editing; dragging node 3 changes the contour but keeps 6 nodes
     const selBounds = (await page.getByTestId('selection-box').boundingBox())!;
     await page.mouse.dblclick(selBounds.x + selBounds.width / 2, selBounds.y + selBounds.height / 2);
