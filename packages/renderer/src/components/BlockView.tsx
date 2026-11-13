@@ -9,7 +9,7 @@ import { cssColor } from '../theme/color.js';
 import { useRenderContext } from '../context.js';
 import { applyRuntimeView } from '../style/apply-view.js';
 import { type FillLayer, styleToCss } from '../style/style-to-css.js';
-import { u, uy } from '../units.js';
+import { UNSTRETCH, u, uy, uyCenter } from '../units.js';
 import { PathTextView, RichTextView } from './RichTextView.js';
 import { blockContent } from '../blocks/content.js';
 import { mergeHandlers } from '../behaviors/pointer.js';
@@ -76,8 +76,19 @@ function FillVideo({ layer, media, base, poster }: { layer: Extract<FillLayer, {
  */
 function Layer({ layer, media, poster }: { layer: FillLayer; media: BlockStyle['media']; poster?: string }): ReactNode {
   const base: CSSProperties = { position: 'absolute', inset: 0 };
-  if (layer.kind === 'video') return <FillVideo layer={layer} media={media} base={base} {...(poster ? { poster } : {})} />;
-  return <div className="bk-fill" style={{ ...base, ...layer.style }} />;
+  // PL-16: the picture is fitted in the unstretched box, then stretched with the screen: nothing is cropped by the stretch.
+  const holder: CSSProperties = { position: 'absolute', left: 0, top: 0, right: 0, ...UNSTRETCH };
+  if (layer.kind === 'video')
+    return (
+      <div style={holder}>
+        <FillVideo layer={layer} media={media} base={base} {...(poster ? { poster } : {})} />
+      </div>
+    );
+  return (
+    <div style={holder}>
+      <div className="bk-fill" style={{ ...base, ...layer.style }} />
+    </div>
+  );
 }
 
 export interface BlockViewProps {
@@ -92,6 +103,18 @@ export interface BlockViewProps {
   inFlow?: boolean;
   /** BH-07: the block is a side of a flip card; only the side facing the participant is shown. */
   face?: { side: 'front' | 'back'; shown: boolean };
+}
+
+const STRETCHED_TYPES = new Set(['image', 'gif', 'video', 'animation', 'container', 'zone', 'shape']);
+/**
+ * PL-16: on a phone a low screen is stretched downwards. Pictures, video, containers, zones and shapes without a text grow with it (they
+ * fill a place); everything with a text — texts, buttons, fields, questions — keeps its own size and only moves to where the stretched
+ * screen puts its centre, so what is drawn inside (a mirrored or turned arrow, the alignment of a label) stays exactly as in the editor.
+ */
+function growsWithScreen(block: Block): boolean {
+  if (!STRETCHED_TYPES.has(block.type)) return false;
+  if (block.type === 'shape') return !block.textLayer?.paragraphs.some((p) => p.runs.length > 0);
+  return true;
 }
 
 const TAP_TRIGGERS = new Set(['tap', 'doubleTap', 'longPress']);
@@ -198,6 +221,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const overrides = view?.overrides;
   const anim = view?.anim;
   const style = useMemo(() => applyRuntimeView(resolved, overrides && anim ? { overrides, anim } : undefined), [resolved, overrides, anim]);
+  const grows = growsWithScreen(block);
   const x = view?.x ?? block.frame.x;
   const y = view?.y ?? block.frame.y;
   const w = view?.w ?? block.frame.w;
@@ -226,11 +250,11 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const root: CSSProperties = {
     // The place from the document stays in left/top; movement by scenarios and behaviors is a `translate`, which
     // the browser composes without layout and repaint (SC-05: 50 moving blocks at ≥ 50 fps on a slow phone).
-    ...(inFlow ? { position: 'relative', flex: 'none', ...(view?.order !== undefined ? { order: view.order } : {}) } : { position: 'absolute', left: u(block.frame.x), top: uy(block.frame.y) }),
+    ...(inFlow ? { position: 'relative', flex: 'none', ...(view?.order !== undefined ? { order: view.order } : {}) } : { position: 'absolute', left: u(block.frame.x), top: grows ? uy(block.frame.y) : uyCenter(block.frame.y, block.frame.h) }),
     ...(x !== block.frame.x || y !== block.frame.y ? { translate: `${u(x - block.frame.x)} ${uy(y - block.frame.y)}` } : {}),
     ...(view && (view.copy || block.behaviors.some((b) => MOVING.has(b.kind))) ? { willChange: 'translate' } : {}),
     width: u(w),
-    ...(style.autoHeight ? { minHeight: uy(h) } : { height: uy(h) }),
+    ...(style.autoHeight ? { minHeight: grows ? uy(h) : u(h) } : { height: grows ? uy(h) : u(h) }),
     // A fleeing button runs over the screen: it must not hide behind pictures and shapes that lie above it.
     zIndex: ctx.mode === 'player' && block.behaviors.some((b) => b.kind === 'flee') ? block.z + FLEE_LIFT : block.z,
     ...(transform ? { transform, transformOrigin: css.transformOrigin } : {}),

@@ -43,7 +43,14 @@ const SPECS: PropertySpec[] = [
     input: { frame: { x: 12, y: 34, w: 56, h: 78, rotation: 30, flipX: true }, style: { autoHeight: true, lockAspect: true } },
     check: ({ root }) => {
       const s = styleOf(root);
-      for (const part of [`left:${u(12)}`, `top:${uy(34)}`, `width:${u(56)}`, `min-height:${uy(78)}`, 'rotate(30deg)', 'scale(-1, 1)']) expect(s).toContain(part);
+      for (const part of [`left:${u(12)}`, `width:${u(56)}`, 'rotate(30deg)', 'scale(-1, 1)']) expect(s).toContain(part);
+      // PL-16: pictures and fills grow with a stretched screen; blocks with a text keep their height and only move by their centre.
+      const grows = s.includes(`top:${uy(34)}`);
+      if (grows) expect(s).toContain(`min-height:${uy(78)}`);
+      else {
+        expect(s).toContain(`top:calc(73 * var(--uy, var(--u)) - 39 * var(--u))`);
+        expect(s).toContain(`min-height:${u(78)}`);
+      }
       expect(s).not.toMatch(/(^|;)height:/);
     },
   },

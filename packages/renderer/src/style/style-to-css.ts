@@ -4,7 +4,7 @@ import { blockMask, innerShadowLayer, outerShadowLayer, shapeMask, strokeLayer }
 import { cssShapeRadius, isCssShape, shapeOutline } from '../shape/outline.js';
 import { cssColor } from '../theme/color.js';
 import { cssFontFamily } from '../theme/fonts.js';
-import { u } from '../units.js';
+import { UNSTRETCH, u } from '../units.js';
 
 /** A resolved media file: where to load it from and how to show it. */
 export interface MediaSource {
@@ -273,8 +273,8 @@ export function styleToCss(style: BlockStyle, ctx: StyleContext, size: BlockSize
         }
       : {
           width: '100%',
-          height: '100%',
           display: 'block',
+          ...UNSTRETCH,
           objectFit: m.fit,
           objectPosition: `${pct(m.focal.x)} ${pct(m.focal.y)}`,
         },

@@ -33,6 +33,15 @@ describe('E-01 · E-02: артборд и единица размера', () => 
     expect(video.querySelector('.bk-screen video')?.getAttribute('src')).toBe('https://media.blokker.ru/video00001.mp4');
   });
 
+  it('PL-16: картинка раскладывается в нерастянутой рамке и растягивается целиком — вертикальная растяжка экрана не режет её по бокам', () => {
+    const photo = render(<BlockView block={block('image', { props: { media: { source: 'media', id: 'elka000001' } } })} />);
+    const img = styleOf(photo.querySelector('img.bk-media'));
+    expect(img).toContain('height:calc(100% / var(--ky, 1))');
+    expect(img).toContain('scale:1 var(--ky, 1)');
+    const bg = render(<ScreenView screen={screenOf([], { background: [{ kind: 'media', media: { source: 'media', id: 'elka000001' }, fit: 'cover', focal: { x: 0.5, y: 0.5 }, scale: 1 }] })} />);
+    expect(styleOf(bg.querySelector('.bk-screen-bg')!.parentElement)).toContain('height:calc(100% / var(--ky, 1))');
+  });
+
   it('E-02: фон темы вокруг колонки — и цветом, и видео', () => {
     const tokens = { ...themes.dark, background: [{ kind: 'media' as const, media: { source: 'media' as const, id: 'video00009' }, fit: 'cover' as const, focal: { x: 0.5, y: 0.5 }, scale: 1 }, { kind: 'solid' as const, color: { hex: '#00000080' } }] };
     const host = render(<span />, { mode: 'player', unit: undefined, tokens });
@@ -42,6 +51,14 @@ describe('E-01 · E-02: артборд и единица размера', () => 
 });
 
 describe('E-03: свободное позиционирование блоков', () => {
+  it('PL-16: блок с текстом на растянутом экране не растёт, а встаёт центром туда же; картинка и фигура без текста растут', () => {
+    const text = styleOf(render(<BlockView block={block('text', { frame: { x: 20, y: 40, w: 100, h: 60 }, textLayer: textOf('←') })} />).querySelector('.bk-block'));
+    expect(text).toContain('top:calc(70 * var(--uy, var(--u)) - 30 * var(--u))');
+    expect(text).toContain('height:calc(60 * var(--u))');
+    const photo = styleOf(render(<BlockView block={block('image', { frame: { x: 0, y: 0, w: 390, h: 400 } })} />).querySelector('.bk-block'));
+    expect(photo).toContain('height:calc(400 * var(--uy, var(--u)))');
+  });
+
   it('E-03: абсолютные координаты и размер в единицах, поворот и отражение', () => {
     const b = block('shape', { frame: { x: 20, y: 40, w: 100, h: 60, rotation: 15, flipX: true, flipY: false } });
     const s = styleOf(render(<BlockView block={b} />).querySelector('.bk-block'));

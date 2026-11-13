@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useEffect, useRef } from 'react';
 import { cssColor } from '../theme/color.js';
 import { RenderContext, type RenderContextValue, defaultRenderContext } from '../context.js';
 import { fillLayers } from '../style/style-to-css.js';
@@ -13,8 +13,8 @@ export interface ArtboardProps extends Partial<RenderContextValue> {
    */
   unit?: number;
   /**
-   * Published player (PL-16): height of the screen in units. On a phone a screen shorter than the window is enlarged to fill it —
-   * the sides are cropped a little, the page shows no strip under the screen (the rule is in `app/globals.css`).
+   * Published player (PL-16): height of the screen in units. On a phone a screen shorter than the window is stretched down to fill it
+   * (vertical only, at most 1.5 times; width and type stay): the sides are never cropped (the rule is in `app/globals.css`).
    */
   coverHeight?: number;
   children: ReactNode;
@@ -29,6 +29,9 @@ export interface ArtboardProps extends Partial<RenderContextValue> {
 export const FOCUS_VAR = '--bk-focus';
 
 /** Fluid unit of the player: min(100vw, 480px) / 390. */
+/** The most a low screen is stretched vertically on a phone (PL-16); keep in step with `app/globals.css`. */
+const MAX_STRETCH = 1.5;
+
 export const PLAYER_UNIT = `calc(min(100vw, ${MAX_PLAYER_WIDTH}px) / ${ARTBOARD_WIDTH})`;
 
 /**
@@ -37,6 +40,22 @@ export const PLAYER_UNIT = `calc(min(100vw, ${MAX_PLAYER_WIDTH}px) / ${ARTBOARD_
  */
 export function Artboard({ unit, coverHeight, children, ...context }: ArtboardProps): ReactNode {
   const value: RenderContextValue = { ...defaultRenderContext, ...context };
+  const stageRef = useRef<HTMLDivElement>(null);
+  const covers = coverHeight !== undefined && unit === undefined;
+  // PL-16: the exact stretch of a low screen on a phone (`--ky`, unitless) — pictures use it to stay whole; `--uy` follows it.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || !covers || coverHeight === undefined) return;
+    const apply = () => {
+      const w = window.innerWidth;
+      const ky = w <= 480 ? Math.min(MAX_STRETCH, Math.max(1, window.innerHeight / (coverHeight * (w / ARTBOARD_WIDTH)))) : 1;
+      el.style.setProperty('--ky', String(ky));
+      el.style.setProperty('--uy', `calc(var(--u) * ${ky})`);
+    };
+    apply();
+    window.addEventListener('resize', apply);
+    return () => window.removeEventListener('resize', apply);
+  }, [covers, coverHeight]);
   const unitValue = unit === undefined ? PLAYER_UNIT : `${unit}px`;
   const board: CSSProperties & Record<string, string> = { [UNIT_VAR]: unitValue, position: 'relative', width: u(ARTBOARD_WIDTH), flex: 'none' };
   if (value.mode !== 'player') {
@@ -64,7 +83,7 @@ export function Artboard({ unit, coverHeight, children, ...context }: ArtboardPr
   const focusBoard = { ...board, [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
   return (
     <RenderContext.Provider value={value}>
-      <div className="bk-stage" data-cover={coverHeight !== undefined && unit === undefined ? '' : undefined} style={stage}>
+      <div ref={stageRef} className="bk-stage" data-cover={coverHeight !== undefined && unit === undefined ? '' : undefined} style={stage}>
         {layers.map((layer, i) =>
           layer.kind === 'paint' ? (
             <div key={i} aria-hidden style={{ position: 'fixed', inset: 0, ...layer.style }} />

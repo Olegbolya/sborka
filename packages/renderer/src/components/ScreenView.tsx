@@ -4,7 +4,7 @@ import { type Block, type Screen, walkBlocks } from '@blokum/schema';
 import { type CSSProperties, type ReactNode } from 'react';
 import { useRenderContext } from '../context.js';
 import { fillLayers } from '../style/style-to-css.js';
-import { ARTBOARD_WIDTH, u, uy } from '../units.js';
+import { ARTBOARD_WIDTH, UNSTRETCH, u, uy } from '../units.js';
 import { BlockView } from './BlockView.js';
 
 /**
@@ -28,13 +28,16 @@ export function ScreenView({ screen }: { screen: Screen }): ReactNode {
   const style: CSSProperties = { position: 'relative', width: u(ARTBOARD_WIDTH), height: uy(screen.height), overflow: 'hidden', isolation: 'isolate' };
   return (
     <section className="bk-screen" data-screen-id={screen.id} aria-label={screen.name} style={style}>
-      {layers.map((layer, i) =>
-        layer.kind === 'video' ? (
-          <video key={i} src={layer.src} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', ...layer.style }} />
-        ) : (
-          <div key={i} className="bk-screen-bg" style={{ position: 'absolute', inset: 0, ...layer.style }} />
-        ),
-      )}
+      {layers.map((layer, i) => (
+        // PL-16: the background picture is fitted in the unstretched screen, then stretched: nothing is cropped by the stretch.
+        <div key={i} aria-hidden style={{ position: 'absolute', left: 0, top: 0, right: 0, ...UNSTRETCH }}>
+          {layer.kind === 'video' ? (
+            <video src={layer.src} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', ...layer.style }} />
+          ) : (
+            <div className="bk-screen-bg" style={{ position: 'absolute', inset: 0, ...layer.style }} />
+          )}
+        </div>
+      ))}
       {blocks.map((b) => (
         <BlockView key={b.id} block={b} />
       ))}

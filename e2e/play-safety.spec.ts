@@ -86,6 +86,32 @@ test.describe('P5.6 · безопасность участника', () => {
     await ctx.close();
   });
 
+  test('PL-16 · две одинаковые стрелки на низком экране стоят на одной высоте и не растут вместе с экраном', async ({ page, browser }, info) => {
+    const phone = (info.project.use.viewport?.width ?? 1440) <= 480;
+    const { id } = await seedProject(page, (d) => {
+      (d.screens[0] as { height?: number }).height = 400;
+      d.screens[0]!.blocks.push(textBlock('strelka_l', '←', 20, 300, 56, 56), { ...textBlock('strelka_r', '→', 314, 300, 56, 56), frame: { x: 314, y: 300, w: 56, h: 56, rotation: 0, flipX: false, flipY: false } });
+    });
+    expect((await call(page, 'post', `/projects/${id}/publish`)).ok()).toBe(true);
+    const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.goto(`/s/${slug}`);
+    await expect(p.locator('.bk-player-screen[data-live="true"]')).toBeVisible();
+    const arrows = await p.evaluate(() => {
+      const unit = document.querySelector('.bk-screen')!.getBoundingClientRect().width / 390;
+      return ['strelka_l', 'strelka_r'].map((bid) => {
+        const r = document.querySelector(`[data-block-id="${bid}"]`)!.getBoundingClientRect();
+        return { top: Math.round(r.top * 10) / 10, height: Math.round(r.height * 10) / 10, unit };
+      });
+    });
+    expect(arrows[0]!.top).toBe(arrows[1]!.top);
+    expect(arrows[0]!.height).toBe(arrows[1]!.height);
+    // Блок с текстом не растягивается вместе с экраном: 56 единиц остаются 56 единицами
+    expect(Math.abs(arrows[0]!.height - 56 * arrows[0]!.unit)).toBeLessThanOrEqual(1);
+    if (phone) expect(arrows[0]!.top).toBeGreaterThan(300 * arrows[0]!.unit);
+    await ctx.close();
+  });
+
   test('PL-16, TS-11 · подвал и водяной знак на экране; жалоба уходит с категорией и попадает в базу с приоритетом', async ({ page, browser }, info) => {
     const { slug } = await published(page);
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);

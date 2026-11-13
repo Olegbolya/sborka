@@ -48,7 +48,8 @@ describe('AC-02: изменения из сценариев попадают в 
     // The place from the document plus the shift from the engine (translate — without layout, SC-05).
     expect(s).toContain(`left:calc(${b.frame.x} * var(--u))`);
     expect(s).toContain(`translate:calc(${70 - b.frame.x} * var(--u)) calc(${80 - b.frame.y} * var(--uy, var(--u)))`);
-    expect(s).toContain('height:calc(40 * var(--uy, var(--u)))');
+    // A shape with a text keeps its own height on a stretched screen (PL-16).
+    expect(s).toContain('height:calc(40 * var(--u))');
     expect(s).toContain('transform:rotate(90deg) scale(1, -1) scale(2)');
     expect(s).toContain('pointer-events:none');
     expect(host.querySelector('.bk-text')?.textContent).toBe('стало');
