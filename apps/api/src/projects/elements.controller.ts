@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { ProjectsService } from './projects.service.js';
+import { patchOf } from './templates.controller.js';
 
 /** ME-01, ME-02 · creator's saved elements: save blocks-with-rules, list, get fragment, delete. */
 @Controller('elements')
@@ -27,6 +28,14 @@ export class ElementsController {
   @Get(':id')
   get(@Param('id') id: string, @CurrentUser() user: RequestUser) {
     return this.projects.getElement(user.id, id);
+  }
+
+  /** ME-01 · rename a saved element and/or set its cover. */
+  @Patch(':id')
+  @HttpCode(200)
+  async update(@Param('id') id: string, @Body() body: { name?: unknown; coverMediaId?: unknown } | null, @CurrentUser() user: RequestUser) {
+    await this.projects.updateElement(user.id, id, patchOf(body));
+    return { ok: true };
   }
 
   /** ME-01 · delete a saved element. */

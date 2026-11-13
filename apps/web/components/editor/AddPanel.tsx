@@ -2,12 +2,14 @@
 import { type BlockType, type MediaRef } from '@blokum/schema';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { addBlock } from '../../lib/editor/commands';
-import { type ClipboardPayload, copyBlocks, pasteBlocks, planPaste } from '../../lib/editor/clipboard';
+import { type ClipboardPayload, type PasteChoice, type PastePlan, copyBlocks, pasteBlocks, planPaste } from '../../lib/editor/clipboard';
 import { type MediaKind } from '../../lib/editor/media';
 import { CATALOG, GROUP_TITLES, type CatalogEntry } from '../../lib/editor/props-specs';
 import { findBlock } from '../../lib/editor/tree';
 import { api, errorText } from '../../lib/api-browser';
+import { CoverThumb } from './CoverThumb';
 import { MediaPicker } from './MediaPicker';
+import { PasteVariablesDialog } from './PasteVariablesDialog';
 import { useEditor, useEnv } from './context';
 
 const GROUPS = Object.keys(GROUP_TITLES) as CatalogEntry['group'][];
@@ -131,7 +133,7 @@ export function AddPanel() {
   );
 }
 
-interface ElementSummary { id: string; name: string }
+interface ElementSummary { id: string; name: string; coverMediaId: string | null }
 
 /** ME-01/ME-02 · «Мои элементы»: список сохранённых элементов и кнопка «Сохранить как элемент». */
 function ElementsSection({ screenId, selectedIds }: { screenId: string; selectedIds: readonly string[] }) {
@@ -143,6 +145,10 @@ function ElementsSection({ screenId, selectedIds }: { screenId: string; selected
   const [saving, setSaving] = useState(false);
   const [namePrompt, setNamePrompt] = useState(false);
   const [eName, setEName] = useState('');
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  const [coverFor, setCoverFor] = useState<string | null>(null);
+  // ME-02: the element's variables share names with the ones of this assembly — the creator chooses (as in SC-06).
+  const [conflict, setConflict] = useState<{ payload: ClipboardPayload; plan: PastePlan } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -158,7 +164,7 @@ function ElementsSection({ screenId, selectedIds }: { screenId: string; selected
       const payload = copyBlocks(doc, selectedIds);
       if (!payload) { flash('Выберите блоки для сохранения.', 'error'); return; }
       const res = await api<{ id: string }>('/elements', { method: 'POST', body: { name: eName.trim(), fragment: payload } });
-      setElements((prev) => [{ id: res.id, name: eName.trim() }, ...prev]);
+      setElements((prev) => [{ id: res.id, name: eName.trim(), coverMediaId: null }, ...prev]);
       flash('Элемент сохранён.', 'ok');
       setEName('');
     } catch (e) {
@@ -168,16 +174,40 @@ function ElementsSection({ screenId, selectedIds }: { screenId: string; selected
     }
   };
 
+  const doInsert = (payload: ClipboardPayload, choices: Record<string, PasteChoice>) => {
+    let created: string[] = [];
+    apply(pasteBlocks(payload, screenId, 12, (made) => (created = made), choices), { label: 'Вставить элемент' });
+    if (created.length) select(screenId, created);
+    else flash('Не удалось вставить — на экране уже 100 блоков.', 'error');
+  };
+
   const insertElement = async (id: string) => {
     try {
       const data = await api<{ fragment: ClipboardPayload }>(`/elements/${id}`);
       const payload = data.fragment;
       const plan = planPaste(doc, payload);
-      const choices = Object.fromEntries(plan.conflicts.map((c) => [c.variable.id, 'link' as const]));
-      let created: string[] = [];
-      apply(pasteBlocks(payload, screenId, 12, (made) => (created = made), choices), { label: 'Вставить элемент' });
-      if (created.length) select(screenId, created);
-      else flash('Не удалось вставить — на экране уже 100 блоков.', 'error');
+      if (plan.conflicts.length > 0) setConflict({ payload, plan });
+      else doInsert(payload, {});
+    } catch (e) {
+      flash(errorText(e), 'error');
+    }
+  };
+
+  const renameElement = async () => {
+    if (!renaming || !renaming.name.trim()) return;
+    try {
+      await api(`/elements/${renaming.id}`, { method: 'PATCH', body: { name: renaming.name.trim() } });
+      setElements((prev) => prev.map((e) => (e.id === renaming.id ? { ...e, name: renaming.name.trim() } : e)));
+      setRenaming(null);
+    } catch (e) {
+      flash(errorText(e), 'error');
+    }
+  };
+
+  const setCover = async (id: string, coverMediaId: string | null) => {
+    try {
+      await api(`/elements/${id}`, { method: 'PATCH', body: { coverMediaId } });
+      setElements((prev) => prev.map((e) => (e.id === id ? { ...e, coverMediaId } : e)));
     } catch (e) {
       flash(errorText(e), 'error');
     }
@@ -227,16 +257,78 @@ function ElementsSection({ screenId, selectedIds }: { screenId: string; selected
       ) : (
         <ul className="ed-list">
           {elements.map((el) => (
-            <li key={el.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <button type="button" className="ed-item" data-testid={`element-insert-${el.id}`} onClick={() => void insertElement(el.id)} title={`Вставить «${el.name}»`} style={{ flex: 1 }}>
-                <span className="name">{el.name}</span>
-              </button>
-              <button type="button" className="ed-btn small danger" onClick={() => void deleteElement(el.id, el.name)} aria-label={`Удалить «${el.name}»`}>
-                ✕
-              </button>
+            <li key={el.id} data-testid={`element-row-${el.id}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {renaming?.id === el.id ? (
+                <div className="ed-actions">
+                  <input
+                    className="ed-title"
+                    aria-label="Новое название элемента"
+                    value={renaming.name}
+                    autoFocus
+                    onChange={(e) => setRenaming({ id: el.id, name: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void renameElement();
+                      if (e.key === 'Escape') setRenaming(null);
+                    }}
+                  />
+                  <button type="button" className="ed-btn small" onClick={() => void renameElement()} disabled={!renaming.name.trim()}>
+                    Сохранить
+                  </button>
+                  <button type="button" className="ed-btn small" onClick={() => setRenaming(null)}>
+                    Отмена
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <CoverThumb id={el.coverMediaId} />
+                    <button type="button" className="ed-item" data-testid={`element-insert-${el.id}`} onClick={() => void insertElement(el.id)} title={`Вставить «${el.name}»`} style={{ flex: 1 }}>
+                      <span className="name">{el.name}</span>
+                    </button>
+                  </div>
+                  <div className="ed-actions">
+                    <button type="button" className="ed-btn small" onClick={() => setRenaming({ id: el.id, name: el.name })} aria-label={`Переименовать «${el.name}»`}>
+                      Переименовать
+                    </button>
+                    <button type="button" className="ed-btn small" onClick={() => setCoverFor(el.id)} aria-label={`Обложка «${el.name}»`}>
+                      Обложка
+                    </button>
+                    {el.coverMediaId && (
+                      <button type="button" className="ed-btn small" onClick={() => void setCover(el.id, null)} aria-label={`Убрать обложку «${el.name}»`}>
+                        Убрать обложку
+                      </button>
+                    )}
+                    <button type="button" className="ed-btn small danger" onClick={() => void deleteElement(el.id, el.name)} aria-label={`Удалить «${el.name}»`}>
+                      Удалить
+                    </button>
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>
+      )}
+      {conflict && (
+        <PasteVariablesDialog
+          payload={conflict.payload}
+          plan={conflict.plan}
+          onCancel={() => setConflict(null)}
+          onPaste={(choices) => {
+            doInsert(conflict.payload, choices);
+            setConflict(null);
+          }}
+        />
+      )}
+      {coverFor && (
+        <MediaPicker
+          kinds={['IMAGE']}
+          onClose={() => setCoverFor(null)}
+          onPick={(ref) => {
+            const id = coverFor;
+            setCoverFor(null);
+            if (ref.source === 'media') void setCover(id, ref.id);
+          }}
+        />
       )}
     </section>
   );

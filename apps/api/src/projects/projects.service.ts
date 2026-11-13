@@ -168,15 +168,39 @@ export class ProjectsService {
     return { id: row!.id };
   }
 
-  /** TPL-02 · rename the creator's own template. */
-  async renameOwnTemplate(userId: string, templateId: string, name: string): Promise<void> {
+  /** TPL-02 · rename the creator's own template and/or change its cover (a picture of the creator's library). */
+  async updateOwnTemplate(userId: string, templateId: string, patch: { name?: string; coverMediaId?: string | null }): Promise<void> {
     // Ownership first: a stranger gets «not found» whatever he sends, never a hint about the validation.
     const own = and(eq(schema.templates.id, templateId), eq(schema.templates.ownerId, userId), eq(schema.templates.isSystem, false), isNull(schema.templates.deletedAt));
     const found = await this.db.select({ id: schema.templates.id }).from(schema.templates).where(own).limit(1);
     if (found.length === 0) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Шаблон не найден.' } });
-    const n = name.trim().slice(0, 120);
-    if (n.length < 1) throw new BadRequestException({ error: { code: 'NAME_REQUIRED', message: 'Нужно название.' } });
-    await this.db.update(schema.templates).set({ name: n }).where(own);
+    const set: { name?: string; coverMediaId?: string | null } = {};
+    if (patch.name !== undefined) {
+      const n = patch.name.trim().slice(0, 120);
+      if (n.length < 1) throw new BadRequestException({ error: { code: 'NAME_REQUIRED', message: 'Нужно название.' } });
+      set.name = n;
+    }
+    if (patch.coverMediaId !== undefined) set.coverMediaId = await this.coverOf(userId, patch.coverMediaId);
+    if (Object.keys(set).length === 0) throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Нечего менять.' } });
+    await this.db.update(schema.templates).set(set).where(own);
+  }
+
+  /** TPL-02, ME-01 · a cover is a picture from the creator's own library, or nothing. */
+  private async coverOf(userId: string, mediaId: string | null): Promise<string | null> {
+    if (mediaId === null) return null;
+    const [m] = await this.db
+      .select({ id: schema.media.id })
+      .from(schema.media)
+      .where(and(eq(schema.media.id, mediaId), eq(schema.media.ownerId, userId), eq(schema.media.kind, 'IMAGE'), isNull(schema.media.deletedAt)));
+    if (!m) throw new BadRequestException({ error: { code: 'INVALID_COVER', message: 'Обложка — это ваше изображение из библиотеки.' } });
+    return m.id;
+  }
+
+  /** TPL-02 · the screens and variables of a template (the creator's own or a system one) for inserting a single screen into an assembly. */
+  async templateContent(userId: string, templateId: string): Promise<{ id: string; name: string; screens: unknown[]; variables: unknown[] }> {
+    const [row] = await this.db.select({ name: schema.templates.name }).from(schema.templates).where(and(eq(schema.templates.id, templateId), isNull(schema.templates.deletedAt)));
+    const doc = await this.anyTemplateDocument(userId, templateId);
+    return { id: templateId, name: row?.name ?? doc.meta.title, screens: doc.screens, variables: doc.variables };
   }
 
   /** TPL-02 · delete the creator's own template. */
@@ -223,6 +247,22 @@ export class ProjectsService {
       .from(schema.savedElements)
       .where(and(eq(schema.savedElements.ownerId, userId), isNull(schema.savedElements.deletedAt)))
       .orderBy(desc(schema.savedElements.createdAt));
+  }
+
+  /** ME-01 · rename a saved element and/or change its cover. */
+  async updateElement(userId: string, elementId: string, patch: { name?: string; coverMediaId?: string | null }): Promise<void> {
+    const own = and(eq(schema.savedElements.id, elementId), eq(schema.savedElements.ownerId, userId), isNull(schema.savedElements.deletedAt));
+    const found = await this.db.select({ id: schema.savedElements.id }).from(schema.savedElements).where(own).limit(1);
+    if (found.length === 0) throw new NotFoundException({ error: { code: 'ELEMENT_NOT_FOUND', message: 'Элемент не найден.' } });
+    const set: { name?: string; coverMediaId?: string | null } = {};
+    if (patch.name !== undefined) {
+      const n = patch.name.trim().slice(0, 120);
+      if (n.length < 1) throw new BadRequestException({ error: { code: 'NAME_REQUIRED', message: 'Нужно название.' } });
+      set.name = n;
+    }
+    if (patch.coverMediaId !== undefined) set.coverMediaId = await this.coverOf(userId, patch.coverMediaId);
+    if (Object.keys(set).length === 0) throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Нечего менять.' } });
+    await this.db.update(schema.savedElements).set(set).where(own);
   }
 
   /** ME-01 · delete a saved element. */

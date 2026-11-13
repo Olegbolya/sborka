@@ -48,7 +48,7 @@ const BY_ID = new Set([
   'DELETE /projects/:projectId/access-points/:id', 'GET /projects/:projectId/access-points/:id/qr.png', 'GET /projects/:projectId/access-points/:id/qr.svg',
   'POST /themes/from-project/:projectId', 'GET /themes/:id', 'PUT /themes/:id', 'DELETE /themes/:id', 'POST /themes/:id/duplicate', 'POST /themes/:id/default',
   'DELETE /fonts/:id',
-  'PATCH /templates/:id', 'DELETE /templates/:id', 'GET /elements/:id', 'DELETE /elements/:id',
+  'GET /templates/:id', 'PATCH /templates/:id', 'DELETE /templates/:id', 'GET /elements/:id', 'PATCH /elements/:id', 'DELETE /elements/:id',
 ]);
 
 interface Route {

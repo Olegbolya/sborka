@@ -3,6 +3,14 @@ import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { ProjectsService } from './projects.service.js';
 
+/** The fields of a rename / cover change; anything else is ignored, a wrong type is refused as «nothing to change». */
+export function patchOf(body: { name?: unknown; coverMediaId?: unknown } | null): { name?: string; coverMediaId?: string | null } {
+  const patch: { name?: string; coverMediaId?: string | null } = {};
+  if (typeof body?.name === 'string') patch.name = body.name;
+  if (typeof body?.coverMediaId === 'string' || body?.coverMediaId === null) patch.coverMediaId = body.coverMediaId;
+  return patch;
+}
+
 /** TPL-01..04 · user and system templates gallery, save-as-template, insert-screen-from-template. */
 @Controller('templates')
 export class TemplatesController {
@@ -39,11 +47,18 @@ export class TemplatesController {
     return this.projects.saveProjectAsTemplate(user.id, projectId, name);
   }
 
-  /** TPL-02 · rename the creator's own template. */
+  /** TPL-02 · the screens and variables of a template, to insert one screen into an assembly. */
+  @Get(':id')
+  content(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.projects.templateContent(user.id, id);
+  }
+
+  /** TPL-02 · rename the creator's own template and/or set its cover (`coverMediaId: null` takes it off). */
   @Patch(':id')
   @HttpCode(200)
-  rename(@Param('id') id: string, @Body() body: { name?: unknown } | null, @CurrentUser() user: RequestUser) {
-    return this.projects.renameOwnTemplate(user.id, id, typeof body?.name === 'string' ? body.name : '');
+  async update(@Param('id') id: string, @Body() body: { name?: unknown; coverMediaId?: unknown } | null, @CurrentUser() user: RequestUser) {
+    await this.projects.updateOwnTemplate(user.id, id, patchOf(body));
+    return { ok: true };
   }
 
   /** TPL-02 · delete the creator's own template. */

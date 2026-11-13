@@ -90,6 +90,19 @@ describe('ME-01/ME-02 · сохранённые элементы', () => {
     expect(body.fragment.variables[0]?.id).toBe('v1');
   });
 
+  it('ME-01 · PATCH /elements/:id — переименовать; пустое имя и чужой элемент — отказ', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp();
+    const other = await loginViaOtp();
+    const saved = await request(t.http()).post(`/${API_PREFIX}/elements`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: 'Старое имя', fragment }).expect(200);
+    const id = (saved.body as { id: string }).id;
+    await request(t.http()).patch(`/${API_PREFIX}/elements/${id}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: 'Новое имя' }).expect(200);
+    const list = await request(t.http()).get(`/${API_PREFIX}/elements`).set('Cookie', cookie).expect(200);
+    expect((list.body as { elements: Array<{ id: string; name: string }> }).elements.find((e) => e.id === id)?.name).toBe('Новое имя');
+    await request(t.http()).patch(`/${API_PREFIX}/elements/${id}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ name: '   ' }).expect(400);
+    await request(t.http()).patch(`/${API_PREFIX}/elements/${id}`).set('Cookie', other).set('X-Blokum-CSRF', '1').send({ name: 'Взлом' }).expect(404);
+  });
+
   it('ME-01 · DELETE /elements/:id — удалить элемент', async () => {
     if (skip()) return;
     const cookie = await loginViaOtp();

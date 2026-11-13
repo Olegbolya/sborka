@@ -105,6 +105,29 @@ describe('TPL-01/TPL-02 · свои шаблоны (сохранить, спис
     expect(found?.name).toBe('Переименованный');
   });
 
+  it('TPL-02 · GET /templates/:id — экраны и переменные шаблона для вставки отдельного экрана; чужого и несуществующего нет', async () => {
+    const res = await get(`/templates/${templateId}`).expect(200);
+    const body = res.body as { id: string; name: string; screens: Array<{ id: string; name: string }>; variables: unknown[] };
+    expect(body.id).toBe(templateId);
+    expect(body.screens.length).toBeGreaterThan(0);
+    expect(Array.isArray(body.variables)).toBe(true);
+    await get('/templates/net-takogo-shablona').expect(404);
+  });
+
+  it('TPL-02 · PATCH /templates/:id — обложка: своё изображение из библиотеки, чужой или выдуманный файл — отказ, null снимает', async () => {
+    const [p] = await db.db.select({ ownerId: schema.projects.ownerId }).from(schema.projects).where(eq(schema.projects.id, projectId));
+    const [m] = await db.db.insert(schema.media).values({ ownerId: p!.ownerId, kind: 'IMAGE', mime: 'image/png', bytes: 10, sha256: 'c'.repeat(64), status: 'READY' }).returning();
+    await patch(`/templates/${templateId}`, { coverMediaId: m!.id }).expect(200);
+    const withCover = await get('/templates/mine').expect(200);
+    expect((withCover.body as { templates: Array<{ id: string; coverMediaId: string | null }> }).templates.find((x) => x.id === templateId)?.coverMediaId).toBe(m!.id);
+    const bad = await patch(`/templates/${templateId}`, { coverMediaId: 'chuzhoj-fajl' }).expect(400);
+    expect((bad.body as { error: { code: string } }).error.code).toBe('INVALID_COVER');
+    await patch(`/templates/${templateId}`, { coverMediaId: null }).expect(200);
+    const without = await get('/templates/mine').expect(200);
+    expect((without.body as { templates: Array<{ id: string; coverMediaId: string | null }> }).templates.find((x) => x.id === templateId)?.coverMediaId).toBeNull();
+    await patch(`/templates/${templateId}`, {}).expect(400);
+  });
+
   it('TPL-04 · POST /projects с templateId своего шаблона — независимая копия', async () => {
     const res = await post('/projects', { templateId }).expect(200);
     const newId = (res.body as { id: string }).id;
