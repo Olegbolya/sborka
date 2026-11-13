@@ -113,6 +113,7 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
           if (!e.target.value.trim()) flash('Название не может быть пустым.', 'error');
         }}
       />
+      <div className="ed-top-tools">
       <span className="ed-status" role="status" aria-live="polite" data-testid="save-status" data-status={save.status}>
         {save.text}
       </span>
@@ -150,6 +151,7 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
       <span className="ed-hint" data-testid="project-status">
         {STATUS_NAMES[status]}
       </span>
+      </div>
       <button type="button" className="ed-btn primary" onClick={() => void publish()} disabled={publishing || !hasUnpublished}>
         {publishing ? 'Публикуем…' : status === 'PUBLISHED' ? 'Опубликовать изменения' : 'Опубликовать'}
       </button>

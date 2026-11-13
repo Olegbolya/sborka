@@ -173,4 +173,33 @@ test.describe('E-12 · мобильный редактор', () => {
     expect(onPhone.length).toBeGreaterThan(5);
     expect(onPhone).toEqual(onDesktop);
   });
+  test('E-12 · шапка на телефоне: название сборки видно целиком и не перекрыто кнопкой «Опубликовать»', async ({ page, viewport }, info) => {
+    if (!viewport || viewport.width >= 768) return;
+    const { id } = await seedProject(page, content);
+    await openEditor(page, id);
+    const title = await page.getByLabel('Название сборки').boundingBox();
+    const publish = await page.getByRole('button', { name: /^Опубликовать/ }).boundingBox();
+    const back = await page.getByRole('link', { name: /Мои сборки/ }).boundingBox();
+    expect(title && publish && back).toBeTruthy();
+    expect(title!.width, 'название сборки не сжато до крошечного').toBeGreaterThanOrEqual(120);
+    expect(title!.x, 'название правее кнопки «Мои сборки»').toBeGreaterThanOrEqual(back!.x + back!.width - 1);
+    const overlap = title!.x < publish!.x + publish!.width && publish!.x < title!.x + title!.width && title!.y < publish!.y + publish!.height && publish!.y < title!.y + title!.height;
+    expect(overlap, 'кнопка «Опубликовать» не закрывает название').toBe(false);
+    expect(publish!.x + publish!.width, 'кнопка не уходит за правый край').toBeLessThanOrEqual(viewport.width + 1);
+    mkdirSync(SHOTS, { recursive: true });
+    await page.screenshot({ path: `${SHOTS}/e12-topbar-${info.project.name}.png` });
+  });
+
+  test('E-12 · маркеры выделения не закрывают текст: зона нажатия 24 px, а видимый маркер меньше', async ({ page, viewport }) => {
+    if (!viewport || viewport.width >= 768) return;
+    const { id } = await seedProject(page, content);
+    await openEditor(page, id);
+    await hit(page, 'Дальше').click();
+    const visible = await page.locator('.ed-handle').first().evaluate((el) => {
+      const s = getComputedStyle(el, '::after');
+      return { w: parseFloat(s.width), h: parseFloat(s.height) };
+    });
+    expect(visible.w).toBeLessThanOrEqual(12);
+    expect(visible.h).toBeLessThanOrEqual(12);
+  });
 });
