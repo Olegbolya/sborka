@@ -374,6 +374,13 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const poster = style.media.poster ? ctx.media(style.media.poster)?.url : undefined;
   const body = (
     <>
+      {css.clipDef && (
+        <svg className="bk-clip-def" width="0" height="0" aria-hidden focusable="false" style={{ position: 'absolute', pointerEvents: 'none' }}>
+          <clipPath id={css.clipDef.id} clipPathUnits="objectBoundingBox">
+            <path d={css.clipDef.d} transform={`scale(${1 / css.clipDef.w} ${1 / css.clipDef.h})`} />
+          </clipPath>
+        </svg>
+      )}
       {css.shadowLayers.map((layer, i) => (
         <div key={`shadow-${i}`} className="bk-shadow" aria-hidden style={layer} />
       ))}

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { subscribeOwner } from './helpers/plan';
@@ -211,6 +211,8 @@ test.describe('P6.8 · GS-01 «Письмо Деду Морозу»', () => {
     await page.getByRole('button', { name: 'Опубликовать', exact: true }).click();
     await expect(page.getByText('Сборка опубликована')).toBeVisible();
     const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
+    // Для замеров производительности (P5.7): GOLDEN_DUMP=папка сохраняет документ этой эталонной сборки.
+    if (process.env.GOLDEN_DUMP) writeFileSync(`${process.env.GOLDEN_DUMP}/gs01.json`, JSON.stringify((await serverDraft(page, id)).doc, null, 1));
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.goto(`/cabinet/projects/${id}`);
     await page.getByRole('button', { name: 'Настройки доступа' }).click();

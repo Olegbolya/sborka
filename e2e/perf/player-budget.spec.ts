@@ -1,7 +1,8 @@
 import { gzipSync } from 'node:zlib';
 import { expect, test, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from '../helpers/auth';
-import { nextButton, seedProject, textBlock } from '../helpers/editor';
+import { seedProject, textBlock, type SeedProject } from '../helpers/editor';
+import { seedGolden } from '../helpers/golden';
 
 /*
  * P5.7 · PL-19, N-02: бюджет первого экрана плеера. Считается в проекте «perf-390» (телефон SC-05) на боевой сборке:
@@ -22,33 +23,15 @@ const choice = (id: string, texts: string[]) => ({
   children: texts.map((t, i) => ({ ...textBlock(`${id}_v${i + 1}`, t, 0, i * 60, 300, 50), type: 'shape' })),
 });
 
-/** Эталонные сборки для замера: простая анкета без правил и сборка с правилами (движок сценариев нужен). */
-const builds: Record<string, (d: Doc) => void> = {
-  'игра: 50 движущихся шариков': (d) => {
-    d.screens[0]!.blocks.push(
-      ...Array.from({ length: 50 }, (_, i) => ({
-        id: `sharik${String(i).padStart(2, '0')}`,
-        type: 'shape',
-        name: `Шарик ${i + 1}`,
-        frame: { x: 10 + ((i * 37) % 340), y: 10 + ((i * 53) % 700), w: 28, h: 28 },
-        style: { shape: { kind: 'ellipse' } },
-        behaviors: [{ kind: 'move', angle: (i * 47) % 360, speed: 80 + (i % 7) * 20, edge: 'bounce' }],
-      })),
-    );
-  },
-  'простая анкета': (d) => {
-    d.screens[0]!.blocks.push(textBlock('zagolovok_1', 'Как вам занятие?', 20, 40, 300, 60), choice('vopros_1', ['Отлично', 'Хорошо', 'Так себе']));
-    d.screens[0]!.blocks.push({ id: 'imya_1', type: 'textInput', name: 'Имя', frame: { x: 20, y: 360, w: 300, h: 56 }, props: {} });
-  },
-  'сборка с правилами и переходами': (d) => {
-    d.variables.push({ id: 'ochki_var', name: 'очки', type: 'number', initial: 0, saveToAnswers: false });
-    d.screens[0]!.blocks.push(
-      textBlock('zagolovok_1', 'Поймай подарок', 20, 40, 300, 60),
-      { ...nextButton('plyus_1', 'Плюс', 200), rules: [{ id: 'plyus_pravilo', when: { kind: 'tap', source: { kind: 'block', blockId: 'plyus_1' } }, do: [{ kind: 'setVariable', variableId: 'ochki_var', op: 'add', value: 1 }] }] },
-      nextButton('dalshe_1', 'Дальше', 300),
-    );
-    d.screens.push({ id: 'ekran_dva', name: 'Второй', blocks: [textBlock('vtoroj_t', 'Конец', 20, 60, 300, 60)] });
-  },
+/** Три эталонные сборки (P5.7): простая анкета и две «золотые» — GS-01 «Письмо Деду Морозу» и GS-02 «Своя мини-игра». */
+const builds: Record<string, (page: Page) => Promise<SeedProject>> = {
+  'простая анкета': (page) =>
+    seedProject(page, (d: Doc) => {
+      d.screens[0]!.blocks.push(textBlock('zagolovok_1', 'Как вам занятие?', 20, 40, 300, 60), choice('vopros_1', ['Отлично', 'Хорошо', 'Так себе']));
+      d.screens[0]!.blocks.push({ id: 'imya_1', type: 'textInput', name: 'Имя', frame: { x: 20, y: 360, w: 300, h: 56 }, props: {} });
+    }),
+  'GS-01 «Письмо Деду Морозу»': (page) => seedGolden(page, 'gs01'),
+  'GS-02 «Своя мини-игра»': (page) => seedGolden(page, 'gs02'),
 };
 
 async function measure(page: Page, url: string) {
@@ -76,10 +59,10 @@ async function measure(page: Page, url: string) {
   return { bytes: bodies.reduce((s, b) => s + b.gzip, 0), files: bodies, lcp };
 }
 
-for (const [name, shape] of Object.entries(builds)) {
+for (const [name, seed] of Object.entries(builds)) {
   test(`PL-19: ${name} — JS плеера ≤ 250 КБ gzip, LCP < 2,5 с`, async ({ page, browser }, info) => {
     await loginAndOnboard(page, freshUser('Автор'));
-    const { id } = await seedProject(page, shape as never);
+    const { id } = await seed(page);
     const origin = new URL(page.url()).origin;
     expect((await page.request.post(`/api/v1/projects/${id}/publish`, { data: {}, headers: { origin } })).ok()).toBe(true);
     const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
@@ -94,8 +77,8 @@ for (const [name, shape] of Object.entries(builds)) {
     expect(r.bytes).toBeLessThanOrEqual(JS_BUDGET_BYTES);
     expect(r.lcp).toBeGreaterThan(0);
     expect(r.lcp).toBeLessThan(LCP_BUDGET_MS);
-    if (name.startsWith('игра')) {
-      // SC-05 в настоящем плеере: 50 движущихся объектов — не меньше 50 кадров в секунду при замедлении процессора в 4 раза.
+    if (name.startsWith('GS-02')) {
+      // SC-05 в настоящем плеере: игра GS-02 — не меньше 50 кадров в секунду при замедлении процессора в 4 раза.
       const cdp = await p.context().newCDPSession(p);
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
       await p.waitForTimeout(1000);

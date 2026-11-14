@@ -59,8 +59,9 @@ const SPECS: PropertySpec[] = [
     keys: ['shape'],
     input: { style: { shape: { kind: 'star', points: 6 } } },
     check: (c, base) => {
-      expect(styleOf(c.own('.bk-surface'))).toContain('mask-image:url("data:image/svg+xml');
-      expect(styleOf(base.own('.bk-surface'))).not.toContain('mask-image');
+      expect(styleOf(c.own('.bk-surface'))).toContain('clip-path:url(#bkc-');
+      expect(c.own('.bk-clip-def clipPath')).not.toBeNull();
+      expect(styleOf(base.own('.bk-surface'))).not.toContain('clip-path');
     },
   },
   {

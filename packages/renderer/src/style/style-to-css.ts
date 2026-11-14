@@ -1,6 +1,6 @@
 import { type BlockStyle, type Fill, type MediaRef, type ThemeTokens } from '@blokum/schema';
 import { type CSSProperties } from 'react';
-import { blockMask, innerShadowLayer, outerShadowLayer, shapeMask, strokeLayer } from '../shape/decor.js';
+import { type ShapeClipDef, blockMask, innerShadowLayer, outerShadowLayer, shapeClip, strokeLayer } from '../shape/decor.js';
 import { cssShapeRadius, isCssShape, shapeOutline } from '../shape/outline.js';
 import { cssColor } from '../theme/color.js';
 import { cssFontFamily } from '../theme/fonts.js';
@@ -44,6 +44,8 @@ export interface BlockCss {
   innerLayers: CSSProperties[];
   /** Stroke along the contour (S-05), over the plate. */
   stroke: CSSProperties | null;
+  /** The inline `<clipPath>` the plate and the content of a non-rectangular shape refer to (S-02); `null` for rectangles, capsules and ellipses. */
+  clipDef: ShapeClipDef | null;
   /** The contour in block units — for hit areas and debugging. */
   outline: string;
   /** Content box: padding, text alignment or auto-layout of nested blocks, clipping (S-09, S-19, S-20). */
@@ -230,7 +232,8 @@ export function styleToCss(style: BlockStyle, ctx: StyleContext, size: BlockSize
   };
   const outline = shapeOutline(style.shape, style.radius, w, h);
   const css = isCssShape(style.shape);
-  const clip: CSSProperties = css ? { borderRadius: cssShapeRadius(style.shape, w, h, u, cssRadius(style.radius)) } : shapeMask(outline, w, h);
+  const shapeCut = css ? null : shapeClip(outline, w, h);
+  const clip: CSSProperties = shapeCut ? shapeCut.style : { borderRadius: cssShapeRadius(style.shape, w, h, u, cssRadius(style.radius)) };
   const shadowSpecs = [
     ...style.shadows.map((s) => ({ ...s, color: cssColor(s.color, ctx.tokens) })),
     ...(style.glow && style.glow.size > 0 ? [{ x: 0, y: 0, blur: style.glow.size, spread: style.glow.size / 4, color: cssColor(style.glow.color, ctx.tokens), inset: false }] : []),
@@ -256,6 +259,7 @@ export function styleToCss(style: BlockStyle, ctx: StyleContext, size: BlockSize
     shadowLayers: css ? [] : shadowSpecs.filter((s) => !s.inset).map((s) => outerShadowLayer(s, outline, w, h)),
     innerLayers: css ? [] : shadowSpecs.filter((s) => s.inset).map((s) => innerShadowLayer(s, outline, w, h)),
     stroke: strokeLayer(style.stroke, outline, w, h, strokePaint),
+    clipDef: shapeCut?.def ?? null,
     outline,
     content: contentCss(style, clip),
     text: textCss(style.text, ctx),

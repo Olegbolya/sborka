@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { addBlock, goToScreen, newScreen, openRule, player, renameScreen, rule, selectBlock } from './helpers/build';
@@ -211,6 +212,8 @@ test.describe('P6.9 · GS-02 «Своя мини-игра»', () => {
     await page.getByRole('button', { name: 'Опубликовать' }).click();
     await expect(page.getByTestId('project-status')).toHaveText(/Опубликована/);
     const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
+    // Для замеров производительности (P5.7): GOLDEN_DUMP=папка сохраняет документ этой эталонной сборки.
+    if (process.env.GOLDEN_DUMP) writeFileSync(`${process.env.GOLDEN_DUMP}/gs02.json`, JSON.stringify((await serverDraft(page, id)).doc, null, 1));
     const ctx = await browser.newContext({ baseURL: info.project.use.baseURL!, locale: 'ru-RU', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const p = await ctx.newPage();
     await p.goto(`/s/${slug}`);

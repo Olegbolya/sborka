@@ -11,8 +11,8 @@ test.describe('S-02 · S-03 · S-05 · S-18 · S-19: галерея форм', (
     expect(res?.status()).toBe(200);
     await expect(page.locator('.bk-screen')).toHaveCount(2);
     expect(await page.locator('.bk-block[data-type="shape"]').count()).toBeGreaterThanOrEqual(36 + 21);
-    const star = await page.locator('[data-block-id="gradient-04"] .bk-surface').evaluate((el) => getComputedStyle(el).maskImage);
-    expect(star).toContain('data:image/svg+xml');
+    const star = await page.locator('[data-block-id="gradient-04"] .bk-surface').evaluate((el) => getComputedStyle(el).clipPath);
+    expect(star).toMatch(/^url\(.*#bkc-/);
     expect(await page.locator('[data-block-id="var-08"] .bk-stroke').count()).toBe(1);
     expect(await page.locator('[data-block-id="foto-05"] .bk-shadow').count()).toBe(1);
     const masked = await page.locator('[data-block-id="var-15"]').evaluate((el) => getComputedStyle(el).maskImage);

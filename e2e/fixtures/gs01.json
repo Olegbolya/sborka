@@ -1,0 +1,821 @@
+{
+ "meta": {
+  "title": "Новая сборка",
+  "description": ""
+ },
+ "rules": [],
+ "theme": {
+  "tokens": {
+   "decor": [
+    {
+     "id": "a4epgy52mvrg6mfw",
+     "source": "media"
+    }
+   ],
+   "fonts": {
+    "body": {
+     "kind": "system",
+     "name": "sans"
+    },
+    "heading": {
+     "kind": "system",
+     "name": "rounded"
+    }
+   },
+   "colors": {
+    "text": "#F6F1E8",
+    "error": "#D6336C",
+    "muted": "#A19792",
+    "accent": "#F2B705",
+    "foto_1": "#1C5496",
+    "foto_2": "#1C5AA2",
+    "foto_3": "#8A2E25",
+    "foto_4": "#40597D",
+    "foto_5": "#C9321D",
+    "foto_6": "#CD451D",
+    "foto_7": "#ECCC70",
+    "foto_8": "#F6F1E8",
+    "primary": "#B3261E",
+    "success": "#2F9E44",
+    "surface": "#3E2E2D",
+    "background": "#2D1C1B"
+   },
+   "sounds": {},
+   "particles": {
+    "size": 1,
+    "wind": 0,
+    "speed": 1,
+    "images": [
+     {
+      "id": "zrf7ge3e4xktfz3j",
+      "source": "media"
+     }
+    ],
+    "preset": "custom",
+    "density": 0.5,
+    "rotation": true,
+    "onlyAtStart": false
+   },
+   "background": [
+    {
+     "fit": "cover",
+     "kind": "media",
+     "focal": {
+      "x": 0.5,
+      "y": 0.5
+     },
+     "media": {
+      "id": "924kg8u5rk9c4hbm",
+      "source": "media"
+     },
+     "scale": 1
+    }
+   ],
+   "transitions": [],
+   "blockDefaults": {
+    "button": {
+     "radius": {
+      "bl": 0,
+      "br": 0,
+      "tl": 28,
+      "tr": 0,
+      "unit": "u"
+     }
+    }
+   },
+   "systemScreens": {
+    "age18": {
+     "background": []
+    },
+    "closed": {
+     "background": []
+    },
+    "password": {
+     "background": []
+    }
+   }
+  },
+  "themeId": "57kym2gjukwggje6"
+ },
+ "results": [],
+ "screens": [
+  {
+   "id": "vtfc4wtfx6yk43hf",
+   "kind": "content",
+   "name": "Желание",
+   "rules": [],
+   "blocks": [
+    {
+     "z": 0,
+     "id": "z689tf2nakjh8g2p",
+     "a11y": {},
+     "name": "Заголовок",
+     "type": "text",
+     "frame": {
+      "h": 90,
+      "w": 350,
+      "x": 20,
+      "y": 40,
+      "flipX": false,
+      "flipY": false,
+      "rotation": 0
+     },
+     "props": {},
+     "rules": [],
+     "style": {
+      "autoHeight": true
+     },
+     "locked": false,
+     "children": [],
+     "behaviors": [],
+     "textLayer": {
+      "paragraphs": [
+       {
+        "kind": "p",
+        "runs": [
+         {
+          "t": "Что бы ты хотел получить от Деда Мороза?"
+         }
+        ]
+       }
+      ]
+     },
+     "hiddenInEditor": false,
+     "initiallyHidden": false
+    },
+    {
+     "z": 1,
+     "id": "uafswpaz484ew4jy",
+     "a11y": {},
+     "name": "Подарок",
+     "type": "singleChoice",
+     "frame": {
+      "h": 380,
+      "w": 350,
+      "x": 20,
+      "y": 150,
+      "flipX": false,
+      "flipY": false,
+      "rotation": 0
+     },
+     "props": {
+      "options": [
+       {
+        "id": "nwq39ku45efq3g8g",
+        "score": 0,
+        "blockId": "8cxty7qxgdxrr25e",
+        "correct": false,
+        "resultTags": []
+       },
+       {
+        "id": "cwfq7krd7zwzp3fd",
+        "score": 0,
+        "blockId": "8evtmhprrnw8a98h",
+        "correct": false,
+        "resultTags": []
+       },
+       {
+        "id": "cn6kmrx23zdhkggs",
+        "score": 0,
+        "blockId": "urafx9z8kmh4c2e4",
+        "correct": false,
+        "resultTags": []
+       },
+       {
+        "id": "na6j6m7bm9gz3zwg",
+        "score": 0,
+        "blockId": "th3f65yfwfukfqub",
+        "correct": false,
+        "resultTags": []
+       }
+      ],
+      "shuffle": false,
+      "required": false,
+      "autoAdvance": false
+     },
+     "rules": [],
+     "style": {},
+     "locked": false,
+     "children": [
+      {
+       "z": 0,
+       "id": "8cxty7qxgdxrr25e",
+       "a11y": {},
+       "name": "Вариант 1",
+       "type": "shape",
+       "frame": {
+        "h": 56,
+        "w": 326,
+        "x": 0,
+        "y": 0,
+        "flipX": false,
+        "flipY": false,
+        "rotation": 0
+       },
+       "props": {},
+       "rules": [],
+       "style": {},
+       "locked": false,
+       "children": [],
+       "behaviors": [],
+       "textLayer": {
+        "paragraphs": [
+         {
+          "kind": "p",
+          "runs": [
+           {
+            "t": "Санки"
+           }
+          ]
+         }
+        ]
+       },
+       "hiddenInEditor": false,
+       "initiallyHidden": false
+      },
+      {
+       "z": 0,
+       "id": "8evtmhprrnw8a98h",
+       "a11y": {},
+       "name": "Вариант 2",
+       "type": "shape",
+       "frame": {
+        "h": 70,
+        "w": 300,
+        "x": 0,
+        "y": 72,
+        "flipX": false,
+        "flipY": false,
+        "rotation": 0
+       },
+       "props": {},
+       "rules": [],
+       "style": {
+        "fills": [
+         {
+          "fit": "cover",
+          "kind": "media",
+          "focal": {
+           "x": 0.5,
+           "y": 0.5
+          },
+          "media": {
+           "id": "vubxtts4udq85vz7",
+           "source": "media"
+          },
+          "scale": 1
+         }
+        ],
+        "shape": {
+         "kind": "star",
+         "depth": 0.5,
+         "points": 5,
+         "cornerRadius": 0
+        },
+        "radius": {
+         "bl": 0,
+         "br": 0,
+         "tl": 18,
+         "tr": 0,
+         "unit": "u"
+        },
+        "transform3d": {
+         "origin": {
+          "x": 0.5,
+          "y": 0.5
+         },
+         "rotateX": 20,
+         "rotateY": 0,
+         "tiltFollow": false,
+         "perspective": 1000,
+         "tiltStrength": 10
+        }
+       },
+       "locked": false,
+       "children": [],
+       "behaviors": [],
+       "textLayer": {
+        "paragraphs": [
+         {
+          "kind": "p",
+          "runs": [
+           {
+            "t": "Конструктор"
+           }
+          ]
+         }
+        ]
+       },
+       "hiddenInEditor": false,
+       "initiallyHidden": false
+      },
+      {
+       "z": 0,
+       "id": "urafx9z8kmh4c2e4",
+       "a11y": {},
+       "name": "Вариант 3",
+       "type": "shape",
+       "frame": {
+        "h": 56,
+        "w": 326,
+        "x": 0,
+        "y": 144,
+        "flipX": false,
+        "flipY": false,
+        "rotation": 0
+       },
+       "props": {},
+       "rules": [],
+       "style": {},
+       "locked": false,
+       "children": [],
+       "behaviors": [],
+       "textLayer": {
+        "paragraphs": [
+         {
+          "kind": "p",
+          "runs": [
+           {
+            "t": "Книгу"
+           }
+          ]
+         }
+        ]
+       },
+       "hiddenInEditor": false,
+       "initiallyHidden": false
+      },
+      {
+       "z": 0,
+       "id": "th3f65yfwfukfqub",
+       "a11y": {},
+       "name": "Вариант 4",
+       "type": "shape",
+       "frame": {
+        "h": 56,
+        "w": 326,
+        "x": 0,
+        "y": 216,
+        "flipX": false,
+        "flipY": false,
+        "rotation": 0
+       },
+       "props": {},
+       "rules": [],
+       "style": {},
+       "locked": false,
+       "children": [],
+       "behaviors": [],
+       "textLayer": {
+        "paragraphs": [
+         {
+          "kind": "p",
+          "runs": [
+           {
+            "t": "Щенка"
+           }
+          ]
+         }
+        ]
+       },
+       "hiddenInEditor": false,
+       "initiallyHidden": false
+      }
+     ],
+     "behaviors": [],
+     "hiddenInEditor": false,
+     "initiallyHidden": false
+    },
+    {
+     "z": 2,
+     "id": "s9pjzme8utyp6439",
+     "a11y": {},
+     "name": "Дальше",
+     "type": "button",
+     "frame": {
+      "h": 64,
+      "w": 200,
+      "x": 95,
+      "y": 570,
+      "flipX": false,
+      "flipY": false,
+      "rotation": 0
+     },
+     "props": {
+      "requiresAnswers": false
+     },
+     "rules": [
+      {
+       "do": [
+        {
+         "to": "next",
+         "kind": "goTo"
+        }
+       ],
+       "id": "5y2kbhq8jkb2tms3",
+       "once": false,
+       "when": {
+        "kind": "tap",
+        "source": {
+         "kind": "block",
+         "blockId": "s9pjzme8utyp6439"
+        }
+       },
+       "enabled": true,
+       "priority": 50
+      }
+     ],
+     "style": {},
+     "locked": false,
+     "children": [],
+     "behaviors": [],
+     "textLayer": {
+      "paragraphs": [
+       {
+        "kind": "p",
+        "runs": [
+         {
+          "t": "Дальше"
+         }
+        ]
+       }
+      ]
+     },
+     "hiddenInEditor": false,
+     "initiallyHidden": false
+    }
+   ],
+   "height": 844,
+   "branches": [],
+   "background": [],
+   "transitionIn": {
+    "blur": 0,
+    "kind": "fade",
+    "scale": 1,
+    "easing": {
+     "kind": "preset",
+     "name": "easeOut"
+    },
+    "delayMs": 0,
+    "direction": "left",
+    "durationMs": 400
+   },
+   "mediaByAnswer": {
+    "cases": [
+     {
+      "when": {
+       "kind": "option",
+       "optionId": "na6j6m7bm9gz3zwg"
+      },
+      "overlay": {
+       "media": {
+        "id": "xh4fwkawc6b4dy85",
+        "source": "media"
+       },
+       "caption": {
+        "font": {
+         "kind": "system",
+         "name": "sans"
+        },
+        "size": 36,
+        "text": "ЩЕНОК? ЗВУЧИТ СЕРЬЁЗНО",
+        "color": {
+         "hex": "#FFFFFF"
+        },
+        "outline": 3,
+        "position": "bottom"
+       },
+       "seconds": 1.5,
+       "skippable": true
+      }
+     }
+    ],
+    "questionBlockId": "uafswpaz484ew4jy"
+   }
+  },
+  {
+   "id": "8skcrec5g84846nz",
+   "kind": "content",
+   "name": "Письмо",
+   "rules": [],
+   "blocks": [
+    {
+     "z": 0,
+     "id": "dm6jrrd64vr8q6zp",
+     "a11y": {},
+     "name": "Просьба",
+     "type": "text",
+     "frame": {
+      "h": 80,
+      "w": 350,
+      "x": 20,
+      "y": 40,
+      "flipX": false,
+      "flipY": false,
+      "rotation": 0
+     },
+     "props": {},
+     "rules": [],
+     "style": {
+      "autoHeight": true
+     },
+     "locked": false,
+     "children": [],
+     "behaviors": [],
+     "textLayer": {
+      "paragraphs": [
+       {
+        "kind": "p",
+        "runs": [
+         {
+          "t": "Напиши пожелание"
+         }
+        ]
+       }
+      ]
+     },
+     "hiddenInEditor": false,
+     "initiallyHidden": false
+    },
+    {
+     "z": 1,
+     "id": "6ktjq4r2g9kbng4b",
+     "a11y": {},
+     "name": "Пожелание",
+     "type": "textInput",
+     "frame": {
+      "h": 160,
+      "w": 350,
+      "x": 20,
+      "y": 150,
+      "flipX": false,
+      "flipY": false,
+      "rotation": 0
+     },
+     "props": {
+      "mask": "none",
+      "required": false,
+      "semantic": "none",
+      "maxLength": 500,
+      "minLength": 0,
+      "multiline": false,
+      "placeholder": ""
+     },
+     "rules": [],
+     "style": {},
+     "locked": false,
+     "children": [],
+     "behaviors": [],
+     "hiddenInEditor": false,
+     "initiallyHidden": false
+    },
+    {
+     "z": 2,
+     "id": "gj56nhv2ay3wv7aj",
+     "a11y": {},
+     "name": "Отправить",
+     "type": "button",
+     "frame": {
+      "h": 64,
+      "w": 200,
+      "x": 95,
+      "y": 400,
+      "flipX": false,
+      "flipY": false,
+      "rotation": 0
+     },
+     "props": {
+      "requiresAnswers": false
+     },
+     "rules": [
+      {
+       "do": [
+        {
+         "to": "next",
+         "kind": "goTo"
+        }
+       ],
+       "id": "ssnndtr2hphcq4wu",
+       "once": false,
+       "when": {
+        "kind": "tap",
+        "source": {
+         "kind": "block",
+         "blockId": "gj56nhv2ay3wv7aj"
+        }
+       },
+       "enabled": true,
+       "priority": 50
+      }
+     ],
+     "style": {},
+     "locked": false,
+     "children": [],
+     "behaviors": [],
+     "textLayer": {
+      "paragraphs": [
+       {
+        "kind": "p",
+        "runs": [
+         {
+          "t": "Отправить"
+         }
+        ]
+       }
+      ]
+     },
+     "hiddenInEditor": false,
+     "initiallyHidden": false
+    }
+   ],
+   "height": 844,
+   "branches": [],
+   "background": [],
+   "transitionIn": {
+    "kind": "media",
+    "overlay": {
+     "media": {
+      "id": "m4znvv6mf8afn2dj",
+      "source": "media"
+     },
+     "caption": {
+      "font": {
+       "kind": "system",
+       "name": "sans"
+      },
+      "size": 36,
+      "text": "ДЕД МОРОЗ УЖЕ ПИШЕТ ОТВЕТ",
+      "color": {
+       "hex": "#FFFFFF"
+      },
+      "outline": 3,
+      "position": "bottom"
+     },
+     "seconds": 1.5,
+     "skippable": true
+    }
+   }
+  },
+  {
+   "id": "bx55szg3wfu6dt98",
+   "kind": "content",
+   "name": "Финал",
+   "rules": [
+    {
+     "do": [
+      {
+       "ms": 0,
+       "kind": "wait"
+      },
+      {
+       "kind": "effect",
+       "effect": "confetti",
+       "intensity": 1
+      },
+      {
+       "kind": "playSound",
+       "media": {
+        "id": "wghv8w5drexqu8ay",
+        "source": "media"
+       }
+      }
+     ],
+     "id": "x6rmjw9crfgrnzfu",
+     "once": false,
+     "when": {
+      "kind": "screen",
+      "phase": "show"
+     },
+     "enabled": true,
+     "priority": 50
+    }
+   ],
+   "blocks": [
+    {
+     "z": 0,
+     "id": "n2e96fn4c6j99ff8",
+     "a11y": {},
+     "name": "Спасибо",
+     "type": "text",
+     "frame": {
+      "h": 120,
+      "w": 350,
+      "x": 20,
+      "y": 120,
+      "flipX": false,
+      "flipY": false,
+      "rotation": 0
+     },
+     "props": {},
+     "rules": [],
+     "style": {
+      "autoHeight": true
+     },
+     "locked": false,
+     "children": [],
+     "behaviors": [],
+     "textLayer": {
+      "paragraphs": [
+       {
+        "kind": "p",
+        "runs": [
+         {
+          "t": "Письмо отправлено! Дед Мороз уже читает."
+         }
+        ]
+       }
+      ]
+     },
+     "hiddenInEditor": false,
+     "initiallyHidden": false
+    },
+    {
+     "z": 1,
+     "id": "8tjq5n8znucbav4e",
+     "a11y": {},
+     "name": "Закончить",
+     "type": "button",
+     "frame": {
+      "h": 64,
+      "w": 200,
+      "x": 95,
+      "y": 400,
+      "flipX": false,
+      "flipY": false,
+      "rotation": 0
+     },
+     "props": {
+      "requiresAnswers": false
+     },
+     "rules": [
+      {
+       "do": [
+        {
+         "to": "next",
+         "kind": "goTo"
+        }
+       ],
+       "id": "c684hs8ags56tggg",
+       "once": false,
+       "when": {
+        "kind": "tap",
+        "source": {
+         "kind": "block",
+         "blockId": "8tjq5n8znucbav4e"
+        }
+       },
+       "enabled": true,
+       "priority": 50
+      }
+     ],
+     "style": {},
+     "locked": false,
+     "children": [],
+     "behaviors": [],
+     "textLayer": {
+      "paragraphs": [
+       {
+        "kind": "p",
+        "runs": [
+         {
+          "t": "Закончить"
+         }
+        ]
+       }
+      ]
+     },
+     "hiddenInEditor": false,
+     "initiallyHidden": false
+    }
+   ],
+   "height": 844,
+   "branches": [],
+   "background": [],
+   "transitionIn": {
+    "blur": 0,
+    "kind": "fade",
+    "scale": 1,
+    "easing": {
+     "kind": "preset",
+     "name": "easeOut"
+    },
+    "delayMs": 0,
+    "direction": "left",
+    "durationMs": 400
+   }
+  }
+ ],
+ "artboard": {
+  "width": 390
+ },
+ "settings": {
+  "audience": "general",
+  "tieBreak": "first",
+  "allowBack": true,
+  "feedbackMode": "end",
+  "showProgress": false,
+  "soundEnabledByDefault": true
+ },
+ "variables": [],
+ "schemaVersion": 1
+}

@@ -139,12 +139,14 @@ describe('S-02: контуры всех форм', () => {
 describe('S-05 · S-06 · S-19: обводка, тени и маски по контуру', () => {
   const css = (s: Record<string, unknown>, w = 200, h = 100) => styleToCss(BlockStyle.parse(s), ctx, { w, h });
 
-  it('S-02: фигура вырезается маской по контуру, без тени CSS', () => {
+  it('S-02: фигура вырезается встроенным контуром (clip-path), без тени CSS', () => {
     const c = css({ shape: { kind: 'star' }, shadows: [{ x: 2, y: 4, blur: 8, spread: 2 }] });
-    expect(c.surface.maskImage).toMatch(/^url\("data:image\/svg\+xml,/);
-    expect(decodeURIComponent(String(c.surface.maskImage))).toContain('viewBox="0 0 200 100"');
+    expect(c.surface.clipPath).toMatch(/^url\(#bkc-[a-z0-9]+\)$/);
+    expect(c.surface.maskImage).toBeUndefined();
+    expect(c.clipDef).toMatchObject({ w: 200, h: 100, d: c.outline });
+    expect(c.surface.clipPath).toBe(`url(#${c.clipDef!.id})`);
     expect(c.surface.boxShadow).toBeUndefined();
-    expect(c.content.maskImage).toBe(c.surface.maskImage);
+    expect(c.content.clipPath).toBe(c.surface.clipPath);
     expect(c.shadowLayers).toHaveLength(1);
   });
 

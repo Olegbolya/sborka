@@ -17,7 +17,7 @@ test.describe('S-00: сетка «все блоки × ключевые свой
       expect((await page.goto(`/dev/matrix?theme=${theme}`))?.status()).toBe(200);
       await expect(page.locator('.bk-block[data-block-id^="m-"]')).toHaveCount(22 * 6);
       // Every type got the star contour, the dashed stroke, the 3D tilt and the faded mask.
-      const stars = await page.locator('.bk-block[data-block-id$="-forma"]').evaluateAll((els) => els.filter((el) => getComputedStyle(el.querySelector(':scope > .bk-surface')!).maskImage.includes('data:image/svg+xml')).length);
+      const stars = await page.locator('.bk-block[data-block-id$="-forma"]').evaluateAll((els) => els.filter((el) => getComputedStyle(el.querySelector(':scope > .bk-surface')!).clipPath.startsWith('url(')).length);
       expect(stars).toBe(22);
       await expect(page.locator('.bk-block[data-block-id$="-obvodka"] > .bk-stroke')).toHaveCount(22);
       const tilted = await page.locator('.bk-block[data-block-id$="-tri-d"]').evaluateAll((els) => els.filter((el) => getComputedStyle(el).transform !== 'none').length);

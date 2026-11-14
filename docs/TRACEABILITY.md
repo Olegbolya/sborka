@@ -572,7 +572,7 @@
 | E-19 | P3.2 | `apps/web/components/editor/HistoryDialog.tsx` | `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
 | E-20 | P3.13 | `apps/web/components/editor/PreviewDialog.tsx` | `apps/web/test/editor-preview.test.ts`, `e2e/preview.spec.ts` |
 | SR-01 | P9.1 | `apps/api/src/admin/safety.service.ts`; `packages/schema/src/safety/` | `packages/schema/test/safety.test.ts`, `apps/api/test/safety.test.ts` |
-| PL-19 | P5.7 | `e2e/perf/player-budget.spec.ts` (бюджет JS и LCP) | `e2e/perf/player-budget.spec.ts`, `e2e/perf/lighthouse.spec.ts` |
+| PL-19 | P5.7 | `e2e/perf/player-budget.spec.ts`; `packages/renderer/src/shape/decor.ts#shapeClip;` | `e2e/perf/player-budget.spec.ts`, `e2e/perf/lighthouse.spec.ts` |
 | N-01 | P3.15 | `apps/web/components/editor/Canvas.tsx` | `e2e/perf/editor.spec.ts` |
 | D-09 | P7.6 | `apps/web/components/billing/BillingSummary.tsx`; `apps/web/components/billing/PlanActions.tsx` | `e2e/billing-pass.spec.ts`, `e2e/billing-addons.spec.ts`, `e2e/payments-admin.spec.ts` |
 | Q-03 | P6.2 | `apps/api/src/projects/qr-render.ts#parseQrStyle`; `apps/api/src/projects/qr-render.ts#colourProblem`; `apps/api/src/projects/qr-render.ts#buildSvg`; `apps/api/src/projects/qr-render.ts#renderPng`; `apps/api/src/projects/access-points.service.ts#setQrStyle`; `apps/web/components/cabinet/QrDesigner.tsx` | `apps/api/test/qr.test.ts`, `e2e/qr-designer.spec.ts` |

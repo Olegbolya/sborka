@@ -25,6 +25,27 @@ export function shapeMask(d: string, w: number, h: number): CSSProperties {
   return { maskImage: image, WebkitMaskImage: image, maskSize: '100% 100%', WebkitMaskSize: '100% 100%', maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat' };
 }
 
+/** Contour of a non-rectangular shape as an inline clip path: it is part of the markup, so the block is painted at once (P5.7). */
+export interface ShapeClipDef {
+  id: string;
+  d: string;
+  w: number;
+  h: number;
+}
+
+/**
+ * The shape is cut out by `clip-path: url(#…)` to an inline `<clipPath>` instead of a `mask-image` with a `data:` picture: such a
+ * picture is decoded asynchronously and the block (often the largest one on the screen) was painted hundreds of milliseconds later
+ * than its text (PL-19, LCP). The contour is the same; the id depends only on the contour and the size, so equal shapes share it.
+ */
+export function shapeClip(d: string, w: number, h: number): { style: CSSProperties; def: ShapeClipDef } {
+  let hash = 5381;
+  for (const ch of `${d}|${fmt(w)}|${fmt(h)}`) hash = ((hash * 33) ^ ch.charCodeAt(0)) >>> 0;
+  const id = `bkc-${hash.toString(36)}`;
+  const ref = `url(#${id})`;
+  return { style: { clipPath: ref, WebkitClipPath: ref }, def: { id, d, w, h } };
+}
+
 /** Dash pattern of the stroke in units (S-05). */
 export function dashArray(stroke: BlockStyle['stroke']): string | null {
   if (stroke.style === 'solid') return null;
