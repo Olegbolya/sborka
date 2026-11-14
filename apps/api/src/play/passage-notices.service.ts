@@ -17,8 +17,7 @@ const clip = (text: string, n: number): string => (text.length > n ? `${text.sli
 /**
  * D-07 · when a message about a passage goes out. The plan decides what may be chosen (04-TARIFFS: «Старт» — a digest once a day,
  * paid plans — at once, or once an hour, or once a day); the creator chooses within that, per project. A passage that is not sent at
- * once waits in `passage_digest_queue`; once a minute the digest sends what is due as ONE message (the cabinet and, with a confirmed
- * address, a letter). Switching the mode sends what has already waited under the old one the next minute.
+ * once waits in `passage_digest_queue`; once a minute the digest sends what is due as ONE message (in the cabinet; no mail — decision of the owner). Switching the mode sends what has already waited under the old one the next minute.
  */
 @Injectable()
 export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
@@ -55,7 +54,7 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
   async deliver(input: { ownerId: string; projectId: string; title: string; body: string; mode: PassageMode }): Promise<void> {
     if (input.mode === 'off') return;
     if (input.mode === 'instant') {
-      await this.notices.notify({ userId: input.ownerId, kind: 'passage', title: input.title, body: input.body, projectId: input.projectId });
+      await this.notices.notify({ userId: input.ownerId, kind: 'passage', title: input.title, body: input.body, projectId: input.projectId, mail: false });
       return;
     }
     const [queued] = await this.db
@@ -100,7 +99,7 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
       const title = `Новые прохождения «${clip(project?.title ?? 'Сборка', 80)}»: ${rows.length} ${span}`;
       // The rows go first: a failed letter must not send the same digest again a minute later (the cabinet message is the record).
       await this.db.delete(schema.passageDigestQueue).where(inArray(schema.passageDigestQueue.id, rows.map((r) => r.id)));
-      await this.notices.notify({ userId: g.userId, kind: 'passage', title, body, projectId: g.projectId });
+      await this.notices.notify({ userId: g.userId, kind: 'passage', title, body, projectId: g.projectId, mail: false });
       sent += 1;
     }
     return sent;

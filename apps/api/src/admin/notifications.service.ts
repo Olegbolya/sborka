@@ -21,6 +21,8 @@ export interface NoticeInput {
   title: string;
   body: string;
   projectId?: string | null;
+  /** `false` — the message stays in the cabinet only (the owner's decision of 14.11.2026: passages are not sent by mail). */
+  mail?: boolean;
 }
 
 /** A message to a user: it is kept for the cabinet and goes by mail when the user has a confirmed address (docs/06-TRUST-SAFETY.md §5). */
@@ -39,7 +41,7 @@ export class NotificationsService {
       .values({ userId: input.userId, kind: input.kind, title: input.title, body: input.body, projectId: input.projectId ?? null })
       .returning({ id: schema.notifications.id });
     const [user] = await this.db.select({ email: schema.users.email, verified: schema.users.emailVerifiedAt }).from(schema.users).where(eq(schema.users.id, input.userId));
-    if (user?.email && user.verified && this.email?.sendNotice) {
+    if (input.mail !== false && user?.email && user.verified && this.email?.sendNotice) {
       // Mail is an extra: a failed delivery must not undo the decision that was just made.
       await this.email.sendNotice(user.email, input.title, input.body).catch(() => undefined);
     }
