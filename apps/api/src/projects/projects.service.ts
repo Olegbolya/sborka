@@ -20,7 +20,7 @@ import { RESERVED_SLUGS } from './slug-rules.js';
 import { type PassageMode, allowedPassageModes, effectivePassageMode, isPassageMode } from '../play/passage-mode.js';
 
 /** The settings of access the cabinet may write (PL-06…PL-10); the password goes separately and is stored as a hash. */
-const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'ageRating', 'singleAttempt', 'restartOnReload', 'showBack', 'closedText', 'answersRetentionDays'] as const;
+const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'ageRating', 'singleAttempt', 'restartOnReload', 'showBack', 'closedText', 'answersRetentionDays', 'allowIndexing'] as const;
 
 export interface ProjectSettings {
   /** PL-06 · at most so many started and/or completed passages. */
@@ -46,6 +46,8 @@ export interface ProjectSettings {
   /** PL-11 · the creator lets the participant see the «← Назад» button (hidden by default: it may break the design). */
   showBack?: boolean;
   closedText?: string;
+  /** PL-05 · the creator lets search engines index the build (the plan must have it; `noindex` otherwise). */
+  allowIndexing?: boolean;
   /** D-07 · how often the creator hears about passages: at once, once an hour, once a day, never. */
   notifications?: { passage?: PassageMode };
 }
@@ -730,9 +732,9 @@ export class ProjectsService {
   }
 
   /** The settings of the owner and whether publishing needs an age category here (the editor asks for it on «Опубликовать»). */
-  async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings & { ageRatingRequired: boolean; noticeModes: NoticeModes }> {
+  async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings & { ageRatingRequired: boolean; noticeModes: NoticeModes; indexingAllowed: boolean }> {
     const row = await this.assertOwner(userId, projectId);
-    return { ...this.forOwner((row.settings ?? {})), ageRatingRequired: this.ageRatingRequired === true, noticeModes: await this.noticeModes(row.ownerId, projectId, row.settings ?? {}) };
+    return { ...this.forOwner((row.settings ?? {})), ageRatingRequired: this.ageRatingRequired === true, noticeModes: await this.noticeModes(row.ownerId, projectId, row.settings ?? {}), indexingAllowed: (await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits.allowIndexing };
   }
 
   /** PL-01: the address of the build and whether the plan lets the creator change it. */
@@ -788,6 +790,12 @@ export class ProjectsService {
     }
     if (incoming.answersRetentionDays !== undefined && incoming.answersRetentionDays !== null && (!Number.isInteger(incoming.answersRetentionDays) || (incoming.answersRetentionDays as number) < 1 || (incoming.answersRetentionDays as number) > 3650)) {
       throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Срок хранения ответов — от 1 до 3650 дней.' } });
+    }
+    if (incoming.allowIndexing !== undefined && incoming.allowIndexing !== null) {
+      if (typeof incoming.allowIndexing !== 'boolean') throw bad();
+      if (incoming.allowIndexing && !(await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits.allowIndexing) {
+        throw new HttpException({ error: { code: 'PLAN_LIMIT', message: 'Разрешить поиск по сборке можно на тарифе «Про».' } }, 402);
+      }
     }
     if (settings.notifications !== undefined) {
       const passage = (settings.notifications as { passage?: unknown } | null)?.passage;

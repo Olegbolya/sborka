@@ -649,6 +649,34 @@ function SlugCard({ projectId, setError }: { projectId: string; setError: (e: st
   );
 }
 
+function IndexingCard({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
+  const [state, setState] = useState<{ on: boolean; allowed: boolean } | null>(null);
+  useEffect(() => {
+    apiFetch<{ allowIndexing?: boolean; indexingAllowed: boolean }>(`/projects/${projectId}/access-settings`)
+      .then((r) => setState({ on: r.allowIndexing === true, allowed: r.indexingAllowed }))
+      .catch((e: Error) => setError(e.message));
+  }, [projectId, setError]);
+  if (!state) return null;
+  async function change(on: boolean) {
+    setState((prev) => (prev ? { ...prev, on } : prev));
+    try {
+      await apiFetch(`/projects/${projectId}/access-settings`, { method: 'PATCH', headers: CSRF, body: JSON.stringify({ allowIndexing: on }) });
+    } catch (e) {
+      setState((prev) => (prev ? { ...prev, on: !on } : prev));
+      setError((e as Error).message);
+    }
+  }
+  return (
+    <div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+        <input type="checkbox" checked={state.on && state.allowed} disabled={!state.allowed} onChange={(e) => void change(e.target.checked)} aria-label="Разрешить поиск по сборке" />
+        Разрешить поиск по сборке {state.allowed ? '' : '🔒'}
+      </label>
+      <p style={s.hint}>{state.allowed ? 'Поисковики смогут показывать эту сборку в результатах. По умолчанию она скрыта от поиска.' : 'Доступно на тарифе «Про». Пока сборка скрыта от поисковиков.'}</p>
+    </div>
+  );
+}
+
 function NoticeModeCard({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
   const [modes, setModes] = useState<{ allowed: string[]; effective: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -877,6 +905,8 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
       </div>
 
       <SlugCard projectId={projectId} setError={setError} />
+
+      <IndexingCard projectId={projectId} setError={setError} />
 
       <NoticeModeCard projectId={projectId} setError={setError} />
 

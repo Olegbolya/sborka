@@ -15,6 +15,11 @@ import { checkUnlockToken, deviceHash, unlockToken, verifyPassword } from './sec
 /** The first state a participant meets (docs/01-PRODUCT-SPEC.md §10.3). */
 export type PlayView = PlayOpen | PlayBlocked;
 
+/** PL-05: `noindex` unless the creator allowed indexing and the plan still has it (a lowered plan closes the build again). */
+function indexable(settings: unknown, planAllows: boolean): boolean {
+  return planAllows && (settings as { allowIndexing?: unknown } | null)?.allowIndexing === true;
+}
+
 export interface PlayOpen {
   state: 'ok';
   projectId: string;
@@ -198,6 +203,7 @@ export class PlayService {
       .where(and(eq(schema.projectVersions.id, versionId), eq(schema.projects.id, projectId)));
     if (!row) throw unavailable();
     const doc = row.document as unknown as ProjectDocument;
+    const limits = (await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits;
     const fontsMap = await this.fontsOf(row.ownerId, doc);
     const media = await this.mediaOf(row.ownerId, doc);
     // Добавляем WOFF2 медиафайлы шрифтов в карту media
@@ -214,11 +220,11 @@ export class PlayService {
       title: doc.meta.title,
       description: doc.meta.description,
       ogImageId: previewImageId(doc),
-      indexable: false,
+      indexable: indexable(row.settings, limits.allowIndexing),
       document: toPublicDocument(doc),
       media,
       fonts: fontsMap,
-      ...marks(row, (await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits.watermark),
+      ...marks(row, limits.watermark),
     };
   }
 
@@ -231,6 +237,7 @@ export class PlayService {
     // 5. Password, 6. «18+»: the document is not sent before they are passed.
     if (!this.unlocked(p, ctx.unlock)) return blocked('password', p.doc.theme.tokens.systemScreens.password.text || 'Введите пароль, чтобы открыть');
     if (p.settings.age18 && !ctx.ageConfirmed) return blocked('age18', p.doc.theme.tokens.systemScreens.age18.text || 'Материал для тех, кому есть 18 лет');
+    const limits = (await this.entitlements.limitsOfProject(p.ownerId, p.id, now)).plan.limits;
     const media = await this.mediaOf(p.ownerId, p.doc);
     const fontsMap = await this.fontsOf(p.ownerId, p.doc);
     // Добавляем WOFF2 медиафайлы шрифтов в карту media
@@ -247,11 +254,11 @@ export class PlayService {
       title: p.doc.meta.title,
       description: p.doc.meta.description,
       ogImageId: previewImageId(p.doc),
-      indexable: false,
+      indexable: indexable(p.settings, limits.allowIndexing),
       document: toPublicDocument(p.doc),
       media,
       fonts: fontsMap,
-      ...marks(p, (await this.entitlements.limitsOfProject(p.ownerId, p.id, now)).plan.limits.watermark),
+      ...marks(p, limits.watermark),
     };
   }
 

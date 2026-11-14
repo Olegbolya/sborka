@@ -41,4 +41,41 @@ test.describe('P7.1 · свой адрес ссылки', () => {
     await page.getByRole('button', { name: 'Настройки доступа' }).click();
     await expect(field).toHaveValue(own);
   });
+  test('PL-05 · «Старт»: поиск по сборке закрыт; «Про» включает галочку — страница сборки получает index, выключает — снова noindex', async ({ page, browser }, info) => {
+    await loginAndOnboard(page, freshUser('Автор'));
+    const { id } = await seedProject(page, (d) => {
+      d.screens[0]!.blocks.push(nextButton('dalshe_1'));
+    });
+    const hdr = { 'X-Blokum-CSRF': '1', 'Content-Type': 'application/json' };
+    expect((await page.request.post(`/api/v1/projects/${id}/publish`, { headers: hdr })).ok()).toBe(true);
+    const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
+    await page.goto(`/cabinet/projects/${id}`);
+    await page.getByRole('button', { name: 'Настройки доступа' }).click();
+    const box = page.getByLabel('Разрешить поиск по сборке');
+    await expect(box).toBeDisabled();
+    await expect(page.getByText('Доступно на тарифе «Про»')).toBeVisible();
+    mkdirSync(SHOTS, { recursive: true });
+    await box.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/indexing-start-${info.project.name}.png` });
+
+    await subscribeOwner(id, 'PRO');
+    await page.reload();
+    await page.getByRole('button', { name: 'Настройки доступа' }).click();
+    await expect(box).toBeEnabled();
+    await box.check();
+    await expect.poll(async () => ((await (await page.request.get(`/api/v1/projects/${id}/access-settings`)).json()) as { allowIndexing?: boolean }).allowIndexing).toBe(true);
+    await box.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/indexing-pro-${info.project.name}.png` });
+
+    const ctx = await browser.newContext({ baseURL: info.project.use.baseURL });
+    const guest = await ctx.newPage();
+    await guest.goto(`/s/${slug}`);
+    expect(await guest.locator('meta[name="robots"]').first().getAttribute('content')).toContain('index');
+    expect(await guest.locator('meta[name="robots"]').first().getAttribute('content')).not.toContain('noindex');
+    await box.uncheck();
+    await expect.poll(async () => ((await (await page.request.get(`/api/v1/projects/${id}/access-settings`)).json()) as { allowIndexing?: boolean }).allowIndexing).toBe(false);
+    await guest.goto(`/s/${slug}`);
+    expect(await guest.locator('meta[name="robots"]').first().getAttribute('content')).toContain('noindex');
+    await ctx.close();
+  });
 });
