@@ -302,7 +302,7 @@
 | B-05 | P4.1 | `apps/api/src/media/signatures.ts#AUDIO`; `apps/api/src/media/media.service.ts`; `apps/api/src/media/entitlements.ts` | `apps/api/test/media.test.ts` |
 | B-07 | P4.1 | `apps/api/src/media/signatures.ts#LOTTIE`; `apps/api/src/media/media.service.ts` | `apps/api/test/media.test.ts` |
 | TS-01 | P4.1 | `apps/api/src/media/signatures.ts#FORBIDDEN_MIMES` | `apps/api/test/media.test.ts` |
-| TS-20 | P4.2 | `apps/worker/src/media/images.ts` (EXIF strip, WebP variants, HEIC→JPEG); `apps/worker/src/media/video.ts` (GIF→MP4/WebM+poster, VIDEO→720p); `apps/worker/src/media/processor.ts` | `apps/worker/test/images.test.ts`; `apps/worker/test/video.test.ts` |
+| TS-20 | P4.2 | apps/worker/src/media/images.ts#processImage; apps/worker/src/media/video.ts#processGif; apps/worker/src/media/video.ts#processVideo; apps/worker/src/media/video.ts#processAudio; apps/worker/src/media/video.ts#assertVideoLength; apps/worker/src/media/processor.ts; apps/api/src/media/media.service.ts | apps/worker/test/images.test.ts; apps/worker/test/video.test.ts; apps/api/test/media.test.ts |
 | TS-21 | P4.2 | `apps/worker/src/media/clamav.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/clamav.test.ts` |
 | TS-25 | P4.2 | `apps/worker/src/media/lottie.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/lottie.test.ts` |
 | D-08 | P4.4 | `apps/api/src/media/media.service.ts#checkUsage`; `apps/api/src/media/media.controller.ts` | `apps/api/test/media.test.ts` |

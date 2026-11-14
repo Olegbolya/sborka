@@ -73,7 +73,7 @@ export class MediaService {
       .returning();
     if (!row) throw new Error('Запись медиафайла не создана');
 
-    await this.queue.add(MEDIA_PROCESS_JOB, { mediaId, ownerId, filePath: this.storage.getPath(key), mime, kind });
+    await this.queue.add(MEDIA_PROCESS_JOB, { mediaId, ownerId, filePath: this.storage.getPath(key), mime, kind, maxVideoHeight: limits.maxVideoHeight, maxVideoSeconds: limits.maxVideoSeconds });
 
     return rowToDto(row);
   }
@@ -143,7 +143,7 @@ export class MediaService {
       .returning();
     if (!row) throw new Error('Запись медиафайла не создана');
 
-    await this.queue.add(MEDIA_PROCESS_JOB, { mediaId, ownerId, filePath: destPath, mime, kind });
+    await this.queue.add(MEDIA_PROCESS_JOB, { mediaId, ownerId, filePath: destPath, mime, kind, maxVideoHeight: limits.maxVideoHeight, maxVideoSeconds: limits.maxVideoSeconds });
 
     return rowToDto(row);
   }

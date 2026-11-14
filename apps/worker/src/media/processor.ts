@@ -14,7 +14,7 @@ import { cleanLottie, LottieError } from './lottie.js';
 import { MEDIA_QUEUE_NAME, MEDIA_PROCESS_JOB, type MediaJobData } from './jobs.js';
 import { computePhash, phashDistance, PHASH_MAX_DISTANCE } from './phash.js';
 import { classifyNsfw, isNsfwModelAvailable } from './nsfw.js';
-import { isFfmpegAvailable, processGif, processVideo } from './video.js';
+import { DEFAULT_MAX_VIDEO_HEIGHT, isFfmpegAvailable, assertVideoLength, processAudio, processGif, processVideo, VideoTooLongError } from './video.js';
 
 export interface MediaProcessorOptions {
   connection: RedisOptions;
@@ -163,21 +163,36 @@ async function processJob(data: MediaJobData, opts: MediaProcessorOptions): Prom
     }
 
     if (kind === 'VIDEO') {
-      // TS-20: перекодирование видео в 720p H.264 MP4.
+      // TS-20: перекодирование видео в H.264 MP4 (720p; 1080p на «Про», ADR-035).
       if (await isFfmpegAvailable()) {
-        const result = await processVideo(filePath, mediaId);
+        // Длину проверяем до перекодирования: слишком длинное видео не тратит время процессора.
+        if (data.maxVideoSeconds !== undefined) {
+          await assertVideoLength(filePath, data.maxVideoSeconds);
+        }
+        const result = await processVideo(filePath, mediaId, data.maxVideoHeight ?? DEFAULT_MAX_VIDEO_HEIGHT);
         width = result.width;
         height = result.height;
         durationMs = result.durationMs;
         mime = 'video/mp4';
         variants = result.variants;
-        logger.info({ mediaId }, 'TS-20 · VIDEO → 720p MP4 перекодирован');
+        logger.info({ mediaId, maxHeight: data.maxVideoHeight ?? DEFAULT_MAX_VIDEO_HEIGHT }, 'TS-20 · VIDEO → H.264 MP4 перекодирован');
       } else {
         logger.warn({ mediaId }, 'ffmpeg недоступен — VIDEO-перекодирование пропущено (TS-20)');
       }
     }
 
-    // AUDIO: ClamAV проверен выше, без перекодирования (AAC/Opus — после MVP).
+    if (kind === 'AUDIO') {
+      // TS-20: аудио → AAC (оригинал заменяется) + Opus; теги и обложка выброшены.
+      if (await isFfmpegAvailable()) {
+        const result = await processAudio(filePath, mediaId);
+        durationMs = result.durationMs;
+        mime = 'audio/mp4';
+        variants = result.variants;
+        logger.info({ mediaId }, 'TS-20 · AUDIO → AAC/Opus перекодирован');
+      } else {
+        logger.warn({ mediaId }, 'ffmpeg недоступен — AUDIO-перекодирование пропущено (TS-20)');
+      }
+    }
 
     if (kind === 'LOTTIE' && data.mime === 'application/json') {
       // TS-25: clean expressions + validate.
@@ -202,8 +217,11 @@ async function processJob(data: MediaJobData, opts: MediaProcessorOptions): Prom
     logger.info({ mediaId, kind }, 'Медиафайл обработан → READY');
   } catch (err) {
     const isLottieErr = err instanceof LottieError;
-    await db.update(schema.media).set({ status: 'REJECTED' }).where(eq(schema.media.id, mediaId));
-    if (isLottieErr) {
+    const tooLong = err instanceof VideoTooLongError;
+    await db.update(schema.media).set({ status: 'REJECTED', ...(tooLong ? { moderation: { rejected: 'VIDEO_TOO_LONG', maxSeconds: err.maxSeconds } } : {}) }).where(eq(schema.media.id, mediaId));
+    if (tooLong) {
+      logger.warn({ mediaId, maxSeconds: err.maxSeconds, durationMs: err.durationMs }, 'TS-20 · видео длиннее лимита тарифа → REJECTED');
+    } else if (isLottieErr) {
       logger.warn({ mediaId, err }, 'Lottie отклонён (TS-25)');
     } else {
       logger.error({ mediaId, err }, 'Ошибка обработки медиафайла → REJECTED');

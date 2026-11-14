@@ -5,7 +5,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { isFfmpegAvailable, processGif, processVideo } from '../src/media/video.js';
+import { assertVideoLength, isFfmpegAvailable, processAudio, processGif, processVideo, VideoTooLongError } from '../src/media/video.js';
 
 const exec = promisify(execFile);
 
@@ -81,5 +81,65 @@ describe('TS-20 · GIF и VIDEO перекодирование', () => {
     // Высота после 720p-масштаба: не более 720
     expect(result.height).toBeLessThanOrEqual(720);
     expect(result.durationMs).toBeGreaterThan(0);
+  });
+
+  async function makeFullHd(name: string): Promise<string> {
+    const out = path.join(tmpDir, `${name}.mp4`);
+    await exec('ffmpeg', ['-f', 'lavfi', '-i', 'color=c=green:size=1920x1080:duration=0.4:rate=5', '-c:v', 'libx264', '-y', out]);
+    return out;
+  }
+
+  it.skipIf(!ffmpegReady)('TS-20 · ADR-035 · «Про»: видео 1080p остаётся 1080p, на остальных тарифах сжимается до 720p', async () => {
+    const pro = path.join(tmpDir, 'hd-pro');
+    await rename(await makeFullHd('hd-a'), pro);
+    const proResult = await processVideo(pro, 'hd-pro', 1080);
+    expect(proResult.height).toBe(1080);
+
+    const base = path.join(tmpDir, 'hd-base');
+    await rename(await makeFullHd('hd-b'), base);
+    const baseResult = await processVideo(base, 'hd-base');
+    expect(baseResult.height).toBe(720);
+    expect(baseResult.width).toBe(1280);
+  });
+
+  it.skipIf(!ffmpegReady)('TS-20 · ADR-035 · маленькое видео не увеличивается даже на «Про»', async () => {
+    const small = path.join(tmpDir, 'small-pro');
+    await rename(await makeTestMp4(), small);
+    const result = await processVideo(small, 'small-pro', 1080);
+    expect(result.height).toBe(180);
+    expect(result.width).toBe(320);
+  });
+
+  it.skipIf(!ffmpegReady)('TS-20 · аудио → AAC вместо оригинала, вариант Opus, теги выброшены', async () => {
+    const src = path.join(tmpDir, 'tone.mp3');
+    await exec('ffmpeg', ['-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-metadata', 'title=СекретныйТег', '-metadata', 'artist=Автор', '-y', src]);
+    const filePath = path.join(tmpDir, 'test-audio-id');
+    await rename(src, filePath);
+
+    const result = await processAudio(filePath, 'test-audio-id');
+
+    const { stdout } = await exec('ffprobe', ['-v', 'quiet', '-print_format', 'json', '-show_streams', '-show_format', filePath]);
+    const info = JSON.parse(stdout) as { streams: Array<{ codec_type: string; codec_name: string }>; format: { format_name: string; tags?: Record<string, string> } };
+    expect(info.streams.map((s) => s.codec_type)).toEqual(['audio']);
+    expect(info.streams[0]!.codec_name).toBe('aac');
+    expect(info.format.format_name).toContain('mp4');
+    expect(JSON.stringify(info.format.tags ?? {})).not.toContain('СекретныйТег');
+    expect(result.durationMs).toBeGreaterThan(800);
+    expect(result.durationMs).toBeLessThan(1300);
+    const opus = result.variants['opus'];
+    if (opus) {
+      expect(existsSync(opus)).toBe(true);
+      const o = await exec('ffprobe', ['-v', 'quiet', '-print_format', 'json', '-show_streams', opus]);
+      expect((JSON.parse(o.stdout) as { streams: Array<{ codec_name: string }> }).streams[0]!.codec_name).toBe('opus');
+    }
+  });
+
+  it.skipIf(!ffmpegReady)('TS-20 · видео длиннее лимита тарифа отклоняется до перекодирования, в пределах лимита — проходит', async () => {
+    const clip = path.join(tmpDir, 'long.mp4');
+    await exec('ffmpeg', ['-f', 'lavfi', '-i', 'color=c=red:size=64x64:duration=3:rate=5', '-c:v', 'libx264', '-y', clip]);
+    await expect(assertVideoLength(clip, 2)).rejects.toBeInstanceOf(VideoTooLongError);
+    await expect(assertVideoLength(clip, 2)).rejects.toMatchObject({ maxSeconds: 2 });
+    await expect(assertVideoLength(clip, 3)).resolves.toBeUndefined();
+    await expect(assertVideoLength(clip, 60)).resolves.toBeUndefined();
   });
 });

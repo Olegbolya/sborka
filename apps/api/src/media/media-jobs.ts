@@ -5,6 +5,10 @@ export interface MediaJobData {
   filePath: string;
   mime: string;
   kind: 'IMAGE' | 'GIF' | 'VIDEO' | 'AUDIO' | 'LOTTIE';
+  /** Потолок высоты видео по тарифу автора (720; 1080 на «Про»). Нет — 720. */
+  maxVideoHeight?: number;
+  /** Предельная длина видео по тарифу автора, секунды. Нет — без проверки. */
+  maxVideoSeconds?: number;
 }
 
 export const MEDIA_QUEUE_NAME = 'media';

@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { schema } from '@blokum/db';
 import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
-import type { IMediaQueue } from '../src/media/media-jobs.js';
+import type { IMediaQueue, MediaJobData } from '../src/media/media-jobs.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
@@ -91,7 +91,8 @@ describe('P4.1, P4.4, B-02–B-07, D-08, TS-01 · Медиатека', () => {
       return Promise.resolve();
     }),
   };
-  const stubQueue: IMediaQueue = { add: () => Promise.resolve() };
+  const queued: MediaJobData[] = [];
+  const stubQueue: IMediaQueue = { add: (_name, data) => (queued.push(data), Promise.resolve()) };
 
   beforeAll(async () => {
     try {
@@ -213,6 +214,20 @@ describe('P4.1, P4.4, B-02–B-07, D-08, TS-01 · Медиатека', () => {
       .expect(201);
     expect(res.body.kind).toBe('VIDEO');
     expect(res.body.status).toBe('UPLOADED');
+  });
+
+  it('TS-20 · ADR-035 · задача обработки видео получает потолок высоты и длины по тарифу автора: 720 p и 60 с у «Старта», 1080 p и 10 мин у «Про»', async () => {
+    if (skip()) return;
+    const phone = '+79991250016';
+    const cookie = await loginViaOtp(phone);
+    const upload = () => request(t.http()).post(`/${API_PREFIX}/media`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').attach('file', MP4_MINIMAL, { filename: 'clip.mp4', contentType: 'video/mp4' }).expect(201);
+    queued.length = 0;
+    await upload();
+    expect(queued.at(-1)).toMatchObject({ kind: 'VIDEO', maxVideoHeight: 720, maxVideoSeconds: 60 });
+    const [u] = await db.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.phoneE164, phone));
+    await db.db.insert(schema.subscriptions).values({ userId: u!.id, planCode: 'PRO', period: 'MONTH', status: 'ACTIVE', currentPeriodStart: new Date(Date.now() - 86_400_000), currentPeriodEnd: new Date(Date.now() + 29 * 86_400_000) });
+    await upload();
+    expect(queued.at(-1)).toMatchObject({ kind: 'VIDEO', maxVideoHeight: 1080, maxVideoSeconds: 600 });
   });
 
   it('B-05 · POST /media — WAV-аудио загружается, kind=AUDIO', async () => {
