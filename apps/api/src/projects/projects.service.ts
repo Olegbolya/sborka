@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, asc, desc, eq, inArray, isNull, max } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { AGE_RATINGS, createDocument, createId, createSlug, customSlugSchema, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
 import { AGE_RATING_REQUIRED } from './projects.tokens.js';
@@ -159,6 +159,21 @@ export class ProjectsService {
     return rows.map(r => ({ ...r, isSystem: false as const }));
   }
 
+  /** 04-TARIFFS §2 · «Мои шаблоны / Мои элементы»: на «Старте» 3 и 10, выше — без ограничений; у пропуска — как у аккаунта. */
+  private async assertRoomFor(userId: string, what: 'templates' | 'elements'): Promise<void> {
+    const plan = await this.entitlements.planOf(userId);
+    const max = what === 'templates' ? plan.limits.ownTemplates : plan.limits.ownElements;
+    if (max === null) return;
+    const [have] =
+      what === 'templates'
+        ? await this.db.select({ n: count() }).from(schema.templates).where(and(eq(schema.templates.ownerId, userId), eq(schema.templates.isSystem, false), isNull(schema.templates.deletedAt)))
+        : await this.db.select({ n: count() }).from(schema.savedElements).where(and(eq(schema.savedElements.ownerId, userId), isNull(schema.savedElements.deletedAt)));
+    if ((have?.n ?? 0) >= max) {
+      const noun = what === 'templates' ? `своих шаблонов — до ${max}` : `своих элементов — до ${max}`;
+      throw new HttpException({ error: { code: 'PLAN_LIMIT', message: `На тарифе «${plan.title}» можно хранить ${noun}. Удалите ненужный или оформите подписку.` } }, 402);
+    }
+  }
+
   /** TPL-01 · save the current document of a project as the creator's own template. */
   async saveProjectAsTemplate(userId: string, projectId: string, name?: string): Promise<{ id: string }> {
     const [p] = await this.db
@@ -172,6 +187,7 @@ export class ProjectsService {
       ? await this.db.select({ document: schema.projectVersions.document }).from(schema.projectVersions).where(eq(schema.projectVersions.id, versionId))
       : [];
     if (!v) throw new BadRequestException({ error: { code: 'NO_DOCUMENT', message: 'У сборки пока нет содержимого.' } });
+    await this.assertRoomFor(userId, 'templates');
     const templateName = (name ?? '').trim().slice(0, 120) || p.title;
     const [row] = await this.db
       .insert(schema.templates)
@@ -245,6 +261,7 @@ export class ProjectsService {
   async saveElement(userId: string, name: string, fragment: Record<string, unknown>): Promise<{ id: string }> {
     const n = name.trim().slice(0, 120);
     if (n.length < 1) throw new BadRequestException({ error: { code: 'NAME_REQUIRED', message: 'Нужно название.' } });
+    await this.assertRoomFor(userId, 'elements');
     const [row] = await this.db
       .insert(schema.savedElements)
       .values({ ownerId: userId, name: n, fragment })

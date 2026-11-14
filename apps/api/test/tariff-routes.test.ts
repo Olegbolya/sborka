@@ -103,6 +103,26 @@ describe('P7.1 · таблица тарифов на маршрутах API: к�
       }
     });
 
+    it(`P7.1 · ${code} · «Мои шаблоны» и «Мои элементы»: ${l.ownTemplates ?? 'без ограничений'} / ${l.ownElements ?? 'без ограничений'}`, async () => {
+      const { cookie, projectId } = await person(code);
+      // «Праздник» не меняет эти лимиты: они считаются по аккаунту, а у аккаунта без подписки это «Старт».
+      const account = code === 'PASS' ? PLANS.find((p) => p.code === 'FREE')!.limits : l;
+      for (const [what, max, url, body] of [
+        ['шаблоны', account.ownTemplates, '/templates', { projectId }],
+        ['элементы', account.ownElements, '/elements', { name: 'Элемент', fragment: { blocks: [] } }],
+      ] as const) {
+        const room = Math.min(max ?? 12, 12);
+        for (let i = 0; i < room; i++) await send('post', url, cookie, body).expect(200);
+        const over = await send('post', url, cookie, body);
+        if (max !== null && max <= 12) {
+          expect(over.status, `${code} ${what}`).toBe(402);
+          expect((over.body as { error: { code: string } }).error.code).toBe('PLAN_LIMIT');
+        } else {
+          expect(over.status, `${code} ${what}`).toBe(200);
+        }
+      }
+    });
+
     it(`P7.1 · ${code} · свои шрифты: ${l.ownFonts ? 'доступны' : 'закрыты'}`, async () => {
       const { cookie } = await person(code);
       // A broken file: where fonts are allowed it is refused as a bad file (400), where they are not — by the plan (402) before that.
