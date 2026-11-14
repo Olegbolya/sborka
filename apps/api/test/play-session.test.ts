@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
+import { PassageNoticesService } from '../src/play/passage-notices.service.js';
 import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 0;
@@ -418,8 +419,69 @@ describe('PL-11…PL-15 · прохождение на сервере', () => {
     expect([...outcomes].sort()).toEqual(['Лиса', 'Сова']);
   }, 90_000);
 
+  /** Платный тариф владельцу сборки: на «Старте» уведомления идут раз в день (04-TARIFFS). */
+  async function onPlan(projectId: string, planCode = 'PLUS'): Promise<string> {
+    const [p] = await db.db.select({ ownerId: schema.projects.ownerId }).from(schema.projects).where(eq(schema.projects.id, projectId));
+    await db.db.insert(schema.subscriptions).values({ userId: p!.ownerId, planCode, period: 'MONTH', status: 'ACTIVE', currentPeriodStart: new Date(Date.now() - 86_400_000), currentPeriodEnd: new Date(Date.now() + 29 * 86_400_000) });
+    return p!.ownerId;
+  }
+  const mine = async (projectId: string) =>
+    ((await call(t, cookie, 'get', '/notifications').expect(200)).body as Array<{ kind: string; title: string; body: string; projectId: string | null }>).filter((n) => n.projectId === projectId);
+
+  it('D-07 · режимы «раз в час», «раз в день»: прохождения копятся и уходят одним сообщением; «Старт» — только раз в день', async () => {
+    const z = await quiz('none');
+    // «Старт»: чаще раза в день выбрать нельзя, по умолчанию — сводка раз в день.
+    const start = (await call(t, cookie, 'get', `/projects/${z.id}/access-settings`).expect(200)).body as { noticeModes: { allowed: string[]; effective: string } };
+    expect(start.noticeModes).toEqual({ allowed: ['daily', 'off'], effective: 'daily' });
+    await call(t, cookie, 'patch', `/projects/${z.id}/access-settings`, { notifications: { passage: 'instant' } }).expect(400);
+    await call(t, cookie, 'patch', `/projects/${z.id}/access-settings`, { notifications: { passage: 'часто' } }).expect(400);
+    for (let i = 0; i < 3; i++) {
+      const sid = await startSession(z.id);
+      await answer(sid, z.text, { kind: 'text', value: `Ответ ${i + 1}` }).expect(200);
+      await open(t, 'post', `/play/sessions/${sid}/complete`).expect(200);
+    }
+    expect(await mine(z.id)).toHaveLength(0);
+    const service = t.app.get(PassageNoticesService);
+    // Сутки ещё не прошли — сводки нет; прошли — одно сообщение на три прохождения.
+    await service.flush(new Date(Date.now() + 23 * 3_600_000));
+    expect(await mine(z.id)).toHaveLength(0);
+    await service.flush(new Date(Date.now() + 25 * 3_600_000));
+    const digest = await mine(z.id);
+    expect(digest).toHaveLength(1);
+    expect(digest[0]).toMatchObject({ kind: 'passage', title: 'Новые прохождения «Викторина»: 3 за сутки' });
+    expect(digest[0]!.body).toContain('1. ');
+    expect(digest[0]!.body).toContain('Ответ 3');
+    await service.flush(new Date(Date.now() + 50 * 3_600_000));
+    expect(await mine(z.id)).toHaveLength(1);
+
+    // Платный тариф: «раз в час» разрешён, сводка уходит через час.
+    await onPlan(z.id);
+    await call(t, cookie, 'patch', `/projects/${z.id}/access-settings`, { notifications: { passage: 'hourly' } }).expect(200);
+    const hourly = (await call(t, cookie, 'get', `/projects/${z.id}/access-settings`).expect(200)).body as { noticeModes: { allowed: string[]; effective: string } };
+    expect(hourly.noticeModes).toEqual({ allowed: ['instant', 'hourly', 'daily', 'off'], effective: 'hourly' });
+    for (let i = 0; i < 2; i++) await open(t, 'post', `/play/sessions/${await startSession(z.id)}/complete`).expect(200);
+    await service.flush(new Date(Date.now() + 30 * 60_000));
+    expect(await mine(z.id)).toHaveLength(1);
+    await service.flush(new Date(Date.now() + 61 * 60_000));
+    expect((await mine(z.id)).map((n) => n.title)).toContain('Новые прохождения «Викторина»: 2 за час');
+
+    // Смена режима на «сразу» отправляет накопленное в ближайшую минуту, «выкл» — сбрасывает очередь без сообщений.
+    await open(t, 'post', `/play/sessions/${await startSession(z.id)}/complete`).expect(200);
+    await call(t, cookie, 'patch', `/projects/${z.id}/access-settings`, { notifications: { passage: 'instant' } }).expect(200);
+    await service.flush();
+    expect((await mine(z.id)).length).toBe(3);
+    await call(t, cookie, 'patch', `/projects/${z.id}/access-settings`, { notifications: { passage: 'hourly' } }).expect(200);
+    await open(t, 'post', `/play/sessions/${await startSession(z.id)}/complete`).expect(200);
+    await call(t, cookie, 'patch', `/projects/${z.id}/access-settings`, { notifications: { passage: 'off' } }).expect(200);
+    const before = (await mine(z.id)).length;
+    await service.flush(new Date(Date.now() + 2 * 3_600_000));
+    expect((await mine(z.id)).length).toBe(before);
+    expect(await db.db.select().from(schema.passageDigestQueue).where(eq(schema.passageDigestQueue.projectId, z.id))).toHaveLength(0);
+  }, 60_000);
+
   it('D-07 · о завершённом прохождении создателю приходит сообщение в кабинет с ответами и путём; повтор не дублирует; «выкл» молчит', async () => {
     const z = await quiz('none');
+    await onPlan(z.id);
     const sid = await startSession(z.id);
     await answer(sid, z.q1.id, { kind: 'choice', optionIds: [z.q1.optionIds[0]!] }).expect(200);
     await answer(sid, z.text, { kind: 'text', value: 'Возьми две пачки' }).expect(200);

@@ -24,6 +24,7 @@ import {
 } from '@blokum/engine';
 import { RETENTION, type Block, type ProjectDocument, plainText, walkBlocks } from '@blokum/schema';
 import { type ApiConfig } from '../config.js';
+import { PassageNoticesService } from './passage-notices.service.js';
 import { API_CONFIG, DB } from '../tokens.js';
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
@@ -51,6 +52,7 @@ export class PlaySessionsService {
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly passageNotices?: PassageNoticesService,
   ) {}
 
   /** The session id is the participant's capability: unguessable, kept by the browser. */
@@ -247,7 +249,8 @@ export class PlaySessionsService {
   ): Promise<void> {
     const [project] = await this.db.select({ title: schema.projects.title, settings: schema.projects.settings }).from(schema.projects).where(eq(schema.projects.id, session.projectId));
     if (!project) return;
-    const mode = ((project.settings as { notifications?: { passage?: unknown } }).notifications ?? {}).passage;
+    // D-07: «выкл», at once, once an hour or once a day — by the choice of the creator within what the plan allows.
+    const mode = this.passageNotices ? await this.passageNotices.modeOf(ownerId, session.projectId, project.settings) : 'instant';
     if (mode === 'off') return;
     const [unread] = await this.db
       .select({ n: sql<number>`count(*)::int` })
@@ -301,13 +304,10 @@ export class PlaySessionsService {
       ...(resultKey ? [`Результат: ${clip(resultKey, 80)}`] : []),
       ...(way.length > 0 ? [`Путь: ${way.join(' → ')}`] : []),
     ];
-    await this.db.insert(schema.notifications).values({
-      userId: ownerId,
-      kind: 'passage',
-      title: `Новое прохождение: «${clip(project.title, 80)}»`,
-      body: parts.join('\n\n'),
-      projectId: session.projectId,
-    });
+    const title = `Новое прохождение: «${clip(project.title, 80)}»`;
+    const body = parts.join('\n\n');
+    if (this.passageNotices) await this.passageNotices.deliver({ ownerId, projectId: session.projectId, title, body, mode });
+    else await this.db.insert(schema.notifications).values({ userId: ownerId, kind: 'passage', title, body, projectId: session.projectId });
   }
 
   /**

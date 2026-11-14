@@ -241,6 +241,26 @@ export const notifications = pgTable(
 );
 
 /**
+ * D-07 · passages waiting for a digest: with the notification mode «раз в час» or «раз в день» the creator gets one message for
+ * many passages. Each row holds the text of one passage (answers, saved values, result, path); the digest removes them when sent.
+ */
+export const passageDigestQueue = pgTable(
+  'passage_digest_queue',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('passage_digest_queue_idx').on(t.userId, t.projectId, t.createdAt)],
+);
+
+/**
  * P8.8 · the journal of destruction (152-ФЗ ст. 21, приказ РКН № 179): what was destroyed, how much, when and on what ground.
  * It holds no personal data itself — only kinds, counts and identifiers of projects.
  */

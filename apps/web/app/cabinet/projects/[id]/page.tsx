@@ -605,6 +605,45 @@ function AdSection({ projectId }: { projectId: string }) {
   );
 }
 
+/** D-07 · how often the creator hears about passages. One choice saves at once; what is offered depends on the plan. */
+const NOTICE_MODE_TEXT: Record<string, string> = { instant: 'Сразу, о каждом прохождении', hourly: 'Сводка раз в час', daily: 'Сводка раз в день', off: 'Не уведомлять' };
+
+function NoticeModeCard({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
+  const [modes, setModes] = useState<{ allowed: string[]; effective: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    apiFetch<{ noticeModes: { allowed: string[]; effective: string } }>(`/projects/${projectId}/access-settings`)
+      .then((s) => setModes(s.noticeModes))
+      .catch((e: Error) => setError(e.message));
+  }, [projectId, setError]);
+  if (!modes) return null;
+  const pick = async (passage: string): Promise<void> => {
+    setBusy(true);
+    setError('');
+    try {
+      const saved = await apiFetch<{ noticeModes: { allowed: string[]; effective: string } }>(`/projects/${projectId}/access-settings`, { method: 'PATCH', headers: CSRF, body: JSON.stringify({ notifications: { passage } }) });
+      setModes(saved.noticeModes);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div>
+      <label style={s.label} htmlFor="noticeMode">Уведомления о прохождениях</label>
+      <select id="noticeMode" style={s.inputFull} value={modes.effective} disabled={busy} onChange={(e) => void pick(e.target.value)} aria-label="Уведомления о прохождениях">
+        {['instant', 'hourly', 'daily', 'off'].map((m) => (
+          <option key={m} value={m} disabled={!modes.allowed.includes(m)}>
+            {NOTICE_MODE_TEXT[m]}{modes.allowed.includes(m) ? '' : ' — на платных тарифах'}
+          </option>
+        ))}
+      </select>
+      <p style={s.hint}>Сообщение приходит в кабинет и на подтверждённую почту. Выбор сохраняется сразу.</p>
+    </div>
+  );
+}
+
 function SettingsTab({ projectId, settings: initialSettings, setError }: { projectId: string; settings: ProjectSettings; setError: (e: string) => void }) {
   const [settings, setSettings] = useState<ProjectSettings>(initialSettings);
   const [saving, setSaving] = useState(false);
@@ -795,6 +834,8 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           aria-label="Текст экрана закрыто"
         />
       </div>
+
+      <NoticeModeCard projectId={projectId} setError={setError} />
 
       <div>
         <button style={s.btn} onClick={() => void save()} disabled={saving}>

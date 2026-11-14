@@ -16,6 +16,7 @@ import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { DB } from '../tokens.js';
 import { hashPassword } from '../play/secrets.js';
+import { type PassageMode, allowedPassageModes, effectivePassageMode, isPassageMode } from '../play/passage-mode.js';
 
 /** The settings of access the cabinet may write (PL-06…PL-10); the password goes separately and is stored as a hash. */
 const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'ageRating', 'singleAttempt', 'restartOnReload', 'showBack', 'closedText', 'answersRetentionDays'] as const;
@@ -44,6 +45,14 @@ export interface ProjectSettings {
   /** PL-11 · the creator lets the participant see the «← Назад» button (hidden by default: it may break the design). */
   showBack?: boolean;
   closedText?: string;
+  /** D-07 · how often the creator hears about passages: at once, once an hour, once a day, never. */
+  notifications?: { passage?: PassageMode };
+}
+
+/** What the cabinet needs to draw the choice of D-07: what the plan allows and what is in force now. */
+export interface NoticeModes {
+  allowed: readonly PassageMode[];
+  effective: PassageMode;
 }
 
 /** PL-23: operator info required when publishing a project with B-19 contacts block. */
@@ -720,12 +729,12 @@ export class ProjectsService {
   }
 
   /** The settings of the owner and whether publishing needs an age category here (the editor asks for it on «Опубликовать»). */
-  async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings & { ageRatingRequired: boolean }> {
+  async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings & { ageRatingRequired: boolean; noticeModes: NoticeModes }> {
     const row = await this.assertOwner(userId, projectId);
-    return { ...this.forOwner((row.settings ?? {})), ageRatingRequired: this.ageRatingRequired === true };
+    return { ...this.forOwner((row.settings ?? {})), ageRatingRequired: this.ageRatingRequired === true, noticeModes: await this.noticeModes(row.ownerId, projectId, row.settings ?? {}) };
   }
 
-  async updateAccessSettings(userId: string, projectId: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings> {
+  async updateAccessSettings(userId: string, projectId: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings & { noticeModes: NoticeModes }> {
     const row = await this.assertOwner(userId, projectId);
     const { password } = settings;
     // ASVS V5.1.2: only the settings the cabinet offers are taken from the body; nothing else (the hash of the password, a key
@@ -746,6 +755,13 @@ export class ProjectsService {
     }
     if (incoming.answersRetentionDays !== undefined && incoming.answersRetentionDays !== null && (!Number.isInteger(incoming.answersRetentionDays) || (incoming.answersRetentionDays as number) < 1 || (incoming.answersRetentionDays as number) > 3650)) {
       throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Срок хранения ответов — от 1 до 3650 дней.' } });
+    }
+    if (settings.notifications !== undefined) {
+      const passage = (settings.notifications as { passage?: unknown } | null)?.passage;
+      if (!isPassageMode(passage)) throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Уведомления о прохождениях — сразу, раз в час, раз в день или выключены.' } });
+      const allowed = allowedPassageModes((await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits.notifications);
+      if (!allowed.includes(passage)) throw new BadRequestException({ error: { code: 'PLAN_LIMIT', message: 'На вашем тарифе уведомления приходят раз в день. Чаще — на платных тарифах.' } });
+      incoming.notifications = { passage };
     }
     if (incoming.closedText !== undefined && incoming.closedText !== null && (typeof incoming.closedText !== 'string' || incoming.closedText.length > 1000)) throw bad();
     const merged: ProjectSettings = { ...((row.settings ?? {}) as ProjectSettings), ...(incoming as Partial<ProjectSettings>) };
@@ -768,7 +784,12 @@ export class ProjectsService {
       .update(schema.projects)
       .set({ settings: merged as Record<string, unknown> })
       .where(eq(schema.projects.id, projectId));
-    return this.forOwner(merged);
+    return { ...this.forOwner(merged), noticeModes: await this.noticeModes(row.ownerId, projectId, merged) };
+  }
+
+  private async noticeModes(ownerId: string, projectId: string, settings: ProjectSettings): Promise<NoticeModes> {
+    const allowed = allowedPassageModes((await this.entitlements.limitsOfProject(ownerId, projectId)).plan.limits.notifications);
+    return { allowed, effective: effectivePassageMode(allowed, settings) };
   }
 
   private async assertOwner(userId: string, projectId: string) {
