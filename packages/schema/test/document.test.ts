@@ -174,6 +174,13 @@ describe('миграции документа (02-ARCHITECTURE §4 п. 4)', () =
     expect(doc.meta.title).toBe('Новогодний квиз');
   });
 
+  it('PL-04 · снимок первого экрана (meta.ogSnapshot) принимается схемой и переживает разбор; старые документы без него — тоже', () => {
+    const doc = createDocument();
+    expect(migrateDocument(JSON.parse(JSON.stringify(doc))).meta.ogSnapshot).toBeUndefined();
+    doc.meta.ogSnapshot = { source: 'media', id: 'snimok_1' };
+    expect(migrateDocument(JSON.parse(JSON.stringify(doc))).meta.ogSnapshot).toEqual({ source: 'media', id: 'snimok_1' });
+  });
+
   it('документ текущей версии проходит без изменений', () => {
     const doc = createDocument();
     expect(migrateDocument(JSON.parse(JSON.stringify(doc)))).toEqual(doc);

@@ -107,6 +107,14 @@ const PASSWORD_TRIES = 10;
 const PASSWORD_WINDOW_MS = 10 * 60 * 1000;
 
 /** PL-16, PL-18 · what the player must show whatever the creator drew: the tariff's mark and the advertising label. */
+/** PL-04 · картинка превью ссылки: своя картинка автора, а если её нет — снимок первого экрана, сделанный при публикации. */
+export function previewImageId(doc: ProjectDocument): string | null {
+  const own = doc.meta.ogImage;
+  if (own?.source === 'media') return own.id;
+  const shot = doc.meta.ogSnapshot;
+  return shot?.source === 'media' ? shot.id : null;
+}
+
 function marks(p: { isAdvertising: boolean; adMarking: { advertiser: string; inn?: string; erid: string } | null; settings?: unknown }, watermark: boolean): Pick<PlayOpen, 'watermark' | 'ad' | 'ageRating' | 'showBack'> {
   const rating = (p.settings as { ageRating?: unknown } | null | undefined)?.ageRating;
   return { watermark, ad: p.isAdvertising && p.adMarking ? p.adMarking : null, ageRating: typeof rating === 'number' ? rating : null, showBack: (p.settings as { showBack?: unknown } | null | undefined)?.showBack === true };
@@ -205,7 +213,7 @@ export class PlayService {
       slug: row.slug,
       title: doc.meta.title,
       description: doc.meta.description,
-      ogImageId: doc.meta.ogImage?.source === 'media' ? doc.meta.ogImage.id : null,
+      ogImageId: previewImageId(doc),
       indexable: false,
       document: toPublicDocument(doc),
       media,
@@ -238,7 +246,7 @@ export class PlayService {
       slug: p.slug,
       title: p.doc.meta.title,
       description: p.doc.meta.description,
-      ogImageId: p.doc.meta.ogImage?.source === 'media' ? p.doc.meta.ogImage.id : null,
+      ogImageId: previewImageId(p.doc),
       indexable: false,
       document: toPublicDocument(p.doc),
       media,

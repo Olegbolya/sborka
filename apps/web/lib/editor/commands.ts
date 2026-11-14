@@ -30,6 +30,29 @@ export const setTitle =
     doc.meta.title = title.trim().slice(0, 120) || doc.meta.title;
   };
 
+/** PL-04 · описание в превью ссылки (до 500 знаков). */
+export const setDescription =
+  (text: string): Recipe =>
+  (doc) => {
+    doc.meta.description = text.slice(0, 500);
+  };
+
+/** PL-04 · своя картинка превью ссылки; `null` убирает её (тогда в превью идёт снимок первого экрана). */
+export const setOgImage =
+  (ref: { source: 'media'; id: string } | null): Recipe =>
+  (doc) => {
+    if (ref === null) delete doc.meta.ogImage;
+    else doc.meta.ogImage = ref;
+  };
+
+/** PL-04 · снимок первого экрана для превью ссылки: ставится при публикации; `null` убирает его. */
+export const setOgSnapshot =
+  (id: string | null): Recipe =>
+  (doc) => {
+    if (id === null) delete doc.meta.ogSnapshot;
+    else doc.meta.ogSnapshot = { source: 'media', id };
+  };
+
 const screenIndex = (doc: ProjectDocument, id: string): number => doc.screens.findIndex((s) => s.id === id);
 
 export const addScreen =

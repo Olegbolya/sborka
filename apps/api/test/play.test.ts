@@ -50,7 +50,8 @@ async function makeAppWithAuth(): Promise<{ t: TestApp; db: TestDb; loginViaOtp:
 }
 
 import sharp from 'sharp';
-import { createBlock, createId, createScreen, type ProjectDocument } from '@blokum/schema';
+import { createBlock, createDocument, createId, createScreen, type ProjectDocument } from '@blokum/schema';
+import { previewImageId } from '../src/play/play.service.js';
 
 const call = (t: TestApp, cookie: string, method: 'post' | 'put' | 'patch' | 'get', url: string, body?: unknown) => {
   const r = request(t.http())[method](`/${API_PREFIX}${url}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1');
@@ -267,5 +268,19 @@ describe('PL-01…PL-05 · публикация и открытие плеера
     await call(t, cookie, 'post', `/projects/${p.id}/access-points/${points[0]!.id}/active`, { active: false }).expect(204);
     await pub(t, `/play/scan/${code}`).expect(404);
     await pub(t, '/play/scan/netakogo').expect(404);
+  });
+});
+
+describe('PL-04 · какая картинка идёт в превью ссылки', () => {
+  it('PL-04 · своя картинка автора важнее снимка первого экрана; без обеих — картинки нет', () => {
+    const doc = createDocument({ title: 'Превью' });
+    expect(previewImageId(doc)).toBeNull();
+    doc.meta.ogSnapshot = { source: 'media', id: 'snimok_1' };
+    expect(previewImageId(doc)).toBe('snimok_1');
+    doc.meta.ogImage = { source: 'media', id: 'svoya_1' };
+    expect(previewImageId(doc)).toBe('svoya_1');
+    delete doc.meta.ogImage;
+    doc.meta.ogSnapshot = { source: 'library', id: 'iz_biblioteki' };
+    expect(previewImageId(doc), 'снимок из библиотеки не бывает: берётся только файл автора').toBeNull();
   });
 });

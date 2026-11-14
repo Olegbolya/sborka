@@ -66,7 +66,7 @@ export const ProjectDocument = z
   .strictObject({
     schemaVersion: z.literal(SCHEMA_VERSION),
     meta: z
-      .strictObject({ title: z.string().min(1).max(120), description: z.string().max(500).default(''), ogImage: MediaRef.optional() })
+      .strictObject({ title: z.string().min(1).max(120), description: z.string().max(500).default(''), ogImage: MediaRef.optional(), ogSnapshot: MediaRef.optional() })
       .prefault({ title: 'Новая сборка' }),
     artboard: z.strictObject({ width: z.literal(390) }).default({ width: 390 }),
     theme: z.strictObject({ themeId: Id.optional(), tokens: ThemeTokens.prefault({}) }).prefault({}),

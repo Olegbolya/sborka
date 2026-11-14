@@ -1,9 +1,12 @@
 'use client';
-import { setScreenProps } from '../../lib/editor/commands';
+import { useState } from 'react';
+import { setDescription, setOgImage, setScreenProps } from '../../lib/editor/commands';
 import { SCREEN_SECTIONS } from '../../lib/editor/screen-specs';
 import { Section } from './controls';
 import { useEditor } from './context';
+import { CoverThumb } from './CoverThumb';
 import { MediaByAnswerEditor } from './MediaByAnswerEditor';
+import { MediaPicker } from './MediaPicker';
 import { Fields, type Level } from './StylePanels';
 
 /** E-13, L-06 · the screen when no block is picked: name, kind, height, background, particles, transition in, timer. */
@@ -36,9 +39,57 @@ export function ScreenPanel() {
           <Fields fields={section.fields} level={level} prefix={`screen-${section.id}`} />
         </Section>
       ))}
+      <Section id="link-preview" title="Превью ссылки" hint="Так сборка выглядит, когда ссылку отправляют в мессенджер. Без своей картинки в превью попадает снимок первого экрана, он делается при каждой публикации.">
+        <LinkPreview />
+      </Section>
       <Section id="screen-media-by-answer" title="Мем по ответу" hint="Когда участник ответил на вопрос и идёт дальше, на секунду показывается ваш мем — свой для верного, неверного или выбранного ответа.">
         <MediaByAnswerEditor screen={screen} />
       </Section>
+    </div>
+  );
+}
+
+/** PL-04 · описание и своя картинка для превью ссылки. */
+function LinkPreview() {
+  const apply = useEditor((s) => s.apply);
+  const meta = useEditor((s) => s.doc.meta);
+  const [picking, setPicking] = useState(false);
+  const own = meta.ogImage?.source === 'media' ? meta.ogImage.id : null;
+  return (
+    <div data-testid="link-preview">
+      <label className="ed-field">
+        <span>Описание</span>
+        <textarea
+          rows={3}
+          style={{ fontFamily: 'inherit' }}
+          maxLength={500}
+          value={meta.description}
+          placeholder="Одно-два предложения: что внутри"
+          onChange={(e) => apply(setDescription(e.target.value), { label: 'Описание сборки', mergeKey: 'description' })}
+        />
+      </label>
+      <div className="ed-actions" style={{ alignItems: 'center' }}>
+        <CoverThumb id={own} />
+        <button type="button" className="ed-btn" onClick={() => setPicking(true)}>
+          {own ? 'Другая картинка' : 'Своя картинка'}
+        </button>
+        {own && (
+          <button type="button" className="ed-btn" onClick={() => apply(setOgImage(null), { label: 'Убрать картинку превью' })}>
+            Убрать
+          </button>
+        )}
+      </div>
+      {!own && <p className="ed-hint">Своей картинки нет — будет снимок первого экрана.</p>}
+      {picking && (
+        <MediaPicker
+          kinds={['IMAGE']}
+          onClose={() => setPicking(false)}
+          onPick={(ref) => {
+            setPicking(false);
+            if (ref.source === 'media') apply(setOgImage({ source: 'media', id: ref.id }), { label: 'Картинка превью' });
+          }}
+        />
+      )}
     </div>
   );
 }

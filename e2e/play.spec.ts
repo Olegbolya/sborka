@@ -1,7 +1,7 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
-import { nextButton, seedProject, serverDraft, textBlock } from './helpers/editor';
+import { box, ensurePanel, nextButton, openEditor, seedProject, serverDraft, textBlock } from './helpers/editor';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -115,6 +115,88 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
     expect(file.status()).toBe(200);
     expect(file.headers()['content-type']).toBe('image/png');
     await ctx.close();
+  });
+
+  test('PL-04 · без своей картинки превью — снимок первого экрана, сделанный при нажатии «Опубликовать»: 1200×630, не пустой, раздаётся без входа', async ({ page, browser }, info) => {
+    const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(textBlock('privet_1', 'Привет, снимок', 20, 60, 300, 80), box('figura_1', 'Плашка', 40, 200, 260, 160)));
+    await openEditor(page, id);
+    await page.getByRole('button', { name: /^Опубликовать/ }).click();
+    await expect(page.getByText('Сборка опубликована').first()).toBeVisible({ timeout: 30_000 });
+    const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
+    const base = info.project.use.baseURL!;
+    const { ctx, page: p } = await participant(browser, base);
+    await p.goto(`/s/${slug}`);
+    const image = await p.locator('meta[property="og:image"]').first().getAttribute('content');
+    expect(image, 'og:image есть, хотя своей картинки автор не выбирал').toMatch(new RegExp(`^${base}/api/v1/play/${slug}/media/`));
+    const file = await p.request.get(image!);
+    expect(file.status()).toBe(200);
+    expect(file.headers()['content-type']).toBe('image/png');
+    const bytes = await file.body();
+    expect(bytes.readUInt32BE(16), 'ширина').toBe(1200);
+    expect(bytes.readUInt32BE(20), 'высота').toBe(630);
+    mkdirSync('e2e/__screenshots__', { recursive: true });
+    writeFileSync(`e2e/__screenshots__/og-snapshot-${info.project.name}.png`, bytes);
+    // На снимке есть содержимое экрана, а не одна заливка.
+    const colors = await p.evaluate(async (src) => {
+      const img = new Image();
+      img.src = src;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = 120;
+      c.height = 63;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, 120, 63);
+      const seen = new Set<string>();
+      const d = ctx.getImageData(0, 0, 120, 63).data;
+      for (let i = 0; i < d.length; i += 4) seen.add(`${d[i]! >> 4},${d[i + 1]! >> 4},${d[i + 2]! >> 4}`);
+      return seen.size;
+    }, image!);
+    expect(colors, 'на снимке больше одного цвета').toBeGreaterThan(2);
+    await ctx.close();
+  });
+
+  test('PL-04 · в редакторе автор пишет описание и выбирает свою картинку превью: они в og-тегах, снимок не делается; «Убрать» возвращает снимок', async ({ page, browser }, info) => {
+    const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(textBlock('privet_1', 'Привет', 20, 60, 300, 80)));
+    await openEditor(page, id);
+    await ensurePanel(page, 'right');
+    const section = page.locator('[data-section="link-preview"]');
+    await section.locator('summary').click();
+    await section.getByLabel('Описание').fill('Проверьте себя за минуту');
+    await section.getByRole('button', { name: 'Своя картинка' }).click();
+    await page.getByRole('dialog', { name: 'Выбор файла' }).getByLabel('Загрузить файл').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
+    await expect(section.getByTestId('cover-thumb')).toBeVisible();
+    mkdirSync('e2e/__screenshots__', { recursive: true });
+    await page.screenshot({ path: `e2e/__screenshots__/link-preview-${info.project.name}.png` });
+    await page.getByRole('button', { name: /^Опубликовать/ }).click();
+    await expect(page.getByText('Сборка опубликована').first()).toBeVisible({ timeout: 30_000 });
+    const draft = await serverDraft(page, id);
+    const meta = draft.doc.meta as unknown as { description: string; ogImage?: { id: string }; ogSnapshot?: unknown };
+    expect(meta.description).toBe('Проверьте себя за минуту');
+    expect(meta.ogSnapshot, 'при своей картинке снимок не делается').toBeUndefined();
+    const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.goto(`/s/${slug}`);
+    await expect(p.locator('meta[property="og:description"]').first()).toHaveAttribute('content', 'Проверьте себя за минуту');
+    await expect(p.locator('meta[property="og:image"]').first()).toHaveAttribute('content', new RegExp(`/api/v1/play/${slug}/media/${meta.ogImage!.id}$`));
+    await ctx.close();
+    // «Убрать»: следующая публикация снова делает снимок первого экрана.
+    await section.getByRole('button', { name: 'Убрать' }).click();
+    await expect(section.getByTestId('cover-thumb')).toHaveCount(0);
+    await page.getByRole('button', { name: /^Опубликовать/ }).click();
+    await expect.poll(async () => ((await serverDraft(page, id)).doc.meta as { ogSnapshot?: unknown }).ogSnapshot, { timeout: 30_000 }).toBeDefined();
+  });
+
+  test('PL-04 · своя картинка превью важнее снимка: снимок не делается', async ({ page }) => {
+    const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const up = await page.request.post('/api/v1/media', { headers: { origin: origin(page) }, multipart: { file: { name: 'a.png', mimeType: 'image/png', buffer: PNG } } });
+    const media = (await up.json()) as { id: string };
+    const { id } = await seedProject(page, (d) => void ((d.meta as Record<string, unknown>).ogImage = { source: 'media', id: media.id }));
+    await openEditor(page, id);
+    await page.getByRole('button', { name: /^Опубликовать/ }).click();
+    await expect(page.getByText('Сборка опубликована').first()).toBeVisible({ timeout: 30_000 });
+    const draft = await serverDraft(page, id);
+    expect((draft.doc.meta as Record<string, unknown>).ogSnapshot).toBeUndefined();
   });
 
   test('PL-01 · неопубликованное и несуществующее — «Недоступно» с кодом 404', async ({ page, browser }, info) => {

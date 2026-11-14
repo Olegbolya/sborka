@@ -1,8 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { api, errorText, isApiError } from '../../lib/api-browser';
-import { setTitle } from '../../lib/editor/commands';
+import { api, errorText, isApiError, upload } from '../../lib/api-browser';
+import { setOgSnapshot, setTitle } from '../../lib/editor/commands';
+import { snapshotFirstScreen } from '../../lib/editor/snapshot';
 import { AgeRatingDialog } from './AgeRatingDialog';
 import { PassDialog } from './PassDialog';
 import { useEditor, useEnv } from './context';
@@ -11,7 +12,7 @@ const STATUS_NAMES = { DRAFT: 'Черновик', PUBLISHED: 'Опубликов
 
 /** E-16 · the top bar: title, save status, undo/redo, history, preview, publish. */
 export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScenarios, onTheme, onLessons }: { status: keyof typeof STATUS_NAMES; onStatus: (s: keyof typeof STATUS_NAMES) => void; onPreview: () => void; onHistory: () => void; onLogic: () => void; onScenarios: () => void; onTheme: () => void; onLessons: () => void }) {
-  const { saver, projectId, store, flash } = useEnv();
+  const { saver, projectId, store, flash, media } = useEnv();
   const title = useEditor((s) => s.doc.meta.title);
   const apply = useEditor((s) => s.apply);
   const canUndo = useEditor((s) => s.past.length > 0 && s.gesture === null);
@@ -48,6 +49,28 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
     }
   };
 
+  /**
+   * PL-04 · перед публикацией делаем снимок первого экрана для превью ссылки. Если автор выбрал свою картинку, снимок не нужен.
+   * Не вышло — публикуем без снимка. Возвращает снимок, который нужно убрать после успешной публикации (прежний).
+   */
+  const refreshSnapshot = async (): Promise<string | null> => {
+    const current = store.getState().doc;
+    if (current.meta.ogImage) return null;
+    try {
+      const blob = await snapshotFirstScreen(current, media.resolver);
+      if (!blob) return null;
+      const form = new FormData();
+      form.append('file', blob, 'preview.png');
+      const item = await upload<{ id: string }>('/media', form);
+      const previous = current.meta.ogSnapshot?.source === 'media' ? current.meta.ogSnapshot.id : null;
+      apply(setOgSnapshot(item.id), { label: 'Превью ссылки' });
+      await saver.flush();
+      return previous;
+    } catch {
+      return null;
+    }
+  };
+
   const publish = async (ageKnown = false) => {
     setPublishing(true);
     try {
@@ -69,9 +92,11 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
           return;
         }
       }
+      const previousSnapshot = await refreshSnapshot();
       const sent = store.getState().doc;
       const result = await api<{ review?: boolean; warnings?: string[] } | null>(`/projects/${encodeURIComponent(projectId)}/publish`, { method: 'POST' });
       setPublishedDoc(sent);
+      if (previousSnapshot) void api(`/media/${encodeURIComponent(previousSnapshot)}`, { method: 'DELETE' }).catch(() => undefined);
       // P9.1 (TS-03): a new account that names a bank or a state body waits for a moderator — the link does not open yet.
       if (result?.review) {
         onStatus('CLOSED');
