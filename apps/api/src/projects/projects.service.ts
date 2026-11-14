@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { and, asc, desc, eq, inArray, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { AGE_RATINGS, createDocument, createId, createSlug, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
+import { AGE_RATINGS, createDocument, createId, createSlug, customSlugSchema, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
 import { AGE_RATING_REQUIRED } from './projects.tokens.js';
 import { HttpException, Inject, Optional } from '@nestjs/common';
 import { SafetyService, type PublishVerdict } from '../admin/safety.service.js';
@@ -16,6 +16,7 @@ import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { DB } from '../tokens.js';
 import { hashPassword } from '../play/secrets.js';
+import { RESERVED_SLUGS } from './slug-rules.js';
 import { type PassageMode, allowedPassageModes, effectivePassageMode, isPassageMode } from '../play/passage-mode.js';
 
 /** The settings of access the cabinet may write (PL-06…PL-10); the password goes separately and is stored as a hash. */
@@ -732,6 +733,38 @@ export class ProjectsService {
   async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings & { ageRatingRequired: boolean; noticeModes: NoticeModes }> {
     const row = await this.assertOwner(userId, projectId);
     return { ...this.forOwner((row.settings ?? {})), ageRatingRequired: this.ageRatingRequired === true, noticeModes: await this.noticeModes(row.ownerId, projectId, row.settings ?? {}) };
+  }
+
+  /** PL-01: the address of the build and whether the plan lets the creator change it. */
+  async getSlug(userId: string, projectId: string): Promise<{ slug: string; allowed: boolean; planTitle: string }> {
+    const row = await this.assertOwner(userId, projectId);
+    const { plan } = await this.entitlements.limitsOfProject(row.ownerId, projectId);
+    return { slug: row.slug, allowed: plan.limits.customSlug, planTitle: plan.title };
+  }
+
+  /** PL-01: own address of the build (`/s/{slug}`) on the plans that have it; QR codes keep working (they point to `/q/{code}`). */
+  async setSlug(userId: string, projectId: string, requested: unknown): Promise<{ slug: string }> {
+    const row = await this.assertOwner(userId, projectId);
+    const parsed = customSlugSchema.safeParse(typeof requested === 'string' ? requested.trim() : requested);
+    if (!parsed.success) throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: parsed.error.issues[0]?.message ?? 'Адрес указан неверно.' } });
+    const slug = parsed.data;
+    const { plan } = await this.entitlements.limitsOfProject(row.ownerId, projectId);
+    if (!plan.limits.customSlug) {
+      throw new HttpException({ error: { code: 'PLAN_LIMIT', message: `Свой адрес ссылки недоступен на тарифе «${plan.title}». Включите «Праздник» для этой сборки или оформите подписку.` } }, 402);
+    }
+    if (slug === row.slug) return { slug };
+    const taken = () => new HttpException({ error: { code: 'SLUG_TAKEN', message: 'Этот адрес занят. Выберите другой.' } }, 409);
+    if (RESERVED_SLUGS.has(slug)) throw taken();
+    const [other] = await this.db.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.slug, slug)).limit(1);
+    if (other) throw taken();
+    try {
+      await this.db.update(schema.projects).set({ slug }).where(eq(schema.projects.id, projectId));
+    } catch (e) {
+      // Two people took the same address at once: the unique index lets one of them.
+      if ((e as { code?: string; cause?: { code?: string } }).code === '23505' || (e as { cause?: { code?: string } }).cause?.code === '23505') throw taken();
+      throw e;
+    }
+    return { slug };
   }
 
   async updateAccessSettings(userId: string, projectId: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings & { noticeModes: NoticeModes }> {

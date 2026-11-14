@@ -78,6 +78,18 @@ export class ProjectsController {
     return this.projects.setProjectStatus(user.id, id, 'PUBLISHED');
   }
 
+  /** PL-01: the address of the build and whether the plan allows an own one. */
+  @Get(':id/slug')
+  getSlug(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.projects.getSlug(user.id, id);
+  }
+
+  /** PL-01: own address of the build (paid plans). */
+  @Patch(':id/slug')
+  setSlug(@Param('id') id: string, @Body() body: { slug?: unknown } | null, @CurrentUser() user: RequestUser) {
+    return this.projects.setSlug(user.id, id, body?.slug);
+  }
+
   /** D-03: Get access settings (limits, schedule, password…). */
   @Get(':id/access-settings')
   getAccessSettings(@Param('id') id: string, @CurrentUser() user: RequestUser) {

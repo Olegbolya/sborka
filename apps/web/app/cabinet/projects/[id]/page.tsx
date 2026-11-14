@@ -608,6 +608,47 @@ function AdSection({ projectId }: { projectId: string }) {
 /** D-07 · how often the creator hears about passages. One choice saves at once; what is offered depends on the plan. */
 const NOTICE_MODE_TEXT: Record<string, string> = { instant: 'Сразу, о каждом прохождении', hourly: 'Сводка раз в час', daily: 'Сводка раз в день', off: 'Не уведомлять' };
 
+function SlugCard({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
+  const [info, setInfo] = useState<{ slug: string; allowed: boolean; planTitle: string } | null>(null);
+  const [value, setValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  useEffect(() => {
+    apiFetch<{ slug: string; allowed: boolean; planTitle: string }>(`/projects/${projectId}/slug`)
+      .then((r) => { setInfo(r); setValue(r.slug); })
+      .catch((e: Error) => setError(e.message));
+  }, [projectId, setError]);
+  if (!info) return null;
+  async function save() {
+    setSaving(true);
+    setMessage('');
+    try {
+      const saved = await apiFetch<{ slug: string }>(`/projects/${projectId}/slug`, { method: 'PATCH', headers: CSRF, body: JSON.stringify({ slug: value }) });
+      setInfo((prev) => (prev ? { ...prev, slug: saved.slug } : prev));
+      setValue(saved.slug);
+      setMessage('Адрес сохранён. QR-коды и точки доступа продолжают работать.');
+    } catch (e) { setMessage((e as Error).message); }
+    finally { setSaving(false); }
+  }
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  return (
+    <div>
+      <label style={s.label} htmlFor="slug">Адрес ссылки {info.allowed ? '' : '🔒'}</label>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={s.hint}>{origin}/s/</span>
+        <input id="slug" style={{ ...s.inputFull, flex: 1, minWidth: 160 }} value={value} disabled={!info.allowed || saving} maxLength={40} onChange={(e) => setValue(e.target.value.toLowerCase())} aria-label="Адрес ссылки" />
+        <button type="button" style={s.btn} disabled={!info.allowed || saving || value === info.slug} onClick={() => void save()}>{saving ? 'Сохранение...' : 'Сменить адрес'}</button>
+      </div>
+      <p style={s.hint}>
+        {info.allowed
+          ? 'От 3 до 40 символов: строчные латинские буквы, цифры и дефис. Старая ссылка перестанет открываться, QR-коды продолжат работать.'
+          : `Свой адрес недоступен на тарифе «${info.planTitle}». Он открывается с пропуском «Праздник» или подпиской.`}
+      </p>
+      {message ? <p role="status" style={s.hint}>{message}</p> : null}
+    </div>
+  );
+}
+
 function NoticeModeCard({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
   const [modes, setModes] = useState<{ allowed: string[]; effective: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -834,6 +875,8 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
           aria-label="Текст экрана закрыто"
         />
       </div>
+
+      <SlugCard projectId={projectId} setError={setError} />
 
       <NoticeModeCard projectId={projectId} setError={setError} />
 
