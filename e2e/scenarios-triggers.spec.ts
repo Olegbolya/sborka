@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { hit, openEditor, seedProject, openTab, tap } from './helpers/editor';
+import { subscribeOwner } from './helpers/plan';
 
 /*
  * P3.8 · TR-01…TR-16: для каждого триггера правило создаётся в интерфейсе (вкладка «Сценарии» блока), а в предпросмотре
@@ -235,6 +236,7 @@ test.describe('P3.8 · правило с каждым триггером соз�
       test.setTimeout(120_000);
       await loginAndOnboard(page, freshUser('Сценарист'));
       const id = await world(page, c.audio === true);
+      await subscribeOwner(id, 'PRO'); // поведения «Движется», «Выпускает копии», «Стирается» — платные: на «Старте» у них замок в названии (04-TARIFFS §2)
       await openEditor(page, id);
       await tap(page, c.on);
       await openTab(page, 'Сценарии');

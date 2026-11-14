@@ -21,6 +21,7 @@ test.describe('P6.9 · GS-02 «Своя мини-игра»', () => {
     test.setTimeout(540_000);
     await loginAndOnboard(page, freshUser('Автор игры'));
     const { id } = await seedProject(page, undefined, 'Поймай подарок');
+    await subscribeOwner(id, 'PRO'); // поведения «Движется», «Выпускает копии», «Стирается» — платные: на «Старте» у них замок в названии (04-TARIFFS §2)
     await openEditor(page, id);
 
     // ── Переменные: «счёт» (в ответы) и «жизни» (три).

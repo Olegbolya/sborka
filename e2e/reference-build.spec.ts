@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { hit, openEditor, saveStatus, seedProject, serverDraft, openTab } from './helpers/editor';
 import { addBlock, newScreen, openRule, player, rule, selectBlock, selectedId } from './helpers/build';
+import { subscribeOwner } from './helpers/plan';
 
 /*
  * P3.12 · RG-01, RG-06, RG-07: игра собирается в редакторе через интерфейс, шаг за шагом, без единой строки кода, а потом проходится
@@ -197,6 +198,7 @@ test.describe('P3.12 · игры собираются через интерфе�
     test.setTimeout(300_000);
     await loginAndOnboard(page, freshUser('Автор игр'));
     const { id } = await seedProject(page);
+    await subscribeOwner(id, 'PRO'); // «Движется» и «Выпускает копии» — платные: на «Старте» у них замок в названии (04-TARIFFS §2)
     await openEditor(page, id);
 
     // 1 · variables.
