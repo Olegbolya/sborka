@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Db } from '@blokum/db';
+import type { EntitlementsService } from '../src/entitlements/entitlements.service.js';
 import { ExportService } from '../src/projects/export.service.js';
 import type { ResponsesService } from '../src/projects/responses.service.js';
 
@@ -20,7 +21,7 @@ function makeService(pages: Array<{ items: unknown[]; nextCursor: string | null 
   const listResponses = vi.fn();
   for (const p of pages) listResponses.mockResolvedValueOnce(p);
   const db = { select: () => ({ from: () => ({ where: () => ({ orderBy: () => Promise.resolve(answers) }) }) }) } as unknown as Db;
-  return { svc: new ExportService(db, { listResponses } as unknown as ResponsesService), listResponses };
+  return { svc: new ExportService(db, { listResponses } as unknown as ResponsesService, { limitsOfProject: () => Promise.resolve({ plan: { title: 'Про', limits: { exportFormats: ['csv', 'xlsx'] } } }) } as unknown as EntitlementsService), listResponses };
 }
 
 describe('D-06: выгрузка ответов', () => {

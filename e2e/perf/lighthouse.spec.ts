@@ -2,6 +2,7 @@ import { chromium, expect, test, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from '../helpers/auth';
 import { seedProject, textBlock, type SeedProject } from '../helpers/editor';
 import { seedGolden } from '../helpers/golden';
+import { subscribeOwner } from '../helpers/plan';
 
 /*
  * P5.7 · PL-19: Lighthouse по страницам участника — Performance ≥ 85 на телефоне с замедлением Lighthouse по умолчанию
@@ -38,6 +39,7 @@ for (const [name, seed] of Object.entries(builds)) {
     test.setTimeout(180_000);
     await loginAndOnboard(page, freshUser('Автор'));
     const { id } = await seed(page);
+    await subscribeOwner(id, 'PRO'); // эталонные сборки используют платные возможности (04-TARIFFS §2)
     const origin = new URL(page.url()).origin;
     expect((await page.request.post(`/api/v1/projects/${id}/publish`, { data: {}, headers: { origin } })).ok()).toBe(true);
     const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };

@@ -6,7 +6,7 @@ import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import { createBlock, createId, createScreen, plainText } from '@blokum/schema';
-import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, grantPlan, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 0;
 
@@ -307,6 +307,7 @@ describe('Q-01/Q-02/Q-04/Q-05/Q-07 · Точки доступа и QR', () => {
     try {
       ({ t, db, loginViaOtp } = await makeAppWithAuth());
       cookie = await loginViaOtp();
+      await grantPlan(db.db, 'PRO');
       const res = await request(t.http())
         .post(`/${API_PREFIX}/projects`)
         .set('Cookie', cookie)
@@ -582,6 +583,7 @@ describe('D-06 · Экспорт CSV/XLSX', () => {
     try {
       ({ t, db, loginViaOtp } = await makeAppWithAuth());
       cookie = await loginViaOtp();
+      await grantPlan(db.db, 'PRO');
       const res = await request(t.http())
         .post(`/${API_PREFIX}/projects`)
         .set('Cookie', cookie)

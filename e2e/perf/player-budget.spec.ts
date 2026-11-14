@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from '../helpers/auth';
 import { seedProject, textBlock, type SeedProject } from '../helpers/editor';
 import { seedGolden } from '../helpers/golden';
+import { subscribeOwner } from '../helpers/plan';
 
 /*
  * P5.7 · PL-19, N-02: бюджет первого экрана плеера. Считается в проекте «perf-390» (телефон SC-05) на боевой сборке:
@@ -63,6 +64,7 @@ for (const [name, seed] of Object.entries(builds)) {
   test(`PL-19: ${name} — JS плеера ≤ 250 КБ gzip, LCP < 2,5 с`, async ({ page, browser }, info) => {
     await loginAndOnboard(page, freshUser('Автор'));
     const { id } = await seed(page);
+    await subscribeOwner(id, 'PRO'); // эталонные сборки используют платные возможности (04-TARIFFS §2)
     const origin = new URL(page.url()).origin;
     expect((await page.request.post(`/api/v1/projects/${id}/publish`, { data: {}, headers: { origin } })).ok()).toBe(true);
     const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };

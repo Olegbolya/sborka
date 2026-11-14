@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { addBlock, goToScreen, newScreen, openRule, player, renameScreen, rule, selectBlock } from './helpers/build';
 import { SMALL_PNG, wav } from './helpers/files';
+import { subscribeOwner } from './helpers/plan';
 import { hit, openEditor, saveStatus, seedProject, serverDraft, openTab } from './helpers/editor';
 
 /*
@@ -209,6 +210,7 @@ test.describe('P6.9 · GS-02 «Своя мини-игра»', () => {
     await g.dialog.getByRole('button', { name: 'Закрыть' }).click();
 
     // ── Шаг 6: публикация; участник на «телефоне» (касания) ловит подарки, таймер приводит на экран результата.
+    await subscribeOwner(id, 'PRO'); // движение, колесо-подобные поведения и звук — платные возможности (04-TARIFFS §2)
     await page.getByRole('button', { name: 'Опубликовать' }).click();
     await expect(page.getByTestId('project-status')).toHaveText(/Опубликована/);
     const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };

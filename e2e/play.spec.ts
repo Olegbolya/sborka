@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { box, ensurePanel, nextButton, openEditor, seedProject, serverDraft, textBlock } from './helpers/editor';
+import { subscribeOwner } from './helpers/plan';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -21,13 +22,14 @@ const question = (id: string, texts: string[]) => ({
 });
 
 /** A published project with a question that has a key; the participant is a browser with no cookies at all. */
-async function published(page: Page, shape: (d: { screens: Array<{ id: string; name: string; blocks: unknown[] }>; meta: Record<string, unknown> }) => void = () => undefined, options: { showBack?: boolean } = {}) {
+async function published(page: Page, shape: (d: { screens: Array<{ id: string; name: string; blocks: unknown[] }>; meta: Record<string, unknown> }) => void = () => undefined, options: { showBack?: boolean; plan?: 'PRO' } = {}) {
   const { id } = await seedProject(page, (d) => {
     d.screens[0]!.blocks.push(textBlock('privet_1', 'Привет, участник', 20, 40, 300, 60), question('vopros_1', ['Да, верно', 'Нет, неверно']), nextButton('knopka_1', 'Дальше', 330));
     d.screens.push({ id: 'ekran_dva', name: 'Второй', blocks: [textBlock('vtoroj_t', 'Это второй экран', 20, 60, 300, 60), nextButton('knopka_2', 'Закончить', 200)] });
     (d.meta as Record<string, unknown>).description = 'Короткая викторина для проверки';
     shape(d as never);
   });
+  if (options.plan) await subscribeOwner(id, options.plan); // своя картинка превью — «Про» (04-TARIFFS §2)
   expect((await post(page, `/projects/${id}/publish`)).ok()).toBe(true);
   // Автор разрешил кнопку «← Назад»: без этого она скрыта (PL-11).
   if (options.showBack !== false) expect((await patch(page, `/projects/${id}/access-settings`, { showBack: true })).ok()).toBe(true);
@@ -105,7 +107,7 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
     const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
     const up = await page.request.post('/api/v1/media', { headers: { origin: origin(page) }, multipart: { file: { name: 'a.png', mimeType: 'image/png', buffer: PNG } } });
     const media = (await up.json()) as { id: string };
-    const { slug } = await published(page, (d) => void (d.meta.ogImage = { source: 'media', id: media.id }));
+    const { slug } = await published(page, (d) => void (d.meta.ogImage = { source: 'media', id: media.id }), { plan: 'PRO' });
     const base = info.project.use.baseURL!;
     const { ctx, page: p } = await participant(browser, base);
     await p.goto(`/s/${slug}`);
@@ -158,6 +160,7 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
   test('PL-04 · в редакторе автор пишет описание и выбирает свою картинку превью: они в og-тегах, снимок не делается; «Убрать» возвращает снимок', async ({ page, browser }, info) => {
     const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
     const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(textBlock('privet_1', 'Привет', 20, 60, 300, 80)));
+    await subscribeOwner(id, 'PRO'); // своя картинка превью — «Про» (04-TARIFFS §2)
     await openEditor(page, id);
     await ensurePanel(page, 'right');
     const section = page.locator('[data-section="link-preview"]');
@@ -192,6 +195,7 @@ test.describe('P5.1 · плеер: адреса, первый экран на с
     const up = await page.request.post('/api/v1/media', { headers: { origin: origin(page) }, multipart: { file: { name: 'a.png', mimeType: 'image/png', buffer: PNG } } });
     const media = (await up.json()) as { id: string };
     const { id } = await seedProject(page, (d) => void ((d.meta as Record<string, unknown>).ogImage = { source: 'media', id: media.id }));
+    await subscribeOwner(id, 'PRO'); // своя картинка превью — «Про» (04-TARIFFS §2)
     await openEditor(page, id);
     await page.getByRole('button', { name: /^Опубликовать/ }).click();
     await expect(page.getByText('Сборка опубликована').first()).toBeVisible({ timeout: 30_000 });

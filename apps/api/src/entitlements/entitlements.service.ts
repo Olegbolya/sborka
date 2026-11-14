@@ -6,6 +6,59 @@ import { countRules, type ProjectDocument, walkBlocks } from '@blokum/schema';
 export type PlanLimits = schema.PlanLimits;
 import { DB } from '../tokens.js';
 
+/** What a document uses that depends on the plan (04-TARIFFS §2): the rows that are checked when publishing. */
+export interface PlanFeatureUse {
+  premiumTransitions: boolean;
+  mediaInserts: number;
+  /** The most objects that move by themselves on one screen. */
+  mostMoving: number;
+  behaviors: Set<string>;
+  ownPreview: boolean;
+}
+
+const PREMIUM_TRANSITIONS = new Set(['flip', 'blinds', 'particles', 'page', 'preset']);
+const MOVING = new Set(['move', 'follow', 'flee', 'spawner']);
+
+/**
+ * Looks through the document for what the plan decides. The kinds are those of the schema: a transition is `transitionIn` of a screen
+ * or `transition` of a branch or rule; a media insert is a transition of kind `media`, a rule action `mediaOverlay` or a case of `mediaByAnswer`.
+ */
+export function scanPlanFeatures(doc: Pick<ProjectDocument, 'screens' | 'rules'> & Partial<Pick<ProjectDocument, 'theme' | 'meta'>>): PlanFeatureUse {
+  const use: PlanFeatureUse = { premiumTransitions: false, mediaInserts: 0, mostMoving: 0, behaviors: new Set(), ownPreview: Boolean(doc.meta?.ogImage) };
+  const visit = (node: unknown, key: string): void => {
+    if (Array.isArray(node)) {
+      for (const x of node) visit(x, key);
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    const o = node as Record<string, unknown>;
+    if ((key === 'transitionIn' || key === 'transition') && typeof o.kind === 'string') {
+      if (PREMIUM_TRANSITIONS.has(o.kind)) use.premiumTransitions = true;
+      if (o.kind === 'media') use.mediaInserts += 1;
+    }
+    if (o.kind === 'mediaOverlay') use.mediaInserts += 1;
+    if (key === 'mediaByAnswer' && Array.isArray(o.cases)) use.mediaInserts += o.cases.length;
+    if (key === 'particles' && Array.isArray(o.images) && o.images.length > 0) use.premiumTransitions = true;
+    for (const [k, v] of Object.entries(o)) visit(v, k);
+  };
+  visit(doc.rules, 'rules');
+  visit(doc.theme?.tokens, 'tokens');
+  for (const screen of doc.screens) {
+    visit(screen, 'screen');
+    let moving = 0;
+    for (const block of walkBlocks(screen.blocks)) {
+      let moves = false;
+      for (const b of block.behaviors) {
+        use.behaviors.add(b.kind);
+        if (MOVING.has(b.kind)) moves = true;
+      }
+      if (moves) moving += 1;
+    }
+    use.mostMoving = Math.max(use.mostMoving, moving);
+  }
+  return use;
+}
+
 /** Тариф человека на момент `now` и его лимиты (04-TARIFFS §6). */
 export interface Plan {
   code: string;
@@ -94,6 +147,16 @@ export class EntitlementsService {
     return (await this.planOf(userId, now)).limits;
   }
 
+  /** Есть ли у человека действующий пропуск «Праздник» хотя бы на одну его сборку (возможности пропуска — не только у сборки: свои шрифты, например). */
+  async hasPass(userId: string, now: Date = new Date()): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: schema.entitlements.id })
+      .from(schema.entitlements)
+      .where(and(eq(schema.entitlements.userId, userId), eq(schema.entitlements.feature, PASS_FEATURE), lte(schema.entitlements.validFrom, now), or(isNull(schema.entitlements.validTo), gt(schema.entitlements.validTo, now))))
+      .limit(1);
+    return Boolean(row);
+  }
+
   /** Действующий пропуск «Праздник» на сборку (начало и конец), если он есть. */
   async passOf(projectId: string, now: Date = new Date()): Promise<{ from: Date; to: Date } | null> {
     const [row] = await this.db
@@ -134,7 +197,7 @@ export class EntitlementsService {
   async publishViolations(
     ownerId: string,
     projectId: string,
-    doc: Pick<ProjectDocument, 'screens' | 'rules'>,
+    doc: Pick<ProjectDocument, 'screens' | 'rules'> & Partial<Pick<ProjectDocument, 'theme' | 'meta'>>,
     settings: { passwordHash?: string; scheduledOpenAt?: string | null; scheduledCloseAt?: string | null; singleAttempt?: boolean },
     now: Date = new Date(),
   ): Promise<Array<{ code: string; message: string }>> {
@@ -164,6 +227,15 @@ export class EntitlementsService {
     }
     if (hasContacts && !l.contactsCollection) add('FEATURE_CONTACTS', `Сбор контактов участников недоступен на тарифе «${plan.title}».`);
     if (hasAudio && !l.audio) add('FEATURE_AUDIO', `Звук в сборке недоступен на тарифе «${plan.title}».`);
+    const use = scanPlanFeatures(doc);
+    if (use.premiumTransitions && !l.premiumTransitions) add('FEATURE_TRANSITIONS', `Переходы «переворот», «шторка», «в частицах», «страница», свои переходы и частицы из своих картинок недоступны на тарифе «${plan.title}».`);
+    if (l.mediaTransitionsPerProject !== null && use.mediaInserts > l.mediaTransitionsPerProject) add('LIMIT_MEDIA_TRANSITIONS', `На тарифе «${plan.title}» в сборке может быть до ${l.mediaTransitionsPerProject} медиа-переходов и вставок, сейчас ${use.mediaInserts}.`);
+    if (use.mostMoving > l.movingObjects) add('LIMIT_MOVING_OBJECTS', `На тарифе «${plan.title}» на экране может двигаться до ${l.movingObjects} объектов, сейчас ${use.mostMoving}.`);
+    if (l.behaviors !== 'all') {
+      const extra = [...use.behaviors].filter((k) => !(l.behaviors as string[]).includes(k));
+      if (extra.length > 0) add('FEATURE_BEHAVIORS', `На тарифе «${plan.title}» доступны только поведения: перетаскивание, переворот, убегание.`);
+    }
+    if (use.ownPreview && !l.ownBranding) add('FEATURE_OWN_PREVIEW', `Своя картинка для превью ссылки недоступна на тарифе «${plan.title}» (снимок первого экрана делается сам).`);
     const hasAccess = Boolean(settings.passwordHash) || Boolean(settings.scheduledOpenAt) || Boolean(settings.scheduledCloseAt) || settings.singleAttempt === true;
     if (hasAccess && !l.accessControls) add('FEATURE_ACCESS', `Пароль, расписание и одна попытка с устройства недоступны на тарифе «${plan.title}».`);
     return out;

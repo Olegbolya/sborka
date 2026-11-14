@@ -9,7 +9,7 @@ import { schema } from '@blokum/db';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import { commercialVendor, isFontLicense } from '../src/fonts/font-processor.js';
-import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, grantPlan, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 /** Буфер с валидным TTF-заголовком, но мусорным содержимым — fontkit не сможет прочитать. */
 const BROKEN_TTF = Buffer.concat([
@@ -115,6 +115,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
   it('TH-04 · POST /fonts — без указания лицензии отказ с понятным текстом', async () => {
     if (skip() || !geistPath) return;
     const cookie = await loginViaOtp();
+    await grantPlan(db.db, 'AUTHOR');
     const buf = await readFile(geistPath);
     const res = await request(t.http())
       .post(`/${API_PREFIX}/fonts`)
@@ -135,6 +136,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
   it('TH-04 · лицензия сохраняется вместе со шрифтом', async () => {
     if (skip() || !geistPath) return;
     const cookie = await loginViaOtp();
+    await grantPlan(db.db, 'AUTHOR');
     const buf = await readFile(geistPath);
     const res = await request(t.http())
       .post(`/${API_PREFIX}/fonts`)
@@ -159,6 +161,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
   it('TH-04 · POST /fonts — отклоняет слишком большой файл (>10 МБ)', async () => {
     if (skip()) return;
     const cookie = await loginViaOtp();
+    await grantPlan(db.db, 'AUTHOR');
     const res = await request(t.http())
       .post(`/${API_PREFIX}/fonts`)
       .set('Cookie', cookie)
@@ -172,6 +175,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
   it('TH-04 · POST /fonts — отклоняет битый файл (TTF-заголовок, мусор внутри)', async () => {
     if (skip()) return;
     const cookie = await loginViaOtp();
+    await grantPlan(db.db, 'AUTHOR');
     const res = await request(t.http())
       .post(`/${API_PREFIX}/fonts`)
       .set('Cookie', cookie)
@@ -186,6 +190,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
   it('TH-04 · POST /fonts — принимает шрифт и возвращает hasCyrillic', async () => {
     if (skipNoFont()) return;
     const cookie = await loginViaOtp();
+    await grantPlan(db.db, 'AUTHOR');
     const buf = await readFile(geistPath!);
     const res = await request(t.http())
       .post(`/${API_PREFIX}/fonts`)
@@ -204,6 +209,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
   it('TH-04 · GET /fonts — возвращает список шрифтов', async () => {
     if (skipNoFont()) return;
     const cookie = await loginViaOtp();
+    await grantPlan(db.db, 'AUTHOR');
     const buf = await readFile(geistPath!);
     // Загружаем шрифт
     await request(t.http())
@@ -228,6 +234,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
   it('TH-04 · DELETE /fonts/:id — удаляет шрифт', async () => {
     if (skipNoFont()) return;
     const cookie = await loginViaOtp();
+    await grantPlan(db.db, 'AUTHOR');
     const buf = await readFile(geistPath!);
     const created = await request(t.http())
       .post(`/${API_PREFIX}/fonts`)
@@ -258,6 +265,7 @@ describe('TH-04, TS-26 · пользовательские шрифты', () => 
   it('TS-26 · POST /fonts — конвертирует в WOFF2 и сохраняет как медиафайл', async () => {
     if (skipNoFont()) return;
     const cookie = await loginViaOtp();
+    await grantPlan(db.db, 'AUTHOR');
     const buf = await readFile(geistPath!);
     const res = await request(t.http())
       .post(`/${API_PREFIX}/fonts`)

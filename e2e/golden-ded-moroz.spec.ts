@@ -208,6 +208,7 @@ test.describe('P6.8 · GS-01 «Письмо Деду Морозу»', () => {
     await page.getByRole('dialog', { name: 'Предпросмотр' }).getByRole('button', { name: 'Закрыть' }).first().click();
 
     // ── Шаг 6: публикация, лимит 50 переходов, ссылка и QR (PNG и SVG).
+    await subscribeOwner(id, 'PRO'); // свои переходы, мемы и звук — платные возможности (04-TARIFFS §2)
     await page.getByRole('button', { name: 'Опубликовать', exact: true }).click();
     await expect(page.getByText('Сборка опубликована')).toBeVisible();
     const { slug } = (await (await page.request.get(`/api/v1/projects/${id}`)).json()) as { slug: string };
@@ -272,7 +273,6 @@ test.describe('P6.8 · GS-01 «Письмо Деду Морозу»', () => {
 
     // ── Шаг 9: 51-й участник видит «Сборка закрыта» в оформлении темы.
     const projectId = id;
-    await subscribeOwner(projectId); // лимит сборки — 50, а не месячный лимит «Старта» (30)
     for (let i = 1; i < 50; i++) {
       const started = await page.request.post(`/api/v1/play/${projectId}/sessions`, { data: {}, headers: { origin: origin(page) } });
       expect(started.status(), await started.text()).toBe(201);

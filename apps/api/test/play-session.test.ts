@@ -6,7 +6,7 @@ import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import { PassageNoticesService } from '../src/play/passage-notices.service.js';
-import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, grantPlan, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 0;
 
@@ -292,6 +292,7 @@ describe('PL-11…PL-15 · прохождение на сервере', () => {
 
   /** A project with a wheel (weights as given), a number variable and a text variable. */
   async function game(weights: number[] = [0, 0, 1]): Promise<{ id: string; wheel: string }> {
+    await grantPlan(db.db, 'PRO'); // «Колесо» — поведение платных тарифов (04-TARIFFS §2)
     const created = (await call(t, cookie, 'post', '/projects', { title: 'Игра' }).expect(200)).body as { id: string; document: ProjectDocument; draftVersionNumber: number };
     const doc = created.document;
     const wheel = createBlock('container', {

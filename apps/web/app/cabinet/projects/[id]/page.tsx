@@ -639,7 +639,7 @@ function NoticeModeCard({ projectId, setError }: { projectId: string; setError: 
           </option>
         ))}
       </select>
-      <p style={s.hint}>Сообщения приходят в кабинет на сайте (позже добавится Telegram). Выбор сохраняется сразу.</p>
+      <p style={s.hint}>Сообщения приходят в кабинет на сайте (позже добавится «Телеграм»). Выбор сохраняется сразу.</p>
     </div>
   );
 }

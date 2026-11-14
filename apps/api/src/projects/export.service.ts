@@ -4,6 +4,8 @@ import { inArray } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import ExcelJS from 'exceljs';
 import { DB } from '../tokens.js';
+import { fail } from '../admin/errors.js';
+import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { ResponsesService } from './responses.service.js';
 
 @Injectable()
@@ -11,10 +13,18 @@ export class ExportService {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly responses: ResponsesService,
+    private readonly entitlements: EntitlementsService,
   ) {}
+
+  /** 04-TARIFFS §2: «Экспорт ответов» — нет / CSV / CSV + XLSX. */
+  private async assertFormat(userId: string, projectId: string, format: 'csv' | 'xlsx'): Promise<void> {
+    const { plan } = await this.entitlements.limitsOfProject(userId, projectId);
+    if (!plan.limits.exportFormats.includes(format)) throw fail(402, 'PLAN_LIMIT', `Выгрузка ответов в ${format.toUpperCase()} недоступна на тарифе «${plan.title}».`);
+  }
 
   /** D-06: Export all responses for a project as CSV (UTF-8 + BOM). */
   async exportCsv(userId: string, projectId: string): Promise<Buffer> {
+    await this.assertFormat(userId, projectId, 'csv');
     const rows = await this.fetchAllResponses(userId, projectId);
     const headers = this.buildHeaders(rows);
     const lines: string[] = [headers.map(csvEscape).join(',')];
@@ -27,6 +37,7 @@ export class ExportService {
 
   /** D-06: Export all responses for a project as XLSX. */
   async exportXlsx(userId: string, projectId: string): Promise<Buffer> {
+    await this.assertFormat(userId, projectId, 'xlsx');
     const rows = await this.fetchAllResponses(userId, projectId);
     const headers = this.buildHeaders(rows);
     const wb = new ExcelJS.Workbook();

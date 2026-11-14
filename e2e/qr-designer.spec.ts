@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { seedProject } from './helpers/editor';
+import { subscribeOwner } from './helpers/plan';
 
 const SHOTS = 'e2e/__screenshots__';
 
@@ -9,6 +10,7 @@ test.describe('Q-03…Q-06 · конструктор QR', () => {
   test('Q-03, Q-04, Q-06 · оформление QR: цвета, форма, рамка с подписью сохраняются; плохой контраст не даёт сохранить; есть PDF и статистика точки', async ({ page }, info) => {
     await loginAndOnboard(page, freshUser('Автор'));
     const { id } = await seedProject(page);
+    await subscribeOwner(id, 'AUTHOR'); // оформленный QR — с первого платного тарифа (04-TARIFFS §2)
     await page.goto(`/cabinet/projects/${id}`);
     await page.getByRole('button', { name: 'Точки доступа' }).click();
     await expect(page.getByText(/\/q\//).first()).toBeVisible();

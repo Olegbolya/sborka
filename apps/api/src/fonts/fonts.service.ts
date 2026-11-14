@@ -5,6 +5,8 @@ import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createId } from '@blokum/schema';
 import { DB } from '../tokens.js';
+import { fail } from '../admin/errors.js';
+import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { LocalStorageService } from '../media/storage.js';
 import { type FontLicense, processFont } from './font-processor.js';
 
@@ -22,6 +24,7 @@ export class FontsService {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly storage: LocalStorageService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   /**
@@ -29,6 +32,11 @@ export class FontsService {
    * создаёт или обновляет запись шрифта (группировка по family + ownerId).
    */
   async upload(ownerId: string, buffer: Buffer, license: FontLicense): Promise<FontDto> {
+    // 04-TARIFFS §2: «Свои шрифты (TH-04)» — со второго тарифа («Праздник» и выше).
+    const plan = await this.entitlements.planOf(ownerId);
+    // Fonts of the library are uploaded by the administrators: the tariffs are for creators.
+    const [who] = await this.db.select({ role: schema.users.role }).from(schema.users).where(eq(schema.users.id, ownerId));
+    if (!plan.limits.ownFonts && who?.role !== 'ADMIN' && !(await this.entitlements.hasPass(ownerId))) throw fail(402, 'PLAN_LIMIT', `Свои шрифты недоступны на тарифе «${plan.title}».`);
     let result: Awaited<ReturnType<typeof processFont>>;
     try {
       result = await processFont(buffer, license);

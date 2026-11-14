@@ -6,7 +6,7 @@ import { API_PREFIX } from '../src/app.js';
 import { DEFAULT_QR_STYLE, QR_MIN_CONTRAST, colourProblem, contrastRatio, parseQrStyle, reads, renderPng } from '../src/projects/qr-render.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, grantPlan, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 const URL_OF = 'https://blokker.ru/q/abc12345';
 const sent: { phone: string; code: string }[] = [];
@@ -43,6 +43,7 @@ describe('Q-03…Q-06 · конструктор QR, печать, проверк
       t = await startTestApp({ db: db.db, otpSender, captchaVerifier });
       cookie = await login('+79051230101');
       other = await login('+79051230102');
+      await grantPlan(db.db, 'PRO');
       projectId = ((await send('post', '/projects', cookie, { title: 'Афиша' }).expect(200)).body as { id: string }).id;
     } catch (e) {
       if ((e as { code?: string }).code === 'ECONNREFUSED') pg.skip();

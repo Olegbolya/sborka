@@ -8,7 +8,7 @@ import { API_PREFIX } from '../src/app.js';
 import { IS_PUBLIC_KEY, ROLES_KEY } from '../src/auth/decorators.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, grantPlan, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 /*
  * P9.4 · N-04 · docs/02-ARCHITECTURE.md §8 п. 10: «проверка роли на каждом эндпоинте» и тесты IDOR по эндпоинтам кабинета.
@@ -83,6 +83,7 @@ describe('P9.4 · N-04 · роли и доступ к чужим объекта�
     const cookie = ((res.headers['set-cookie'] ?? []) as string[]).find((c) => c.startsWith('session='))!.split(';')[0]!;
     const [u] = await db.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.phoneE164, phone));
     if (role !== 'USER') await db.db.update(schema.users).set({ role }).where(eq(schema.users.id, u!.id));
+    await grantPlan(db.db, 'PRO');
     return { cookie, id: u!.id };
   }
 

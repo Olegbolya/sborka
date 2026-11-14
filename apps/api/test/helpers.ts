@@ -4,7 +4,7 @@ import os from 'node:os';
 import { beforeEach as _beforeEach } from 'vitest';
 import { type INestApplication } from '@nestjs/common';
 import { type Alert, Alerts, createLogger } from '@blokum/observability';
-import { createDb, runMigrations, type Db } from '@blokum/db';
+import { createDb, runMigrations, schema, type Db } from '@blokum/db';
 import pg from 'pg';
 import { createId } from '@blokum/schema';
 import { type AppDeps } from '../src/app.module.js';
@@ -118,4 +118,16 @@ export async function startTestApp(overrides: Partial<AppDeps> = {}, configOverr
   const port = typeof addr === 'object' && addr !== null ? addr.port : 0;
   dynamicConfig.oauthBaseUrl = `http://127.0.0.1:${port}/${API_PREFIX}`;
   return { app, http: () => app.getHttpServer() as Server, logs, alerts: sent };
+}
+
+/**
+ * Every user of the database who has no active subscription gets `planCode` (P7.1): tests of what the paid plans open (several access
+ * points, a styled QR, XLSX, own fonts, the wheel…) say so in one line; without it a user is on «Старт», as in life.
+ */
+export async function grantPlan(db: Db, planCode: 'AUTHOR' | 'PLUS' | 'PRO' = 'PRO'): Promise<void> {
+  const have = new Set((await db.select({ id: schema.subscriptions.userId }).from(schema.subscriptions)).map((r) => r.id));
+  for (const u of await db.select({ id: schema.users.id }).from(schema.users)) {
+    if (have.has(u.id)) continue;
+    await db.insert(schema.subscriptions).values({ userId: u.id, planCode, period: 'MONTH', status: 'ACTIVE', currentPeriodStart: new Date(Date.now() - 86_400_000), currentPeriodEnd: new Date(Date.now() + 29 * 86_400_000) });
+  }
 }

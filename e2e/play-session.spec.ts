@@ -1,6 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { nextButton, seedProject, textBlock } from './helpers/editor';
+import { subscribeOwner } from './helpers/plan';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -20,7 +21,7 @@ const choice = (id: string, texts: string[]) => ({
 
 const textField = (id: string) => ({ id, type: 'textInput', name: 'Имя', frame: { x: 20, y: 340, w: 300, h: 56 }, props: {} });
 
-async function published(page: Page, shape: (d: { screens: Array<{ id: string; name: string; blocks: unknown[] }>; variables: unknown[]; settings: Record<string, unknown> }) => void = () => undefined) {
+async function published(page: Page, shape: (d: { screens: Array<{ id: string; name: string; blocks: unknown[] }>; variables: unknown[]; settings: Record<string, unknown> }) => void = () => undefined, plan?: 'PLUS' | 'PRO') {
   const { id } = await seedProject(page, (d) => {
     d.variables.push({ id: 'ochki_var', name: 'очки', type: 'number', initial: 0, saveToAnswers: false });
     d.screens[0]!.blocks.push(
@@ -33,6 +34,7 @@ async function published(page: Page, shape: (d: { screens: Array<{ id: string; n
     d.screens.push({ id: 'ekran_dva', name: 'Второй', blocks: [textBlock('vtoroj_t', 'Это второй экран', 20, 60, 300, 60), nextButton('konec_1', 'Закончить', 200)] });
     shape(d as never);
   });
+  if (plan) await subscribeOwner(id, plan); // «Колесо» и другие поведения — на платных тарифах (04-TARIFFS §2)
   expect((await post(page, `/projects/${id}/publish`)).ok()).toBe(true);
   // Кнопка «← Назад» включается автором в настройках проекта (PL-11).
   expect((await page.request.patch(`/api/v1/projects/${id}/access-settings`, { data: { showBack: true }, headers: { origin: new URL(page.url()).origin } })).ok()).toBe(true);
@@ -157,7 +159,7 @@ test.describe('P5.3 · прохождение и ответы', () => {
           { ...textBlock('sektor_b', 'Приз Б', 100, 0, 80, 40), type: 'shape' },
         ],
       });
-    });
+    }, 'PRO');
     const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
     const seen: string[] = [];
     p.on('response', async (r) => {

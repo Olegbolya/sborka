@@ -359,6 +359,44 @@
      "behaviors": [],
      "hiddenInEditor": false,
      "initiallyHidden": false
+    },
+    {
+     "z": 6,
+     "id": "h1nt0ls7k2m9q4xa",
+     "a11y": {},
+     "name": "Подсказка",
+     "type": "text",
+     "frame": {
+      "h": 90,
+      "w": 350,
+      "x": 20,
+      "y": 130,
+      "flipX": false,
+      "flipY": false,
+      "rotation": 0
+     },
+     "props": {},
+     "rules": [],
+     "style": {
+      "autoHeight": true
+     },
+     "locked": false,
+     "children": [],
+     "behaviors": [],
+     "textLayer": {
+      "paragraphs": [
+       {
+        "kind": "p",
+        "runs": [
+         {
+          "t": "Лови подарки, пока не кончилось время!"
+         }
+        ]
+       }
+      ]
+     },
+     "hiddenInEditor": false,
+     "initiallyHidden": false
     }
    ],
    "height": 844,

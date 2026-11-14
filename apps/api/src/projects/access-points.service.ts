@@ -1,9 +1,10 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createId } from '@blokum/schema';
 import { Inject } from '@nestjs/common';
 import { DB } from '../tokens.js';
+import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { fail } from '../admin/errors.js';
 import { LocalStorageService, servedKey } from '../media/storage.js';
 import { type PrintLayout, type QrStyle, QrInputError, colourProblem, logoFromFile, parseQrStyle, readStoredStyle, renderPdf, renderPng, reads, buildSvg } from './qr-render.js';
@@ -29,6 +30,7 @@ export class AccessPointsService {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly storage: LocalStorageService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   /** Q-01: List all access points for a project. */
@@ -45,6 +47,13 @@ export class AccessPointsService {
   /** Q-01: Create a new access point (LINK or QR). */
   async create(userId: string, projectId: string, webUrl: string, data: { label?: string; kind?: 'LINK' | 'QR' }): Promise<AccessPointDto> {
     await this.assertProjectOwner(userId, projectId);
+    // 04-TARIFFS §2: «Точек доступа на сборку» — 1 / 3 / 3 / 5 / 50.
+    const { plan } = await this.entitlements.limitsOfProject(userId, projectId);
+    const max = plan.limits.accessPointsPerProject;
+    if (max !== null) {
+      const [have] = await this.db.select({ n: sql<number>`count(*)::int` }).from(schema.accessPoints).where(eq(schema.accessPoints.projectId, projectId));
+      if ((have?.n ?? 0) >= max) throw fail(402, 'PLAN_LIMIT', `На тарифе «${plan.title}» у сборки может быть до ${max} ${max === 1 ? 'точки доступа' : 'точек доступа'} (ссылок и QR-кодов).`);
+    }
     const id = createId();
     const code = slugCode();
     const label = data.label ?? 'Основная ссылка';
@@ -78,6 +87,9 @@ export class AccessPointsService {
    */
   async setQrStyle(userId: string, pointId: string, webUrl: string, input: unknown): Promise<QrStyle> {
     const ap = await this.getAndAuthorize(userId, pointId);
+    // 04-TARIFFS §2: оформленный QR (цвета, логотип, рамка) — с тарифа «Автор»; обычный QR доступен всем.
+    const { plan } = await this.entitlements.limitsOfProject(userId, ap.projectId);
+    if (!plan.limits.styledQr) throw fail(402, 'PLAN_LIMIT', `Оформленный QR-код (цвета, логотип, рамка) недоступен на тарифе «${plan.title}».`);
     let style: QrStyle;
     try {
       style = parseQrStyle(input);

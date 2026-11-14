@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
+import { createTestDb, grantPlan, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 let phoneCounter = 0;
 
@@ -210,6 +210,7 @@ describe('PL-01…PL-05 · публикация и открытие плеера
   });
 
   it('PL-04 · картинка из опубликованной сборки раздаётся участникам, чужая и не упомянутая — нет', async () => {
+    await grantPlan(db.db, 'PRO'); // своя картинка превью — «Про» (04-TARIFFS §2)
     const png = await sharp({ create: { width: 4, height: 4, channels: 3, background: '#336699' } }).png().toBuffer();
     const up = await request(t.http()).post(`/${API_PREFIX}/media`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').attach('file', png, { filename: 'a.png', contentType: 'image/png' }).expect(201);
     const other = await request(t.http()).post(`/${API_PREFIX}/media`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').attach('file', await sharp({ create: { width: 5, height: 5, channels: 3, background: '#993366' } }).png().toBuffer(), { filename: 'b.png', contentType: 'image/png' }).expect(201);
@@ -229,6 +230,7 @@ describe('PL-01…PL-05 · публикация и открытие плеера
   });
 
   it('TS-24 · медиафайл на проверке — в view.media есть stub: processing; заблокированный — stub: blocked', async () => {
+    await grantPlan(db.db, 'PRO'); // своя картинка превью — «Про» (04-TARIFFS §2)
     const png = await sharp({ create: { width: 4, height: 4, channels: 3, background: '#225588' } }).png().toBuffer();
     const up = await request(t.http()).post(`/${API_PREFIX}/media`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').attach('file', png, { filename: 'c.png', contentType: 'image/png' }).expect(201);
     const mediaId = up.body.id as string;

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { adminLogin, freshUser, loginAndOnboard } from './helpers/auth';
 import { openEditor, openTab, saveStatus, seedProject, serverDraft, textBlock } from './helpers/editor';
+import { subscribeOwner } from './helpers/plan';
 
 /** The administrators of this browser project who fill the library (scripts/e2e-api.sh). */
 const libraryAdminId = (info: { project: { name: string } }): string => (info.project.name.startsWith('mobile') ? '700000000042' : '700000000041');
@@ -23,6 +24,7 @@ test.beforeEach(async ({ page }) => {
 /** The block is chosen and its «Свой шрифт» is turned on. */
 async function ownFontOnBlock(page: Page): Promise<void> {
   const { id } = await seedProject(page, (d) => void d.screens[0]!.blocks.push(textBlock('tekst_shrift', 'Заголовок')));
+  await subscribeOwner(id, 'AUTHOR'); // свои шрифты — с первого платного тарифа (04-TARIFFS §2)
   await openEditor(page, id);
   await openTab(page, 'Слои');
   await page.getByRole('list', { name: 'Слои' }).getByRole('button', { name: 'Заголовок', exact: true }).click();
