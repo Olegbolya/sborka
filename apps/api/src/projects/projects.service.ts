@@ -755,10 +755,10 @@ export class ProjectsService {
   }
 
   /** P7.1 · what the editor shows of the plan of the build: its name and the limits of screens and rules. */
-  async getLimits(userId: string, projectId: string): Promise<{ plan: { code: string; title: string }; screens: number; rules: number }> {
+  async getLimits(userId: string, projectId: string): Promise<{ plan: { code: string; title: string }; screens: number; rules: number; behaviors: 'all' | string[]; premiumTransitions: boolean; audio: boolean; contacts: boolean }> {
     const row = await this.assertOwner(userId, projectId);
     const { plan } = await this.entitlements.limitsOfProject(row.ownerId, projectId);
-    return { plan: { code: plan.code, title: plan.title }, screens: plan.limits.screensPerProject, rules: plan.limits.rulesPerProject };
+    return { plan: { code: plan.code, title: plan.title }, screens: plan.limits.screensPerProject, rules: plan.limits.rulesPerProject, behaviors: plan.limits.behaviors, premiumTransitions: plan.limits.premiumTransitions, audio: plan.limits.audio, contacts: plan.limits.contactsCollection };
   }
 
   /** PL-01: the address of the build and whether the plan lets the creator change it. */

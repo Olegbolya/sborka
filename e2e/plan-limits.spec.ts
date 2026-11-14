@@ -40,4 +40,37 @@ test.describe('P7.1 · границы тарифа в редакторе', () =>
     await expect(page.getByTestId('screens-limit')).toContainText('Экранов: 10 из 30 на тарифе «Автор»');
     await expect(page.getByRole('button', { name: 'Добавить экран', exact: true })).toBeEnabled();
   });
+  test('04-TARIFFS §2 · «Старт»: у платных блоков, поведений и переходов стоит замок и подсказка; на «Авторе» замков нет', async ({ page }, info) => {
+    await loginAndOnboard(page, freshUser('Автор'));
+    const { id } = await seedProject(page, (d) => {
+      d.screens[0]!.blocks.push(textBlock('korobka_lk', 'Коробка', 20, 40, 200, 56));
+    });
+    await openEditor(page, id);
+    await openTab(page, 'Добавить');
+    const audio = page.locator('[data-add-type="audio"]');
+    const contacts = page.locator('[data-add-type="contacts"]');
+    await expect(audio).toContainText('Звук 🔒');
+    await expect(contacts).toContainText('Контактные данные 🔒');
+    await expect(audio).toHaveAttribute('title', /опубликовать сборку с этим — на платном тарифе/);
+    await expect(page.locator('[data-add-type="text"]')).not.toContainText('🔒');
+    mkdirSync(SHOTS, { recursive: true });
+    await page.screenshot({ path: `${SHOTS}/plan-locks-add-${info.project.name}.png` });
+
+    await hit(page, 'Коробка').click();
+    await openTab(page, 'Сценарии');
+    const behaviors = page.getByLabel('Добавить поведение');
+    await expect(behaviors.locator('option', { hasText: '🔒' })).not.toHaveCount(0);
+    await expect(behaviors.locator('option', { hasText: 'Перетаскивается' })).not.toContainText('🔒');
+    await page.screenshot({ path: `${SHOTS}/plan-locks-behaviors-${info.project.name}.png` });
+
+    await subscribeOwner(id, 'AUTHOR');
+    await page.reload();
+    await expect(page.getByTestId('editor')).toBeVisible();
+    await openTab(page, 'Добавить');
+    await expect(page.locator('[data-add-type="audio"]')).not.toContainText('🔒');
+    await expect(page.locator('[data-add-type="contacts"]')).not.toContainText('🔒');
+    await hit(page, 'Коробка').click();
+    await openTab(page, 'Сценарии');
+    await expect(page.getByLabel('Добавить поведение').locator('option', { hasText: '🔒' })).toHaveCount(0);
+  });
 });

@@ -47,6 +47,12 @@ export function useEnv(): EditorEnv {
   return env as EditorEnv;
 }
 
+/** The environment of the project editor, or `null` where the same panels work without a project (the editor of a theme). */
+export function useOptionalEnv(): EditorEnv | null {
+  const env = useContext(Ctx);
+  return env && 'saver' in env ? (env as EditorEnv) : null;
+}
+
 /** Selector over the editor store; select primitives or stable references only. */
 export function useEditor<T>(selector: (state: EditorState & EditorActions) => T): T {
   return useStore(useControlEnv().store, selector);

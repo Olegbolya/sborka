@@ -6,10 +6,12 @@ import { BEHAVIORS, type MakeContext } from '../../lib/editor/scenario-specs';
 import { SelectInput } from './controls';
 import { useEditor } from './context';
 import { PartForm } from './ScenarioForm';
+import { usePlanLocks } from './planLimits';
 
 /** BH-01…BH-08 · what the block does by itself: drags, runs away, spins… Each is a small form of its own. */
 export function BehaviorsEditor({ blockId, behaviors }: { blockId: string; behaviors: readonly Behavior[] }) {
   const doc = useEditor((s) => s.doc);
+  const locks = usePlanLocks();
   const apply = useEditor((s) => s.apply);
   const screenId = useEditor((s) => s.selection.screenId);
   const [open, setOpen] = useState<number | null>(null);
@@ -45,7 +47,7 @@ export function BehaviorsEditor({ blockId, behaviors }: { blockId: string; behav
         control="add-behavior"
         label="Добавить поведение"
         value=""
-        options={[['', behaviors.length >= 8 ? 'Больше восьми нельзя' : free.length === 0 ? 'Все поведения уже добавлены' : 'Добавить поведение…'], ...free.map((b) => [b.kind, b.title] as const)]}
+        options={[['', behaviors.length >= 8 ? 'Больше восьми нельзя' : free.length === 0 ? 'Все поведения уже добавлены' : 'Добавить поведение…'], ...free.map((b) => [b.kind, locks.mark(b.title, locks.behavior(b.kind))] as const)]}
         onChange={(kind) => {
           const spec = BEHAVIORS.find((b) => b.kind === kind);
           if (!spec || behaviors.length >= 8) return;

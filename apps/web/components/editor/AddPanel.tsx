@@ -11,6 +11,7 @@ import { CoverThumb } from './CoverThumb';
 import { MediaPicker } from './MediaPicker';
 import { PasteVariablesDialog } from './PasteVariablesDialog';
 import { useEditor, useEnv } from './context';
+import { usePlanLocks } from './planLimits';
 
 const GROUPS = Object.keys(GROUP_TITLES) as CatalogEntry['group'][];
 const BLOCK_OF_MEDIA: Partial<Record<MediaKind, BlockType>> = {
@@ -67,6 +68,7 @@ export function useAddBlocks() {
 
 /** E-14 · «Добавить»: the kinds of blocks by group with a search, and a file from the media library as a ready block. */
 export function AddPanel() {
+  const locks = usePlanLocks();
   const { media } = useEnv();
   useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
   const [query, setQuery] = useState('');
@@ -108,9 +110,9 @@ export function AddPanel() {
             <ul className="ed-list">
               {entries.map((e) => (
                 <li key={e.type}>
-                  <button type="button" className="ed-item" data-add-type={e.type} onClick={() => add(e.type)}>
+                  <button type="button" className="ed-item" data-add-type={e.type} title={locks.block(e.type) ? locks.hint : undefined} onClick={() => add(e.type)}>
                     <span className="name">
-                      {e.title}
+                      {locks.mark(e.title, locks.block(e.type))}
                       <br />
                       <small>{e.hint}</small>
                     </span>

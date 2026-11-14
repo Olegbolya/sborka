@@ -127,7 +127,7 @@ describe('P7.1 · таблица тарифов на маршрутах API: к�
       const { cookie, projectId } = await person(code);
       const res = (await send('get', `/projects/${projectId}/limits`, cookie).expect(200)).body as { plan: { code: string }; screens: number; rules: number };
       // «Праздник» поднимает границы сборки до своих; без него — тариф человека.
-      expect(res).toMatchObject({ plan: { code }, screens: l.screensPerProject, rules: l.rulesPerProject });
+      expect(res).toMatchObject({ plan: { code }, screens: l.screensPerProject, rules: l.rulesPerProject, behaviors: l.behaviors, premiumTransitions: l.premiumTransitions, audio: l.audio, contacts: l.contactsCollection });
     });
 
     it(`P7.1 · ${code} · свои шрифты: ${l.ownFonts ? 'доступны' : 'закрыты'}`, async () => {

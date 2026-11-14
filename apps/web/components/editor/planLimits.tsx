@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api-browser';
-import { useEnv } from './context';
+import { useEnv, useOptionalEnv } from './context';
 import { PassDialog } from './PassDialog';
 
 /** P7.1 · границы тарифа этой сборки, которые редактор показывает при работе (04-TARIFFS §2). */
@@ -9,27 +9,62 @@ export interface ProjectLimits {
   plan: { code: string; title: string };
   screens: number;
   rules: number;
+  /** Поведения тарифа: `all` или список видов. */
+  behaviors: 'all' | string[];
+  premiumTransitions: boolean;
+  audio: boolean;
+  contacts: boolean;
 }
 
-/** Лимиты сборки: читаются один раз и заново — когда человек возвращается в окно (например, после оплаты). */
+const PREMIUM_TRANSITIONS = new Set(['flip', 'blinds', 'particles', 'page', 'preset']);
+export const LOCK = ' 🔒';
+const LOCK_HINT = 'Собирать и проверять можно бесплатно, а опубликовать сборку с этим — на платном тарифе (или с пропуском «Праздник»).';
+
+const cache = new Map<string, { at: number; request: Promise<ProjectLimits | null> }>();
+/** Одна загрузка на всех: панели редактора спрашивают границы одновременно. */
+function fetchLimits(projectId: string, force: boolean): Promise<ProjectLimits | null> {
+  const hit = cache.get(projectId);
+  if (!force && hit && Date.now() - hit.at < 5000) return hit.request;
+  const request = api<ProjectLimits>(`/projects/${projectId}/limits`).catch(() => null);
+  cache.set(projectId, { at: Date.now(), request });
+  return request;
+}
+
+/** Лимиты сборки: читаются один раз и заново — когда человек возвращается в окно (например, после оплаты). Вне редактора сборки — `null`. */
 export function useProjectLimits(): ProjectLimits | null {
-  const { projectId } = useEnv();
+  const projectId = useOptionalEnv()?.projectId ?? null;
   const [limits, setLimits] = useState<ProjectLimits | null>(null);
   useEffect(() => {
+    if (!projectId) return undefined;
     let active = true;
-    const load = () => {
-      api<ProjectLimits>(`/projects/${projectId}/limits`)
-        .then((r) => active && setLimits(r))
-        .catch(() => undefined);
-    };
-    load();
-    window.addEventListener('focus', load);
+    const load = (force: boolean) => void fetchLimits(projectId, force).then((r) => active && r && setLimits(r));
+    load(false);
+    const onFocus = () => load(true);
+    window.addEventListener('focus', onFocus);
     return () => {
       active = false;
-      window.removeEventListener('focus', load);
+      window.removeEventListener('focus', onFocus);
     };
   }, [projectId]);
   return limits;
+}
+
+/** Замки платных возможностей: что закрыто на тарифе сборки. Пока границы не прочитаны, ничего не помечается. */
+export function usePlanLocks(): {
+  transition: (kind: string) => boolean;
+  behavior: (kind: string) => boolean;
+  block: (type: string) => boolean;
+  mark: (title: string, locked: boolean) => string;
+  hint: string;
+} {
+  const l = useProjectLimits();
+  return {
+    transition: (kind) => l !== null && !l.premiumTransitions && PREMIUM_TRANSITIONS.has(kind),
+    behavior: (kind) => l !== null && l.behaviors !== 'all' && !l.behaviors.includes(kind),
+    block: (type) => l !== null && ((type === 'audio' && !l.audio) || (type === 'contacts' && !l.contacts)),
+    mark: (title, locked) => (locked ? `${title}${LOCK}` : title),
+    hint: LOCK_HINT,
+  };
 }
 
 /** «Занято N из M»; у границы — замок и кнопка, которая объясняет, как её снять. */

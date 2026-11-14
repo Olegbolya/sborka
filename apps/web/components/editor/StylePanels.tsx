@@ -17,6 +17,7 @@ import {
 import { ANIMATION_SPEC, EDGES, type Field, GROUP_HINTS, GROUP_SPECS, MEDIA_TYPES } from '../../lib/editor/style-specs';
 import { ColorInput, NumberInput, Section, SelectInput, SliderInput, TextInput, Toggle } from './controls';
 import { useEditor, useEnv } from './context';
+import { usePlanLocks } from './planLimits';
 import { DEFAULT_FRAMES, DEFAULT_MOTION_PATH, type Frames, KeyframesEditor, type Slot, playMotionPath } from './KeyframesEditor';
 import { type Crop, type Focal, MediaFramer } from './MediaFramer';
 import { FontPicker } from './FontPicker';
@@ -71,6 +72,7 @@ const num = (v: unknown): number | null => (typeof v === 'number' ? v : null);
 
 /** One field of the table: a control for a number, a choice, a colour… in the object of this level. */
 export function FieldView({ field, level, prefix }: { field: Field; level: Level; prefix: string }) {
+  const locks = usePlanLocks();
   const id = join(prefix, field.key);
   const here = child(level, field.key);
   const shared = common(here.values);
@@ -304,7 +306,7 @@ export function FieldView({ field, level, prefix }: { field: Field; level: Level
     case 'variant': {
       const kinds = here.values.map((v) => (getIn(v, 'kind') as string | undefined) ?? null);
       const kind = common(kinds);
-      const options = Object.entries(field.variants).map(([k, v]) => [k, v.title] as const);
+      const options = Object.entries(field.variants).map(([k, v]) => [k, locks.mark(v.title, field.key === 'transitionIn' && locks.transition(k))] as const);
       const spec = kind ? field.variants[kind] : undefined;
       return (
         <div className="ed-layer-fields">

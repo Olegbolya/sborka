@@ -10,6 +10,7 @@ import { useEditor, useEnv } from './context';
 import { useInDialog } from './Dialog';
 import { MediaPicker } from './MediaPicker';
 import { ScreenField, TransitionPresetField, VariableField } from './PropsFields';
+import { usePlanLocks } from './planLimits';
 
 type Value = Record<string, unknown>;
 const NONE = '';
@@ -268,6 +269,7 @@ export function OverlayField({ label, value, onChange }: { label: string; value:
 const TRANSITION_TITLES: Record<string, string> = { none: 'Мгновенно', fade: 'Растворение', slide: 'Сдвиг', zoom: 'Увеличение', flip: 'Переворот', blinds: 'Жалюзи', particles: 'Частицы', page: 'Страница' };
 const DIRECTIONS: ReadonlyArray<readonly [string, string]> = [['up', 'вверх'], ['down', 'вниз'], ['left', 'влево'], ['right', 'вправо'], ['upLeft', 'вверх и влево'], ['upRight', 'вверх и вправо'], ['downLeft', 'вниз и влево'], ['downRight', 'вниз и вправо']];
 function TransitionField({ label, value, onChange }: { label: string; value: unknown; onChange: (v: unknown) => void }) {
+  const locks = usePlanLocks();
   const t = value && typeof value === 'object' ? (value as Value) : null;
   const kind = t === null ? '' : String(t.kind);
   return (
@@ -277,7 +279,7 @@ function TransitionField({ label, value, onChange }: { label: string; value: unk
         control={`transition:${label}`}
         label={`${label}: вид`}
         value={kind}
-        options={[['', 'Как в теме'], ...TRANSITION_KINDS.map((k) => [k, TRANSITION_TITLES[k] ?? k] as const), ['media', 'Вставка с мемом'], ['preset', 'Свой переход из темы']]}
+        options={[['', 'Как в теме'], ...TRANSITION_KINDS.map((k) => [k, locks.mark(TRANSITION_TITLES[k] ?? k, locks.transition(k))] as const), ['media', 'Вставка с мемом'], ['preset', locks.mark('Свой переход из темы', locks.transition('preset'))]]}
         onChange={(k) => onChange(k === '' ? undefined : k === 'media' ? { kind: 'media', overlay: { media: { source: 'media', id: 'media_unset' } } } : k === 'preset' ? { kind: 'preset', presetId: '' } : { kind: k, direction: 'left', durationMs: 400, delayMs: 0, easing: { kind: 'preset', name: 'easeOut' }, blur: 0, scale: 1 })}
       />
       {kind !== '' && kind !== 'media' && kind !== 'preset' && (
