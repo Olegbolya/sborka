@@ -754,6 +754,13 @@ export class ProjectsService {
     return { ...this.forOwner((row.settings ?? {})), ageRatingRequired: this.ageRatingRequired === true, noticeModes: await this.noticeModes(row.ownerId, projectId, row.settings ?? {}), indexingAllowed: (await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits.allowIndexing };
   }
 
+  /** P7.1 · what the editor shows of the plan of the build: its name and the limits of screens and rules. */
+  async getLimits(userId: string, projectId: string): Promise<{ plan: { code: string; title: string }; screens: number; rules: number }> {
+    const row = await this.assertOwner(userId, projectId);
+    const { plan } = await this.entitlements.limitsOfProject(row.ownerId, projectId);
+    return { plan: { code: plan.code, title: plan.title }, screens: plan.limits.screensPerProject, rules: plan.limits.rulesPerProject };
+  }
+
   /** PL-01: the address of the build and whether the plan lets the creator change it. */
   async getSlug(userId: string, projectId: string): Promise<{ slug: string; allowed: boolean; planTitle: string }> {
     const row = await this.assertOwner(userId, projectId);

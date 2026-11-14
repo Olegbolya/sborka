@@ -1,5 +1,5 @@
 'use client';
-import { type Rule, type Trigger } from '@blokum/schema';
+import { type Rule, type Trigger, countRules } from '@blokum/schema';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { describeAction, describeCondition, describeTrigger, namesOf } from '../../lib/editor/rule-text';
 import { QUICK_ACTIONS, type RuleOwner, addRule, applyQuickAction, duplicateRule, moveRule, removeRule, setRuleCondition, setRuleFields, setTrigger } from '../../lib/editor/rules';
@@ -7,6 +7,7 @@ import { type MakeContext, TRIGGERS, specOf } from '../../lib/editor/scenario-sp
 import { ConditionEditor, newCondition } from './ConditionEditor';
 import { NumberInput, SelectInput, TextInput, Toggle } from './controls';
 import { useEditor, useEnv } from './context';
+import { LimitNote, useProjectLimits } from './planLimits';
 import { ActionList, PartForm } from './ScenarioForm';
 
 /** SC-02 · the rules of one owner (a block, a screen or the assembly) as a constructor «Когда → Если → Сделать». */
@@ -15,6 +16,9 @@ export function ScenarioEditor({ owner, rules, title = 'Правила' }: { own
   const apply = useEditor((s) => s.apply);
   const screenId = useEditor((s) => s.selection.screenId);
   const { picker, focus } = useEnv();
+  const limits = useProjectLimits();
+  const totalRules = countRules(doc);
+  const planFull = limits !== null && totalRules >= limits.rules;
   const asked = useSyncExternalStore(focus.subscribe, focus.getSnapshot, focus.getSnapshot);
   const picking = useSyncExternalStore(picker.subscribe, picker.getSnapshot, picker.getSnapshot);
   const [open, setOpen] = useState<string | null>(() => (asked.ruleId && rules.some((r) => r.id === asked.ruleId) ? asked.ruleId : null));
@@ -74,7 +78,7 @@ export function ScenarioEditor({ owner, rules, title = 'Правила' }: { own
                 <button type="button" className="ed-btn small" aria-label={`Правило ${index + 1}: ниже`} disabled={index === rules.length - 1} onClick={() => apply(moveRule(owner, rule.id, 1), { label: 'Порядок правил' })}>
                   ↓
                 </button>
-                <button type="button" className="ed-btn small" aria-label={`Правило ${index + 1}: копия`} onClick={() => apply(duplicateRule(owner, rule.id), { label: 'Копия правила' })}>
+                <button type="button" className="ed-btn small" aria-label={`Правило ${index + 1}: копия`} disabled={planFull} onClick={() => apply(duplicateRule(owner, rule.id), { label: 'Копия правила' })}>
                   Копия
                 </button>
                 <button type="button" className="ed-btn small" aria-label={`Правило ${index + 1}: удалить`} onClick={() => apply(removeRule(owner, rule.id), { label: 'Удалить правило' })}>
@@ -128,12 +132,13 @@ export function ScenarioEditor({ owner, rules, title = 'Правила' }: { own
           }}
         />
       )}
+      {limits && <LimitNote used={totalRules} max={limits.rules} what="Правил в сборке" planTitle={limits.plan.title} testId="rules-limit" />}
       <SelectInput<string>
         control="add-rule"
         label="Добавить правило: когда"
         value=""
-        options={[['', rules.length >= 50 ? 'Больше 50 правил нельзя' : 'Добавить правило: когда…'], ...triggerList.map((t) => [t.kind, t.title] as const)]}
-        onChange={(kind) => kind !== '' && rules.length < 50 && create(kind)}
+        options={[['', rules.length >= 50 ? 'Больше 50 правил нельзя' : planFull ? 'Предел правил тарифа' : 'Добавить правило: когда…'], ...triggerList.map((t) => [t.kind, t.title] as const)]}
+        onChange={(kind) => kind !== '' && rules.length < 50 && !planFull && create(kind)}
       />
     </div>
   );

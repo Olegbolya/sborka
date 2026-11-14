@@ -19,6 +19,7 @@ import { LibraryPanel } from './LibraryPanel';
 import { CoverThumb } from './CoverThumb';
 import { MediaPicker } from './MediaPicker';
 import { useEditor, useEnv } from './context';
+import { LimitNote, useProjectLimits } from './planLimits';
 
 const THUMB = 0.22;
 
@@ -80,6 +81,8 @@ function ScreensList() {
   const selectScreen = useEditor((s) => s.selectScreen);
   const current = doc.screens.find((s) => s.id === currentId) ?? doc.screens[0]!;
   const index = doc.screens.findIndex((s) => s.id === current.id);
+  const limits = useProjectLimits();
+  const maxScreens = Math.min(50, limits?.screens ?? 50);
 
   /** Adds or copies a screen after the current one and goes to it (the new screen's id is known once the change is made). */
   const createScreenWith = (make: typeof addScreen | typeof duplicateScreen, label: string) => {
@@ -131,12 +134,13 @@ function ScreensList() {
           </li>
         ))}
       </ul>
+      {limits && <LimitNote used={doc.screens.length} max={limits.screens} what="Экранов" planTitle={limits.plan.title} testId="screens-limit" />}
       <div className="ed-actions" role="group" aria-label="Действия с экраном">
         <button
           type="button"
           className="ed-btn small"
           onClick={() => createScreenWith(addScreen, 'Добавить экран')}
-          disabled={doc.screens.length >= 50}
+          disabled={doc.screens.length >= maxScreens}
         >
           Добавить экран
         </button>
@@ -154,7 +158,7 @@ function ScreensList() {
           type="button"
           className="ed-btn small"
           onClick={() => createScreenWith(duplicateScreen, 'Дублировать экран')}
-          disabled={doc.screens.length >= 50}
+          disabled={doc.screens.length >= maxScreens}
         >
           Дублировать
         </button>
@@ -174,7 +178,7 @@ function ScreensList() {
           type="button"
           className="ed-btn small"
           title="Вставляет скопированный экран после текущего"
-          disabled={doc.screens.length >= 50 || (!copied && readScreenClipboard() === null)}
+          disabled={doc.screens.length >= maxScreens || (!copied && readScreenClipboard() === null)}
           onClick={() => {
             const payload = readScreenClipboard();
             if (!payload) return;

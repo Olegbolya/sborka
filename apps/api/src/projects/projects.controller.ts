@@ -78,6 +78,12 @@ export class ProjectsController {
     return this.projects.setProjectStatus(user.id, id, 'PUBLISHED');
   }
 
+  /** P7.1: limits of screens and rules of the build for the editor. */
+  @Get(':id/limits')
+  getLimits(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.projects.getLimits(user.id, id);
+  }
+
   /** PL-01: the address of the build and whether the plan allows an own one. */
   @Get(':id/slug')
   getSlug(@Param('id') id: string, @CurrentUser() user: RequestUser) {
