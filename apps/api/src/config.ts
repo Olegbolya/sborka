@@ -39,6 +39,8 @@ export interface ApiConfig {
   backupDir?: string;
   /** P7.3 · ЮKassa: ShopID и секретный ключ (ключ приходит только из окружения сервера, в репозитории его нет). `undefined` — оплата не подключена. */
   yookassa?: { shopId: string; secretKey: string };
+  /** P7.3 · Robokassa — запасной провайдер того же интерфейса; берётся, только если не подключена ЮKassa. Пароли приходят из окружения сервера. */
+  robokassa?: { login: string; password1: string; password2: string; password3: string; hash: 'md5' | 'sha256' | 'sha384' | 'sha512'; test: boolean };
   /** TS-05 · key of Yandex Safe Browsing; without it links are checked only against the own rules and the stop-list of domains. */
   safeBrowsingKey?: string;
   /** P8.7: a project is not published without an age category. On in production; the test runs publish hundreds of projects and leave it off. */
@@ -99,6 +101,18 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     playLimits: { startsPerHourPerIp: Number(env.PLAY_STARTS_PER_HOUR_PER_IP ?? 120), answersPerMinutePerSession: Number(env.PLAY_ANSWERS_PER_MINUTE ?? 240), reportsPerHourPerIp: Number(env.REPORTS_PER_HOUR_PER_IP ?? 5) },
     ...(env.BACKUP_DIR ? { backupDir: env.BACKUP_DIR } : {}),
     ...(env.YOOKASSA_SHOP_ID?.trim() && env.YOOKASSA_SECRET_KEY?.trim() ? { yookassa: { shopId: env.YOOKASSA_SHOP_ID.trim(), secretKey: env.YOOKASSA_SECRET_KEY.trim() } } : {}),
+    ...(env.ROBOKASSA_LOGIN?.trim() && env.ROBOKASSA_PASSWORD1 && env.ROBOKASSA_PASSWORD2 && env.ROBOKASSA_PASSWORD3
+      ? {
+          robokassa: {
+            login: env.ROBOKASSA_LOGIN.trim(),
+            password1: env.ROBOKASSA_PASSWORD1,
+            password2: env.ROBOKASSA_PASSWORD2,
+            password3: env.ROBOKASSA_PASSWORD3,
+            hash: (['md5', 'sha256', 'sha384', 'sha512'] as const).find((h) => h === env.ROBOKASSA_HASH?.trim().toLowerCase()) ?? 'md5',
+            test: env.ROBOKASSA_TEST === '1',
+          },
+        }
+      : {}),
     ...(env.NEW_ACCOUNT_HOURS !== undefined && Number.isFinite(Number(env.NEW_ACCOUNT_HOURS)) && Number(env.NEW_ACCOUNT_HOURS) >= 0 ? { newAccountHours: Number(env.NEW_ACCOUNT_HOURS) } : {}),
     requireAgeRating: env.REQUIRE_AGE_RATING !== undefined ? env.REQUIRE_AGE_RATING !== '0' : production,
     ...(env.YANDEX_SAFEBROWSING_KEY?.trim() ? { safeBrowsingKey: env.YANDEX_SAFEBROWSING_KEY.trim() } : {}),

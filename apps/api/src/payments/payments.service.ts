@@ -211,11 +211,25 @@ export class PaymentsService {
    */
   async handleNotification(body: unknown): Promise<{ ok: true; duplicate?: boolean }> {
     const provider = this.requireProvider();
+    if (provider.name !== 'yookassa') throw fail(404, 'NOT_FOUND', 'Такого адреса нет.');
     const event = (body as { event?: unknown } | null)?.event;
     const object = (body as { object?: { id?: unknown; payment_id?: unknown } } | null)?.object;
     const isRefund = event === 'refund.succeeded';
     const paymentId = isRefund ? object?.payment_id : object?.id;
     if (typeof event !== 'string' || typeof paymentId !== 'string') throw fail(400, 'BAD_NOTIFICATION', 'Непонятное уведомление.');
+    return this.settle(provider, paymentId, isRefund);
+  }
+
+  /** Robokassa · ResultURL: подпись проверяет провайдер, дальше — та же перепроверка платежа, что и у ЮKassa. Ответ — `OK{InvId}`. */
+  async handleResultNotification(params: Record<string, unknown>): Promise<string> {
+    const provider = this.requireProvider();
+    const parsed = provider.name === 'robokassa' ? provider.parseResultNotification?.(params) : undefined;
+    if (!parsed) throw fail(400, 'BAD_NOTIFICATION', 'Непонятное уведомление.');
+    await this.settle(provider, parsed.paymentId, false);
+    return parsed.reply;
+  }
+
+  private async settle(provider: PaymentProvider, paymentId: string, isRefund: boolean): Promise<{ ok: true; duplicate?: boolean }> {
     let payment;
     try {
       payment = await provider.getPayment(paymentId);

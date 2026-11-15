@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, Post, Query } from '@nestjs/common';
 import { CurrentUser, Public, SkipCsrf } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { BillingService } from './billing.service.js';
@@ -54,5 +54,23 @@ export class PaymentsController {
   @HttpCode(200)
   notify(@Body() body: unknown) {
     return this.payments.handleNotification(body);
+  }
+
+  /** Уведомление Robokassa (ResultURL, POST или GET). Без сессии и Origin; подпись по паролю №2, платёж перепроверяется; ответ — `OK{InvId}` обычным текстом. */
+  @Public()
+  @SkipCsrf()
+  @Post('payments/robokassa/result')
+  @HttpCode(200)
+  @Header('Content-Type', 'text/plain; charset=utf-8')
+  resultPost(@Body() body: Record<string, unknown> | null) {
+    return this.payments.handleResultNotification(body ?? {});
+  }
+
+  @Public()
+  @SkipCsrf()
+  @Get('payments/robokassa/result')
+  @Header('Content-Type', 'text/plain; charset=utf-8')
+  resultGet(@Query() query: Record<string, unknown>) {
+    return this.payments.handleResultNotification(query);
   }
 }

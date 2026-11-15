@@ -10,13 +10,21 @@ import { PaymentsController } from './payments.controller.js';
 import { PaymentsService } from './payments.service.js';
 import { PromoAdminController } from './promo-admin.controller.js';
 import { PromoService } from './promo.service.js';
+import { RobokassaProvider } from './robokassa.provider.js';
 import { YooKassaProvider } from './yookassa.provider.js';
 
 @Module({})
 export class PaymentsModule {
-  /** `provider` — для тестов; без него берётся ЮKassa из окружения, а если ключей нет, оплата отвечает «не подключена». */
+  /** `provider` — для тестов; без него берётся ЮKassa из окружения, затем Robokassa, а если ключей нет, оплата отвечает «не подключена». */
   static register(config: ApiConfig, provider?: PaymentProvider | null): DynamicModule {
-    const resolved = provider !== undefined ? provider : config.yookassa ? new YooKassaProvider(config.yookassa.shopId, config.yookassa.secretKey) : null;
+    const resolved =
+      provider !== undefined
+        ? provider
+        : config.yookassa
+          ? new YooKassaProvider(config.yookassa.shopId, config.yookassa.secretKey)
+          : config.robokassa
+            ? new RobokassaProvider({ login: config.robokassa.login, password1: config.robokassa.password1, password2: config.robokassa.password2, password3: config.robokassa.password3, hash: config.robokassa.hash, test: config.robokassa.test })
+            : null;
     return {
       module: PaymentsModule,
       controllers: [PaymentsController, PromoAdminController, PaymentsAdminController],

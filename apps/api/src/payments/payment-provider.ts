@@ -34,6 +34,8 @@ export interface PaymentProvider {
   /** `null` — такого платежа у провайдера нет (подделка или чужой магазин). Сетевой сбой — исключение. */
   getPayment(providerPaymentId: string): Promise<ProviderPayment | null>;
   refund(input: RefundInput): Promise<{ refundId: string; status: string }>;
+  /** Провайдеры, которые сообщают о платеже подписанным запросом (Robokassa): подпись проверена — номер платежа и ответ провайдеру; подделка — `null`. */
+  parseResultNotification?(params: Record<string, unknown>): { paymentId: string; reply: string } | null;
 }
 
 export class PaymentProviderError extends Error {
