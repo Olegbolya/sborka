@@ -17,16 +17,19 @@ const TYPE_TO_FILE: Record<string, { file: string; title: string }> = {
 };
 
 /** P8.4, P8.5: the documents that describe a procedure lead to its form. */
-const FORM_OF: Record<string, { href: string; text: string }> = {
-  complaints: { href: '/legal/copyright', text: 'Подать заявление правообладателя' },
-  privacy: { href: '/legal/data-request', text: 'Отправить запрос о своих данных' },
+const FORM_OF: Record<string, Array<{ href: string; text: string }>> = {
+  complaints: [
+    { href: '/legal/copyright', text: 'Подать заявление правообладателя' },
+    { href: '/legal/report', text: 'Пожаловаться на сборку' },
+  ],
+  privacy: [{ href: '/legal/data-request', text: 'Отправить запрос о своих данных' }],
 };
 
 const s = {
   main: { minHeight: '100dvh', padding: '48px 16px', maxWidth: 720, margin: '0 auto' },
   nav: { marginBottom: 32 },
   back: { fontSize: 14, color: 'var(--muted)', textDecoration: 'none' },
-  form: { display: 'inline-block', margin: '0 0 24px', padding: '10px 16px', borderRadius: 10, background: 'var(--accent)', color: '#fff', fontWeight: 600, textDecoration: 'none' },
+  form: { display: 'inline-block', margin: '0 12px 24px 0', padding: '10px 16px', borderRadius: 10, background: 'var(--accent)', color: '#fff', fontWeight: 600, textDecoration: 'none' },
   heading: { fontSize: 'clamp(18px, 3.5vw, 26px)', lineHeight: 1.2, margin: '0 0 24px', letterSpacing: '-0.02em' },
 };
 
@@ -43,11 +46,11 @@ export default async function LegalDocumentPage({ params }: { params: Promise<{ 
         <a href="/" style={s.back}>← Главная</a>
       </nav>
       <h1 style={s.heading}>{entry.title}</h1>
-      {FORM_OF[type] ? (
-        <a href={FORM_OF[type].href} style={s.form}>
-          {FORM_OF[type].text}
+      {(FORM_OF[type] ?? []).map((f) => (
+        <a key={f.href} href={f.href} style={s.form}>
+          {f.text}
         </a>
-      ) : null}
+      ))}
       <LegalMarkdown source={bodyMd} />
     </main>
   );

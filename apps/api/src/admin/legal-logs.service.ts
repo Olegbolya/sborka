@@ -1,15 +1,21 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { readFile } from 'node:fs/promises';
 import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { COPYRIGHT_CLAIM_HOURS, DATA_REQUEST_EXTENSION_DAYS, DEADLINE_ALERT_HOURS, addWorkingDays } from '@blokum/schema';
 import { AuditLogService } from '../auth/audit-log.service.js';
 import { type RequestUser } from '../auth/session.service.js';
-import { DB } from '../tokens.js';
+import { LocalStorageService } from '../media/storage.js';
+import { type ApiConfig } from '../config.js';
+import { claimFileKey } from '../reports/legal-requests.service.js';
+import { API_CONFIG, DB } from '../tokens.js';
 import { fail } from './errors.js';
 import { ModerationService } from './moderation.service.js';
 import { NotificationsService } from './notifications.service.js';
 
 const HOUR_MS = 3_600_000;
+/** Сколько обоснованных заявлений правообладателей на одну сборку приводят к её блокировке. */
+export const COPYRIGHT_STRIKES_LIMIT = 3;
 const text = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
 const need = (value: string, min: number, max: number, what: string): string => {
   if (value.length < min || value.length > max) throw fail(422, 'FIELD', `${what}: от ${min} до ${max} знаков.`);
@@ -26,7 +32,22 @@ export class LegalLogsService implements OnModuleInit, OnModuleDestroy {
     private readonly audit: AuditLogService,
     private readonly moderation: ModerationService,
     private readonly notices: NotificationsService,
-  ) {}
+    @Inject(API_CONFIG) config: ApiConfig,
+  ) {
+    this.files = new LocalStorageService(config.mediaDir);
+  }
+
+  private readonly files: LocalStorageService;
+
+  /** Файл, приложенный к заявлению (доверенность): только из списка вложений этого заявления. */
+  async claimFile(id: string, name: string): Promise<{ buffer: Buffer; mime: string }> {
+    const [row] = await this.db.select({ attachments: schema.copyrightClaims.attachments }).from(schema.copyrightClaims).where(eq(schema.copyrightClaims.id, id)).limit(1);
+    if (!row || !row.attachments.includes(name)) throw fail(404, 'NOT_FOUND', 'Файл не найден.');
+    const buffer = await readFile(this.files.getPath(claimFileKey(id, name))).catch(() => null);
+    if (!buffer) throw fail(404, 'NOT_FOUND', 'Файл не найден.');
+    const ext = name.split('.').pop();
+    return { buffer, mime: ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : 'image/jpeg' };
+  }
 
   /** The alerts go out by themselves: the terms are looked at every five minutes while the API runs (not under tests — they call the check directly). */
   onModuleInit(): void {
@@ -96,11 +117,41 @@ export class LegalLogsService implements OnModuleInit, OnModuleDestroy {
     if (outcome === 'REMOVED') {
       const mediaId = text(body.mediaId);
       if (mediaId) await this.moderation.act(actor, { targetType: 'MEDIA', targetId: mediaId, action: 'BLOCK_MEDIA', reasonCode: 'B6', note });
-      else if (c.projectId) await this.moderation.act(actor, { targetType: 'PROJECT', targetId: c.projectId, action: 'UNPUBLISH', reasonCode: 'B6', note });
+      else if (c.projectId) {
+        // Сборка уже снята прежним решением — повторно снимать нечего, заявление всё равно засчитывается.
+        const [p] = await this.db.select({ status: schema.projects.status }).from(schema.projects).where(eq(schema.projects.id, c.projectId));
+        if (p?.status === 'PUBLISHED') await this.moderation.act(actor, { targetType: 'PROJECT', targetId: c.projectId, action: 'UNPUBLISH', reasonCode: 'B6', note });
+      }
       else throw fail(422, 'TARGET', 'Укажите сборку или файл, который снимается.');
     }
     await this.db.update(schema.copyrightClaims).set({ status: outcome, resolvedAt: now, resolution: note }).where(eq(schema.copyrightClaims.id, id));
     await this.audit.log({ actorId: actor.id, action: outcome === 'REMOVED' ? 'COPYRIGHT_CLAIM_REMOVED' : 'COPYRIGHT_CLAIM_REJECTED', targetType: 'COPYRIGHT_CLAIM', targetId: id, ...(ip ? { ip } : {}) });
+    if (outcome === 'REMOVED' && c.projectId) await this.afterRemoval(actor, c, note);
+  }
+
+  /**
+   * 149-ФЗ ст. 15.7: создателю сообщают, чьё заявление и что снято, и что можно оспорить решение (обращение на странице сборки).
+   * 06-TRUST-SAFETY §4.3: после трёх обоснованных заявлений на одну сборку она блокируется (повторное нарушение).
+   */
+  private async afterRemoval(actor: RequestUser, c: typeof schema.copyrightClaims.$inferSelect, note: string): Promise<void> {
+    const projectId = c.projectId!;
+    const [project] = await this.db.select({ ownerId: schema.projects.ownerId, title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, projectId));
+    if (!project) return;
+    const [removed] = await this.db.select({ n: count() }).from(schema.copyrightClaims).where(and(eq(schema.copyrightClaims.projectId, projectId), eq(schema.copyrightClaims.status, 'REMOVED')));
+    const strikes = removed?.n ?? 0;
+    const who = text(c.claimant.name) || 'правообладатель';
+    await this.notices
+      .notify({
+        userId: project.ownerId,
+        kind: `COPYRIGHT_REMOVED:${c.id}`,
+        title: `По заявлению правообладателя материал в сборке «${project.title}» снят`,
+        body: `Правообладатель (${who}) сообщил, что в вашей сборке размещён его материал без разрешения. Мы проверили заявление и сняли материал. Комментарий модератора: ${note}\n\nЕсли вы считаете, что у вас есть право на этот материал, откройте страницу сборки в кабинете и отправьте обращение с доказательствами (лицензия, договор, ссылка на источник) — мы рассмотрим его. После трёх обоснованных заявлений на одну сборку она блокируется. Сейчас обоснованных заявлений на эту сборку: ${strikes}.`,
+        projectId,
+      })
+      .catch(() => undefined);
+    if (strikes >= COPYRIGHT_STRIKES_LIMIT) {
+      await this.moderation.act(actor, { targetType: 'PROJECT', targetId: projectId, action: 'BLOCK_PROJECT', reasonCode: 'B6', note: `Автоматически: ${strikes} обоснованных заявления правообладателей на одну сборку.` });
+    }
   }
 
   // ── Requests of state bodies ───────────────────────────────────────────────

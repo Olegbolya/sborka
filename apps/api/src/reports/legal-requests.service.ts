@@ -1,11 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { fileTypeFromBuffer } from 'file-type';
 import { and, count, eq, gte, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { COPYRIGHT_CLAIM_HOURS, DATA_REQUEST_KINDS, DATA_REQUEST_WORKING_DAYS, addWorkingDays, type DataRequestKind } from '@blokum/schema';
+import { COPYRIGHT_CLAIM_HOURS, createId, DATA_REQUEST_KINDS, DATA_REQUEST_WORKING_DAYS, addWorkingDays, type DataRequestKind } from '@blokum/schema';
 import { fail } from '../admin/errors.js';
 import { hashIp } from '../auth/ip-hash.js';
 import { type ApiConfig } from '../config.js';
+import { LocalStorageService, saveBuffer } from '../media/storage.js';
 import { API_CONFIG, DB } from '../tokens.js';
+
+/** 06-TRUST-SAFETY §4.3: доверенность представителя — PDF или фото, не больше 2 МБ (тело запроса — до 4 МБ в base64). */
+export const POA_MAX_BYTES = 2 * 1024 * 1024;
+const POA_TYPES: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
+/** Где лежат файлы заявлений: отдельно от медиа создателей, отдаются только модераторам. */
+export const claimFileKey = (claimId: string, name: string): string => `legal/copyright/${claimId}/${name}`;
 
 const HOUR_MS = 3_600_000;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
@@ -21,10 +29,28 @@ const need = (value: string, min: number, max: number, code: string, what: strin
  */
 @Injectable()
 export class LegalRequestsService {
+  private readonly storage: LocalStorageService;
+
   constructor(
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
-  ) {}
+  ) {
+    this.storage = new LocalStorageService(config.mediaDir);
+  }
+
+  /** Файл доверенности: base64 из формы, тип — по содержимому файла, а не по имени. */
+  private async powerOfAttorney(raw: unknown): Promise<{ buffer: Buffer; ext: string; mime: string } | null> {
+    if (raw === undefined || raw === null || raw === '') return null;
+    const b64 = typeof raw === 'object' && typeof (raw as { data?: unknown }).data === 'string' ? (raw as { data: string }).data : '';
+    if (!/^[A-Za-z0-9+/=\s]+$/.test(b64)) throw fail(422, 'CLAIM_POA', 'Не удалось прочитать файл доверенности.');
+    const buffer = Buffer.from(b64, 'base64');
+    if (buffer.length === 0) throw fail(422, 'CLAIM_POA', 'Файл доверенности пустой.');
+    if (buffer.length > POA_MAX_BYTES) throw fail(422, 'CLAIM_POA', 'Файл доверенности — не больше 2 МБ.');
+    const type = await fileTypeFromBuffer(buffer);
+    const ext = type ? POA_TYPES[type.mime] : undefined;
+    if (!type || !ext) throw fail(422, 'CLAIM_POA', 'Доверенность — файл PDF, JPG или PNG.');
+    return { buffer, ext, mime: type.mime };
+  }
 
   private get perHour(): number {
     return this.config.playLimits?.reportsPerHourPerIp ?? 5;
@@ -58,6 +84,9 @@ export class LegalRequestsService {
     if (phone.length > 40) throw fail(422, 'CLAIMANT_PHONE', 'Телефон слишком длинный.');
     const representative = text(body.representative);
     if (representative.length > 500) throw fail(422, 'CLAIMANT_REPRESENTATIVE', 'Сведения о представителе слишком длинные.');
+    // §4.3: представитель прикладывает доверенность; без представителя файл не нужен.
+    const poa = await this.powerOfAttorney(body.powerOfAttorney);
+    if (representative && !poa) throw fail(422, 'CLAIM_POA', 'Представитель прикладывает доверенность — файл PDF, JPG или PNG.');
     const objectDescription = need(text(body.objectDescription), 5, 4000, 'CLAIM_OBJECT', 'Что защищается');
     const urls = (Array.isArray(body.urls) ? body.urls : []).map(text).filter((u) => u !== '');
     if (urls.length === 0) throw fail(422, 'CLAIM_URLS', 'Укажите хотя бы одну ссылку на страницу, где размещён материал.');
@@ -74,9 +103,18 @@ export class LegalRequestsService {
     if ((recent?.n ?? 0) >= this.perHour) throw fail(429, 'TOO_MANY_REQUESTS', 'Вы уже отправили несколько заявлений. Подождите немного.');
 
     const dueAt = new Date(now.getTime() + COPYRIGHT_CLAIM_HOURS * HOUR_MS);
+    const id = createId();
+    const attachments: string[] = [];
+    if (poa) {
+      const name = `poa.${poa.ext}`;
+      await saveBuffer(this.storage, poa.buffer, claimFileKey(id, name));
+      attachments.push(name);
+    }
     const [row] = await this.db
       .insert(schema.copyrightClaims)
       .values({
+        id,
+        attachments,
         projectId: await this.projectOf(urls),
         claimant: { kind, name, email, ...(phone ? { phone } : {}), ...(document ? { document } : {}), ...(address ? { address } : {}), ...(representative ? { representative } : {}) },
         objectDescription,

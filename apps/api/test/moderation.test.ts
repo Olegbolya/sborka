@@ -272,6 +272,25 @@ describe('P9.3 · AD-02, AD-03, AD-04, AD-07, AD-09, AD-11 · админка м�
     expect(list.find((r) => r.id === rid)!.actions).toHaveLength(1);
   });
 
+  it('AD-04 · P8.4 · снятие по заявлению: создатель получает уведомление со способом оспорить, после трёх обоснованных заявлений сборка блокируется', async () => {
+    const owner = await login();
+    const moderator = await login('MODERATOR');
+    const p = await publishedBy(owner.cookie);
+    const file = async (n: number): Promise<string> =>
+      ((await call(t, moderator.cookie, 'post', '/admin/copyright-claims', { claimant: `Автор ${n}`, objectDescription: `Фотография номер ${n}`, urls: [`https://blokker.ru/s/${p.slug}`], statement: 'Права нарушены', projectId: p.id }).expect(201)).body as { id: string }).id;
+    for (const n of [1, 2]) {
+      await call(t, moderator.cookie, 'post', `/admin/copyright-claims/${await file(n)}/resolve`, { outcome: 'REMOVED', note: `Снято по заявлению ${n}` }).expect(204);
+      expect((await projectRow(p.id)).status).toBe('CLOSED');
+    }
+    const notices = (await call(t, owner.cookie, 'get', '/notifications').expect(200)).body as Array<{ title: string; body: string; kind: string }>;
+    const copyright = notices.filter((n) => n.kind.startsWith('COPYRIGHT_REMOVED:'));
+    expect(copyright).toHaveLength(2);
+    expect(copyright[0]!.body).toContain('отправьте обращение');
+    expect(copyright[0]!.body).toContain('Автор');
+    await call(t, moderator.cookie, 'post', `/admin/copyright-claims/${await file(3)}/resolve`, { outcome: 'REMOVED', note: 'Снято по заявлению 3' }).expect(204);
+    expect((await projectRow(p.id)).status).toBe('BLOCKED');
+  });
+
   it('AD-07 · выключатели: действуют без перезапуска, нужна причина, пишутся в аудит и в тревоги; плеер, публикация, загрузка, регистрация и СМС закрываются', async () => {
     const owner = await login();
     const admin = await login('ADMIN');

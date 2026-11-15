@@ -1,6 +1,7 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Ip, Param, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Ip, Param, Patch, Post, Put, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { type Response } from 'express';
 import { CurrentUser, Roles } from '../auth/decorators.js';
 import { type RequestUser } from '../auth/session.service.js';
 import { AdminUsersService } from './admin-users.service.js';
@@ -95,6 +96,15 @@ export class AdminController {
   @Get('copyright-claims')
   claims() {
     return this.legal.claims();
+  }
+
+  @Get('copyright-claims/:id/files/:name')
+  async claimFile(@Param('id') id: string, @Param('name') name: string, @Res() res: Response) {
+    const f = await this.legal.claimFile(id, name);
+    res.setHeader('Content-Type', f.mime);
+    res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.end(f.buffer);
   }
 
   @Post('copyright-claims')

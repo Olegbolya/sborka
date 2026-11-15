@@ -1,6 +1,6 @@
 'use client';
 import { type CSSProperties, type FormEvent, type ReactNode, useState } from 'react';
-import { DATA_REQUEST_KINDS } from '@blokum/schema';
+import { DATA_REQUEST_KINDS, REPORT_CATEGORIES } from '@blokum/schema';
 import { api, errorText } from '../../lib/api-browser';
 
 const s: Record<string, CSSProperties> = {
@@ -46,18 +46,41 @@ export function CopyrightForm() {
   const [kind, setKind] = useState<'PERSON' | 'ORG'>('PERSON');
   const [f, setF] = useState({ name: '', document: '', address: '', email: '', phone: '', representative: '', objectDescription: '', urls: '' });
   const [checks, setChecks] = useState({ hasRights: false, noPermission: false, pdConsent: false });
+  const [poa, setPoa] = useState<{ name: string; data: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState<{ id: string; dueAt: string } | null>(null);
   const set = (key: keyof typeof f) => (e: { target: { value: string } }) => setF((v) => ({ ...v, [key]: e.target.value }));
 
+  /** Доверенность: PDF, JPG или PNG до 2 МБ — читаем файл в base64 прямо в браузере. */
+  const pickPoa = (file: File | undefined) => {
+    setPoa(null);
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Файл доверенности — не больше 2 МБ.');
+      return;
+    }
+    setError('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = typeof reader.result === 'string' ? reader.result : '';
+      setPoa({ name: file.name, data: url.slice(url.indexOf(',') + 1) });
+    };
+    reader.onerror = () => setError('Не удалось прочитать файл доверенности.');
+    reader.readAsDataURL(file);
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (f.representative.trim() !== '' && !poa) {
+      setError('Приложите файл доверенности (PDF, JPG или PNG, до 2 МБ).');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
       const urls = f.urls.split(/\s+/).filter((u) => u !== '');
-      setDone(await api<{ id: string; dueAt: string }>('/legal/requests/copyright', { method: 'POST', body: { claimantKind: kind, ...f, urls, ...checks } }));
+      setDone(await api<{ id: string; dueAt: string }>('/legal/requests/copyright', { method: 'POST', body: { claimantKind: kind, ...f, urls, ...checks, ...(f.representative.trim() !== '' && poa ? { powerOfAttorney: { data: poa.data } } : {}) } }));
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -111,6 +134,11 @@ export function CopyrightForm() {
         <Field label="Если вы представитель правообладателя (необязательно)" hint="Чьи интересы представляете и на каком основании: номер и дата доверенности.">
           <input style={s.input} value={f.representative} onChange={set('representative')} maxLength={500} />
         </Field>
+        {f.representative.trim() !== '' ? (
+          <Field label="Файл доверенности" hint="PDF, JPG или PNG, не больше 2 МБ. Без доверенности заявление представителя не принимается.">
+            <input style={s.input} type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => pickPoa(e.target.files?.[0])} required />
+          </Field>
+        ) : null}
         <Field label="Что защищается" hint="Название и описание произведения, где и когда оно было впервые опубликовано.">
           <textarea style={{ ...s.input, minHeight: 110 }} value={f.objectDescription} onChange={set('objectDescription')} required maxLength={4000} />
         </Field>
@@ -202,6 +230,95 @@ export function DataRequestForm() {
         </label>
         {error ? <p style={s.error} role="alert">{error}</p> : null}
         <button style={s.btn} type="submit" disabled={busy}>{busy ? 'Отправляем…' : 'Отправить запрос'}</button>
+      </form>
+    </Shell>
+  );
+}
+
+/** Из ссылки вида https://blokker.ru/s/<адрес> или просто «адрес» достаёт адрес сборки. */
+export const slugFromLink = (raw: string): string => {
+  const v = raw.trim();
+  const m = /\/s\/([A-Za-z0-9_-]+)/.exec(v);
+  if (m) return m[1]!;
+  return /^[A-Za-z0-9_-]+$/.test(v) ? v : '';
+};
+
+/** P8.4 · жалоба на сборку не из плеера: по ссылке на неё, для тех, кто открыл её не у себя в браузере или не нашёл кнопку. */
+export function ComplaintForm({ initialSlug = '' }: { initialSlug?: string }) {
+  const [link, setLink] = useState(initialSlug);
+  const [category, setCategory] = useState('');
+  const [text, setText] = useState('');
+  const [contact, setContact] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const slug = slugFromLink(link);
+    if (!slug) {
+      setError('Вставьте ссылку на сборку — она выглядит как https://blokker.ru/s/…');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await api('/reports', { method: 'POST', body: { slug, category, text, ...(contact.trim() ? { contact, consent } : {}) } });
+      setDone(true);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <Shell title="Жалоба принята" lead="">
+        <p style={s.ok} role="status">
+          Спасибо. Модераторы посмотрят сборку в сроки, которые указаны в <a href="/legal/complaints">правилах рассмотрения жалоб</a>. Если вы оставили контакт, мы ответим на него.
+        </p>
+      </Shell>
+    );
+  }
+  return (
+    <Shell
+      title="Пожаловаться на сборку"
+      lead={
+        <>
+          Опишите, что не так. Если нарушены ваши авторские права, используйте <a href="/legal/copyright">заявление правообладателя</a> — по нему мы отвечаем в течение 24 часов.
+        </>
+      }
+    >
+      <form onSubmit={(e) => void submit(e)} noValidate>
+        <Field label="Ссылка на сборку" hint="Адрес из строки браузера, например https://blokker.ru/s/abc123">
+          <input style={s.input} value={link} onChange={(e) => setLink(e.target.value)} required maxLength={300} inputMode="url" autoComplete="off" />
+        </Field>
+        <Field label="Что не так">
+          <select style={s.input} value={category} onChange={(e) => setCategory(e.target.value)} required>
+            <option value="">Выберите из списка</option>
+            {REPORT_CATEGORIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Подробности" hint="Где именно в сборке и что вы увидели.">
+          <textarea style={{ ...s.input, minHeight: 110 }} value={text} onChange={(e) => setText(e.target.value)} required maxLength={4000} />
+        </Field>
+        <Field label="Как с вами связаться (необязательно)" hint="Почта или телефон — только если хотите получить ответ.">
+          <input style={s.input} value={contact} onChange={(e) => setContact(e.target.value)} maxLength={200} autoComplete="email" />
+        </Field>
+        {contact.trim() !== '' ? (
+          <label style={s.check}>
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+            <span>
+              Согласен на обработку этого контакта, чтобы получить ответ (<a href="/legal/privacy">политика обработки</a>).
+            </span>
+          </label>
+        ) : null}
+        {error ? <p style={s.error} role="alert">{error}</p> : null}
+        <button style={s.btn} type="submit" disabled={busy}>{busy ? 'Отправляем…' : 'Отправить жалобу'}</button>
       </form>
     </Shell>
   );

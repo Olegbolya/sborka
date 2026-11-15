@@ -97,6 +97,31 @@ describe('P8.4, P8.5 · заявления правообладателей и �
     expect(list[0]).not.toHaveProperty('ipHash');
   });
 
+  it('P8.4 · представитель правообладателя прикладывает доверенность: PDF/JPG/PNG до 2 МБ, тип — по содержимому; файл видит только модератор', async () => {
+    const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n');
+    const rep = { ...claim, representative: 'Адвокат Петров, доверенность № 5 от 01.10.2026' };
+    // Без файла представитель не принимается.
+    expect((await pub('/legal/requests/copyright', rep).expect(422)).body.error.code).toBe('CLAIM_POA');
+    // Файл с чужим содержимым под видом PDF — отказ: тип определяется по первым байтам, а не по имени.
+    const fake = { data: Buffer.from('<script>alert(1)</script>').toString('base64'), name: 'x.pdf' };
+    expect((await pub('/legal/requests/copyright', { ...rep, powerOfAttorney: fake }).expect(422)).body.error.code).toBe('CLAIM_POA');
+    // Больше 2 МБ — отказ.
+    const big = { data: Buffer.concat([pdf, Buffer.alloc(2 * 1024 * 1024)]).toString('base64') };
+    expect((await pub('/legal/requests/copyright', { ...rep, powerOfAttorney: big }).expect(422)).body.error.code).toBe('CLAIM_POA');
+    const ok = await pub('/legal/requests/copyright', { ...rep, powerOfAttorney: { data: pdf.toString('base64') } }).expect(201);
+    const [row] = await db.db.select().from(schema.copyrightClaims).where(eq(schema.copyrightClaims.id, ok.body.id as string));
+    expect(row!.attachments).toEqual(['poa.pdf']);
+    const moderator = await staff('MODERATOR');
+    const file = await call(moderator.cookie, 'get', `/admin/copyright-claims/${ok.body.id as string}/files/poa.pdf`).buffer(true).expect(200);
+    expect(file.headers['content-type']).toContain('application/pdf');
+    expect(Buffer.from(file.body as Buffer).equals(pdf)).toBe(true);
+    // Чужое имя файла и просмотр без входа не работают.
+    await call(moderator.cookie, 'get', `/admin/copyright-claims/${ok.body.id as string}/files/passwd`).expect(404);
+    await request(t.http()).get(`/${API_PREFIX}/admin/copyright-claims/${ok.body.id as string}/files/poa.pdf`).expect(401);
+    // Заявление без представителя файла не требует.
+    await pub('/legal/requests/copyright', claim).expect(201);
+  });
+
   it('P8.4 · тревоги за 6 часов и за 1 час до конца срока приходят модераторам по одному разу (подмена времени)', async () => {
     await db.db.delete(schema.copyrightClaims);
     const moderator = await staff('MODERATOR');
