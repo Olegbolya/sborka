@@ -1,6 +1,6 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
-import { and, asc, count, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { COPYRIGHT_CLAIM_HOURS, DATA_REQUEST_EXTENSION_DAYS, DEADLINE_ALERT_HOURS, addWorkingDays } from '@blokum/schema';
 import { AuditLogService } from '../auth/audit-log.service.js';
@@ -9,6 +9,7 @@ import { LocalStorageService } from '../media/storage.js';
 import { type ApiConfig } from '../config.js';
 import { claimFileKey } from '../reports/legal-requests.service.js';
 import { API_CONFIG, DB } from '../tokens.js';
+import { phoneDigits } from './admin-users.service.js';
 import { fail } from './errors.js';
 import { ModerationService } from './moderation.service.js';
 import { NotificationsService } from './notifications.service.js';
@@ -222,6 +223,71 @@ export class LegalLogsService implements OnModuleInit, OnModuleDestroy {
     if (r.status === 'CLOSED') throw fail(409, 'CLOSED', 'Запрос уже закрыт.');
     await this.db.update(schema.dataSubjectRequests).set({ status: 'CLOSED', closedAt: now, resolution }).where(eq(schema.dataSubjectRequests.id, id));
     await this.audit.log({ actorId: actor.id, action: 'DATA_REQUEST_CLOSED', targetType: 'DATA_REQUEST', targetId: id, ...(ip ? { ip } : {}) });
+  }
+
+  /**
+   * P8.5: кто из пользователей подходит под контакт из запроса (почта — без учёта регистра, телефон — в любой записи). Совпадение
+   * контакта не доказывает, что пишет сам человек: модератор решает, выгружать или удалять, и записывает это в ответ.
+   */
+  async dataRequestMatches(id: string) {
+    const r = await this.dataRequestOrFail(id);
+    const contact = r.subjectContact.trim();
+    const phone = contact.includes('@') ? null : phoneDigits(contact);
+    if (!contact.includes('@') && !phone) return [];
+    const rows = await this.db
+      .select({ id: schema.users.id, displayName: schema.users.displayName, email: schema.users.email, status: schema.users.status, deletedAt: schema.users.deletedAt, legalHold: schema.users.legalHold, createdAt: schema.users.createdAt })
+      .from(schema.users)
+      .where(contact.includes('@') ? sql`lower(${schema.users.email}) = ${contact.toLowerCase()}` : eq(schema.users.phoneE164, phone!))
+      .limit(10);
+    return rows;
+  }
+
+  /** P8.5, 152-ФЗ ст. 14: выгрузка данных человека — профиль, способы входа, согласия, сборки и платежи. Действие пишется в журнал. */
+  async dataRequestExport(actor: RequestUser, id: string, userId: string, ip?: string, now = new Date()) {
+    await this.matchedUser(id, userId);
+    const [profile] = await this.db
+      .select({ id: schema.users.id, displayName: schema.users.displayName, email: schema.users.email, emailVerifiedAt: schema.users.emailVerifiedAt, phoneE164: schema.users.phoneE164, status: schema.users.status, createdAt: schema.users.createdAt, deletedAt: schema.users.deletedAt })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId));
+    const identities = await this.db.select({ provider: schema.authIdentities.provider, createdAt: schema.authIdentities.createdAt }).from(schema.authIdentities).where(eq(schema.authIdentities.userId, userId));
+    const consents = await this.db
+      .select({ kind: schema.consentRecords.kind, acceptedAt: schema.consentRecords.acceptedAt, withdrawnAt: schema.consentRecords.withdrawnAt, documentType: schema.legalDocuments.type, documentVersion: schema.legalDocuments.version })
+      .from(schema.consentRecords)
+      .leftJoin(schema.legalDocuments, eq(schema.consentRecords.legalDocumentId, schema.legalDocuments.id))
+      .where(and(eq(schema.consentRecords.subjectType, 'USER'), eq(schema.consentRecords.subjectId, userId)))
+      .orderBy(desc(schema.consentRecords.acceptedAt));
+    const projects = await this.db.select({ id: schema.projects.id, title: schema.projects.title, status: schema.projects.status, createdAt: schema.projects.createdAt }).from(schema.projects).where(eq(schema.projects.ownerId, userId)).limit(500);
+    const orders = await this.db.select({ id: schema.orders.id, kind: schema.orders.kind, amountKop: schema.orders.amountKop, status: schema.orders.status, createdAt: schema.orders.createdAt, paidAt: schema.orders.paidAt }).from(schema.orders).where(eq(schema.orders.userId, userId)).limit(500);
+    await this.audit.log({ actorId: actor.id, action: 'DATA_REQUEST_EXPORT', targetType: 'DATA_REQUEST', targetId: id, ...(ip ? { ip } : {}), meta: { userId } });
+    return { exportedAt: now.toISOString(), requestId: id, profile, authIdentities: identities, consentHistory: consents, projects, orders };
+  }
+
+  /** P8.5, ст. 21: удаление данных человека одной кнопкой — как удаление аккаунта (сборки снимаются сразу, окончательно данные стираются по срокам хранения). Под юридическим холдом нельзя. */
+  async dataRequestDelete(actor: RequestUser, id: string, userId: string, ip?: string, now = new Date()): Promise<void> {
+    const user = await this.matchedUser(id, userId);
+    if (user.legalHold) throw fail(409, 'LEGAL_HOLD', 'На данные наложен юридический холд — удалять нельзя, пока он не снят.');
+    if (user.deletedAt) throw fail(409, 'ALREADY', 'Аккаунт уже удалён.');
+    await this.db.transaction(async (tx) => {
+      await tx.update(schema.users).set({ status: 'DELETED', deletedAt: now }).where(and(eq(schema.users.id, userId), isNull(schema.users.deletedAt)));
+      await tx
+        .update(schema.projects)
+        .set({ status: 'CLOSED', deletedAt: now })
+        .where(and(eq(schema.projects.ownerId, userId), isNull(schema.projects.deletedAt), inArray(schema.projects.status, ['PUBLISHED', 'DRAFT'])));
+    });
+    await this.audit.log({ actorId: actor.id, action: 'DATA_REQUEST_DELETE', targetType: 'DATA_REQUEST', targetId: id, ...(ip ? { ip } : {}), meta: { userId } });
+  }
+
+  private async dataRequestOrFail(id: string) {
+    const [r] = await this.db.select().from(schema.dataSubjectRequests).where(eq(schema.dataSubjectRequests.id, id));
+    if (!r) throw fail(404, 'NOT_FOUND', 'Запрос не найден');
+    return r;
+  }
+
+  /** Работать можно только с тем, кто найден по контакту этого запроса, — а не с любым пользователем по номеру. */
+  private async matchedUser(id: string, userId: string) {
+    const found = (await this.dataRequestMatches(id)).find((u) => u.id === userId);
+    if (!found) throw fail(404, 'NOT_FOUND', 'Этот пользователь не найден по контакту из запроса.');
+    return found;
   }
 
   // ── Alerts before a term runs out (05-LEGAL.md §7) ─────────────────────────

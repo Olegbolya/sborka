@@ -92,6 +92,63 @@ interface DataRequest {
 
 const DATA_KIND: Record<string, string> = { ACCESS: 'Узнать о своих данных', DELETE: 'Удалить данные', WITHDRAW: 'Отозвать согласие' };
 
+interface Match {
+  id: string;
+  displayName: string;
+  email: string | null;
+  status: string;
+  deletedAt: string | null;
+  legalHold: boolean;
+  createdAt: string;
+}
+
+/** P8.5 · кто найден по контакту из запроса: выгрузить его данные файлом или удалить (удаление — в два нажатия). */
+function MatchList({ requestId }: { requestId: string }) {
+  const [matches, setMatches] = useState<Match[] | null>(null);
+  const [confirm, setConfirm] = useState('');
+  const { busy, error, ok, run } = useAction();
+  const find = () => run(async () => setMatches(await api<Match[]>(`/admin/data-requests/${requestId}/matches`)), 'Поиск выполнен');
+  const download = (userId: string) =>
+    run(async () => {
+      const dump = await api<unknown>(`/admin/data-requests/${requestId}/export`, { method: 'POST', body: { userId } });
+      const url = URL.createObjectURL(new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dannye-${userId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 'Файл с данными скачан');
+  const remove = (userId: string) =>
+    run(async () => {
+      await api(`/admin/data-requests/${requestId}/delete`, { method: 'POST', body: { userId } });
+      setConfirm('');
+      setMatches(await api<Match[]>(`/admin/data-requests/${requestId}/matches`));
+    }, 'Данные удалены');
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button type="button" style={css.btnLight} disabled={busy} onClick={() => void find()}>Найти человека по контакту</button>
+      <Notice error={error} ok={ok} />
+      {matches?.length === 0 ? <p style={css.muted}>По этому контакту никого не найдено.</p> : null}
+      {matches?.map((m) => (
+        <div key={m.id} style={{ ...css.row, marginTop: 6 }} data-testid="data-match">
+          <span>
+            <strong>{m.displayName}</strong> · {m.email ?? 'почты нет'} · с {dateTime(m.createdAt)}
+            {m.deletedAt ? ' · уже удалён' : ''}{m.legalHold ? ' · юридический холд' : ''}
+          </span>
+          <button type="button" style={css.btnLight} disabled={busy} onClick={() => void download(m.id)}>Выгрузить данные</button>
+          {!m.deletedAt && !m.legalHold ? (
+            confirm === m.id ? (
+              <button type="button" style={css.btnDanger} disabled={busy} onClick={() => void remove(m.id)}>Да, удалить данные</button>
+            ) : (
+              <button type="button" style={css.btnDanger} disabled={busy} onClick={() => setConfirm(m.id)}>Удалить данные</button>
+            )
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DataRequestCard({ r, onDone }: { r: DataRequest; onDone: () => void }) {
   const [text, setText] = useState('');
   const { busy, error, ok, run } = useAction(onDone);
@@ -109,6 +166,7 @@ function DataRequestCard({ r, onDone }: { r: DataRequest; onDone: () => void }) 
       </p>
       {r.extendedAt ? <p style={css.muted}>Срок продлён {dateTime(r.extendedAt)}: {r.extensionReason}</p> : null}
       {r.resolution ? <p style={css.muted}>Ответ: {r.resolution}</p> : null}
+      {open ? <MatchList requestId={r.id} /> : null}
       {open ? (
         <>
           <Notice error={error} ok={ok} />

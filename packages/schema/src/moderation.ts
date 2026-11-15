@@ -109,17 +109,39 @@ export function yearsAgo(now: Date, years: number): Date {
 export const DEADLINE_ALERT_HOURS = [6, 1] as const;
 
 /**
- * The date `days` working days after `from`, by Moscow time: Saturdays and Sundays are skipped. Public holidays are not known
- * here, so the term can only come out earlier than the law allows, never later.
+ * Нерабочие праздничные дни России с учётом переносов (ст. 112 ТК РФ; постановления Правительства от 24.09.2025 № 1466 для 2026 года
+ * и от 17.09.2026 № 1187 для 2027 года), даты по московскому времени. На годы, которых здесь нет, учитываются только суббота и
+ * воскресенье — срок тогда может выйти только раньше законного, не позже. Каждый год добавляют после выхода постановления.
  */
+export const NON_WORKING_DAYS: ReadonlySet<string> = new Set([
+  // 2026
+  ...['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'].map((d) => `2026-01-${d}`),
+  '2026-02-23', '2026-03-09', '2026-05-01', '2026-05-11', '2026-06-12', '2026-11-04', '2026-12-31',
+  // 2027
+  ...['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'].map((d) => `2027-01-${d}`),
+  '2027-02-22', '2027-02-23', '2027-03-08', '2027-05-03', '2027-05-10', '2027-06-14', '2027-11-04', '2027-11-05', '2027-12-31',
+]);
+
+/** Рабочие субботы, назначенные переносом (в 2026 их нет). */
+export const WORKING_SATURDAYS: ReadonlySet<string> = new Set(['2027-02-20']);
+
+/** Рабочий ли день: учитываются выходные, праздники и перенесённые рабочие субботы. Дата — по московскому времени. */
+export function isWorkingDay(date: Date): boolean {
+  const msk = new Date(date.getTime() + 3 * 3_600_000);
+  const key = msk.toISOString().slice(0, 10);
+  const weekday = msk.getUTCDay();
+  if (NON_WORKING_DAYS.has(key)) return false;
+  if (weekday === 6) return WORKING_SATURDAYS.has(key);
+  return weekday !== 0;
+}
+
+/** The date `days` working days after `from`, by Moscow time, without weekends, public holidays and transferred days off. */
 export function addWorkingDays(from: Date, days: number): Date {
-  const MSK = 3 * 3_600_000;
   const d = new Date(from.getTime());
   let left = days;
   while (left > 0) {
     d.setTime(d.getTime() + 86_400_000);
-    const weekday = new Date(d.getTime() + MSK).getUTCDay();
-    if (weekday !== 0 && weekday !== 6) left -= 1;
+    if (isWorkingDay(d)) left -= 1;
   }
   return d;
 }

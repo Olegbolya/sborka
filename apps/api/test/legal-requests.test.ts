@@ -173,9 +173,40 @@ describe('P8.4, P8.5 · заявления правообладателей и �
     await request(t.http()).get(`/${API_PREFIX}/admin/data-requests`).expect(401);
   });
 
+  it('P8.5 · по контакту из запроса находится человек; выгрузка и удаление — только по найденному, под холдом удалять нельзя, всё в журнале аудита', async () => {
+    const [user] = await db.db.insert(schema.users).values({ displayName: 'Иван', email: 'Ivan.Test@Example.ru', phoneE164: '79991234567' }).returning({ id: schema.users.id });
+    const [held] = await db.db.insert(schema.users).values({ displayName: 'Под холдом', phoneE164: '79990000001', legalHold: true }).returning({ id: schema.users.id });
+    const admin = await staff('ADMIN');
+    const make = async (contact: string): Promise<string> => (await pub('/legal/requests/data', { kind: 'ACCESS', contact, details: 'Какие данные у вас обо мне', consent: true }).expect(201)).body.id as string;
+    const byMail = await make('ivan.test@example.ru');
+    const matches = (await call(admin.cookie, 'get', `/admin/data-requests/${byMail}/matches`).expect(200)).body as Array<{ id: string }>;
+    expect(matches.map((m) => m.id)).toEqual([user!.id]);
+    const byPhone = await make('8 (999) 123-45-67');
+    expect(((await call(admin.cookie, 'get', `/admin/data-requests/${byPhone}/matches`).expect(200)).body as Array<{ id: string }>).map((m) => m.id)).toEqual([user!.id]);
+    expect((await call(admin.cookie, 'get', `/admin/data-requests/${await make('nikto@example.ru')}/matches`).expect(200)).body).toEqual([]);
+
+    const dump = (await call(admin.cookie, 'post', `/admin/data-requests/${byMail}/export`, { userId: user!.id }).expect(200)).body as { profile: { email: string; phoneE164: string }; projects: unknown[]; orders: unknown[] };
+    expect(dump.profile).toMatchObject({ email: 'Ivan.Test@Example.ru', phoneE164: '79991234567' });
+    expect(dump.projects).toEqual([]);
+    // Чужой пользователь, не найденный по контакту этого запроса, недоступен.
+    await call(admin.cookie, 'post', `/admin/data-requests/${byMail}/export`, { userId: held!.id }).expect(404);
+    await call(admin.cookie, 'post', `/admin/data-requests/${byMail}/delete`, { userId: held!.id }).expect(404);
+    // Под холдом: найден по телефону, но удалять нельзя.
+    const heldReq = await make('+7 999 000-00-01');
+    expect((await call(admin.cookie, 'post', `/admin/data-requests/${heldReq}/delete`, { userId: held!.id }).expect(409)).body.error.code).toBe('LEGAL_HOLD');
+
+    await call(admin.cookie, 'post', `/admin/data-requests/${byMail}/delete`, { userId: user!.id }).expect(204);
+    const [gone] = await db.db.select().from(schema.users).where(eq(schema.users.id, user!.id));
+    expect(gone).toMatchObject({ status: 'DELETED' });
+    expect(gone!.deletedAt).not.toBeNull();
+    expect((await call(admin.cookie, 'post', `/admin/data-requests/${byMail}/delete`, { userId: user!.id }).expect(409)).body.error.code).toBe('ALREADY');
+    const audit = await db.db.select().from(schema.auditLog).where(eq(schema.auditLog.targetId, byMail));
+    expect(audit.map((a) => a.action)).toEqual(expect.arrayContaining(['DATA_REQUEST_EXPORT', 'DATA_REQUEST_DELETE']));
+  });
+
   it('P8.5 · десять рабочих дней пропускают субботы и воскресенья (по московскому времени)', () => {
-    // Monday 2 November 2026, 10:00 MSK → Monday 16 November.
-    expect(addWorkingDays(new Date('2026-11-02T07:00:00Z'), 10).toISOString()).toBe('2026-11-16T07:00:00.000Z');
+    // Monday 9 November 2026, 10:00 MSK → Monday 23 November (на этой неделе праздников нет).
+    expect(addWorkingDays(new Date('2026-11-09T07:00:00Z'), 10).toISOString()).toBe('2026-11-23T07:00:00.000Z');
     // Friday → the next working day is Monday.
     expect(addWorkingDays(new Date('2026-11-06T07:00:00Z'), 1).toISOString()).toBe('2026-11-09T07:00:00.000Z');
   });

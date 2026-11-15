@@ -153,6 +153,23 @@ export class AdminController {
     return this.legal.dataRequests();
   }
 
+  @Get('data-requests/:id/matches')
+  dataRequestMatches(@Param('id') id: string) {
+    return this.legal.dataRequestMatches(id);
+  }
+
+  @Post('data-requests/:id/export')
+  @HttpCode(200)
+  dataRequestExport(@Param('id') id: string, @Body() body: Body, @CurrentUser() user: RequestUser, @Ip() ip: string) {
+    return this.legal.dataRequestExport(user, id, typeof body?.userId === 'string' ? body.userId : '', ip);
+  }
+
+  @Post('data-requests/:id/delete')
+  @HttpCode(204)
+  async dataRequestDelete(@Param('id') id: string, @Body() body: Body, @CurrentUser() user: RequestUser, @Ip() ip: string) {
+    await this.legal.dataRequestDelete(user, id, typeof body?.userId === 'string' ? body.userId : '', ip);
+  }
+
   @Post('data-requests/:id/extend')
   @HttpCode(204)
   async extendDataRequest(@Param('id') id: string, @Body() body: Body, @CurrentUser() user: RequestUser, @Ip() ip: string) {
