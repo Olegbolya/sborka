@@ -169,7 +169,7 @@ describe('PL-01…PL-05 · публикация и открытие плеера
     await pub(t, `/play/${p.slug}/media/${mediaId}`).expect(404);
   });
 
-  it('PL-05 · по умолчанию noindex; «Про» может разрешить индексацию, на «Старте» — 402; после понижения тарифа сборка снова закрыта от поиска', async () => {
+  it('PL-05, PL-22 · по умолчанию noindex и страница «Вы переходите»; «Про» может разрешить индексацию, на «Старте» — 402; после понижения тарифа сборка снова закрыта от поиска', async () => {
     const p = await project();
     await call(t, cookie, 'post', `/projects/${p.id}/publish`).expect(200);
     const refused = await call(t, cookie, 'patch', `/projects/${p.id}/access-settings`, { allowIndexing: true }).expect(402);
@@ -178,11 +178,11 @@ describe('PL-01…PL-05 · публикация и открытие плеера
     expect((await call(t, cookie, 'get', `/projects/${p.id}/access-settings`).expect(200)).body.indexingAllowed).toBe(false);
     await grantPlan(db.db, 'PRO');
     expect((await call(t, cookie, 'get', `/projects/${p.id}/access-settings`).expect(200)).body).toMatchObject({ indexingAllowed: true });
-    expect((await pub(t, `/play/${p.slug}`).expect(200)).body.indexable).toBe(false);
+    expect((await pub(t, `/play/${p.slug}`).expect(200)).body).toMatchObject({ indexable: false, directLinks: true });
     await call(t, cookie, 'patch', `/projects/${p.id}/access-settings`, { allowIndexing: true }).expect(200);
     expect((await pub(t, `/play/${p.slug}`).expect(200)).body.indexable).toBe(true);
     await db.db.delete(schema.subscriptions);
-    expect((await pub(t, `/play/${p.slug}`).expect(200)).body.indexable).toBe(false);
+    expect((await pub(t, `/play/${p.slug}`).expect(200)).body).toMatchObject({ indexable: false, directLinks: false });
     await call(t, cookie, 'patch', `/projects/${p.id}/access-settings`, { allowIndexing: false }).expect(200);
   });
 

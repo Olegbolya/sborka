@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PlayApp } from '../../../components/play/PlayApp';
 import { fontFaceCSS, playMediaUrl } from '../../../lib/play/api';
-import { loadPlayView, siteOrigin } from '../../../lib/play/server';
+import { externalLinksEnabled, loadPlayView, siteOrigin } from '../../../lib/play/server';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -29,6 +29,8 @@ export default async function PlayPage({ params, searchParams }: { params: Promi
   const { p } = await searchParams;
   const view = await loadPlayView(slug);
   if (!view) notFound();
+  // PL-22 · AD-07: direct links work only while the switch of external links is on; otherwise they lead to the page that says so.
+  if (view.state === 'ok' && view.directLinks && !(await externalLinksEnabled())) view.directLinks = false;
   // TH-04: инжектируем @font-face для пользовательских шрифтов
   const fontCSS = view.state === 'ok' && Object.keys(view.fonts).length > 0 ? fontFaceCSS(view) : '';
   return (

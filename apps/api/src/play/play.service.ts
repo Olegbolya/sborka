@@ -31,6 +31,8 @@ export interface PlayOpen {
   ogImageId: string | null;
   /** noindex by default (PL-05); a paid tariff may allow indexing. */
   indexable: boolean;
+  /** PL-22: on a tariff with direct links a link opens at once, without the page «Вы переходите на другой сайт» (the links are checked at publication, TS-05). */
+  directLinks: boolean;
   document: PublicDocument;
   /**
    * Kinds of the media the document refers to, so the player draws a picture, a video or a sound as it should.
@@ -221,6 +223,7 @@ export class PlayService {
       description: doc.meta.description,
       ogImageId: previewImageId(doc),
       indexable: indexable(row.settings, limits.allowIndexing),
+      directLinks: limits.directExternalLinks,
       document: toPublicDocument(doc),
       media,
       fonts: fontsMap,
@@ -255,6 +258,7 @@ export class PlayService {
       description: p.doc.meta.description,
       ogImageId: previewImageId(p.doc),
       indexable: indexable(p.settings, limits.allowIndexing),
+      directLinks: limits.directExternalLinks,
       document: toPublicDocument(p.doc),
       media,
       fonts: fontsMap,

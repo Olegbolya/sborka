@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { nextButton, seedProject, textBlock } from './helpers/editor';
+import { subscribeOwner } from './helpers/plan';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -211,6 +212,24 @@ test.describe('P5.6 · безопасность участника', () => {
     await out.goto(`/out?u=${encodeURIComponent('javascript:alert(1)')}`);
     await expect(out.getByTestId('out-page')).toContainText('Эту ссылку открыть нельзя');
     await expect(out.getByRole('link', { name: 'Перейти на сайт' })).toHaveCount(0);
+    await ctx.close();
+  });
+  test('PL-22 · на «Про» ссылка и действие «открыть ссылку» ведут сразу, без /out; на «Старте» — через /out', async ({ page, browser }, info) => {
+    const { id, slug } = await published(page);
+    await subscribeOwner(id, 'PRO');
+    const { ctx, page: p } = await participant(browser, info.project.use.baseURL!);
+    await p.addInitScript(() => {
+      (window as unknown as { __opened: string[] }).__opened = [];
+      window.open = (url?: string | URL) => {
+        (window as unknown as { __opened: string[] }).__opened.push(String(url));
+        return null;
+      };
+    });
+    await p.goto(`/s/${slug}`);
+    await expect(p.locator('.bk-player-screen[data-live="true"]')).toBeVisible();
+    await expect(p.getByRole('link', { name: 'Наш сайт' })).toHaveAttribute('href', LINK);
+    await p.getByRole('button', { name: 'Открыть сайт' }).click();
+    expect(await p.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).toEqual([LINK]);
     await ctx.close();
   });
 });

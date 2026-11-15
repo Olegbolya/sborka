@@ -11,6 +11,7 @@ export interface PlayOpen {
   description: string;
   ogImageId: string | null;
   indexable: boolean;
+  directLinks: boolean;
   document: PublicDocument;
   /** TS-24: entries with `stub` are not available but need a placeholder in the player. */
   media: Record<string, { kind: string; mime: string; stub?: 'processing' | 'blocked' }>;

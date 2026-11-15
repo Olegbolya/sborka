@@ -16,5 +16,8 @@ export function parseOutTarget(raw: string | null | undefined): URL | null {
   return url;
 }
 
+/** PL-22 · on a tariff with direct links (and while the switch of external links is on) a link opens at once: the address was checked at publication (TS-05). */
+export const directHref = (url: string): string => (parseOutTarget(url) ? url : '#');
+
 /** Where a link of the player really goes: the page of the safe redirect (a link that is not allowed leads nowhere). */
 export const outHref = (url: string): string => (parseOutTarget(url) ? `/out?u=${encodeURIComponent(url)}` : '#');

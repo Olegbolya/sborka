@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outHref, parseOutTarget } from '../lib/play/out';
+import { directHref, outHref, parseOutTarget } from '../lib/play/out';
 
 describe('PL-22, TS-12 · безопасный переход', () => {
   it('PL-22 · пропускает http, https (без логина в адресе), mailto и tel', () => {
@@ -15,5 +15,11 @@ describe('PL-22, TS-12 · безопасный переход', () => {
   it('TS-12 · ссылка из плеера ведёт на /out с закодированным адресом; недопустимая — никуда', () => {
     expect(outHref('https://example.ru/a?b=1&c=2')).toBe('/out?u=https%3A%2F%2Fexample.ru%2Fa%3Fb%3D1%26c%3D2');
     expect(outHref('javascript:alert(1)')).toBe('#');
+  });
+
+  it('PL-22 · прямая ссылка («Про») ведёт на сам адрес; недопустимая — никуда', () => {
+    expect(directHref('https://example.ru/a?b=1&c=2')).toBe('https://example.ru/a?b=1&c=2');
+    expect(directHref('mailto:a@example.ru')).toBe('mailto:a@example.ru');
+    for (const bad of ['javascript:alert(1)', 'https://user:pass@example.ru', 'example.ru']) expect(directHref(bad)).toBe('#');
   });
 });

@@ -7,7 +7,7 @@ import { type PlayOpen, playMediaResolver } from '../../lib/play/api';
 import { type Proof, startSession } from '../../lib/play/client';
 import { type PassageResume, PassageSession } from '../../lib/play/passage-session';
 import { ServerDraws } from '../../lib/play/draws';
-import { outHref } from '../../lib/play/out';
+import { directHref, outHref } from '../../lib/play/out';
 import { PlayClient, type PlayTransport } from '../../lib/play/play-client';
 import { AdBanner, PlayFooter } from './PlayFooter';
 import './player.css';
@@ -70,9 +70,9 @@ function makeBoot(view: PlayOpen, resume?: PassageResume): Boot {
       branch: (screenId) => client.branch(screenId),
       values: (v) => client.values(v),
       random: { drawWheel: draws.drawWheel, next: draws.next },
-      // AC-16: the rule was started by a gesture of the participant; the link still goes through the page of the safe redirect (PL-22).
+      // AC-16: the rule was started by a gesture of the participant; the link goes through the page of the safe redirect (PL-22), on a tariff with direct links — at once.
       openLink: (url) => {
-        const href = outHref(url);
+        const href = view.directLinks ? directHref(url) : outHref(url);
         if (href !== '#') window.open(href, '_blank', 'noopener,noreferrer');
       },
       copyText: (text) => void navigator.clipboard?.writeText(text).catch(() => undefined),
@@ -189,7 +189,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
   };
 
   return (
-    <Artboard mode="player" {...(passage.screen ? { coverHeight: passage.screen.height } : {})} tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} linkHref={outHref}>
+    <Artboard mode="player" {...(passage.screen ? { coverHeight: passage.screen.height } : {})} tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} linkHref={view.directLinks ? directHref : outHref}>
       {boot.view.ad && <AdBanner ad={boot.view.ad} />}
       {passage.screen ? (
         <PlayerScreen key={`${passage.screen.id}:${passage.screenKey}`} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} entryOverlay={passage.entryOverlay} />
