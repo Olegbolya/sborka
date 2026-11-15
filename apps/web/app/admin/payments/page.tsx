@@ -26,6 +26,8 @@ interface AdminOrder {
   createdAt: string;
   paidAt: string | null;
   refundedAt: string | null;
+  receiptIssuedAt: string | null;
+  needsReceipt: boolean;
   item: Record<string, unknown>;
   user: { id: string; displayName: string | null } | null;
 }
@@ -97,6 +99,19 @@ function OrderRow({ o, onDone }: { o: AdminOrder; onDone: () => void }) {
         <td style={css.td}>{rubles(o.amountKop)}</td>
         <td style={css.td}><Badge color={st.color}>{st.label}</Badge></td>
         <td style={css.td}>{o.provider === 'manual' ? 'вручную' : o.provider === 'promo' ? 'по промокоду' : o.payerType === 'BUSINESS' ? `юрлицо/ИП${o.payerInn ? `, ИНН ${o.payerInn}` : ''}` : 'физлицо'}</td>
+        <td style={css.td} data-testid={`receipt-${o.id}`}>
+          {o.needsReceipt ? (
+            <div style={css.row}>
+              <Badge color="#d97706">Чек не выдан</Badge>
+              <button type="button" style={css.btnLight} disabled={busy} onClick={() => void run(() => api(`/admin/payments/orders/${o.id}/receipt`, { method: 'PATCH', body: { issued: true } }), 'Отмечено: чек выдан')}>Чек выдан</button>
+            </div>
+          ) : o.receiptIssuedAt ? (
+            <div style={css.row}>
+              <span style={css.muted}>выдан {dateTime(o.receiptIssuedAt)}</span>
+              <button type="button" style={css.btnLight} disabled={busy} onClick={() => void run(() => api(`/admin/payments/orders/${o.id}/receipt`, { method: 'PATCH', body: { issued: false } }), 'Отметка снята')}>Снять отметку</button>
+            </div>
+          ) : null}
+        </td>
         <td style={css.td}>
           {o.provider !== 'manual' && o.provider !== 'promo' && o.status === 'PAID' ? (
             <div style={css.row}>
@@ -108,7 +123,7 @@ function OrderRow({ o, onDone }: { o: AdminOrder; onDone: () => void }) {
       </tr>
       {open ? (
         <tr>
-          <td style={css.td} colSpan={7}>
+          <td style={css.td} colSpan={8}>
             <Notice error={error} ok={ok} />
             {open === 'refund' ? (
               <div style={{ ...css.row, alignItems: 'flex-end' }}>
@@ -147,9 +162,10 @@ function OrderRow({ o, onDone }: { o: AdminOrder; onDone: () => void }) {
 /** AD-05, AD-12 · платежи в админке: доход самозанятого, заказы с возвратом, ручные начисления. Только администратор. */
 export default function PaymentsPage() {
   const [status, setStatus] = useState('');
+  const [noReceipt, setNoReceipt] = useState(false);
   const [page, setPage] = useState(0);
   const incomeLoad = useLoad(() => api<Income>('/admin/payments/income'));
-  const ordersLoad = useLoad(() => api<{ orders: AdminOrder[]; total: number }>(`/admin/payments/orders?page=${page}${status ? `&status=${status}` : ''}`), [status, page]);
+  const ordersLoad = useLoad(() => api<{ orders: AdminOrder[]; total: number }>(`/admin/payments/orders?page=${page}${status ? `&status=${status}` : ''}${noReceipt ? '&receipt=missing' : ''}`), [status, noReceipt, page]);
   const reload = () => {
     incomeLoad.reload();
     ordersLoad.reload();
@@ -170,6 +186,10 @@ export default function PaymentsPage() {
             ))}
           </select>
         </Field>
+        <label style={{ ...css.row, alignSelf: 'flex-end' }}>
+          <input type="checkbox" checked={noReceipt} onChange={(e) => { setNoReceipt(e.target.checked); setPage(0); }} data-testid="orders-no-receipt" />
+          Только без чека
+        </label>
       </div>
       {ordersLoad.error ? <p role="alert" style={css.error}>{ordersLoad.error}</p> : null}
       {ordersLoad.data && ordersLoad.data.orders.length === 0 ? <p style={css.muted}>Заказов нет.</p> : null}
@@ -177,7 +197,7 @@ export default function PaymentsPage() {
         <div style={{ overflowX: 'auto' }}>
           <table style={css.table}>
             <thead>
-              <tr><th style={css.th}>Дата</th><th style={css.th}>Кто</th><th style={css.th}>Что</th><th style={css.th}>Сумма</th><th style={css.th}>Статус</th><th style={css.th}>Плательщик</th><th style={css.th}>Действия</th></tr>
+              <tr><th style={css.th}>Дата</th><th style={css.th}>Кто</th><th style={css.th}>Что</th><th style={css.th}>Сумма</th><th style={css.th}>Статус</th><th style={css.th}>Плательщик</th><th style={css.th}>Чек</th><th style={css.th}>Действия</th></tr>
             </thead>
             <tbody>
               {ordersLoad.data.orders.map((o) => <OrderRow key={o.id} o={o} onDone={reload} />)}

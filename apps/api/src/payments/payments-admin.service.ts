@@ -19,9 +19,17 @@ export interface AdminOrderView {
   createdAt: Date;
   paidAt: Date | null;
   refundedAt: Date | null;
+  /** Чек самозанятого в «Мой налог» выдан вручную (ADR-093): когда отмечено; `null` — не отмечено. */
+  receiptIssuedAt: Date | null;
+  /** Платёж принят деньгами, а чек ещё не отмечен выданным. */
+  needsReceipt: boolean;
   item: Record<string, unknown>;
   user: { id: string; displayName: string | null } | null;
 }
+
+/** Деньги реально приняты (не подарок и не бесплатный заказ по промокоду): по такому платежу нужен чек. */
+const receiptDue = (o: { status: string; amountKop: number; provider: string }): boolean => (o.status === 'PAID' || o.status === 'REFUNDED') && o.amountKop > 0 && o.provider !== 'manual' && o.provider !== 'promo';
+const issuedAt = (receipt: Record<string, unknown> | null): Date | null => (typeof receipt?.issuedAt === 'string' ? new Date(receipt.issuedAt) : null);
 
 /**
  * P7.7 · AD-05, AD-12 · what the administrator does with payments: sees the orders, returns money, gives a plan or a pass by hand,
@@ -53,10 +61,11 @@ export class PaymentsAdminService {
 
   // ── Orders ───────────────────────────────────────────────────────────────
 
-  async orders(filter: { status?: string; kind?: string; q?: string; page?: number }): Promise<{ orders: AdminOrderView[]; total: number }> {
+  async orders(filter: { status?: string; kind?: string; q?: string; page?: number; receipt?: string }): Promise<{ orders: AdminOrderView[]; total: number }> {
     const conds = [];
     if (filter.status && ['PENDING', 'PAID', 'CANCELED', 'REFUNDED'].includes(filter.status)) conds.push(eq(schema.orders.status, filter.status as 'PAID'));
     if (filter.kind && ['SUBSCRIPTION', 'PASS', 'ADDON'].includes(filter.kind)) conds.push(eq(schema.orders.kind, filter.kind as 'PASS'));
+    if (filter.receipt === 'missing') conds.push(inArray(schema.orders.status, ['PAID', 'REFUNDED']), gt(schema.orders.amountKop, 0), sql`${schema.orders.provider} not in ('manual', 'promo')`, sql`${schema.orders.receipt} is null`);
     const q = filter.q?.trim();
     if (q) conds.push(or(like(schema.orders.id, `${q.replace(/[%_]/g, '')}%`), like(schema.users.displayName, `%${q.replace(/[%_]/g, '')}%`)));
     const where = conds.length > 0 ? and(...conds) : undefined;
@@ -83,6 +92,8 @@ export class PaymentsAdminService {
         createdAt: o.createdAt,
         paidAt: o.paidAt,
         refundedAt: o.refundedAt,
+        receiptIssuedAt: issuedAt(o.receipt),
+        needsReceipt: receiptDue(o) && o.receipt === null,
         item: o.item,
         user: o.userId ? { id: o.userId, displayName: userName } : null,
       })),
@@ -104,6 +115,18 @@ export class PaymentsAdminService {
     await this.npd.checkLimit();
     const found = await this.orders({ q: orderId });
     return found.orders.find((o) => o.id === orderId)!;
+  }
+
+  /** Отметить, что чек в «Мой налог» выдан (или снять отметку): только для платежей с реальными деньгами. Чек выдаёт владелец сам, ЮKassa их больше не делает (ADR-093). */
+  async setReceipt(actorId: string, orderId: string, issued: unknown, ip?: string): Promise<AdminOrderView> {
+    if (typeof issued !== 'boolean') throw fail(400, 'INVALID_INPUT', 'Укажите: чек выдан или нет.');
+    const [o] = await this.db.select().from(schema.orders).where(eq(schema.orders.id, orderId));
+    if (!o) throw fail(404, 'NOT_FOUND', 'Заказ не найден.');
+    if (!receiptDue(o)) throw fail(409, 'NO_RECEIPT_NEEDED', 'По этому заказу чек не нужен: деньги не принимались.');
+    await this.db.update(schema.orders).set({ receipt: issued ? { issuedAt: new Date().toISOString(), by: actorId } : null }).where(eq(schema.orders.id, orderId));
+    await this.audit.log({ actorId, action: 'ORDER_RECEIPT_MARKED', targetType: 'ORDER', targetId: orderId, ...(ip ? { ip } : {}), meta: { issued } });
+    const found = await this.orders({ q: orderId });
+    return found.orders.find((x) => x.id === orderId)!;
   }
 
   /** The full return of an order (AD-05): the provider is asked; the order becomes «Возвращён» when the provider confirms. */

@@ -20,13 +20,18 @@ export class PaymentsAdminController {
   }
 
   @Get('orders')
-  orders(@Query('status') status?: string, @Query('kind') kind?: string, @Query('q') q?: string, @Query('page') page?: string) {
-    return this.admin.orders({ ...(status ? { status } : {}), ...(kind ? { kind } : {}), ...(q ? { q } : {}), page: Number(page) || 0 });
+  orders(@Query('status') status?: string, @Query('kind') kind?: string, @Query('q') q?: string, @Query('page') page?: string, @Query('receipt') receipt?: string) {
+    return this.admin.orders({ ...(status ? { status } : {}), ...(kind ? { kind } : {}), ...(q ? { q } : {}), ...(receipt ? { receipt } : {}), page: Number(page) || 0 });
   }
 
   @Patch('orders/:id/payer')
   payer(@Param('id') id: string, @Body() body: Record<string, unknown>, @CurrentUser() user: RequestUser, @Ip() ip: string) {
     return this.admin.setPayer(user.id, id, body ?? {}, ip);
+  }
+
+  @Patch('orders/:id/receipt')
+  receipt(@Param('id') id: string, @Body() body: Record<string, unknown>, @CurrentUser() user: RequestUser, @Ip() ip: string) {
+    return this.admin.setReceipt(user.id, id, body?.issued, ip);
   }
 
   @Post('orders/:id/refund')

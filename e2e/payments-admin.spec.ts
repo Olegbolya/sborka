@@ -31,6 +31,13 @@ test.describe('P7.7 · админка платежей', () => {
     await form.getByTestId('grant-submit').click();
     await expect(form.getByRole('alert')).toContainText('Пользователь не найден');
     await expect(page.getByRole('heading', { name: 'Заказы' })).toBeVisible();
+    // Чек самозанятого выдаётся вручную (ADR-093): фильтр «Только без чека» есть и переключается; подарок чека не требует.
+    const noReceipt = page.getByTestId('orders-no-receipt');
+    await expect(noReceipt).not.toBeChecked();
+    await noReceipt.check();
+    await expect(noReceipt).toBeChecked();
+    await expect(page.getByText('Заказов нет.')).toBeVisible();
+    await page.screenshot({ path: `e2e/__screenshots__/admin-payments-receipt-${info.project.name}.png` });
   });
 
   test('AD-05 · тариф выдаётся и продлевается на странице пользователя: найти человека, открыть, выдать «Про»', async ({ page, browser }, info) => {

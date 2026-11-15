@@ -557,6 +557,34 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
       expect(log.map((l) => l.action).sort()).toEqual(['ORDER_PAYER_CHANGED', 'ORDER_REFUND_REQUESTED']);
     });
 
+    it('AD-05 · чек самозанятого: оплаченный заказ «без чека», отметка и её снятие, фильтр, журнал; подарок и неоплаченное не требуют чека', async () => {
+      const admin = await adminLogin();
+      const payer = await login(t, db);
+      const o = await pay(payer.cookie);
+      type View = { id: string; needsReceipt: boolean; receiptIssuedAt: string | null };
+      const list = async (q: string) => ((await adm('get', q, admin.cookie).expect(200)).body as { orders: View[] }).orders;
+      const mine = async () => (await list(`/orders?q=${o.id}`)).find((x) => x.id === o.id)!;
+      expect(await mine()).toMatchObject({ needsReceipt: true, receiptIssuedAt: null });
+      expect((await list('/orders?receipt=missing')).map((x) => x.id)).toContain(o.id);
+      await adm('patch', `/orders/${o.id}/receipt`, admin.cookie, { issued: 'да' }).expect(400);
+      await adm('patch', '/orders/нет-такого/receipt', admin.cookie, { issued: true }).expect(404);
+      const marked = await adm('patch', `/orders/${o.id}/receipt`, admin.cookie, { issued: true }).expect(200);
+      expect(marked.body).toMatchObject({ id: o.id, needsReceipt: false });
+      expect((marked.body as View).receiptIssuedAt).toBeTruthy();
+      expect((await list('/orders?receipt=missing')).map((x) => x.id)).not.toContain(o.id);
+      await adm('patch', `/orders/${o.id}/receipt`, admin.cookie, { issued: false }).expect(200);
+      expect(await mine()).toMatchObject({ needsReceipt: true, receiptIssuedAt: null });
+      const log = await db.db.select({ action: schema.auditLog.action }).from(schema.auditLog).where(eq(schema.auditLog.targetId, o.id));
+      expect(log.filter((l) => l.action === 'ORDER_RECEIPT_MARKED')).toHaveLength(2);
+      // подарок администратора и заказ без оплаты: чек не нужен, отметка отклоняется
+      const gift = await adm('post', '/grants', admin.cookie, { userId: payer.userId, kind: 'SUBSCRIPTION', planCode: 'AUTHOR', months: 1, reason: 'Проверка чека' }).expect(201);
+      await adm('patch', `/orders/${(gift.body as { orderId: string }).orderId}/receipt`, admin.cookie, { issued: true }).expect(409);
+      const pending = await order(t, payer.cookie, { kind: 'SUBSCRIPTION', planCode: 'AUTHOR', period: 'MONTH' }).expect(201);
+      await adm('patch', `/orders/${pending.body.orderId as string}/receipt`, admin.cookie, { issued: true }).expect(409);
+      const noRole = await login(t, db);
+      await request(t.http()).patch(`/${API_PREFIX}/admin/payments/orders/${o.id}/receipt`).set('Cookie', noRole.cookie).set('X-Blokum-CSRF', '1').send({ issued: true }).expect(403);
+    });
+
     it('AD-12 · предупреждения администраторам при 80 % и 95 % лимита: каждое один раз в год (проверено подменой сумм)', async () => {
       const admin = await adminLogin();
       const other = await adminLogin();
