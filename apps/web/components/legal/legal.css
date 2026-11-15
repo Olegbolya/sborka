@@ -1,0 +1,14 @@
+/* Вид документов /legal/*: читаемая ширина, таблицы прокручиваются на телефоне; цвета — из переменных сайта (светлая и тёмная тема). */
+.legal-doc{font-size:15px;line-height:1.7;color:var(--fg,inherit)}
+.legal-doc h2{font-size:19px;line-height:1.3;margin:32px 0 10px}
+.legal-doc h3{font-size:16px;margin:24px 0 8px}
+.legal-doc p{margin:0 0 12px}
+.legal-doc ul,.legal-doc ol{margin:0 0 12px;padding-left:22px}
+.legal-doc li{margin:0 0 6px}
+.legal-doc blockquote{margin:0 0 16px;padding:10px 14px;border-left:3px solid var(--accent,#e8572a);background:rgba(127,127,127,.08);border-radius:6px}
+.legal-doc a{color:var(--accent,#e8572a)}
+.legal-doc code{font-size:13px;padding:1px 5px;border-radius:4px;background:rgba(127,127,127,.15)}
+.legal-table{overflow-x:auto;margin:0 0 16px}
+.legal-doc table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.5}
+.legal-doc th,.legal-doc td{border:1px solid rgba(127,127,127,.35);padding:8px 10px;text-align:left;vertical-align:top}
+.legal-doc th{background:rgba(127,127,127,.1)}

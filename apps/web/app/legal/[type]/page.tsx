@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { LegalMarkdown } from '../../../components/legal/LegalMarkdown';
 import { readLegalFile } from '../../../lib/legal-files';
 
 const TYPE_TO_FILE: Record<string, { file: string; title: string }> = {
@@ -25,19 +26,8 @@ const s = {
   main: { minHeight: '100dvh', padding: '48px 16px', maxWidth: 720, margin: '0 auto' },
   nav: { marginBottom: 32 },
   back: { fontSize: 14, color: 'var(--muted)', textDecoration: 'none' },
-  draft: {
-    display: 'inline-block',
-    padding: '4px 10px',
-    background: '#f5a623',
-    color: '#fff',
-    borderRadius: 6,
-    fontSize: 13,
-    fontWeight: 600,
-    marginBottom: 16,
-  },
   form: { display: 'inline-block', margin: '0 0 24px', padding: '10px 16px', borderRadius: 10, background: 'var(--accent)', color: '#fff', fontWeight: 600, textDecoration: 'none' },
   heading: { fontSize: 'clamp(18px, 3.5vw, 26px)', lineHeight: 1.2, margin: '0 0 24px', letterSpacing: '-0.02em' },
-  body: { fontSize: 15, lineHeight: 1.75, color: 'var(--muted)', whiteSpace: 'pre-wrap' as const },
 };
 
 export default async function LegalDocumentPage({ params }: { params: Promise<{ type: string }> }) {
@@ -47,21 +37,18 @@ export default async function LegalDocumentPage({ params }: { params: Promise<{ 
 
   const bodyMd = readLegalFile(entry.file);
 
-  const isDraft = bodyMd.includes('ЧЕРНОВИК');
-
   return (
     <main style={s.main}>
       <nav style={s.nav}>
         <a href="/" style={s.back}>← Главная</a>
       </nav>
-      {isDraft && <span style={s.draft}>Черновик — на проверке у юриста</span>}
       <h1 style={s.heading}>{entry.title}</h1>
       {FORM_OF[type] ? (
         <a href={FORM_OF[type].href} style={s.form}>
           {FORM_OF[type].text}
         </a>
       ) : null}
-      <div style={s.body}>{bodyMd}</div>
+      <LegalMarkdown source={bodyMd} />
     </main>
   );
 }
