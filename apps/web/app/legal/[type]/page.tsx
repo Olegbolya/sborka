@@ -1,8 +1,5 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { notFound } from 'next/navigation';
-
-const LEGAL_DIR = resolve(process.cwd(), 'legal');
+import { readLegalFile } from '../../../lib/legal-files';
 
 const TYPE_TO_FILE: Record<string, { file: string; title: string }> = {
   terms: { file: 'terms.md', title: 'Пользовательское соглашение' },
@@ -48,8 +45,7 @@ export default async function LegalDocumentPage({ params }: { params: Promise<{ 
   const entry = TYPE_TO_FILE[type];
   if (!entry) notFound();
 
-  const filePath = resolve(LEGAL_DIR, entry.file);
-  const bodyMd = existsSync(filePath) ? readFileSync(filePath, 'utf8') : '';
+  const bodyMd = readLegalFile(entry.file);
 
   const isDraft = bodyMd.includes('ЧЕРНОВИК');
 

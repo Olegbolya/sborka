@@ -1,7 +1,5 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readLegalFile } from '../../../lib/legal-files';
 
-const LEGAL_DIR = resolve(process.cwd(), 'legal');
 
 const s = {
   main: { minHeight: '100dvh', padding: '48px 16px', maxWidth: 720, margin: '0 auto' },
@@ -20,8 +18,7 @@ const s = {
 };
 
 export default function PdConsentPage() {
-  const filePath = resolve(LEGAL_DIR, 'pd-consent.md');
-  const bodyMd = existsSync(filePath) ? readFileSync(filePath, 'utf8') : '';
+  const bodyMd = readLegalFile('pd-consent.md');
 
   return (
     <main style={s.main}>
