@@ -7,6 +7,22 @@ import { type AddonRow, type BillingState, type OrderRow, ORDER_STATUS_LABEL, da
 const planName = (o: OrderRow, addons: AddonRow[]): string =>
   o.kind === 'PASS' ? 'Пропуск «Праздник»' : o.kind === 'ADDON' ? (addons.find((a) => a.code === o.item.addon)?.title ?? 'Дополнительная покупка') : `Подписка ${o.item.period === 'YEAR' ? 'на год' : 'на месяц'}`;
 
+const mb = (bytes: number): string => `${Math.ceil(bytes / 1024 / 1024)} МБ`;
+
+/** Строка расхода: «12 из 100», на 80 % и больше — с пометкой, чтобы подойти к границе не вслепую. */
+function UsageLine({ label, used, limit, format = String }: { label: string; used: number; limit: number; format?: (n: number) => string }) {
+  const share = limit > 0 ? used / limit : 0;
+  return (
+    <>
+      {label}: <strong>{format(used)}</strong> из {format(limit)}
+      {share >= 1 ? ' — лимит исчерпан' : share >= 0.8 ? ' — осталось меньше 20 %' : ''}
+      <span aria-hidden="true" style={{ display: 'block', height: 6, borderRadius: 3, background: 'var(--lp-line, rgba(127,127,127,.25))', marginTop: 4, maxWidth: 320 }}>
+        <span style={{ display: 'block', height: '100%', width: `${Math.min(100, Math.round(share * 100))}%`, borderRadius: 3, background: share >= 0.8 ? '#d97706' : 'var(--accent, #e8572a)' }} />
+      </span>
+    </>
+  );
+}
+
 /** P7.6 · «Тариф и оплата»: что действует сейчас, до какого числа, заказы; после возврата с оплаты ждёт подтверждения от платёжного сервиса. */
 export function BillingSummary() {
   const params = useSearchParams();
@@ -73,6 +89,27 @@ export function BillingSummary() {
         )}
       </p>
       {active && sub && !sub.trial && <p className="lp-note">Продление — вручную: когда срок подойдёт к концу, мы напомним, а вы нажмёте «Оплатить» на карточке тарифа. Автоматических списаний нет.</p>}
+      <h2 className="lp-h2">Расход лимитов</h2>
+      <ul className="lp-plan-list" data-testid="billing-usage">
+        <li>
+          <UsageLine label="Прохождения в этом месяце" used={state.usage.completions} limit={state.usage.completionsLimit} />
+        </li>
+        <li>
+          <UsageLine label="Место под файлы" used={state.usage.storageBytes} limit={state.usage.storageLimit} format={mb} />
+        </li>
+      </ul>
+      {state.passes.length > 0 && (
+        <>
+          <h2 className="lp-h2">Пропуска «Праздник»</h2>
+          <ul className="lp-plan-list" data-testid="billing-passes">
+            {state.passes.map((p) => (
+              <li key={p.projectId}>
+                <a href={`/cabinet/projects/${p.projectId}`}>{p.title}</a> — действует до {dateRu(p.validTo)}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {orders.length > 0 && (
         <>
           <h2 className="lp-h2">Заказы</h2>

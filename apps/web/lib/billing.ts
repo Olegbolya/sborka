@@ -5,6 +5,8 @@ export interface BillingState {
   plan: { code: string; title: string };
   subscription: { planCode: string; status: string; trial: boolean; currentPeriodEnd: string; renewMode: 'AUTO' | 'LINK' } | null;
   trialUsed: boolean;
+  usage: { completions: number; completionsLimit: number; storageBytes: number; storageLimit: number };
+  passes: Array<{ projectId: string; title: string; validTo: string }>;
 }
 
 export interface OrderRow {

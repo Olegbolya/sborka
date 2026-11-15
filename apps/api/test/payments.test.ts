@@ -540,6 +540,45 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
     expect(sub).toMatchObject({ paymentMethodRef: null, autoRenewConsentId: null });
   });
 
+  it('D-09 · «Тариф и оплата»: расход прохождений за месяц и места под файлы, действующие пропуска «Праздник» по сборкам', async () => {
+    const { cookie, userId } = await login(t, db);
+    const me = async () => (await request(t.http()).get(`/${API_PREFIX}/billing/me`).set('Cookie', cookie).expect(200)).body as {
+      usage: { completions: number; completionsLimit: number; storageBytes: number; storageLimit: number };
+      passes: Array<{ projectId: string; title: string; validTo: string }>;
+    };
+    const empty = await me();
+    expect(empty.usage).toMatchObject({ completions: 0, storageBytes: 0 });
+    expect(empty.usage.completionsLimit).toBeGreaterThan(0);
+    expect(empty.usage.storageLimit).toBeGreaterThan(0);
+    expect(empty.passes).toEqual([]);
+    const [a] = await db.db.insert(schema.projects).values({ ownerId: userId, title: 'Ёлка', slug: 'usage-a' }).returning();
+    const [b] = await db.db.insert(schema.projects).values({ ownerId: userId, title: 'Квиз', slug: 'usage-b' }).returning();
+    const [v] = await db.db.insert(schema.projectVersions).values({ projectId: a!.id, number: 1, document: {} as never, schemaVersion: 1, sha256: `usage-${a!.id}`, kind: 'PUBLISHED' }).returning();
+    const now = new Date();
+    const lastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) - 86_400_000);
+    await db.db.insert(schema.participantSessions).values([
+      { projectId: a!.id, versionId: v!.id, startedAt: now },
+      { projectId: a!.id, versionId: v!.id, startedAt: now },
+      { projectId: a!.id, versionId: v!.id, startedAt: now, isPreview: true },
+      { projectId: a!.id, versionId: v!.id, startedAt: lastMonth },
+    ]);
+    await db.db.insert(schema.media).values([
+      { ownerId: userId, kind: 'IMAGE', mime: 'image/png', bytes: 3 * 1024 * 1024, sha256: `usage-1-${userId}` },
+      { ownerId: userId, kind: 'IMAGE', mime: 'image/png', bytes: 1024 * 1024, sha256: `usage-2-${userId}`, deletedAt: now },
+    ] as never);
+    const day = 86_400_000;
+    await db.db.insert(schema.entitlements).values([
+      { userId, projectId: a!.id, feature: 'PASS', validFrom: new Date(now.getTime() - day), validTo: new Date(now.getTime() + 10 * day) },
+      { userId, projectId: a!.id, feature: 'PASS', validFrom: new Date(now.getTime() - day), validTo: new Date(now.getTime() + 20 * day) },
+      { userId, projectId: b!.id, feature: 'PASS', validFrom: new Date(now.getTime() - 40 * day), validTo: new Date(now.getTime() - day) },
+    ]);
+    const full = await me();
+    expect(full.usage).toMatchObject({ completions: 2, storageBytes: 3 * 1024 * 1024 });
+    expect(full.passes).toHaveLength(1);
+    expect(full.passes[0]).toMatchObject({ projectId: a!.id, title: 'Ёлка' });
+    expect(new Date(full.passes[0]!.validTo).getTime()).toBe(now.getTime() + 20 * day);
+  });
+
   // ── P7.7 · админка платежей, возвраты, доход самозанятого ───────────────────
   describe('P7.7 · админка платежей', () => {
     const adm = (method: 'get' | 'post' | 'patch' | 'put', path: string, cookie: string, body?: object) => {

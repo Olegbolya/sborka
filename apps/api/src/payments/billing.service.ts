@@ -1,5 +1,5 @@
 import { HttpException, Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, isNull, sql, sum } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { DB } from '../tokens.js';
@@ -11,6 +11,10 @@ export interface BillingState {
   subscription: { planCode: string; status: string; trial: boolean; currentPeriodEnd: Date; renewMode: 'AUTO' | 'LINK' } | null;
   /** Пробный период уже использован: он один на человека. */
   trialUsed: boolean;
+  /** D-09 · расход лимитов тарифа: прохождения с начала месяца (по всем сборкам) и место под файлы. */
+  usage: { completions: number; completionsLimit: number; storageBytes: number; storageLimit: number };
+  /** D-09 · действующие пропуска «Праздник»: сборка и последний день. */
+  passes: Array<{ projectId: string; title: string; validTo: Date }>;
 }
 
 /** P7.4 · состояние подписки человека и пробный период без карты (ADR-048). */
@@ -34,7 +38,27 @@ export class BillingService {
       plan: { code: plan.code, title: plan.title },
       subscription: latest ? { planCode: latest.planCode, status: latest.status, trial: latest.trial, currentPeriodEnd: latest.currentPeriodEnd, renewMode: latest.renewMode } : null,
       trialUsed: Boolean(trial),
+      usage: await this.usage(userId, plan.limits, now),
+      passes: await this.db
+        .selectDistinctOn([schema.entitlements.projectId], { projectId: schema.entitlements.projectId, title: schema.projects.title, validTo: schema.entitlements.validTo })
+        .from(schema.entitlements)
+        .innerJoin(schema.projects, eq(schema.projects.id, schema.entitlements.projectId))
+        .where(and(eq(schema.entitlements.userId, userId), eq(schema.entitlements.feature, 'PASS'), gt(schema.entitlements.validTo, now), isNull(schema.projects.deletedAt)))
+        .orderBy(schema.entitlements.projectId, desc(schema.entitlements.validTo))
+        .then((rows) => rows.map((x) => ({ projectId: x.projectId!, title: x.title, validTo: x.validTo! })).sort((a, b) => a.validTo.getTime() - b.validTo.getTime())),
     };
+  }
+
+  /** Тот же счёт, что у лимита при старте прохождения (play.service) и у квоты файлов (media.service). */
+  private async usage(userId: string, limits: { completionsPerMonth: number; storageBytes: number }, now: Date): Promise<BillingState['usage']> {
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const [month] = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.participantSessions)
+      .innerJoin(schema.projects, eq(schema.projects.id, schema.participantSessions.projectId))
+      .where(and(eq(schema.projects.ownerId, userId), eq(schema.participantSessions.isPreview, false), gte(schema.participantSessions.startedAt, monthStart)));
+    const [files] = await this.db.select({ total: sum(schema.media.bytes) }).from(schema.media).where(and(eq(schema.media.ownerId, userId), isNull(schema.media.deletedAt)));
+    return { completions: month?.n ?? 0, completionsLimit: limits.completionsPerMonth, storageBytes: Number(files?.total ?? 0), storageLimit: limits.storageBytes };
   }
 
   /** Пробный период: без карты, один раз на человека, только на тарифах, где он задан (`trialDays`). Потом ничего не списывается. */

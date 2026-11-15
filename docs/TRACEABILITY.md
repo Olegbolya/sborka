@@ -598,3 +598,4 @@
 | S-02 | P3.4 | `apps/web/lib/editor/style-specs.ts#SHAPE_VARIANTS`, `apps/web/components/editor/StylePanels.tsx` | `apps/web/test/inspector-groups.test.ts`, `e2e/inspector.spec.ts` |
 | S-10 | P3.4 | `apps/web/lib/editor/style-specs.ts`, `apps/web/components/editor/TextEditor.tsx`, `apps/web/components/editor/FontPicker.tsx` | `apps/web/test/inspector-groups.test.ts`, `e2e/inspector.spec.ts` |
 | AD-01 | P2.6 | `apps/api/src/auth/admin-password.service.ts`, `apps/api/src/auth/admin-login.controller.ts`, `apps/web/app/login/admin/AdminLoginForm.tsx`, `apps/web/app/admin/security/page.tsx`, `packages/db/src/schema/users.ts` | `apps/api/test/admin-password.test.ts`, `e2e/admin-password.spec.ts` |
+| D-09 | P7.6 | `apps/api/src/payments/billing.service.ts#state,usage`; `apps/web/components/billing/BillingSummary.tsx#UsageLine` | `apps/api/test/payments.test.ts`; `e2e/billing-usage.spec.ts` |
