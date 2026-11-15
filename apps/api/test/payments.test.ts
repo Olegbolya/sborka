@@ -8,6 +8,7 @@ import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import { EntitlementsService } from '../src/entitlements/entitlements.service.js';
 import { YooKassaProvider } from '../src/payments/yookassa.provider.js';
 import { addPeriod } from '../src/payments/payments.service.js';
+import { RenewalRemindersService } from '../src/payments/renewal-reminders.service.js';
 import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 /** Поддельный сервер ЮKassa: платежи в памяти, ответы того же вида, что у API v3. */
@@ -491,6 +492,52 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
     const results = await Promise.all(Array.from({ length: 5 }, () => request(t.http()).post(`/${API_PREFIX}/billing/trial`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ planCode: 'PLUS' })));
     expect(results.filter((r) => r.status === 200)).toHaveLength(1);
     expect(await db.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId))).toHaveLength(1);
+  });
+
+  it('P7.4 · напоминания в кабинете за 3 и за 1 день: по одному на срок, в пробном периоде — «списаний не будет», после продления — тишина', async () => {
+    const reminders = t.app.get(RenewalRemindersService);
+    const { userId } = await login(t, db);
+    const now = new Date('2026-12-01T09:00:00Z');
+    const end = new Date(now.getTime() + 2.5 * 86_400_000);
+    const [sub] = await db.db.insert(schema.subscriptions).values({ userId, planCode: 'PLUS', period: 'MONTH', status: 'ACTIVE', currentPeriodStart: new Date(end.getTime() - 30 * 86_400_000), currentPeriodEnd: end }).returning();
+    const mine = async () => (await db.db.select().from(schema.notifications).where(eq(schema.notifications.userId, userId))).filter((n) => n.kind.startsWith('renewal:'));
+    // за 4 дня — рано
+    expect(await reminders.run(new Date(end.getTime() - 4 * 86_400_000))).toBe(0);
+    // за 2,5 дня — первое; повторные запуски ничего не добавляют
+    expect(await reminders.run(now)).toBe(1);
+    expect(await reminders.run(new Date(now.getTime() + 3_600_000))).toBe(0);
+    let list = await mine();
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ title: 'Через 3 дня закончится тариф «Плюс»' });
+    expect(list[0]!.body).toContain('Автоматических списаний нет');
+    expect(list[0]!.body).toContain('4 декабря 2026 г.');
+    // за 20 часов — второе
+    const lastDay = new Date(end.getTime() - 20 * 3_600_000);
+    expect(await reminders.run(lastDay)).toBe(1);
+    expect(await reminders.run(new Date(lastDay.getTime() + 3_600_000))).toBe(0);
+    list = await mine();
+    expect(list.map((n) => n.title).sort()).toEqual(['Завтра закончится тариф «Плюс»', 'Через 3 дня закончится тариф «Плюс»']);
+    // срок прошёл — напоминаний нет; продление сдвигает конец срока и открывает новое окно
+    expect(await reminders.run(new Date(end.getTime() + 1000))).toBe(0);
+    await db.db.update(schema.subscriptions).set({ currentPeriodEnd: new Date(end.getTime() + 30 * 86_400_000) }).where(eq(schema.subscriptions.id, sub!.id));
+    expect(await reminders.run(new Date(end.getTime() + 3_600_000))).toBe(0);
+    // «Отменённая» подписка не напоминает
+    const other = await login(t, db);
+    await db.db.insert(schema.subscriptions).values({ userId: other.userId, planCode: 'PLUS', period: 'MONTH', status: 'ACTIVE', currentPeriodStart: now, currentPeriodEnd: end, canceledAt: now });
+    expect(await reminders.run(now)).toBe(0);
+  });
+
+  it('P7.4 · пробный период: за день до конца приходит напоминание без угроз списания, карты не нужно', async () => {
+    const reminders = t.app.get(RenewalRemindersService);
+    const { cookie, userId } = await login(t, db);
+    await request(t.http()).post(`/${API_PREFIX}/billing/trial`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ planCode: 'AUTHOR' }).expect(200);
+    const [sub] = await db.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId));
+    await reminders.run(new Date(sub!.currentPeriodEnd.getTime() - 20 * 3_600_000)); // в общей базе тестов могут подойти и чужие сроки
+    const [n] = (await db.db.select().from(schema.notifications).where(eq(schema.notifications.userId, userId))).filter((x) => x.kind.startsWith('renewal:'));
+    expect(n).toMatchObject({ title: 'Завтра закончится тариф «Автор»' });
+    expect(n!.body).toContain('Списаний не будет');
+    expect(await db.db.select().from(schema.orders).where(eq(schema.orders.userId, userId))).toHaveLength(0);
+    expect(sub).toMatchObject({ paymentMethodRef: null, autoRenewConsentId: null });
   });
 
   // ── P7.7 · админка платежей, возвраты, доход самозанятого ───────────────────

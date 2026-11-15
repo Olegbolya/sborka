@@ -10,6 +10,7 @@ import { PaymentsController } from './payments.controller.js';
 import { PaymentsService } from './payments.service.js';
 import { PromoAdminController } from './promo-admin.controller.js';
 import { PromoService } from './promo.service.js';
+import { RenewalRemindersService } from './renewal-reminders.service.js';
 import { RobokassaProvider } from './robokassa.provider.js';
 import { YooKassaProvider } from './yookassa.provider.js';
 
@@ -28,7 +29,7 @@ export class PaymentsModule {
     return {
       module: PaymentsModule,
       controllers: [PaymentsController, PromoAdminController, PaymentsAdminController],
-      providers: [PaymentsService, PaymentsAdminService, NpdIncomeService, PromoService, BillingService, { provide: API_CONFIG, useValue: config }, { provide: PAYMENT_PROVIDER, useValue: resolved }],
+      providers: [PaymentsService, PaymentsAdminService, NpdIncomeService, PromoService, BillingService, RenewalRemindersService, { provide: API_CONFIG, useValue: config }, { provide: PAYMENT_PROVIDER, useValue: resolved }],
     };
   }
 }
