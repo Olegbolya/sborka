@@ -367,6 +367,10 @@ describe('P9.3 · AD-02, AD-03, AD-04, AD-07, AD-09, AD-11 · админка м�
     await call(t, owner.cookie, 'post', '/admin/templates', { projectId: p.id }).expect(403);
     await call(t, admin.cookie, 'post', '/admin/templates', {}).expect(422);
     await call(t, admin.cookie, 'post', '/admin/templates', { projectId: 'net-takoj' }).expect(404);
+    // PL-09 · 05-LEGAL §2.4: сборка 18+ в публичную подборку не попадает.
+    const adult = await publishedBy(owner.cookie);
+    await call(t, owner.cookie, 'patch', `/projects/${adult.id}/access-settings`, { ageRating: 18 }).expect(200);
+    expect((await call(t, admin.cookie, 'post', '/admin/templates', { projectId: adult.id }).expect(409)).body.error.code).toBe('AGE_18');
     const tid = ((await call(t, admin.cookie, 'post', '/admin/templates', { projectId: p.id, name: 'Викторина с баллами', category: 'Обучение', sort: 2 }).expect(201)).body as { id: string }).id;
     const templates = (await call(t, admin.cookie, 'get', '/admin/templates').expect(200)).body as Array<{ id: string; name: string; category: string; sort: number }>;
     expect(templates.find((x) => x.id === tid)).toMatchObject({ name: 'Викторина с баллами', category: 'Обучение', sort: 2 });

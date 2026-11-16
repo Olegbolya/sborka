@@ -32,10 +32,13 @@ export class SystemContentService {
   /** The document of a project as the creator last had it: the draft, or the published one when there is no draft. */
   private async projectDocument(projectId: string): Promise<{ document: Record<string, unknown>; title: string }> {
     const [p] = await this.db
-      .select({ title: schema.projects.title, draft: schema.projects.draftVersionId, published: schema.projects.publishedVersionId })
+      .select({ title: schema.projects.title, draft: schema.projects.draftVersionId, published: schema.projects.publishedVersionId, settings: schema.projects.settings })
       .from(schema.projects)
       .where(and(eq(schema.projects.id, projectId), isNull(schema.projects.deletedAt)));
     if (!p) throw fail(404, 'NOT_FOUND', 'Сборка не найдена');
+    // 05-LEGAL §2.4: сборки 18+ не попадают в публичные подборки — галерею системных шаблонов видят все создатели.
+    const s = (p.settings ?? {}) as { ageRating?: unknown; age18?: unknown };
+    if (s.ageRating === 18 || s.age18 === true) throw fail(409, 'AGE_18', 'Из сборки с категорией 18+ нельзя сделать системный шаблон или тему: их видят все создатели.');
     const versionId = p.draft ?? p.published;
     const [v] = versionId ? await this.db.select({ document: schema.projectVersions.document }).from(schema.projectVersions).where(eq(schema.projectVersions.id, versionId)) : [];
     if (!v) throw fail(409, 'NO_DOCUMENT', 'У сборки пока нет содержимого.');

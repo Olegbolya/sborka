@@ -247,3 +247,18 @@ describe('L-02 · L-05: ссылки на ответы и переменные',
   });
 });
 
+
+describe('PL-09 · аудитория «дети» (05-LEGAL §2.4)', () => {
+  it('PL-09 · в сборке для детей нельзя спрашивать контакты и поля имя/телефон/почта/город; обычное текстовое поле можно', () => {
+    const contacts = createBlock('contacts');
+    const phone = createBlock('textInput');
+    if (phone.type === 'textInput') phone.props.semantic = 'phone';
+    const plain = createBlock('textInput');
+    const doc = docWith([{ ...createScreen('Анкета'), blocks: [contacts, phone, plain] }, createScreen('Финал')]);
+    expect(codes(doc)).not.toContain('CHILDREN_PERSONAL_DATA');
+    doc.settings.audience = 'children';
+    const found = validateDocument(doc).filter((i) => i.code === 'CHILDREN_PERSONAL_DATA');
+    expect(found.map((i) => i.path.at(-1))).toEqual([contacts.id, phone.id]);
+    expect(found.every((i) => i.severity === 'error')).toBe(true);
+  });
+});

@@ -183,7 +183,7 @@ test.describe('P3.7 · логика', () => {
     await expect(page.getByRole('button', { name: /Потерянный/ })).toHaveAttribute('aria-current', 'true');
   });
 
-  test('L-03 · настройки прохождения: когда показывать верность ответа, ничья, «Назад»', async ({ page }) => {
+  test('L-03 · PL-09 · настройки прохождения: когда показывать верность ответа, ничья, «Назад», аудитория — дети', async ({ page }) => {
     const { id } = await seedProject(page);
     await openEditor(page, id);
     const dialog = await openLogic(page, 'Результаты');
@@ -192,6 +192,10 @@ test.describe('P3.7 · логика', () => {
     await dialog.getByLabel('Можно вернуться назад').uncheck();
     await expect.poll(async () => JSON.stringify((await serverDraft(page, id)).doc.settings), { timeout: 15_000 }).toContain('"allowBack":false');
     expect((await serverDraft(page, id)).doc.settings).toMatchObject({ feedbackMode: 'instant', tieBreak: 'random', allowBack: false });
+    // PL-09 · 05-LEGAL §2.4: «Аудитория — дети» сохраняется в сборке (поля с персональными данными тогда не пройдут проверку).
+    await dialog.getByLabel(/^Аудитория — дети/).check();
+    await expect.poll(async () => (await serverDraft(page, id)).doc.settings.audience, { timeout: 15_000 }).toBe('children');
+    await dialog.getByTestId('passage-settings').screenshot({ path: `e2e/__screenshots__/logic-audience-${test.info().project.name}.png` });
   });
 
   test('L-05 · на экране результата «результат» и «баллы» подставляются в текст', async ({ page }) => {

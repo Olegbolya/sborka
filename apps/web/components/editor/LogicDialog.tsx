@@ -274,6 +274,12 @@ function SettingsBlock({ doc }: { doc: ProjectDocument }) {
       />
       <Toggle control="settings.back" label="Можно вернуться назад" value={st.allowBack} onChange={(v) => set({ allowBack: v }, 'Кнопка «Назад»')} />
       <Toggle control="settings.progress" label="Показывать, сколько экранов осталось" value={st.showProgress} onChange={(v) => set({ showProgress: v }, 'Показ прогресса')} />
+      <Toggle
+        control="settings.children"
+        label="Аудитория — дети: сборка не спрашивает имя, телефон, почту и город"
+        value={st.audience === 'children'}
+        onChange={(v) => set({ audience: v ? 'children' : 'general' }, 'Аудитория')}
+      />
     </div>
   );
 }

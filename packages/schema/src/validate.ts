@@ -12,6 +12,7 @@ import { parseSettableValue } from './settable-values.js';
  */
 export interface ValidationIssue {
   code:
+    | 'CHILDREN_PERSONAL_DATA'
     | 'UNREACHABLE_SCREEN'
     | 'NO_EXIT'
     | 'ENDLESS_LOOP'
@@ -324,6 +325,9 @@ export function validateDocument(doc: ProjectDocument): ValidationIssue[] {
 
     for (const b of walkBlocks(s.blocks)) {
       const bp: Path = ['screens', si, 'block', b.id];
+      // 05-LEGAL §2.4: сборка для детей не собирает персональные данные — ни контактов, ни полей «имя/телефон/почта/город».
+      if (doc.settings.audience === 'children' && (b.type === 'contacts' || (b.type === 'textInput' && b.props.semantic !== 'none')))
+        err('CHILDREN_PERSONAL_DATA', bp, `Сборка для детей не может спрашивать персональные данные: уберите блок «${b.name}» или поменяйте аудиторию в настройках сборки`);
       checkCondition(b.visibleIf, [...bp, 'visibleIf'], s);
       for (const run of b.textLayer?.paragraphs.flatMap((p) => p.runs) ?? []) {
         if ('v' in run) checkVariable(run.v, [...bp, 'textLayer']);
