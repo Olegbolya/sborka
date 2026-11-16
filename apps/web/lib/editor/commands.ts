@@ -322,7 +322,7 @@ export const setOptionText =
 
 /** B-11 · in a single-choice question only one option is right. */
 export const patchOption =
-  (blockId: string, optionId: string, patch: { correct?: boolean; score?: number; resultTags?: string[] }): Recipe =>
+  (blockId: string, optionId: string, patch: { correct?: boolean; score?: number; resultTags?: string[]; limit?: number | null; showRemaining?: boolean }): Recipe =>
   (doc) => {
     const q = choiceOf(doc, blockId);
     const option = q?.props.options.find((o) => o.id === optionId);
@@ -333,6 +333,14 @@ export const patchOption =
     }
     if (patch.score !== undefined && Number.isFinite(patch.score))
       option.score = Math.max(-1000, Math.min(1000, patch.score));
+    // B-24 · a limit is a whole number from 1 to 10 000; «нет» (null or 0) takes it off together with the note about the places left.
+    if (patch.limit !== undefined) {
+      if (patch.limit === null || !Number.isFinite(patch.limit) || patch.limit < 1) {
+        delete option.limit;
+        delete option.showRemaining;
+      } else option.limit = Math.min(10000, Math.round(patch.limit));
+    }
+    if (patch.showRemaining !== undefined && option.limit !== undefined) option.showRemaining = patch.showRemaining;
     if (patch.resultTags !== undefined)
       option.resultTags = patch.resultTags
         .map((t) => t.trim().slice(0, 40))

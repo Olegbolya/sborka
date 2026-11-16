@@ -64,6 +64,19 @@ export const answers = pgTable(
   ],
 );
 
+/** PL-26, D-12 · the creator frees an option a passage holds (B-24): the place goes back to the others, the answer itself stays as it was. */
+export const choiceReleases = pgTable(
+  'choice_releases',
+  {
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => participantSessions.id, { onDelete: 'cascade' }),
+    optionId: text('option_id').notNull(),
+    releasedAt: ts('released_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.sessionId, t.optionId] })],
+);
+
 /** Server-side random draws that affect results (RN-01): fixed before the animation is shown. */
 export const randomDraws = pgTable(
   'random_draws',

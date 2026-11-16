@@ -68,10 +68,10 @@ export const ConditionLeaf = z.discriminatedUnion('kind', [
   z.strictObject({
     kind: z.literal('answer'),
     questionBlockId: Id,
-    op: z.enum(['selected', 'notSelected', 'eq', 'contains', 'empty', 'scoreGte', 'scoreLte', 'correct', 'wrong']),
+    op: z.enum(['selected', 'notSelected', 'eq', 'contains', 'empty', 'scoreGte', 'scoreLte', 'correct', 'wrong', 'taken', 'free']),
     optionId: Id.optional(),
     value: Scalar.optional(),
-  }), // CN-02
+  }), // CN-02; `taken` / `free` — the option has no place left for this passage / has one (L-09, with `optionId`)
   z.strictObject({
     kind: z.literal('blockState'),
     blockId: Id,

@@ -31,7 +31,8 @@ export interface PlayClientOptions {
   /** A server verdict on an answer («сразу»). */
   onVerdict?: (blockId: string, verdict: { correct: boolean | null; score: number }) => void;
   /** The server refused an answer for good (not a network failure): the person is told. */
-  onRejected?: (message: string) => void;
+  /** The server refused an answer or values for good; `code` and `blockId` tell the player what to take back (PL-24: «вариант занят»). */
+  onRejected?: (message: string, info?: { code: string; blockId?: string }) => void;
   /** «Сразу»: the verdict is asked for after each answer. */
   instantFeedback: boolean;
   /** Time source and timers are replaceable for tests. */
@@ -159,7 +160,7 @@ export class PlayClient {
             this.persist();
             this.waiting.get(op.id)?.reject(e);
             this.waiting.delete(op.id);
-            if (op.kind === 'answer' || op.kind === 'values') this.o.onRejected?.(e.message);
+            if (op.kind === 'answer' || op.kind === 'values') this.o.onRejected?.(e.message, { code: e.code, ...(op.kind === 'answer' ? { blockId: op.body.blockId } : {}) });
             continue;
           }
           const delay = this.delays[Math.min(this.attempt, this.delays.length - 1)]!;

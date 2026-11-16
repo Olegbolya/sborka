@@ -22,12 +22,15 @@ import {
   scoreTotals,
   startFlow,
 } from '@blokum/engine';
-import { RETENTION, type Block, type ProjectDocument, plainText, walkBlocks } from '@blokum/schema';
+import { RETENTION, type Block, type ProjectDocument, limitedOptions, plainText, walkBlocks } from '@blokum/schema';
+import { type OptionPlaces, fullOptionsFor, lockOptions, placesFor } from './choice-limits.js';
 import { type ApiConfig } from '../config.js';
 import { PassageNoticesService } from './passage-notices.service.js';
 import { API_CONFIG, DB } from '../tokens.js';
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
+/** PL-24 · the options of the answer that others have taken; the player shows the text and refreshes the places. */
+const optionTaken = (takenOptionIds: string[]): HttpException => new HttpException({ error: { code: 'OPTION_TAKEN', message: 'Этот вариант только что заняли — выберите другой.', takenOptionIds } }, 409);
 const gone = (): HttpException => fail(404, 'UNAVAILABLE', 'Недоступно');
 
 const MAX_STATE_BYTES = 64 * 1024;
@@ -131,6 +134,14 @@ export class PlaySessionsService {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'session:' + sessionId}))`);
       const [again] = await tx.select({ id: schema.answers.id }).from(schema.answers).where(and(eq(schema.answers.sessionId, sessionId), eq(schema.answers.clientEventId, body.clientEventId as string)));
       if (again) return { stored: false, answer };
+      // B-24, PL-24: a limited option is given to the passage only if a place is left, decided under the lock of the option.
+      const wanted = answer.kind === 'choice' ? answer.optionIds : [];
+      const limited = limitedOptions(doc).filter((o) => wanted.includes(o.optionId));
+      if (limited.length > 0) {
+        await lockOptions(tx, session.projectId, limited.map((o) => o.optionId));
+        const full = await fullOptionsFor(tx, session.projectId, doc, wanted, sessionId);
+        if (full.length > 0) throw optionTaken(full);
+      }
       const [existing] = await tx.select().from(schema.answers).where(and(eq(schema.answers.sessionId, sessionId), eq(schema.answers.blockId, block.id)));
       if (existing) {
         // «Сразу»: an answer to a question with a key is final.
@@ -176,6 +187,13 @@ export class PlaySessionsService {
     return { blockId: block.id, correct: isCorrect(block, answer), correctOptionIds: correctOptionIds(block), score: questionScore(block, answer) };
   }
 
+  /** PL-25 · the places of the limited options for this passage: which are taken and, where the creator allows, how many are left. */
+  async places(sessionId: string): Promise<{ options: Record<string, OptionPlaces> }> {
+    this.throttle(sessionId);
+    const { session, doc } = await this.load(sessionId);
+    return { options: await placesFor(this.db, session.projectId, doc, sessionId) };
+  }
+
   /** PL-11 · the place of the passage and the variables of scenarios, to continue after a reload. */
   async saveState(sessionId: string, state: unknown): Promise<{ saved: true }> {
     this.throttle(sessionId);
@@ -201,6 +219,18 @@ export class PlaySessionsService {
     this.throttle(sessionId);
     const { session, doc, ownerId } = await this.load(sessionId);
     const answers = await this.answersOf(sessionId);
+    if (session.status === 'IN_PROGRESS') {
+      // A passage that waited longer than the hold time may have lost its place to someone else (PL-26): it must choose again.
+      const held = Object.values(answers).flatMap((a) => (a.kind === 'choice' ? a.optionIds : []));
+      const mine = limitedOptions(doc).filter((o) => held.includes(o.optionId));
+      if (mine.length > 0) {
+        const full = await this.db.transaction(async (tx) => {
+          await lockOptions(tx, session.projectId, mine.map((o) => o.optionId));
+          return fullOptionsFor(tx, session.projectId, doc, held, sessionId);
+        });
+        if (full.length > 0) throw optionTaken(full);
+      }
+    }
     const variables = ((session.runtimeState ?? {}) as { variables?: Record<string, never> }).variables ?? {};
     const seed = createHash('sha256').update(sessionId).digest().readUInt32BE(0);
     const totals = scoreTotals(doc, answers);

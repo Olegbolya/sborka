@@ -60,6 +60,8 @@ export const Settings = z.strictObject({
   audience: z.enum(['general', 'children']).default('general'),
   /** Tie between personality results (L-04). */
   tieBreak: z.enum(['first', 'random']).default('first'),
+  /** PL-26 · hours a started but unfinished passage keeps the option it chose when the option has a limit (B-24). */
+  choiceHoldHours: z.number().int().min(1).max(720).default(24),
 });
 
 export const ProjectDocument = z

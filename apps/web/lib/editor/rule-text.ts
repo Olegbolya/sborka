@@ -78,7 +78,7 @@ export function describeCondition(c: Condition, n: Names): string {
     case 'variable':
       return `${variable(n, c.variableId)} ${OPS[c.op]!}${c.op === 'empty' || c.value === undefined ? '' : ` ${String(c.value)}`}`;
     case 'answer':
-      return `ответ на ${block(n, c.questionBlockId)}: ${c.op === 'correct' ? 'верный' : c.op === 'wrong' ? 'неверный' : c.op === 'empty' ? 'пусто' : c.op === 'selected' ? 'выбран вариант' : c.op === 'notSelected' ? 'вариант не выбран' : `${c.op === 'eq' ? '=' : c.op === 'contains' ? 'содержит' : c.op === 'scoreGte' ? 'баллов ≥' : 'баллов ≤'} ${String(c.value ?? '')}`}`;
+      return `ответ на ${block(n, c.questionBlockId)}: ${c.op === 'correct' ? 'верный' : c.op === 'wrong' ? 'неверный' : c.op === 'empty' ? 'пусто' : c.op === 'selected' ? 'выбран вариант' : c.op === 'notSelected' ? 'вариант не выбран' : c.op === 'taken' ? 'вариант занят' : c.op === 'free' ? 'в варианте есть места' : `${c.op === 'eq' ? '=' : c.op === 'contains' ? 'содержит' : c.op === 'scoreGte' ? 'баллов ≥' : 'баллов ≤'} ${String(c.value ?? '')}`}`;
     case 'blockState':
       return `${block(n, c.blockId)}: ${{ visible: 'виден', hidden: 'скрыт', selected: 'выбран', onZone: 'на зоне', dragging: 'тащат', copiesCount: 'число копий' }[c.state]}${c.op ? ` ${OPS[c.op]!} ${c.value ?? 0}` : ''}`;
     case 'ruleCount':

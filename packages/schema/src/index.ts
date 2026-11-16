@@ -14,6 +14,7 @@ export * from './scenario.js';
 export * from './scenario-limits.js';
 export * from './blocks.js';
 export * from './walk.js';
+export * from './choice-limits.js';
 export * from './theme.js';
 export * from './document.js';
 export * from './factories.js';

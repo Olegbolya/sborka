@@ -13,6 +13,8 @@ import { DraftsController } from './drafts.controller.js';
 import { SystemTemplatesService } from './system-templates.service.js';
 import { TemplatesController } from './templates.controller.js';
 import { ElementsController } from './elements.controller.js';
+import { ChoiceLimitsService } from './choice-limits.service.js';
+import { ChoiceLimitsController } from './choice-limits.controller.js';
 import { LocalStorageService } from '../media/storage.js';
 import { AGE_RATING_REQUIRED, WEB_URL } from './projects.tokens.js';
 
@@ -31,11 +33,12 @@ export class ProjectsModule {
         ExportService,
         DraftsService,
         SystemTemplatesService,
+        ChoiceLimitsService,
         { provide: WEB_URL, useValue: webUrl },
         { provide: LocalStorageService, useValue: new LocalStorageService(mediaDir) },
         { provide: AGE_RATING_REQUIRED, useValue: ageRatingRequired },
       ],
-      controllers: [ProjectsController, TemplatesController, ElementsController, DraftsController, ResponsesController, AnalyticsController, AccessPointsController],
+      controllers: [ProjectsController, TemplatesController, ElementsController, DraftsController, ResponsesController, AnalyticsController, AccessPointsController, ChoiceLimitsController],
       exports: [ProjectsService, SystemTemplatesService],
     };
   }

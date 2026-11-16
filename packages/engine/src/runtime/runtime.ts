@@ -833,7 +833,15 @@ export class Runtime {
       random: this.random,
       ruleCount,
       blockState: (c) => this.blockState(c),
+      optionTaken: (id) => this.takenOptions.has(id),
     };
+  }
+
+  private takenOptions: ReadonlySet<string> = new Set();
+
+  /** L-09 · the options the server says have no place left for this passage; conditions «вариант занят / свободен» read them. */
+  setTakenOptions(ids: Iterable<string>): void {
+    this.takenOptions = new Set(ids);
   }
 
   private evaluate(c: Condition, ruleCount: number): boolean {

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { ChoiceLimitsPanel } from './ChoiceLimitsPanel';
 
 interface NamedCount {
   key: string;
@@ -151,6 +152,8 @@ export function AnalyticsTab({ projectId, setError }: { projectId: string; setEr
               ))}
             </section>
           )}
+
+          <ChoiceLimitsPanel projectId={projectId} setError={setError} />
 
           {data.results.length > 0 && (
             <section style={st.section}>

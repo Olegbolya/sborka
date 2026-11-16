@@ -203,6 +203,18 @@ describe('CN-01…CN-06 в ветвлении: сравнения и услов�
     expect(evaluateCondition({ kind: 'answer', questionBlockId: cs.id, op: 'eq', value: true }, x)).toBe(true);
     expect(evaluateCondition({ kind: 'answer', questionBlockId: cs.id, op: 'notSelected', optionId: 'x00000' }, x)).toBe(true);
   });
+
+  it('L-09 условие «вариант занят» и «в варианте есть места» берёт ответ сервера', () => {
+    const taken = new Set(['opt-busy']);
+    const x = ctx({ optionTaken: (id) => taken.has(id) });
+    const q = 'q00000';
+    expect(evaluateCondition({ kind: 'answer', questionBlockId: q, op: 'taken', optionId: 'opt-busy' }, x)).toBe(true);
+    expect(evaluateCondition({ kind: 'answer', questionBlockId: q, op: 'free', optionId: 'opt-busy' }, x)).toBe(false);
+    expect(evaluateCondition({ kind: 'answer', questionBlockId: q, op: 'taken', optionId: 'opt-free' }, x)).toBe(false);
+    expect(evaluateCondition({ kind: 'answer', questionBlockId: q, op: 'free', optionId: 'opt-free' }, x)).toBe(true);
+    // Without any answer of the server nothing is taken.
+    expect(evaluateCondition({ kind: 'answer', questionBlockId: q, op: 'taken', optionId: 'opt-busy' }, ctx())).toBe(false);
+  });
 });
 
 describe('AC-05 через движок прохождения', () => {

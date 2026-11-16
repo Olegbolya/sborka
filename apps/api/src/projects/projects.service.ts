@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { and, asc, count, desc, eq, inArray, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { AGE_RATINGS, createDocument, createId, createSlug, customSlugSchema, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
+import { AGE_RATINGS, choiceLimitWarnings, createDocument, createId, createSlug, customSlugSchema, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
 import { AGE_RATING_REQUIRED } from './projects.tokens.js';
 import { HttpException, Inject, Optional } from '@nestjs/common';
 import { SafetyService, type PublishVerdict } from '../admin/safety.service.js';
@@ -671,7 +671,9 @@ export class ProjectsService {
         .where(eq(schema.projects.id, row.id));
     });
     if (verdict && this.safety) await this.safety.afterPublish(row.id, verdict);
-    return { review: verdict?.hold ?? false, warnings: verdict?.warnings ?? [] };
+    // B-25: places on required options fewer than the passages the assembly allows.
+    const places = choiceLimitWarnings(doc, ((row.settings ?? {}) as ProjectSettings).maxCompletions);
+    return { review: verdict?.hold ?? false, warnings: [...(verdict?.warnings ?? []), ...places] };
   }
 
   /** PL-23: check that operator info and DPA are set if document has B-19 contacts blocks. */

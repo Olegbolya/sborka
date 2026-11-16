@@ -52,6 +52,12 @@ export class PlayController {
     return this.sessions.answer(id, body ?? {});
   }
 
+  /** PL-25 · places of the limited options (B-24): which are taken for this passage and how many are left. */
+  @Get('sessions/:id/places')
+  places(@Param('id') id: string) {
+    return this.sessions.places(id);
+  }
+
   /** L-03 · feedback after an answer («сразу»). */
   @Post('sessions/:id/check')
   @HttpCode(200)

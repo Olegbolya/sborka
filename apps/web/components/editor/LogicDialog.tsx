@@ -265,6 +265,15 @@ function SettingsBlock({ doc }: { doc: ProjectDocument }) {
         options={[['instant', 'Сразу после ответа'], ['end', 'В конце'], ['none', 'Не показывать']]}
         onChange={(v) => set({ feedbackMode: v as typeof st.feedbackMode }, 'Обратная связь')}
       />
+      <NumberInput
+        control="settings.choiceHold"
+        label="Сколько часов держится место в варианте с лимитом, пока человек не закончил"
+        value={st.choiceHoldHours}
+        min={1}
+        max={720}
+        step={1}
+        onChange={(n) => set({ choiceHoldHours: Math.max(1, Math.min(720, Math.round(n))) }, 'Время удержания места')}
+      />
       <SelectInput<string>
         control="settings.tie"
         label="Если в личностном тесте ничья"

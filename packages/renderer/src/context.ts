@@ -37,6 +37,8 @@ export interface RenderContextValue {
   timerRemaining?: (blockId: string) => number | undefined;
   /** Text of the consent to personal data processing (B-20), generated from the creator's details (PL-23). */
   consentUrl?: string;
+  /** B-24 · PL-25: places of limited options by option id — taken for this passage, and how many are left when the creator lets it be said. */
+  optionPlaces?: ReadonlyMap<string, { taken: boolean; left: number | null }>;
   /** Questions on the screen still blocking «дальше» (L-07) — a button with «требует ответов» waits for them. */
   requiredMissing?: boolean;
   /** Type-specific content of a block (media, questions…), drawn under its text layer. */

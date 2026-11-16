@@ -168,6 +168,14 @@ function semantics(block: Block, o: { option: BlockViewProps['option']; chosen: 
   return label ? { role: 'group', 'aria-label': label } : {};
 }
 
+/** PL-25 · «осталось 1 место / 2 места / 5 мест». */
+export function leftText(n: number): string {
+  const last = n % 10;
+  const tens = n % 100;
+  const word = last === 1 && tens !== 11 ? 'место' : last >= 2 && last <= 4 && (tens < 12 || tens > 14) ? 'места' : 'мест';
+  return `осталось ${n} ${word}`;
+}
+
 /** S-15: what changes smoothly when a block changes its state. */
 export const STATE_TRANSITION = ['opacity', 'filter', 'background-color', 'border-radius', 'box-shadow', 'color'].map((p) => `${p} 160ms ease`).join(', ');
 
@@ -200,9 +208,12 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const answer = option ? ctx.answers?.[option.questionId] : undefined;
   const chosen = view?.selected ?? (answer?.kind === 'choice' && option !== undefined && answer.optionIds.includes(option.optionId));
   const waiting = block.type === 'button' && block.props.requiresAnswers && ctx.requiredMissing === true;
+  // B-24, PL-25: the last place of a limited option went to someone else — it cannot be chosen (unless this passage already holds it).
+  const places = option ? ctx.optionPlaces?.get(option.optionId) : undefined;
+  const occupied = ctx.mode === 'player' && places?.taken === true && !chosen;
   const activeState =
     state ??
-    (((view && !view.interactive) || waiting) && states?.disabled
+    (((view && !view.interactive) || waiting || occupied) && states?.disabled
       ? 'disabled'
       : pointer.pressed && trackPress
         ? 'pressed'
@@ -262,6 +273,8 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
     ...(ctx.mode === 'editor' && block.initiallyHidden ? { opacity: (typeof css.root.opacity === 'number' ? css.root.opacity : 1) * 0.35 } : {}),
     ...(ctx.mode === 'thumbnail' ? { pointerEvents: 'none' } : {}),
     ...(view && !view.interactive ? { pointerEvents: 'none' } : {}),
+    // The look of «занято» is the block's own «недоступно» state (the theme sets it); without one the option is only dimmed.
+    ...(occupied ? { cursor: 'not-allowed', ...(states?.disabled ? {} : { opacity: (typeof css.root.opacity === 'number' ? css.root.opacity : 1) * 0.5 }) } : {}),
     // S-15: switching between states is smooth (transforms stay instant — the runtime drives them by frames).
     ...(states && !reducedMotion ? { transition: STATE_TRANSITION } : {}),
     ...(drag ? { touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none', cursor: view?.dragging ? 'grabbing' : 'grab' } : {}),
@@ -293,14 +306,14 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   };
   // B-11/B-12: choosing an option sends the new answer of its question; a single choice keeps one option.
   const toggleOption = () => {
-    if (!option || !ctx.dispatch) return;
+    if (!option || !ctx.dispatch || occupied) return;
     const ids = answer?.kind === 'choice' ? answer.optionIds : [];
     const next = option.multi ? (ids.includes(option.optionId) ? ids.filter((id) => id !== option.optionId) : [...ids, option.optionId]) : [option.optionId];
     ctx.dispatch({ type: 'answer', questionBlockId: option.questionId, answer: next.length ? { kind: 'choice', optionIds: next } : null });
   };
   const pressable = ctx.mode === 'player' && !option && isPressable(block);
   const tap = () => {
-    if (waiting) return;
+    if (waiting || occupied) return;
     ctx.dispatch?.({ type: 'tap', blockId: instanceId });
   };
   const handlers = {
@@ -401,6 +414,11 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
           ) : (
             <PathTextView text={textLayer} typography={style.text} style={css.text} w={w} h={h} />
           ))}
+        {option && places && ctx.mode === 'player' && (occupied || places.left !== null) && (
+          <span className="bk-option-note" data-testid={occupied ? 'option-taken' : 'option-left'} style={{ position: 'absolute', right: u(8), bottom: u(4), fontSize: u(12), lineHeight: 1.2, pointerEvents: 'none', color: 'inherit', opacity: 0.85 }}>
+            {occupied ? 'Занято' : leftText(places.left ?? 0)}
+          </span>
+        )}
         {block.children.map((child) => {
           const opt = choiceOptions?.get(child.id);
           const side = flip ? (child.id === flip.frontId ? 'front' : child.id === flip.backId ? 'back' : null) : null;
@@ -437,7 +455,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
       data-type={block.type}
       data-state={activeState}
       data-leaving={leaving ? '' : undefined}
-      {...semantics(block, { option, chosen, pressable, waiting, player: ctx.mode === 'player' })}
+      {...semantics(block, { option, chosen, pressable, waiting: waiting || occupied, player: ctx.mode === 'player' })}
       style={root}
       {...mergeHandlers<Record<string, unknown>>(dragHandlers, scratching.handlers, handlers)}
     >

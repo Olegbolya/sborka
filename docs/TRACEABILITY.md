@@ -600,3 +600,10 @@
 | S-10 | P3.4 | `apps/web/lib/editor/style-specs.ts`, `apps/web/components/editor/TextEditor.tsx`, `apps/web/components/editor/FontPicker.tsx` | `apps/web/test/inspector-groups.test.ts`, `e2e/inspector.spec.ts` |
 | AD-01 | P2.6 | `apps/api/src/auth/admin-password.service.ts`, `apps/api/src/auth/admin-login.controller.ts`, `apps/web/app/login/admin/AdminLoginForm.tsx`, `apps/web/app/admin/security/page.tsx`, `packages/db/src/schema/users.ts` | `apps/api/test/admin-password.test.ts`, `e2e/admin-password.spec.ts` |
 | D-09 | P7.6 | `apps/api/src/payments/billing.service.ts#state,usage`; `apps/web/components/billing/BillingSummary.tsx#UsageLine` | `apps/api/test/payments.test.ts`; `e2e/billing-usage.spec.ts` |
+| B-24 | P12.2 | `packages/schema/src/blocks.ts#ChoiceOption`; `apps/web/components/editor/PropsFields.tsx`; `apps/web/lib/editor/commands.ts#patchOption` | `apps/web/test/editor-props.test.ts`; `apps/api/test/choice-limits.test.ts` |
+| B-25 | P12.2 | `packages/schema/src/choice-limits.ts#choiceLimitWarnings`; `apps/api/src/projects/projects.service.ts` | `apps/api/test/choice-limits.test.ts` |
+| L-09 | P12.2 | `packages/engine/src/flow/conditions.ts`; `apps/web/components/editor/ConditionEditor.tsx` | `packages/engine/test/flow.units.test.ts` |
+| PL-24 | P12.2 | `apps/api/src/play/choice-limits.ts`; `apps/api/src/play/play-sessions.service.ts#answer` | `apps/api/test/choice-limits.test.ts`; `e2e/choice-limits.spec.ts` |
+| PL-25 | P12.2 | `apps/api/src/play/play.controller.ts`; `packages/renderer/src/components/BlockView.tsx`; `apps/web/components/play/Player.tsx` | `e2e/choice-limits.spec.ts`; `apps/api/test/choice-limits.test.ts` |
+| PL-26 | P12.2 | `apps/api/src/projects/choice-limits.service.ts`; `packages/db/src/schema/play.ts#choiceReleases` | `apps/api/test/choice-limits.test.ts`; `e2e/choice-limits.spec.ts` |
+| D-12 | P12.2 | `apps/api/src/projects/choice-limits.controller.ts`; `apps/web/components/cabinet/ChoiceLimitsPanel.tsx` | `apps/api/test/choice-limits.test.ts`; `e2e/choice-limits.spec.ts` |

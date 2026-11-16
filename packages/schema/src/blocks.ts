@@ -16,6 +16,10 @@ export const ChoiceOption = z.strictObject({
   correct: z.boolean().default(false),
   score: num(-1000, 1000).default(0),
   resultTags: z.array(z.string().min(1).max(40)).max(10).default([]),
+  /** B-24 · how many participants may choose this option (none = no limit); the count lives on the server, the limit itself stays off the participant's document. */
+  limit: int(1, 10000).optional(),
+  /** B-24 · the player says how many places are left («осталось 2 места»). */
+  showRemaining: z.boolean().optional(),
 });
 
 export const BLOCK_PROPS = {

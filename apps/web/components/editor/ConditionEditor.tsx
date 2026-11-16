@@ -36,6 +36,8 @@ const ANSWER_OPS: ReadonlyArray<readonly [string, string]> = [
   ['scoreLte', 'баллы за ответ не больше'],
   ['correct', 'ответ верный'],
   ['wrong', 'ответ неверный'],
+  ['taken', 'вариант занят (лимит выборов)'],
+  ['free', 'в варианте есть места'],
 ];
 
 const STATE_TITLES: ReadonlyArray<readonly [string, string]> = [
@@ -156,7 +158,7 @@ export function ConditionEditor({ value, onChange, label, onRemove }: { value: C
 
   if (value.kind === 'answer') {
     const q = questions.find((x) => x.id === value.questionBlockId);
-    const needsOption = value.op === 'selected' || value.op === 'notSelected';
+    const needsOption = value.op === 'selected' || value.op === 'notSelected' || value.op === 'taken' || value.op === 'free';
     const needsValue = ['eq', 'contains', 'scoreGte', 'scoreLte'].includes(value.op);
     const numeric = value.op === 'scoreGte' || value.op === 'scoreLte';
     return (
@@ -171,14 +173,14 @@ export function ConditionEditor({ value, onChange, label, onRemove }: { value: C
           label={`${label}: вопрос`}
           value={known(value.questionBlockId, questions)}
           options={[[UNSET, 'Выберите вопрос'], ...questions.map((x) => [x.id, `${x.name} (${x.screen})`] as const)]}
-          onChange={(id) => id !== UNSET && onChange({ kind: 'answer', questionBlockId: id, op: value.op === 'selected' || value.op === 'notSelected' ? 'empty' : value.op })}
+          onChange={(id) => id !== UNSET && onChange({ kind: 'answer', questionBlockId: id, op: value.op === 'selected' || value.op === 'notSelected' || value.op === 'taken' || value.op === 'free' ? 'empty' : value.op })}
         />
         <SelectInput<string>
           control={`${label}.op`}
           label={`${label}: условие на ответ`}
           value={value.op}
           options={ANSWER_OPS}
-          onChange={(op) => onChange({ kind: 'answer', questionBlockId: value.questionBlockId, op: op as typeof value.op, ...(op === 'selected' || op === 'notSelected' ? { optionId: q?.options[0]?.id ?? 'option_unset' } : {}), ...(op === 'scoreGte' || op === 'scoreLte' ? { value: 0 } : {}) })}
+          onChange={(op) => onChange({ kind: 'answer', questionBlockId: value.questionBlockId, op: op as typeof value.op, ...(op === 'selected' || op === 'notSelected' || op === 'taken' || op === 'free' ? { optionId: q?.options[0]?.id ?? 'option_unset' } : {}), ...(op === 'scoreGte' || op === 'scoreLte' ? { value: 0 } : {}) })}
         />
         {needsOption && (
           <SelectInput<string>

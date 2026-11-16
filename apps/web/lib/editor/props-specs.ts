@@ -356,7 +356,7 @@ export function fieldKeys(fields: Field[]): string[] {
   const walk = (list: Field[], prefix: string) => {
     for (const f of list) {
       if (f.t === 'choiceOptions') {
-        for (const k of ['correct', 'score', 'resultTags']) out.add(`options.${k}`);
+        for (const k of ['correct', 'score', 'resultTags', 'limit', 'showRemaining']) out.add(`options.${k}`);
         continue;
       }
       const here = join(prefix, f.key);

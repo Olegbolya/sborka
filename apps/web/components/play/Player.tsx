@@ -28,6 +28,45 @@ interface Boot {
   client: PlayClient;
   /** Where the queue is kept; known when the passage has a session on the server. */
   setSession: (id: string) => void;
+  /** B-24, PL-25 · the places of limited options: kept here, refreshed from the server, read by the screen. */
+  places: PlacesBox;
+}
+
+type Places = Record<string, { taken: boolean; left: number | null }>;
+
+/** A small observable of the places; empty while the document has no limited options. */
+class PlacesBox {
+  value: Places = {};
+  private subs = new Set<() => void>();
+  private sessionId: string | null = null;
+  private busy = false;
+  subscribe = (fn: () => void): (() => void) => {
+    this.subs.add(fn);
+    return () => this.subs.delete(fn);
+  };
+  get = (): Places => this.value;
+  attach(id: string): void {
+    this.sessionId = id;
+    void this.refresh();
+  }
+  get limited(): boolean {
+    return Object.keys(this.value).length > 0;
+  }
+  async refresh(): Promise<void> {
+    if (!this.sessionId || this.busy) return;
+    this.busy = true;
+    try {
+      const r = await api<{ options: Places }>(`/play/sessions/${this.sessionId}/places`);
+      if (JSON.stringify(r.options) !== JSON.stringify(this.value)) {
+        this.value = r.options;
+        this.subs.forEach((f) => f());
+      }
+    } catch {
+      // The places are an addition: a lost call changes nothing, the server decides when an answer comes.
+    } finally {
+      this.busy = false;
+    }
+  }
 }
 
 function makeBoot(view: PlayOpen, resume?: PassageResume): Boot {
@@ -53,8 +92,14 @@ function makeBoot(view: PlayOpen, resume?: PassageResume): Boot {
     },
     instantFeedback: view.document.settings.feedbackMode === 'instant',
     onVerdict: (blockId, verdict) => holder.session?.setVerdict(blockId, verdict),
-    onRejected: (message) => holder.session?.say(message),
+    onRejected: (message, info) => {
+      if (info?.code === 'OPTION_TAKEN' && info.blockId) {
+        holder.session?.takeBack(info.blockId, message);
+        void places.refresh();
+      } else holder.session?.say(message);
+    },
   });
+  const places = new PlacesBox();
   // RN-01: a draw that affects the result is made by the server; a wheel gets its sector from there, the results their numbers.
   const draws = new ServerDraws(transport, { main: 8, default: 1 }, () => client.values([{ label: 'Случайность на устройстве', value: true }]));
   draws.watch('main');
@@ -79,7 +124,7 @@ function makeBoot(view: PlayOpen, resume?: PassageResume): Boot {
     },
   });
   holder.session = session;
-  return { view, session, client, setSession: (id) => ((key = outboxKey(id)), client.attach(id), draws.attach(id)) };
+  return { view, session, client, places, setSession: (id) => ((key = outboxKey(id)), client.attach(id), draws.attach(id), places.attach(id)) };
 }
 
 /**
@@ -91,6 +136,18 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
   const [boot, setBoot] = useState<Boot>(() => makeBoot(view));
   const passage = useSyncExternalStore(boot.session.subscribe, boot.session.getSnapshot, boot.session.getSnapshot);
   const media = useMemo(() => playMediaResolver(boot.view), [boot.view]);
+  const places = useSyncExternalStore(boot.places.subscribe, boot.places.get, boot.places.get);
+  // PL-25: the places are asked again on every screen and every few seconds while the passage has limited options.
+  const screenId = passage.screen?.id;
+  useEffect(() => {
+    void boot.places.refresh();
+  }, [boot, screenId]);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (boot.places.limited && document.visibilityState === 'visible') void boot.places.refresh();
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [boot]);
   const bootRef = useRef(boot);
   bootRef.current = boot;
   const latest = useRef({ source, proof, onBlocked });
@@ -192,7 +249,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
     <Artboard mode="player" {...(passage.screen ? { coverHeight: passage.screen.height } : {})} tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} linkHref={view.directLinks ? directHref : outHref}>
       {boot.view.ad && <AdBanner ad={boot.view.ad} />}
       {passage.screen ? (
-        <PlayerScreen key={`${passage.screen.id}:${passage.screenKey}`} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} entryOverlay={passage.entryOverlay} />
+        <PlayerScreen key={`${passage.screen.id}:${passage.screenKey}`} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} entryOverlay={passage.entryOverlay} places={places} />
       ) : (
         <div className="pl-end" data-testid="play-end" role="status">
           <strong>{passage.completing ? 'Считаем результат…' : 'Спасибо! Прохождение завершено.'}</strong>

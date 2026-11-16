@@ -194,6 +194,28 @@ function OptionRows({
                 })
               }
             />
+            <NumberInput
+              control={`option-${i}.limit`}
+              label="Лимит выборов (0 — без лимита)"
+              value={o.limit ?? 0}
+              min={0}
+              max={10000}
+              step={1}
+              onChange={(n) =>
+                apply(patchOption(block.id, o.id, { limit: n }), {
+                  label: 'Лимит выборов',
+                  mergeKey: `option-limit:${o.id}`,
+                })
+              }
+            />
+            {o.limit !== undefined && (
+              <Toggle
+                control={`option-${i}.showRemaining`}
+                label="Показывать, сколько мест осталось"
+                value={o.showRemaining === true}
+                onChange={(v) => apply(patchOption(block.id, o.id, { showRemaining: v }), { label: 'Показ остатка мест' })}
+              />
+            )}
             <TextInput
               control={`option-${i}.tags`}
               label="Метки результата (через запятую)"

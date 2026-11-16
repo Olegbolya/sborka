@@ -2,7 +2,7 @@
 
 import { type AnswerValue, type QuestionBlock, hasPersonalData, isQuestion, requiredProblem } from '@blokum/engine';
 import { type MediaOverlay, type Screen, walkBlocks } from '@blokum/schema';
-import { type PointerEvent, type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { MediaOverlayView } from '../components/MediaOverlayView.js';
 import { ScreenView } from '../components/ScreenView.js';
 import { RenderContext, useRenderContext } from '../context.js';
@@ -32,8 +32,11 @@ export function requiredMissing(screen: Screen, answers: Readonly<Record<string,
 /** The screen has blocks that react to the pointer itself (BH-02 flee, BH-08 follow). */
 export const usesPointer = (screen: Screen): boolean => [...walkBlocks(screen.blocks)].some((b) => b.behaviors.some((x) => x.kind === 'flee' || x.kind === 'follow'));
 
-export function PlayerScreen({ screen, store, progress, entryOverlay }: { screen: Screen; store: RuntimeStore; progress?: { index: number; total: number }; entryOverlay?: MediaOverlay | null }): ReactNode {
+export function PlayerScreen({ screen, store, progress, entryOverlay, places }: { screen: Screen; store: RuntimeStore; progress?: { index: number; total: number }; entryOverlay?: MediaOverlay | null; places?: Readonly<Record<string, { taken: boolean; left: number | null }>> }): ReactNode {
   const ctx = useRenderContext();
+  // B-24, PL-25, L-09: the places of limited options come from the server; the draw and the conditions read the same state.
+  const optionPlaces = useMemo(() => (places && Object.keys(places).length > 0 ? new Map(Object.entries(places)) : undefined), [places]);
+  store.runtime.setTakenOptions(optionPlaces ? [...optionPlaces].filter(([, p]) => p.taken).map(([id]) => id) : []);
   const shakeTarget = useRef<HTMLDivElement>(null);
   const effects = useRef<EffectsHandle>(null);
   // T-20, T-21: a media insert on the way to this screen covers it first.
@@ -153,6 +156,7 @@ export function PlayerScreen({ screen, store, progress, entryOverlay }: { screen
           const ms = store.runtime.timerRemaining(id);
           return ms === undefined ? undefined : ms / 1000;
         },
+        ...(optionPlaces ? { optionPlaces } : {}),
         requiredMissing: requiredMissing(screen, answers, (id) => store.views.get(id)?.visible ?? true),
         ...(progress ? { progress } : {}),
       }}

@@ -32,6 +32,7 @@ const OWN_SESSION = new Set([
 
 /** Not public, no role, and the route names an object by an id: another signed-in user must get neither it nor a change of it (IDOR). */
 const BY_ID = new Set([
+  'GET /projects/:projectId/choice-limits', 'POST /projects/:projectId/choice-limits/release',
   'DELETE /auth/sessions/:id',
   'POST /notifications/:id/read',
   'PUT /media/sessions/:id', 'POST /media/sessions/:id/complete', 'GET /media/:id/file', 'DELETE /media/:id',

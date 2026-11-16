@@ -360,6 +360,14 @@ export class PassageSession {
   /** L-04, L-05 · what a variable, an answer or «баллы», «результат»… in a text stands for now. */
   textValue = (run: Parameters<typeof runText>[0]): string | null => runText(run, { doc: this.doc, state: this.synced(), now: this.now(), ...(this.totals ? { totals: this.totals } : {}) });
 
+  /** PL-24 · the server did not give the place: the answer is taken back (it does not count and «дальше» waits for another one) and the person is told. */
+  takeBack(blockId: string, message: string): void {
+    const { [blockId]: _dropped, ...rest } = this.runtime.currentAnswers;
+    this.runtime.setAnswers(rest);
+    this.message = message;
+    this.publish();
+  }
+
   /** A word to the participant (the server did not accept an answer…). */
   say(message: string): void {
     this.message = message;

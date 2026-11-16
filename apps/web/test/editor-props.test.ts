@@ -130,6 +130,22 @@ describe('B-01…B-23 · свойства блоков', () => {
     expect(plainText(drawn.textLayer!)).toBe('Новый текст');
   });
 
+  it('B-24 · лимит выборов варианта: число от 1 до 10 000, «показывать остаток» держится, пока лимит есть', () => {
+    const t = setup('singleChoice');
+    const q = () => t.get() as Extract<ReturnType<typeof t.get>, { type: 'singleChoice' }>;
+    const id = q().props.options[0]!.id;
+    t.store.getState().apply(patchOption(t.ids[0]!, id, { showRemaining: true }), { label: 'x' });
+    expect(q().props.options[0]!.showRemaining).toBeUndefined();
+    t.store.getState().apply(patchOption(t.ids[0]!, id, { limit: 12.4 }), { label: 'x' });
+    t.store.getState().apply(patchOption(t.ids[0]!, id, { showRemaining: true }), { label: 'x' });
+    expect(q().props.options[0]).toMatchObject({ limit: 12, showRemaining: true });
+    t.store.getState().apply(patchOption(t.ids[0]!, id, { limit: 99999 }), { label: 'x' });
+    expect(q().props.options[0]!.limit).toBe(10000);
+    t.store.getState().apply(patchOption(t.ids[0]!, id, { limit: 0 }), { label: 'x' });
+    expect(q().props.options[0]!.limit).toBeUndefined();
+    expect(q().props.options[0]!.showRemaining).toBeUndefined();
+  });
+
   it('B-12 · в вопросе с несколькими ответами правильных может быть несколько', () => {
     const t = setup('multiChoice');
     const q = () => t.get() as Extract<ReturnType<typeof t.get>, { type: 'multiChoice' }>;

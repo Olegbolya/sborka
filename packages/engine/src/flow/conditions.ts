@@ -17,6 +17,8 @@ export interface ConditionContext {
   random: RandomSource;
   /** CN-03: state of a live block; without a runtime there is no live state and the condition is false. */
   blockState?: (c: Extract<Condition, { kind: 'blockState' }>) => boolean;
+  /** L-09 · whether a limited option has no place left for this passage (B-24); without the server's places nothing is taken. */
+  optionTaken?: (optionId: string) => boolean;
   /** CN-04: how many times the current rule has fired. */
   ruleCount?: number;
 }
@@ -72,6 +74,11 @@ function answerCondition(c: Extract<Condition, { kind: 'answer' }>, ctx: Conditi
     case 'notSelected': {
       const chosen = answer?.kind === 'choice' && c.optionId !== undefined && answer.optionIds.includes(c.optionId);
       return c.op === 'selected' ? chosen : !chosen;
+    }
+    case 'taken':
+    case 'free': {
+      const taken = c.optionId !== undefined && (ctx.optionTaken?.(c.optionId) ?? false);
+      return c.op === 'taken' ? taken : !taken;
     }
     case 'empty':
       return !isAnswered(answer);
