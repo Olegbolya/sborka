@@ -63,7 +63,7 @@ async function play(p: Page, slug: string, o: { answer: string; name: string }):
 }
 
 test.describe('D-13…D-19 · табло', () => {
-  test('BD-01…BD-07 · табло: включение, новое прохождение на экране за 6 секунд, место в конце, заморозка и скрытие из кабинета', async ({ page, browser }, info) => {
+  test('D-13 · D-15 · D-16 · D-17 · D-18 · D-19 · табло: включение, новое прохождение на экране за 6 секунд, место в конце, заморозка и скрытие из кабинета', async ({ page, browser }, info) => {
     test.setTimeout(180_000);
     await loginAndOnboard(page, freshUser('Автор'));
     const { id, slug } = await published(page);
@@ -127,7 +127,7 @@ test.describe('D-13…D-19 · табло', () => {
     await screen.ctx.close();
   });
 
-  test('BD-04 · табло выключено или адрес чужой — «Табло не найдено»', async ({ page }) => {
+  test('D-16 · табло выключено или адрес чужой — «Табло не найдено»', async ({ page }) => {
     await page.goto('/b/aaaaaaaaaa');
     await expect(page.getByTestId('board-missing')).toBeVisible();
   });

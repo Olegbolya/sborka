@@ -219,7 +219,7 @@ describe('D-13…D-21 · табло: итоги прохождений на бо
     expect(board.rows.map((r) => [r.rank, r.name, r.value])).toEqual([[1, 'А', 10], [2, 'Б', 4], [2, 'В', 4], [4, 'Г', 1]]);
   });
 
-  it('D-20 · BD-08 · ник показывается только с согласием «Показывать моё имя» и без стоп-слов, иначе «Участник N»', async () => {
+  it('D-16 · ник показывается только с согласием «Показывать моё имя» и без стоп-слов, иначе «Участник N»', async () => {
     await db.db.insert(schema.safetyTerms).values({ kind: 'STOP', term: 'дурак', category: 'A', weight: 90, active: true });
     // The board reads the dictionary once a minute; the test does not wait for it.
     t.app.get<{ dictionary: unknown }>(BoardService).dictionary = null;
@@ -238,7 +238,7 @@ describe('D-13…D-21 · табло: итоги прохождений на бо
     expect((await fresh(g)).rows.map((r) => r.name)).toEqual(['Участник 1', 'Участник 2', 'Участник 3', 'Участник 4']);
   });
 
-  it('D-17 · BD-05 · ответ табло кэшируется на 3 секунды: новое прохождение видно после правки создателя или через кэш', async () => {
+  it('D-20 · ответ табло кэшируется на 3 секунды: новое прохождение видно после правки создателя или через кэш', async () => {
     const g = await game();
     await settings(g, { nickBlockId: g.nickId, consentBlockId: g.consentId }).expect(200);
     const code = await codeOf(g);
@@ -251,7 +251,7 @@ describe('D-13…D-21 · табло: итоги прохождений на бо
     expect(typeof (await publicBoard(code)).theme).toBe('object');
   });
 
-  it('D-18 · BD-06 · {{место}} в конце прохождения совпадает с позицией на табло; кнопка «Открыть табло» приходит вместе со сборкой', async () => {
+  it('D-17 · {{место}} в конце прохождения совпадает с позицией на табло; кнопка «Открыть табло» приходит вместе со сборкой', async () => {
     const g = await game();
     await settings(g, { nickBlockId: g.nickId, consentBlockId: g.consentId }).expect(200);
     const first = await pass(g, { quiz: 1, nick: 'Боря', agree: true });
@@ -277,7 +277,7 @@ describe('D-13…D-21 · табло: итоги прохождений на бо
     expect((await pass(none, { quiz: 0 })).board).toBeNull();
   });
 
-  it('D-19 · BD-07 · заморозка не пускает новых, возобновление пускает; обнуление начинает новый раунд; скрытая строка не видна', async () => {
+  it('D-18 · заморозка не пускает новых, возобновление пускает; обнуление начинает новый раунд; скрытая строка не видна', async () => {
     const g = await game();
     await settings(g, { nickBlockId: g.nickId, consentBlockId: g.consentId }).expect(200);
     const code = await codeOf(g);
