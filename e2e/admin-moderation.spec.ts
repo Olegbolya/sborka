@@ -130,7 +130,9 @@ test.describe('P9.3 · админка модерации', () => {
   test('AD-11 · администратор публикует сборку как системный шаблон и тему — как системную, создатели видят тему, администратор снимает оба', async ({ page, browser }, info) => {
     test.setTimeout(180_000);
     const base = info.project.use.baseURL!;
-    const author = freshUser('Автор');
+    // The whole number in the name: «Автор 8557» (last four digits) is shared by other people of the e2e base and the row is not found alone.
+    const fresh = freshUser('Автор');
+    const author = { ...fresh, name: `Автор шаблона ${fresh.id}` };
     const title = `Шаблон ${Date.now()}`;
     await loginAndOnboard(page, author);
     const { id } = await published(page, title);

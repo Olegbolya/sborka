@@ -26,6 +26,8 @@ describe('ADR-048 · хэш IP-адреса с ежесуточно уничто
   it('длина настраивается, адрес в хэше не виден', () => {
     const h = hashIp('203.0.113.7', new Date(), 64);
     expect(h).toMatch(/^[0-9a-f]{64}$/);
-    expect(h).not.toContain('203');
+    // The digits of the address in a row: a random hex string has «203» in about one run of seventy, the whole address — practically never.
+    expect(h).not.toContain('2030113');
+    expect(h).not.toContain('203.0.113');
   });
 });
