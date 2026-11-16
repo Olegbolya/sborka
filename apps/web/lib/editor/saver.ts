@@ -96,6 +96,8 @@ export class Saver {
   };
 
   private set(status: SaveStatus, text = STATUS_TEXT[status], revision = this.view.revision): void {
+    // Every movement of a dragged block says «saving» again: the same status is not news for the screen.
+    if (this.view.status === status && this.view.text === text && this.view.revision === revision) return;
     this.view = { status, text, revision };
     for (const l of this.listeners) l(this.view);
   }

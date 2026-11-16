@@ -67,14 +67,20 @@ export class MediaCatalog {
 
   getSnapshot = (): number => this.version;
 
+  /** Something new is known: a new `resolver` object tells the artboard to draw its blocks again (they are memo, E-05). */
+  private changed(): void {
+    this.version += 1;
+    this.resolver = (ref) => this.resolve(ref);
+    for (const l of this.listeners) l();
+  }
+
   items(kinds?: readonly MediaKind[]): MediaItem[] {
     return [...this.byId.values()].filter((m) => !kinds || kinds.includes(m.kind)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
   add(item: MediaItem): void {
     this.byId.set(item.id, item);
-    this.version += 1;
-    for (const l of this.listeners) l();
+    this.changed();
   }
 
   /**
@@ -105,8 +111,7 @@ export class MediaCatalog {
       this.library.set(it.id, it);
       this.withdrawn.delete(it.id);
     }
-    this.version += 1;
-    for (const l of this.listeners) l();
+    this.changed();
   }
 
   /** LB-04 · asks the server about the library items the document already uses; those it does not return are withdrawn. */
@@ -119,8 +124,7 @@ export class MediaCatalog {
       for (const it of found) this.library.set(it.id, it);
       for (const id of part) if (!found.some((f) => f.id === id)) this.withdrawn.add(id);
     }
-    this.version += 1;
-    for (const l of this.listeners) l();
+    this.changed();
   }
 
   /** The whole library, page by page. */
@@ -132,12 +136,13 @@ export class MediaCatalog {
       cursor = res.nextCursor;
       if (!cursor) break;
     }
-    this.version += 1;
-    for (const l of this.listeners) l();
+    this.changed();
   }
 
-  /** For `Artboard`: a reference becomes an address. A file the catalog has not seen yet is drawn as a picture. */
-  resolver = (ref: MediaRef): MediaSource | null => {
+  /** For `Artboard`: a reference becomes an address. A file the catalog has not seen yet is drawn as a picture. A new object after every change. */
+  resolver: (ref: MediaRef) => MediaSource | null = (ref) => this.resolve(ref);
+
+  private resolve = (ref: MediaRef): MediaSource | null => {
     if (ref.source === 'library') {
       if (this.withdrawn.has(ref.id)) return { url: '', kind: 'image', stub: 'blocked' };
       const lib = this.library.get(ref.id);

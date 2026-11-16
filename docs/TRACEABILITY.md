@@ -340,7 +340,7 @@
 | E-17 | P3.2 | `apps/web/lib/editor/saver.ts`, `apps/web/lib/editor/remote.ts`, `apps/api/src/projects/drafts.service.ts` | `apps/web/test/editor-saver.test.ts`, `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
 | E-18 | P3.2 | `apps/web/lib/editor/saver.ts`, `apps/web/components/editor/ConflictDialog.tsx`, `apps/api/src/projects/drafts.service.ts` | `apps/web/test/editor-saver.test.ts`, `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
 | E-04 | P3.3 | `apps/web/lib/editor/gestures.ts`, `apps/web/components/editor/Canvas.tsx` | `e2e/canvas.spec.ts` |
-| E-05 | P3.3 | `apps/web/lib/editor/geometry.ts`, `apps/web/lib/editor/gestures.ts`, `apps/web/components/editor/Canvas.tsx` | `apps/web/test/editor-geometry.test.ts`, `e2e/canvas.spec.ts` |
+| E-05 | P3.3 | `apps/web/lib/editor/geometry.ts`, `apps/web/lib/editor/gestures.ts`, `apps/web/components/editor/Canvas.tsx` | `apps/web/test/editor-geometry.test.ts`, `e2e/canvas.spec.ts`; `packages/renderer/test/memo.test.tsx`; `e2e/perf/editor-latency.spec.ts` |
 | E-06 | P3.3 | `apps/web/lib/editor/snap.ts`, `apps/web/lib/editor/gestures.ts` | `apps/web/test/editor-geometry.test.ts`, `e2e/canvas.spec.ts` |
 | E-07 | P3.3 | `apps/web/components/editor/Editor.tsx`, `apps/web/lib/editor/commands.ts` | `e2e/canvas.spec.ts` |
 | E-08 | P3.3 | `apps/web/lib/editor/clipboard.ts`, `apps/web/lib/editor/commands.ts` | `apps/web/test/editor-arrange.test.ts`, `e2e/canvas.spec.ts` |

@@ -2,7 +2,7 @@
 
 import { behaviorOf } from '@blokum/engine';
 import { type Block, type BLOCK_STATES, type BlockStyle, resolveBlockStyle } from '@blokum/schema';
-import { type CSSProperties, type PointerEvent, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type PointerEvent, type ReactNode, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TINT_STYLE, animatedLayerStyle, useBlockAnimation, usesTint } from '../animation/useBlockAnimation.js';
 import { prefersReducedMotion } from '../particles/ParticleLayer.js';
 import { cssColor } from '../theme/color.js';
@@ -132,8 +132,9 @@ export const isPressable = (block: Block): boolean =>
  * One block of any type (E-03, S-00): absolute position in units, rotation and flips, the style through
  * `styleToCss`, animations (S-12…S-14), type-specific content, the text layer (any block can have text)
  * and nested blocks. Showing and hiding by a scenario with animation (AC-01) fades the block in and out.
+ * Memo: a block whose object and context did not change is not drawn again (the editor while dragging another block, E-05).
  */
-export function BlockView(props: BlockViewProps): ReactNode {
+export const BlockView = memo(function BlockView(props: BlockViewProps): ReactNode {
   const ctx = useRenderContext();
   const instanceId = props.instanceId ?? props.block.id;
   const view = ctx.views?.get(instanceId);
@@ -152,7 +153,7 @@ export function BlockView(props: BlockViewProps): ReactNode {
   }
   if (!present) return null;
   return <BlockBody {...props} instanceId={instanceId} appear={appear} leaving={leaving} onExited={() => setPresent(false)} />;
-}
+});
 
 /**
  * Roles for screen readers and the keyboard (PL-21): options are radio buttons or checkboxes inside their

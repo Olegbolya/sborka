@@ -38,8 +38,19 @@ export const PLAYER_UNIT = `calc(min(100vw, ${MAX_PLAYER_WIDTH}px) / ${ARTBOARD_
  * The artboard (E-01, E-02): defines the size of one unit through a CSS variable and provides the render
  * context. In the player the theme background fills the whole window around the column.
  */
+/** Same keys, same values (by reference). */
+function sameContext(a: RenderContextValue, b: RenderContextValue): boolean {
+  const ka = Object.keys(a) as Array<keyof RenderContextValue>;
+  return ka.length === Object.keys(b).length && ka.every((k) => a[k] === b[k]);
+}
+
 export function Artboard({ unit, coverHeight, children, ...context }: ArtboardProps): ReactNode {
-  const value: RenderContextValue = { ...defaultRenderContext, ...context };
+  const merged: RenderContextValue = { ...defaultRenderContext, ...context };
+  // E-05: while a block is dragged the editor redraws the artboard many times a second; a context that did not change keeps its
+  // object, so every block that did not change skips drawing (BlockView is memo). The player passes new views on every change.
+  const last = useRef(merged);
+  if (!sameContext(last.current, merged)) last.current = merged;
+  const value = last.current;
   const stageRef = useRef<HTMLDivElement>(null);
   const covers = coverHeight !== undefined && unit === undefined;
   // PL-16: the exact stretch of a low screen on a phone (`--ky`, unitless) — pictures use it to stay whole; `--uy` follows it.

@@ -1,6 +1,6 @@
 'use client';
 import { type ProjectDocument } from '@blokum/schema';
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { isApiError, errorText } from '../../lib/api-browser';
 import { groupBlocks, orderBlocks, selectionIsGroup, ungroupBlocks } from '../../lib/editor/arrange';
 import { type ClipboardPayload, type PasteChoice, type PastePlan, copyBlocks, pasteBlocks, planPaste, readClipboard, writeClipboard } from '../../lib/editor/clipboard';
@@ -23,6 +23,11 @@ import { EditorProvider, type EditorEnv, useEnv } from './context';
 import { HistoryDialog } from './HistoryDialog';
 import { Inspector } from './Inspector';
 import { LeftPanel } from './LeftPanel';
+
+// The three panels follow the store themselves: a message, a dialog or the save status above them does not redraw them.
+const LeftPanelView = memo(LeftPanel);
+const CanvasView = memo(Canvas);
+const InspectorView = memo(Inspector);
 import { LogicDialog } from './LogicDialog';
 import { ScenarioDialog } from './ScenarioDialog';
 import { ThemeDialog } from './ThemeDialog';
@@ -316,7 +321,6 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
   useEffect(() => {
     if (asked.dialog) setDialog('scenarios');
   }, [asked, setDialog]);
-  const doc = useSyncExternalStore(store.subscribe, () => store.getState().doc, () => store.getState().doc);
   // E-12: bottom sheet panel navigation on mobile (< 768 px). null — шторка свёрнута, холст виден целиком.
   const [mobilePanel, setMobilePanel] = useState<'left' | 'right' | null>('left');
   const selLen = useSyncExternalStore(store.subscribe, () => store.getState().selection.blockIds.length, () => 0);
@@ -333,9 +337,9 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
         </p>
       )}
       <div className="ed-body" data-mobile-panel={mobilePanel ?? 'none'}>
-        <LeftPanel />
-        <Canvas />
-        <Inspector />
+        <LeftPanelView />
+        <CanvasView />
+        <InspectorView />
         <nav className="ed-mobile-nav" aria-label="Панели редактора">
           <button type="button" className="ed-mobile-nav-btn" aria-pressed={mobilePanel === 'left'} aria-label="Слои и экраны" data-testid="mobile-nav-left" onClick={() => setMobilePanel(mobilePanel === 'left' ? null : 'left')}>
             Слои
@@ -350,7 +354,7 @@ function Body({ message, dialog, setDialog, saver, store }: { message: { text: s
       {dialog === 'logic' && <LogicDialog onClose={() => setDialog(null)} />}
       {dialog === 'scenarios' && <ScenarioDialog onClose={() => setDialog(null)} />}
       {dialog === 'theme' && <ThemeDialog onClose={() => setDialog(null)} />}
-      {dialog === 'preview' && <PreviewDialog doc={doc} onClose={() => setDialog(null)} />}
+      {dialog === 'preview' && <PreviewDialog doc={store.getState().doc} onClose={() => setDialog(null)} />}
     </>
   );
 }

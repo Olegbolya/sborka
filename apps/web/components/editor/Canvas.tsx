@@ -229,15 +229,22 @@ export function Canvas() {
   };
 
   // В редакторе вставка в тексте показана по имени: «{{счёт}}», «{{ответ: Вопрос}}» (в плеере вместо неё — значение).
-  const runTextNames = useCallback(
-    (run: Parameters<TextRunValue>[0]): string | null => {
-      if ('sys' in run) return `{{${run.sys}}}`;
-      if ('v' in run) return `{{${doc.variables.find((v) => v.id === run.v)?.name ?? 'переменная'}}}`;
-      if ('answer' in run) return `{{ответ: ${[...doc.screens.flatMap((sc) => [...drawOrder(sc.blocks)])].find((b) => b.id === run.answer)?.name ?? 'вопрос'}}}`;
-      return null;
-    },
-    [doc],
+  // E-05: the function changes only when a name changes — not when a block is moved, otherwise every block of the screen is drawn again.
+  const namesKey = useMemo(
+    () => JSON.stringify([doc.variables.map((v) => [v.id, v.name]), doc.screens.flatMap((sc) => [...drawOrder(sc.blocks)].map((b) => [b.id, b.name]))]),
+    [doc.variables, doc.screens],
   );
+  const runTextNames = useMemo(() => {
+    const [vars, blocks] = JSON.parse(namesKey) as [Array<[string, string]>, Array<[string, string]>];
+    const varName = new Map(vars);
+    const blockName = new Map(blocks);
+    return (run: Parameters<TextRunValue>[0]): string | null => {
+      if ('sys' in run) return `{{${run.sys}}}`;
+      if ('v' in run) return `{{${varName.get(run.v) ?? 'переменная'}}}`;
+      if ('answer' in run) return `{{ответ: ${blockName.get(run.answer) ?? 'вопрос'}}}`;
+      return null;
+    };
+  }, [namesKey]);
   const blocksById = useMemo(() => new Map([...drawOrder(screen.blocks)].map((b) => [b.id, b])), [screen.blocks]);
   const frames = useMemo(() => absoluteFrames(screen.blocks), [screen.blocks]);
   const hits = useMemo(() => drawOrder(screen.blocks).filter((b) => !b.hiddenInEditor), [screen.blocks]);

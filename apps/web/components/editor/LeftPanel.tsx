@@ -2,7 +2,7 @@
 import { copyScreen, pasteScreen, readScreenClipboard, writeScreenClipboard } from '../../lib/editor/clipboard';
 import { Artboard, ScreenView } from '@blokum/renderer';
 import { type Block, type Screen, type Variable } from '@blokum/schema';
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { type ReactNode, memo, useDeferredValue, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { withGroupMates } from '../../lib/editor/arrange';
 import { stackOf } from '../../lib/editor/tree';
 import {
@@ -49,7 +49,12 @@ function useNearViewport(): [(node: HTMLElement | null) => void, boolean] {
   return [ref, near];
 }
 
-function Thumbnail({ screen }: { screen: Screen }) {
+/**
+ * Memo: only the thumbnail of the screen that changed is drawn again; deferred: while a block is dragged the canvas goes first and
+ * the thumbnail catches up when the browser has time (E-05).
+ */
+const Thumbnail = memo(function Thumbnail({ screen: live }: { screen: Screen }) {
+  const screen = useDeferredValue(live);
   const { media } = useEnv();
   useSyncExternalStore(media.subscribe, media.getSnapshot, media.getSnapshot);
   const tokens = useEditor((s) => s.doc.theme.tokens);
@@ -68,7 +73,7 @@ function Thumbnail({ screen }: { screen: Screen }) {
       )}
     </span>
   );
-}
+});
 
 /** E-13 · the screens of the document: thumbnails, order, duplicate, delete, rename. */
 function ScreensList() {
@@ -220,8 +225,8 @@ function ScreensList() {
   );
 }
 
-/** One row of the layers: the name, «скрыть в редакторе», «заблокировать». */
-function LayerRow({
+/** One row of the layers: the name, «скрыть в редакторе», «заблокировать». Memo: a row of a block that did not change is not drawn again. */
+const LayerRow = memo(function LayerRow({
   block,
   depth,
   screenId,
@@ -289,7 +294,7 @@ function LayerRow({
       {children}
     </>
   );
-}
+});
 
 /**
  * The blocks of one level from the top layer down. Blocks of a group are shown together under a row «Группа»;

@@ -1,6 +1,6 @@
 'use client';
 import { type Block } from '@blokum/schema';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { memo, useEffect, useState, useSyncExternalStore } from 'react';
 import {
   type AlignMode,
   type OrderMode,
@@ -21,7 +21,25 @@ import { Toggle, useTypedNumber } from './controls';
 import { ScenarioEditor } from './ScenarioEditor';
 import { ScreenPanel } from './ScreenPanel';
 import { TextEditor } from './TextEditor';
-import { AnimationInspector, StyleInspector } from './StylePanels';
+import { AnimationInspector as AnimationPanel, StyleInspector as StylePanel } from './StylePanels';
+
+/**
+ * The same blocks, perhaps moved or resized: every property except the frame is the same object (the store changes documents with
+ * immer, so what did not change keeps its object). The sections below the position do not show the frame.
+ */
+export function sameButFrame(a: { blocks: Block[] }, b: { blocks: Block[] }): boolean {
+  if (a.blocks.length !== b.blocks.length) return false;
+  return a.blocks.every((x, i) => {
+    const y = b.blocks[i]!;
+    if (x === y) return true;
+    const keys = Object.keys(x) as Array<keyof Block>;
+    return keys.length === Object.keys(y).length && keys.every((k) => k === 'frame' || x[k] === y[k]);
+  });
+}
+
+// E-05: while a block is dragged only «Положение и размер» changes; the long sections below it are not drawn again.
+const StyleInspector = memo(StylePanel, sameButFrame);
+const AnimationInspector = memo(AnimationPanel, sameButFrame);
 import { useEditor, useEnv } from './context';
 
 /** A field whose value is shown as «смешанно» when the selected blocks differ (E-15). */
@@ -294,7 +312,7 @@ function Appearance({ blocks }: { blocks: Block[] }) {
 }
 
 /** S-16 · when the block is on the screen: from the start or only after a rule shows it, and only while a condition holds. */
-function VisibilitySection({ blocks }: { blocks: Block[] }) {
+const VisibilitySection = memo(function VisibilitySection({ blocks }: { blocks: Block[] }) {
   const apply = useEditor((s) => s.apply);
   const ids = blocks.map((b) => b.id);
   const single = blocks.length === 1 ? blocks[0]! : null;
@@ -322,10 +340,10 @@ function VisibilitySection({ blocks }: { blocks: Block[] }) {
       )}
     </div>
   );
-}
+}, sameButFrame);
 
 /** «Содержимое»: what the block is called and how it is announced to a screen reader. */
-function Content({ blocks }: { blocks: Block[] }) {
+const Content = memo(function Content({ blocks }: { blocks: Block[] }) {
   const apply = useEditor((s) => s.apply);
   const ids = blocks.map((b) => b.id);
   const single = blocks.length === 1 ? blocks[0]! : null;
@@ -378,10 +396,10 @@ function Content({ blocks }: { blocks: Block[] }) {
       <PropsInspector blocks={blocks} />
     </>
   );
-}
+}, sameButFrame);
 
 /** «Сценарии»: the rules of the selected block as a constructor (P3.8); with several blocks selected only the counts. */
-function Scenarios({ blocks }: { blocks: Block[] }) {
+const Scenarios = memo(function Scenarios({ blocks }: { blocks: Block[] }) {
   if (blocks.length === 1) {
     const block = blocks[0]!;
     return (
@@ -404,7 +422,7 @@ function Scenarios({ blocks }: { blocks: Block[] }) {
       </p>
     </div>
   );
-}
+}, sameButFrame);
 
 type Tab = 'look' | 'content' | 'scenarios';
 const TABS: Array<[Tab, string]> = [

@@ -20,9 +20,10 @@ export function TopBar({ status, onStatus, onPreview, onHistory, onLogic, onScen
   const save = useSyncExternalStore(saver.subscribe, () => saver.state, () => saver.state);
   const [publishing, setPublishing] = useState(false);
   // Опубликованная версия — копия черновика на момент публикации; правки после неё доходят до людей только новой публикацией.
-  const doc = useEditor((s) => s.doc);
   const [publishedDoc, setPublishedDoc] = useState<unknown>(null);
-  const hasUnpublished = status !== 'PUBLISHED' || publishedDoc === null || doc !== publishedDoc;
+  // Only «есть неопубликованные правки» is followed, not the document: the bar is not drawn again on every movement of a block (E-05).
+  const docChanged = useEditor((s) => s.doc !== publishedDoc);
+  const hasUnpublished = status !== 'PUBLISHED' || publishedDoc === null || docChanged;
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [passReasons, setPassReasons] = useState<string[] | null>(null);
   const [askAge, setAskAge] = useState(false);

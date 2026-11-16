@@ -138,6 +138,7 @@ export function startMove(env: GestureEnv, e: PointerEvent, ids: readonly string
   const p0 = { x: e.clientX, y: e.clientY };
   const u0 = env.toUnits(e.clientX, e.clientY);
   let began = false;
+  let snapOpts: SnapOptions | null = null;
   track(
     e.pointerId,
     (ev) => {
@@ -159,8 +160,9 @@ export function startMove(env: GestureEnv, e: PointerEvent, ids: readonly string
       let guides: Guide[] = [];
       let gaps: Gap[] = [];
       if (env.snap() && !ev.altKey) {
-        const height = screenOf(state.doc, state.selection.screenId).height;
-        const r = snapRect({ ...box, x: box.x + dx, y: box.y + dy }, optionsFor(env, movable, height));
+        // The other blocks stand still while these move: what they can be pulled to is found once per gesture.
+        snapOpts ??= optionsFor(env, movable, screenOf(state.doc, state.selection.screenId).height);
+        const r = snapRect({ ...box, x: box.x + dx, y: box.y + dy }, snapOpts);
         // Shift keeps the axis: the other one is not pulled sideways.
         if (!ev.shiftKey || dx !== 0) dx += r.dx;
         if (!ev.shiftKey || dy !== 0) dy += r.dy;
@@ -186,6 +188,7 @@ export function startResize(env: GestureEnv, e: PointerEvent, ids: readonly stri
   if (movable.length === 0) return;
   const u0 = env.toUnits(e.clientX, e.clientY);
   const { sx, sy } = handleAxes(handle);
+  let snapOpts: SnapOptions | null = null;
   env.store.getState().beginGesture('Изменить размер');
   track(
     e.pointerId,
@@ -201,8 +204,8 @@ export function startResize(env: GestureEnv, e: PointerEvent, ids: readonly stri
         const f = start.frames.get(id)!;
         // Straight blocks are pulled to lines by the edge being moved.
         if (env.snap() && !ev.altKey && f.rotation === 0 && !opts.keepAspect) {
-          const height = screenOf(state.doc, state.selection.screenId).height;
-          const o = optionsFor(env, movable, height);
+          snapOpts ??= optionsFor(env, movable, screenOf(state.doc, state.selection.screenId).height);
+          const o = snapOpts;
           const origin = start.boxes.get(id)!;
           const edgeX = sx === 0 ? [] : [(sx > 0 ? origin.x + origin.w : origin.x) + delta.x];
           const edgeY = sy === 0 ? [] : [(sy > 0 ? origin.y + origin.h : origin.y) + delta.y];
