@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, errorText, isApiError } from '../../lib/api-browser';
+import { takeAfterLogin } from '../../lib/after-login';
 
 const s = {
   main: { minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: '32px 16px' },
@@ -64,7 +65,7 @@ export default function OnboardingPage() {
       try {
         const st = await api<OnboardingStatus>('/auth/onboarding');
         if (st.completed) {
-          window.location.replace('/cabinet/projects');
+          window.location.replace(takeAfterLogin() ?? '/cabinet/projects');
           return;
         }
         const marketingDoc = await api<LegalDocument>('/legal/documents/marketing').catch(() => null);
@@ -103,7 +104,7 @@ export default function OnboardingPage() {
           ...(marketing && marketingDocId ? { marketingConsentDocId: marketingDocId } : {}),
         },
       });
-      window.location.assign('/cabinet/projects');
+      window.location.assign(takeAfterLogin() ?? '/cabinet/projects');
     } catch (e) {
       setError(errorText(e));
       setSaving(false);

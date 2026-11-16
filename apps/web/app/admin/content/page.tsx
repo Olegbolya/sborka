@@ -10,7 +10,38 @@ interface Template {
   category: string | null;
   sort: number;
   sourceProjectId: string | null;
+  slug: string | null;
+  exampleProjectId: string | null;
   publishedAt: string | null;
+}
+
+interface TemplateSource {
+  id: string;
+  slug: string;
+  name: string;
+  examplePassages: number;
+  drafts: number;
+  byLabel: Array<{ label: string; drafts: number }>;
+}
+
+/** TPL-05.1/05.3 · the address of the public page of a template and its example (a published project). */
+function TemplatePageForm({ t, action }: { t: Template; action: ReturnType<typeof useAction> }) {
+  const [slug, setSlug] = useState(t.slug ?? '');
+  const [example, setExample] = useState(t.exampleProjectId ?? '');
+  return (
+    <form
+      aria-label={`Страница шаблона «${t.name}»`}
+      style={{ ...css.row, marginTop: 8 }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        void action.run(() => api(`/admin/templates/${t.id}`, { method: 'PATCH', body: { slug, exampleProjectId: example } }), 'Страница шаблона сохранена');
+      }}
+    >
+      <Field label="Адрес страницы /t/…"><input style={css.input} value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="letter-to-santa" /></Field>
+      <Field label="Сборка-пример (идентификатор опубликованной сборки)"><input style={css.input} value={example} onChange={(e) => setExample(e.target.value)} /></Field>
+      <button type="submit" style={css.btnLight} disabled={action.busy}>Сохранить страницу</button>
+    </form>
+  );
 }
 
 interface Theme {
@@ -23,9 +54,13 @@ interface Theme {
 export default function ContentPage() {
   const templates = useLoad(() => api<Template[]>('/admin/templates'));
   const themes = useLoad(() => api<Theme[]>('/admin/themes'));
+  const sources = useLoad(() => api<TemplateSource[]>('/admin/templates/sources'));
   const [tpl, setTpl] = useState({ projectId: '', name: '', category: '', sort: '0' });
   const [theme, setTheme] = useState({ source: 'themeId' as 'themeId' | 'projectId', id: '', name: '' });
-  const tplAction = useAction(templates.reload);
+  const tplAction = useAction(() => {
+    templates.reload();
+    sources.reload();
+  });
   const themeAction = useAction(themes.reload);
 
   return (
@@ -40,8 +75,20 @@ export default function ContentPage() {
             <span style={css.muted}>{t.category ?? 'без категории'} · порядок {t.sort} · {dateTime(t.publishedAt)}</span>
             <button type="button" style={{ ...css.btnLight, marginLeft: 'auto' }} disabled={tplAction.busy} onClick={() => void tplAction.run(() => api(`/admin/templates/${t.id}`, { method: 'DELETE' }), `Шаблон «${t.name}» снят`)}>Снять</button>
           </div>
+          <TemplatePageForm t={t} action={tplAction} />
         </div>
       ))}
+      {sources.data && sources.data.length > 0 && (
+        <div style={css.card} data-testid="template-sources">
+          <strong>Откуда приходят: страницы шаблонов</strong>
+          {sources.data.map((r) => (
+            <p key={r.id} style={css.muted}>
+              {r.name} (/t/{r.slug}): пример прошли до конца — {r.examplePassages}, черновиков создано — {r.drafts}
+              {r.byLabel.length > 0 ? ` (${r.byLabel.map((l) => `${l.label}: ${l.drafts}`).join(', ')})` : ''}
+            </p>
+          ))}
+        </div>
+      )}
       <form
         aria-label="Опубликовать шаблон"
         style={css.card}

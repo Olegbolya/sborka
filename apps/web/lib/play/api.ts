@@ -26,6 +26,8 @@ export interface PlayOpen {
   ageRating?: number | null;
   /** PL-11 · the creator allows the «← Назад» button. */
   showBack?: boolean;
+  /** TPL-05.4 · the project is the example of a system template: the button «Собрать такую же» leads to the page of that template. */
+  buildSimilar?: { slug: string } | null;
   /** PL-18 · «Реклама», the advertiser and the erid. */
   ad: { advertiser: string; inn?: string; erid: string } | null;
   /** The proof of the password (PL-08). */

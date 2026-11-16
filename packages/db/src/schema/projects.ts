@@ -33,11 +33,17 @@ export const projects = pgTable(
     publishedAt: ts('published_at'),
     closedReason: text('closed_reason'),
     legalHold: boolean('legal_hold').notNull().default(false),
+    /** TPL-05.5 · where the draft came from (the label of a page `/t/{slug}` visit, e.g. `serial-2.1`); shown to the administrator. */
+    sourceLabel: text('source_label'),
+    /** TPL-05.5 · the system template the draft was made from (to count drafts per template page). */
+    sourceTemplateId: text('source_template_id'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     deletedAt: ts('deleted_at'),
   },
   (t) => [
+    index('projects_source_label_idx').on(t.sourceLabel),
+    index('projects_source_template_idx').on(t.sourceTemplateId),
     uniqueIndex('projects_slug_uq').on(t.slug),
     index('projects_owner_status_idx').on(t.ownerId, t.status, t.updatedAt),
     index('projects_deleted_idx').on(t.deletedAt),

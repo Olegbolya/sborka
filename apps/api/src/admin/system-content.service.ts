@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { AuditLogService } from '../auth/audit-log.service.js';
 import { type RequestUser } from '../auth/session.service.js';
@@ -49,7 +49,7 @@ export class SystemContentService {
 
   templates() {
     return this.db
-      .select({ id: schema.templates.id, name: schema.templates.name, category: schema.templates.category, sort: schema.templates.sort, coverMediaId: schema.templates.coverMediaId, sourceProjectId: schema.templates.sourceProjectId, publishedAt: schema.templates.publishedAt })
+      .select({ id: schema.templates.id, name: schema.templates.name, category: schema.templates.category, sort: schema.templates.sort, coverMediaId: schema.templates.coverMediaId, sourceProjectId: schema.templates.sourceProjectId, slug: schema.templates.slug, exampleProjectId: schema.templates.exampleProjectId, publishedAt: schema.templates.publishedAt })
       .from(schema.templates)
       .where(and(eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt)))
       .orderBy(asc(schema.templates.category), asc(schema.templates.sort), desc(schema.templates.createdAt));
@@ -63,9 +63,11 @@ export class SystemContentService {
     const category = text(body.category) || null;
     if (category && category.length > 60) throw fail(422, 'CATEGORY', 'Категория: не больше 60 знаков.');
     const sort = Number.isInteger(Number(body.sort)) ? Number(body.sort) : 0;
+    const slug = body.slug === undefined ? null : await this.templateSlug(body.slug, null);
+    const exampleProjectId = body.exampleProjectId === undefined ? null : await this.exampleProject(body.exampleProjectId);
     const [row] = await this.db
       .insert(schema.templates)
-      .values({ ownerId: null, name: templateName, category, document, sourceProjectId: projectId, isSystem: true, sort, coverMediaId: await this.cover(body.coverMediaId), publishedAt: new Date() })
+      .values({ ownerId: null, name: templateName, category, document, sourceProjectId: projectId, slug, exampleProjectId, isSystem: true, sort, coverMediaId: await this.cover(body.coverMediaId), publishedAt: new Date() })
       .returning({ id: schema.templates.id });
     await this.audit.log({ actorId: actor.id, action: 'SYSTEM_TEMPLATE_PUBLISHED', targetType: 'TEMPLATE', targetId: row!.id, ...(ip ? { ip } : {}), meta: { projectId } });
     return { id: row!.id };
@@ -80,10 +82,57 @@ export class SystemContentService {
       set.sort = Number(body.sort);
     }
     if (body.coverMediaId !== undefined) set.coverMediaId = await this.cover(body.coverMediaId);
+    if (body.slug !== undefined) set.slug = await this.templateSlug(body.slug, id);
+    if (body.exampleProjectId !== undefined) set.exampleProjectId = await this.exampleProject(body.exampleProjectId);
     if (Object.keys(set).length === 0) throw fail(422, 'EMPTY', 'Нечего менять.');
     const rows = await this.db.update(schema.templates).set(set).where(and(eq(schema.templates.id, id), eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt))).returning({ id: schema.templates.id });
     if (rows.length === 0) throw fail(404, 'NOT_FOUND', 'Шаблон не найден');
     await this.audit.log({ actorId: actor.id, action: 'SYSTEM_TEMPLATE_UPDATED', targetType: 'TEMPLATE', targetId: id, ...(ip ? { ip } : {}) });
+  }
+
+  /** TPL-05.1 · the address of the template page: lower-case letters, digits and dashes, 3–60, free; empty takes the page away. */
+  private async templateSlug(raw: unknown, selfId: string | null): Promise<string | null> {
+    const v = text(raw).toLowerCase();
+    if (v === '') return null;
+    if (!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(v)) throw fail(422, 'SLUG', 'Адрес шаблона: 3–60 знаков, строчные латинские буквы, цифры и дефис.');
+    const [taken] = await this.db.select({ id: schema.templates.id }).from(schema.templates).where(and(eq(schema.templates.slug, v), isNull(schema.templates.deletedAt)));
+    if (taken && taken.id !== selfId) throw fail(409, 'SLUG_TAKEN', 'Этот адрес уже занят другим шаблоном.');
+    return v;
+  }
+
+  /** TPL-05.3 · the example of a template is a published project; empty unlinks it. */
+  private async exampleProject(raw: unknown): Promise<string | null> {
+    const v = text(raw);
+    if (v === '') return null;
+    const [p] = await this.db.select({ status: schema.projects.status }).from(schema.projects).where(and(eq(schema.projects.id, v), isNull(schema.projects.deletedAt)));
+    if (!p) throw fail(422, 'EXAMPLE', 'Сборка-пример не найдена.');
+    if (p.status !== 'PUBLISHED') throw fail(422, 'EXAMPLE', 'Сборка-пример должна быть опубликована.');
+    return v;
+  }
+
+  /**
+   * TPL-05.5 · per template with a page: how many people ran the example to the end and how many drafts were made from the page,
+   * by label (`serial-2.1`…), to count the conversion of each episode.
+   */
+  async templateSources(): Promise<Array<{ id: string; slug: string; name: string; examplePassages: number; drafts: number; byLabel: Array<{ label: string; drafts: number }> }>> {
+    const templates = await this.db
+      .select({ id: schema.templates.id, slug: schema.templates.slug, name: schema.templates.name, exampleProjectId: schema.templates.exampleProjectId })
+      .from(schema.templates)
+      .where(and(eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt), isNotNull(schema.templates.slug)));
+    const out = [];
+    for (const t of templates) {
+      const [done] = t.exampleProjectId
+        ? await this.db.select({ n: count() }).from(schema.participantSessions).where(and(eq(schema.participantSessions.projectId, t.exampleProjectId), eq(schema.participantSessions.status, 'COMPLETED'), eq(schema.participantSessions.isPreview, false)))
+        : [{ n: 0 }];
+      const byLabel = await this.db
+        .select({ label: schema.projects.sourceLabel, drafts: count() })
+        .from(schema.projects)
+        .where(and(eq(schema.projects.sourceTemplateId, t.id), isNotNull(schema.projects.sourceLabel)))
+        .groupBy(schema.projects.sourceLabel);
+      const [all] = await this.db.select({ n: count() }).from(schema.projects).where(eq(schema.projects.sourceTemplateId, t.id));
+      out.push({ id: t.id, slug: t.slug!, name: t.name, examplePassages: done?.n ?? 0, drafts: all?.n ?? 0, byLabel: byLabel.map((r) => ({ label: r.label!, drafts: r.drafts })) });
+    }
+    return out;
   }
 
   async removeTemplate(actor: RequestUser, id: string, ip?: string): Promise<void> {

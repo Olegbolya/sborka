@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
-import { CurrentUser } from '../auth/decorators.js';
+import { CurrentUser, Public } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { ProjectsService } from './projects.service.js';
 
@@ -30,6 +30,13 @@ export class TemplatesController {
       result = result.filter((t) => t.name.toLowerCase().includes(q));
     }
     return { templates: result };
+  }
+
+  /** TPL-05.1 · the public page of a system template, for people who are not signed in. */
+  @Public()
+  @Get('by-slug/:slug')
+  bySlug(@Param('slug') slug: string) {
+    return this.projects.templateBySlug(slug);
   }
 
   /** TPL-02 · the creator's own saved templates. */

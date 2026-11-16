@@ -99,6 +99,11 @@ export interface PublishResult {
   warnings: string[];
 }
 
+/** TPL-05.5 · a label of origin: letters, digits, dot, dash, underscore, up to 40; anything else is dropped, the draft is made all the same. */
+export function sourceLabelOf(raw: unknown): string | null {
+  return typeof raw === 'string' && /^[a-z0-9][a-z0-9._-]{0,39}$/i.test(raw) ? raw.toLowerCase() : null;
+}
+
 function sha256(doc: ProjectDocument): string {
   return createHash('sha256').update(JSON.stringify(doc)).digest('hex');
 }
@@ -123,7 +128,7 @@ export class ProjectsService {
     @Optional() @Inject(AGE_RATING_REQUIRED) private readonly ageRatingRequired?: boolean,
   ) {}
 
-  async createProject(userId: string, requestedTitle?: string, templateId?: string): Promise<ProjectDetail> {
+  async createProject(userId: string, requestedTitle?: string, templateId?: string, source?: string): Promise<ProjectDetail> {
     const projectId = createId();
     const slug = createSlug();
     const fromTemplate = templateId ? await this.anyTemplateDocument(userId, templateId) : null;
@@ -136,7 +141,33 @@ export class ProjectsService {
       const tokens = ThemeTokens.safeParse(theme.tokens);
       if (tokens.success) doc.theme = { themeId: theme.id, tokens: tokens.data };
     }
-    return this.insertProject(userId, projectId, slug, title, doc);
+    return this.insertProject(userId, projectId, slug, title, doc, sourceLabelOf(source), fromTemplate && (await this.isSystemTemplate(templateId!)) ? templateId! : null);
+  }
+
+  /**
+   * TPL-05.1 · the public page of a system template: name, category, cover and the example to try. No sign-in needed; an unknown
+   * address, a taken-down template or one without a page all answer the same «not found».
+   */
+  async templateBySlug(slug: string): Promise<{ id: string; slug: string; name: string; category: string | null; coverMediaId: string | null; example: { slug: string } | null }> {
+    const [row] = await this.db
+      .select({ id: schema.templates.id, slug: schema.templates.slug, name: schema.templates.name, category: schema.templates.category, coverMediaId: schema.templates.coverMediaId, exampleProjectId: schema.templates.exampleProjectId })
+      .from(schema.templates)
+      .where(and(eq(schema.templates.slug, slug), eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt)));
+    if (!row?.slug) throw new NotFoundException({ error: { code: 'TEMPLATE_NOT_FOUND', message: 'Шаблон не найден.' } });
+    let example: { slug: string } | null = null;
+    if (row.exampleProjectId) {
+      const [p] = await this.db
+        .select({ slug: schema.projects.slug })
+        .from(schema.projects)
+        .where(and(eq(schema.projects.id, row.exampleProjectId), eq(schema.projects.status, 'PUBLISHED'), isNull(schema.projects.deletedAt)));
+      example = p ? { slug: p.slug } : null;
+    }
+    return { id: row.id, slug: row.slug, name: row.name, category: row.category, coverMediaId: row.coverMediaId, example };
+  }
+
+  private async isSystemTemplate(templateId: string): Promise<boolean> {
+    const [r] = await this.db.select({ id: schema.templates.id }).from(schema.templates).where(and(eq(schema.templates.id, templateId), eq(schema.templates.isSystem, true)));
+    return Boolean(r);
   }
 
   /** TPL-03 · the published system templates, by category and order set in the admin. */
@@ -321,7 +352,7 @@ export class ProjectsService {
       .where(and(eq(schema.themes.ownerId, userId), eq(schema.themes.isDefault, true), isNull(schema.themes.deletedAt)));
   }
 
-  private async insertProject(userId: string, projectId: string, slug: string, title: string, doc: ProjectDocument): Promise<ProjectDetail> {
+  private async insertProject(userId: string, projectId: string, slug: string, title: string, doc: ProjectDocument, sourceLabel: string | null = null, sourceTemplateId: string | null = null): Promise<ProjectDetail> {
     const docJson = doc as unknown as schema.ProjectDocumentJson;
     const versionId = createId();
 
@@ -335,6 +366,8 @@ export class ProjectsService {
         title,
         slug,
         status: 'DRAFT',
+        ...(sourceLabel ? { sourceLabel } : {}),
+        ...(sourceTemplateId ? { sourceTemplateId } : {}),
       });
       await tx.insert(schema.projectVersions).values({
         id: versionId,

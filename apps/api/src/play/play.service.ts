@@ -2,7 +2,7 @@ import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { NotificationsService } from '../admin/notifications.service.js';
 import { hashIp } from '../auth/ip-hash.js';
-import { and, count, eq, gt, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, count, eq, gt, gte, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { createId, type ProjectDocument, type PublicDocument, type ThemeTokens, toPublicDocument } from '@blokum/schema';
 import { API_CONFIG, DB } from '../tokens.js';
@@ -50,6 +50,8 @@ export interface PlayOpen {
   ageRating: number | null;
   /** PL-11 · the creator allows the «← Назад» button in the player. */
   showBack: boolean;
+  /** TPL-05.4 · this project is the example of a system template: the player offers «Собрать такую же» (the address of the template page). */
+  buildSimilar: { slug: string } | null;
   /** PL-18 · an advertising project says so: who advertises and the erid. */
   ad: { advertiser: string; inn?: string; erid: string } | null;
   /** Given after the right password: the browser keeps it for the tab and sends it with later calls (PL-08). */
@@ -228,7 +230,17 @@ export class PlayService {
       media,
       fonts: fontsMap,
       ...marks(row, limits.watermark),
+      buildSimilar: await this.buildSimilarOf(projectId),
     };
+  }
+
+  /** TPL-05.4 · only the example of a system template with a page gets the button, whatever the tariff of its owner. */
+  private async buildSimilarOf(projectId: string): Promise<{ slug: string } | null> {
+    const [t] = await this.db
+      .select({ slug: schema.templates.slug })
+      .from(schema.templates)
+      .where(and(eq(schema.templates.exampleProjectId, projectId), eq(schema.templates.isSystem, true), isNull(schema.templates.deletedAt), isNotNull(schema.templates.slug)));
+    return t?.slug ? { slug: t.slug } : null;
   }
 
   async view(slug: string, ctx: PlayContext = {}): Promise<PlayView> {
@@ -263,6 +275,7 @@ export class PlayService {
       media,
       fonts: fontsMap,
       ...marks(p, limits.watermark),
+      buildSimilar: await this.buildSimilarOf(p.id),
     };
   }
 

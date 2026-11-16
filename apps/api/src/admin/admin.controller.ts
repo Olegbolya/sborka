@@ -228,6 +228,13 @@ export class AdminController {
     return this.content.templates();
   }
 
+  /** TPL-05.5 · per template page: example passages and drafts made from it, by label. */
+  @Roles('ADMIN')
+  @Get('templates/sources')
+  templateSources() {
+    return this.content.templateSources();
+  }
+
   @Roles('ADMIN')
   @Post('templates')
   @HttpCode(201)

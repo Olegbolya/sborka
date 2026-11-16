@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, check, index, integer, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, index, integer, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { createdAt, id, ts, updatedAt } from './columns.js';
 import { assetLicense, libraryKind, mediaKind, mediaStatus } from './enums.js';
 import { users } from './users.js';
@@ -62,13 +62,22 @@ export const templates = pgTable(
     coverMediaId: text('cover_media_id').references(() => media.id, { onDelete: 'set null' }),
     document: jsonb('document').$type<Record<string, unknown>>().notNull(),
     sourceProjectId: text('source_project_id'),
+    /** TPL-05.1 · the address of the public page `/t/{slug}` of a system template (none = no page). */
+    slug: text('slug'),
+    /** TPL-05.3 · the published project the viewer tries before building their own copy. */
+    exampleProjectId: text('example_project_id'),
     isSystem: boolean('is_system').notNull().default(false),
     sort: integer('sort').notNull().default(0),
     publishedAt: ts('published_at'),
     createdAt: createdAt(),
     deletedAt: ts('deleted_at'),
   },
-  (t) => [index('templates_owner_idx').on(t.ownerId), index('templates_system_idx').on(t.isSystem, t.category, t.sort)],
+  (t) => [
+    index('templates_owner_idx').on(t.ownerId),
+    index('templates_system_idx').on(t.isSystem, t.category, t.sort),
+    uniqueIndex('templates_slug_uq').on(t.slug).where(sql`${t.slug} IS NOT NULL AND ${t.deletedAt} IS NULL`),
+    index('templates_example_idx').on(t.exampleProjectId),
+  ],
 );
 
 export const savedElements = pgTable(
