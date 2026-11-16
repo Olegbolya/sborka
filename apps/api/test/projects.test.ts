@@ -143,6 +143,22 @@ describe('D-01 · Мои сборки', () => {
     await request(t.http()).get(`/${API_PREFIX}/projects/${c.body.id as string}`).set('Cookie', cookie).expect(200);
   });
 
+  it('D-01: удалённая сборка видна в списке удалённых (?deleted=1) и возвращается оттуда; через 30 дней список её не показывает', async () => {
+    const c = await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'Корзина-тест' }).expect(200);
+    const id = c.body.id as string;
+    await request(t.http()).delete(`/${API_PREFIX}/projects/${id}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(204);
+    const trash = await request(t.http()).get(`/${API_PREFIX}/projects?deleted=1`).set('Cookie', cookie).expect(200);
+    expect((trash.body as Array<{ id: string; deletedAt?: string }>).find((p) => p.id === id)?.deletedAt).toBeTruthy();
+    const live = await request(t.http()).get(`/${API_PREFIX}/projects`).set('Cookie', cookie).expect(200);
+    expect((live.body as Array<{ id: string }>).some((p) => p.id === id)).toBe(false);
+    await request(t.http()).post(`/${API_PREFIX}/projects/${id}/restore`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200);
+    expect(((await request(t.http()).get(`/${API_PREFIX}/projects?deleted=1`).set('Cookie', cookie).expect(200)).body as Array<{ id: string }>).some((p) => p.id === id)).toBe(false);
+    // Old deletion: out of the list.
+    await request(t.http()).delete(`/${API_PREFIX}/projects/${id}`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(204);
+    await db.db.update(schema.projects).set({ deletedAt: new Date(Date.now() - 31 * 86_400_000) }).where(eq(schema.projects.id, id));
+    expect(((await request(t.http()).get(`/${API_PREFIX}/projects?deleted=1`).set('Cookie', cookie).expect(200)).body as Array<{ id: string }>).some((p) => p.id === id)).toBe(false);
+  });
+
   it('D-01: дублировать сборку', async () => {
     const c = await request(t.http())
       .post(`/${API_PREFIX}/projects`)

@@ -136,6 +136,7 @@ export default function AccountPage() {
   if (!profile) {
     return (
       <main style={s.main}>
+        <nav style={{ fontSize: 14, marginBottom: 24 }}><a href="/cabinet/projects" data-testid="account-back" style={{ color: 'var(--muted)', textDecoration: 'none' }}>← К моим сборкам</a></nav>
         <h1 style={s.heading}>Мой аккаунт</h1>
         {error ? <p role="alert" style={s.error}>{error}</p> : <p style={s.notice}>Загружаем…</p>}
       </main>
@@ -147,7 +148,8 @@ export default function AccountPage() {
 
   return (
     <main style={s.main}>
-      <h1 style={s.heading}>Мой аккаунт</h1>
+      <nav style={{ fontSize: 14, marginBottom: 24 }}><a href="/cabinet/projects" data-testid="account-back" style={{ color: 'var(--muted)', textDecoration: 'none' }}>← К моим сборкам</a></nav>
+        <h1 style={s.heading}>Мой аккаунт</h1>
       {error && <p role="alert" style={s.error}>{error}</p>}
       {notice && <p role="status" style={s.ok}>{notice}</p>}
 

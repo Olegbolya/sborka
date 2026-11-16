@@ -14,6 +14,7 @@ interface Project {
   completions: number;
   updatedAt: string;
   createdAt: string;
+  deletedAt?: string;
 }
 
 const STATUS_LABEL: Record<ProjectStatus, string> = {
@@ -39,7 +40,8 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     const body = await res.json().catch(() => ({ message: 'Ошибка сервера' })) as { message?: string };
     throw new Error(body.message ?? `Ошибка ${res.status}`);
   }
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 const s = {
@@ -79,6 +81,7 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [creating, setCreating] = useState(false);
+  const [trash, setTrash] = useState<Project[]>([]);
   const [version, setVersion] = useState(0);
   const [editId, setEditId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -97,6 +100,14 @@ export default function ProjectsPage() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [search, statusFilter, version]);
+
+  useEffect(() => {
+    let active = true;
+    apiFetch<Project[]>('/projects?deleted=1')
+      .then((data) => { if (active) setTrash(data); })
+      .catch(() => { if (active) setTrash([]); });
+    return () => { active = false; };
+  }, [version]);
 
   async function createProject() {
     setCreating(true);
@@ -117,9 +128,16 @@ export default function ProjectsPage() {
   }
 
   async function deleteProject(id: string, title: string) {
-    if (!confirm(`Удалить «${title}»? Восстановить можно в течение 30 дней.`)) return;
+    if (!confirm(`Удалить «${title}»? Вернуть её можно в течение 30 дней в разделе «Удалённые сборки» внизу этой страницы.`)) return;
     try {
       await apiFetch(`/projects/${id}`, { method: 'DELETE', headers: { 'X-Blokum-CSRF': '1' } });
+      reload();
+    } catch (e) { setError((e as Error).message); }
+  }
+
+  async function restoreProject(id: string) {
+    try {
+      await apiFetch(`/projects/${id}/restore`, { method: 'POST', headers: CSRF, body: '{}' });
       reload();
     } catch (e) { setError((e as Error).message); }
   }
@@ -246,6 +264,30 @@ export default function ProjectsPage() {
           </div>
         </div>
       ))}
+
+      {trash.length > 0 && (
+        <section data-testid="trash">
+          <p style={s.sectionTitle}>Удалённые сборки</p>
+          <p style={s.emptyHint}>Удалённую сборку можно вернуть в течение 30 дней, потом она исчезнет насовсем.</p>
+          {trash.map((p) => {
+            const left = Math.max(0, 30 - Math.floor((Date.now() - new Date(p.deletedAt ?? Date.now()).getTime()) / 86_400_000));
+            return (
+              <div key={p.id} style={s.card} data-testid="trash-item">
+                <div style={s.cardInfo}>
+                  <p style={s.title} title={p.title}>{p.title}</p>
+                  <div style={s.meta}>
+                    <span>Удалена: {new Date(p.deletedAt ?? Date.now()).toLocaleDateString('ru-RU')}</span>
+                    <span>Осталось дней: {left}</span>
+                  </div>
+                </div>
+                <div style={s.actions}>
+                  <button style={s.btnSm} data-testid="trash-restore" onClick={() => void restoreProject(p.id)}>Восстановить</button>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       <div style={s.divider} />
 

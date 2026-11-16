@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNull, max } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { AGE_RATINGS, choiceLimitWarnings, createDocument, createId, createSlug, customSlugSchema, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
 import { AGE_RATING_REQUIRED } from './projects.tokens.js';
@@ -82,6 +82,8 @@ export interface ProjectSummary {
   completions: number;
   updatedAt: Date;
   createdAt: Date;
+  /** Только в списке удалённых: когда сборку удалили (восстановить можно в течение 30 дней). */
+  deletedAt?: Date;
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'starts' | 'completions'> {
@@ -407,7 +409,7 @@ export class ProjectsService {
     };
   }
 
-  async listProjects(userId: string, opts: { search?: string; status?: string } = {}): Promise<ProjectSummary[]> {
+  async listProjects(userId: string, opts: { search?: string; status?: string; deleted?: boolean } = {}): Promise<ProjectSummary[]> {
     const rows = await this.db
       .select({
         id: schema.projects.id,
@@ -416,12 +418,14 @@ export class ProjectsService {
         status: schema.projects.status,
         updatedAt: schema.projects.updatedAt,
         createdAt: schema.projects.createdAt,
+        deletedAt: schema.projects.deletedAt,
       })
       .from(schema.projects)
       .where(
         and(
           eq(schema.projects.ownerId, userId),
-          isNull(schema.projects.deletedAt),
+          opts.deleted ? isNotNull(schema.projects.deletedAt) : isNull(schema.projects.deletedAt),
+          opts.deleted ? gte(schema.projects.deletedAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) : undefined,
           opts.status ? eq(schema.projects.status, opts.status as 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'BLOCKED' | 'DELETED') : undefined,
         ),
       )
@@ -442,7 +446,8 @@ export class ProjectsService {
     return withSearch.map((r) => {
       const starts = counters.find((c) => c.projectId === r.id && c.kind === 'STARTS')?.value ?? 0;
       const completions = counters.find((c) => c.projectId === r.id && c.kind === 'COMPLETIONS')?.value ?? 0;
-      return { ...r, starts, completions };
+      const { deletedAt, ...rest } = r;
+      return { ...rest, ...(opts.deleted && deletedAt ? { deletedAt } : {}), starts, completions };
     });
   }
 

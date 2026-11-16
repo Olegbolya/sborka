@@ -20,8 +20,8 @@ export class ProjectsController {
 
   /** D-01: List projects with optional search and status filter. */
   @Get()
-  list(@CurrentUser() user: RequestUser, @Query('search') search?: string, @Query('status') status?: string) {
-    return this.projects.listProjects(user.id, { search, status });
+  list(@CurrentUser() user: RequestUser, @Query('search') search?: string, @Query('status') status?: string, @Query('deleted') deleted?: string) {
+    return this.projects.listProjects(user.id, { search, status, deleted: deleted === '1' });
   }
 
   /** D-01: Create a new project. */

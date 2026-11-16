@@ -306,7 +306,7 @@
 | TS-21 | P4.2 | `apps/worker/src/media/clamav.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/clamav.test.ts` |
 | TS-25 | P4.2 | `apps/worker/src/media/lottie.ts`; `apps/worker/src/media/processor.ts` | `apps/worker/test/lottie.test.ts` |
 | D-08 | P4.4 | `apps/api/src/media/media.service.ts#checkUsage`; `apps/api/src/media/media.controller.ts` | `apps/api/test/media.test.ts` |
-| D-01 | P6.1 | `apps/api/src/projects/projects.service.ts`; `apps/api/src/projects/projects.controller.ts`; `apps/web/app/cabinet/projects/page.tsx` | `apps/api/test/projects.test.ts` |
+| D-01 | P6.1 | `apps/api/src/projects/projects.service.ts`; `apps/api/src/projects/projects.controller.ts`; `apps/web/app/cabinet/projects/page.tsx` | `apps/api/test/projects.test.ts`; `e2e/trash.spec.ts` |
 | D-11 | P6.1 | `apps/web/app/cabinet/projects/page.tsx` | `apps/api/test/projects.test.ts` |
 | D-02 | P6.2 | `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
 | Q-01 | P6.2 | `apps/api/src/projects/access-points.service.ts`; `apps/api/src/projects/access-points.controller.ts` | `apps/api/test/projects.test.ts` |
