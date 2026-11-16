@@ -35,6 +35,16 @@ async function publishedProject(page: Page, title: string, text: string): Promis
   return { id: created.id, slug: created.slug, document: created.document };
 }
 
+/** Waits for the address; when it never comes, the error says what the page shows and what the browser logged (the cause is read from the CI log). */
+async function reach(page: Page, url: RegExp, seen: string[]): Promise<void> {
+  try {
+    await page.waitForURL(url, { timeout: 30_000 });
+  } catch (e) {
+    const shown = (await page.locator('body').innerText().catch(() => '(страница недоступна)')).slice(0, 400);
+    throw new Error(`Адрес ${String(url)} не открылся; сейчас ${page.url()}; на странице: «${shown}»; сообщения браузера: ${seen.slice(-8).join(' | ')}; ${(e as Error).message.split('\n')[0]}`);
+  }
+}
+
 test.describe('TPL-05 · «Собрать такую же»', () => {
   test('TPL-05.1 · адреса нет — «Шаблон не найден» со ссылкой на галерею, без входа', async ({ page }, info) => {
     await page.goto('/t/takogo-shablona-net');
@@ -46,6 +56,10 @@ test.describe('TPL-05 · «Собрать такую же»', () => {
 
   test('TPL-05.2 · TPL-05.5 · невошедший: страница → «Собрать такую же» → вход → редактор с копией; метка источника сохранена, шаблон не тронут', async ({ page }, info) => {
     test.setTimeout(120_000);
+    const seen: string[] = [];
+    page.on('console', (m) => seen.push(`${m.type()}: ${m.text().slice(0, 160)}`));
+    page.on('pageerror', (err) => seen.push(`pageerror: ${err.message.slice(0, 160)}`));
+    page.on('response', (r) => { if (r.status() >= 400) seen.push(`${r.status()} ${r.url().slice(0, 120)}`); });
     const tag = `${info.project.name.replace(/[^a-z0-9]/g, '')}${Date.now().toString(36)}`;
     const slug = `e2e-${tag}`;
     const owner = freshUser('Автор');
@@ -61,14 +75,14 @@ test.describe('TPL-05 · «Собрать такую же»', () => {
       await page.screenshot({ path: `${SHOTS}/template-page-${info.project.name}.png`, fullPage: true });
 
       await page.getByTestId('template-build').click();
-      await page.waitForURL(/\/login/);
+      await reach(page, /\/login/, seen);
       await loginViaEmulatorFromLoginPage(page, freshUser('Зритель'));
       // New person: consents first, then the copy is made without choosing the template again.
       await page.getByLabel('Принимаю').check();
       await page.getByLabel(/обработку персональных данных/).check();
       await page.getByLabel(/18 лет/).check();
       await page.getByRole('button', { name: 'Продолжить' }).click();
-      await page.waitForURL(/\/app\/projects\/[^/]+\/edit/);
+      await reach(page, /\/app\/projects\/[^/]+\/edit/, seen);
       const projectId = page.url().match(/projects\/([^/]+)\/edit/)![1]!;
       const row = (await sql(`select source_label, source_template_id, title from projects where id = $1`, [projectId])).rows[0]!;
       expect(row.source_label).toBe('serial-9.9');
@@ -84,6 +98,10 @@ test.describe('TPL-05 · «Собрать такую же»', () => {
 
   test('TPL-05.2 · вошедший: «Собрать такую же» сразу открывает редактор с копией', async ({ page }, info) => {
     test.setTimeout(120_000);
+    const seen: string[] = [];
+    page.on('console', (m) => seen.push(`${m.type()}: ${m.text().slice(0, 160)}`));
+    page.on('pageerror', (err) => seen.push(`pageerror: ${err.message.slice(0, 160)}`));
+    page.on('response', (r) => { if (r.status() >= 400) seen.push(`${r.status()} ${r.url().slice(0, 120)}`); });
     const tag = `${info.project.name.replace(/[^a-z0-9]/g, '')}${Date.now().toString(36)}b`;
     const slug = `e2e-${tag}`;
     await loginAndOnboard(page, freshUser('Автор'));
@@ -92,7 +110,7 @@ test.describe('TPL-05 · «Собрать такую же»', () => {
     try {
       await page.goto(`/t/${slug}`);
       await page.getByTestId('template-build').click();
-      await page.waitForURL(/\/app\/projects\/[^/]+\/edit/);
+      await reach(page, /\/app\/projects\/[^/]+\/edit/, seen);
       const projectId = page.url().match(/projects\/([^/]+)\/edit/)![1]!;
       expect(projectId).not.toBe(example.id);
       expect((await sql(`select source_label from projects where id = $1`, [projectId])).rows[0]!.source_label).toBeNull();
@@ -103,6 +121,10 @@ test.describe('TPL-05 · «Собрать такую же»', () => {
 
   test('TPL-05.4 · в плеере кнопка «Собрать такую же» есть у сборки-примера и нет у обычной', async ({ page }, info) => {
     test.setTimeout(120_000);
+    const seen: string[] = [];
+    page.on('console', (m) => seen.push(`${m.type()}: ${m.text().slice(0, 160)}`));
+    page.on('pageerror', (err) => seen.push(`pageerror: ${err.message.slice(0, 160)}`));
+    page.on('response', (r) => { if (r.status() >= 400) seen.push(`${r.status()} ${r.url().slice(0, 120)}`); });
     const tag = `${info.project.name.replace(/[^a-z0-9]/g, '')}${Date.now().toString(36)}c`;
     const slug = `e2e-${tag}`;
     await loginAndOnboard(page, freshUser('Автор'));
