@@ -80,7 +80,8 @@ describe('Q-03…Q-06 · конструктор QR, печать, проверк
       { ...DEFAULT_QR_STYLE, frame: true, caption: 'Пройди сборку — 2 минуты' },
     ];
     for (const look of looks) expect(await reads(await renderPng(URL_OF, look, null, 1024), URL_OF), JSON.stringify(look)).toBe(true);
-  });
+    // Four 1024 px pictures drawn and read back: half a second here, over five seconds on a busy CI runner.
+  }, 30_000);
 
   it('Q-05 · чужой код не принимается за свой: проверка сравнивает именно адрес точки', async () => {
     const png = await renderPng('https://blokker.ru/q/drugoj999', DEFAULT_QR_STYLE, null, 1024);
