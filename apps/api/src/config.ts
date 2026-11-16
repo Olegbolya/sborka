@@ -19,6 +19,8 @@ export interface ApiConfig {
   oauthBaseUrl: string;
   /** Frontend URL for post-login redirect. */
   webUrl: string;
+  /** D-07 · the Telegram bot of the owner; absent — the bot is off. `webhookSecret` is checked on every call of Telegram. */
+  telegram?: { token: string; botUsername: string; webhookSecret: string };
   /**
    * A-01: login by phone code. Off unless PHONE_LOGIN=1 — the owner declined SMS for cost (ADR-033); the code is
    * kept for a cheaper provider later. In production it also needs a real `OtpSender`, which is not connected.
@@ -93,6 +95,8 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     yandexClientId: env.YANDEX_CLIENT_ID ?? (production ? '' : 'dev-yandex'),
     oauthBaseUrl: env.OAUTH_BASE_URL ?? (publicUrl ? `${publicUrl}/api/v1` : `${selfBaseUrl}/api/v1`),
     webUrl: env.WEB_URL ?? (publicUrl || 'http://localhost:3110'),
+    // D-07: the bot of the owner (BotFather). Without the three values the bot is simply off: the cabinet says so, nothing is sent.
+    ...(env.TELEGRAM_BOT_TOKEN?.trim() && env.TELEGRAM_BOT_USERNAME?.trim() && env.TELEGRAM_WEBHOOK_SECRET?.trim() ? { telegram: { token: env.TELEGRAM_BOT_TOKEN.trim(), botUsername: env.TELEGRAM_BOT_USERNAME.trim().replace(/^@/, ''), webhookSecret: env.TELEGRAM_WEBHOOK_SECRET.trim() } } : {}),
     phoneLogin: env.PHONE_LOGIN === '1',
     adminPhone: env.ADMIN_PHONE ?? '',
     adminAccounts: (env.ADMIN_ACCOUNTS ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean),

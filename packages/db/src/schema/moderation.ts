@@ -298,3 +298,25 @@ export const commsMetaLog = pgTable(
   },
   (t) => [index('comms_meta_created_idx').on(t.createdAt), index('comms_meta_project_idx').on(t.projectId, t.createdAt)],
 );
+
+/** D-07 · the chat of Telegram where a creator hears about passages (the bot of the owner; Про+). One chat per creator. */
+export const telegramLinks = pgTable('telegram_links', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  chatId: text('chat_id').notNull(),
+  linkedAt: ts('linked_at').notNull().defaultNow(),
+});
+
+/** D-07 · a one-time word the creator sends to the bot to say «this chat is mine»; it lives a quarter of an hour. */
+export const telegramLinkCodes = pgTable(
+  'telegram_link_codes',
+  {
+    code: text('code').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: ts('expires_at').notNull(),
+  },
+  (t) => [index('telegram_link_codes_user_idx').on(t.userId)],
+);

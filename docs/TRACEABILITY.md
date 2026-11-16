@@ -607,3 +607,4 @@
 | PL-25 | P12.2 | `apps/api/src/play/play.controller.ts`; `packages/renderer/src/components/BlockView.tsx`; `apps/web/components/play/Player.tsx` | `e2e/choice-limits.spec.ts`; `apps/api/test/choice-limits.test.ts` |
 | PL-26 | P12.2 | `apps/api/src/projects/choice-limits.service.ts`; `packages/db/src/schema/play.ts#choiceReleases` | `apps/api/test/choice-limits.test.ts`; `e2e/choice-limits.spec.ts` |
 | D-12 | P12.2 | `apps/api/src/projects/choice-limits.controller.ts`; `apps/web/components/cabinet/ChoiceLimitsPanel.tsx` | `apps/api/test/choice-limits.test.ts`; `e2e/choice-limits.spec.ts` |
+| D-07 | P6.7 (Телеграм) | `apps/api/src/telegram/telegram.service.ts#TelegramService`; `apps/api/src/telegram/telegram.controller.ts`; `apps/api/src/play/passage-notices.service.ts#telegramAbout`; `apps/web/components/account/TelegramSettings.tsx#TelegramSettings` | `apps/api/test/telegram.test.ts`; `e2e/telegram-settings.spec.ts` |

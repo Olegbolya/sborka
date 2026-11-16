@@ -3,7 +3,9 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { NotificationsService } from '../admin/notifications.service.js';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
-import { DB } from '../tokens.js';
+import { TelegramService } from '../telegram/telegram.service.js';
+import { type ApiConfig } from '../config.js';
+import { API_CONFIG, DB } from '../tokens.js';
 import { type PassageMode, allowedPassageModes, effectivePassageMode } from './passage-mode.js';
 
 const PERIOD_MS: Record<'hourly' | 'daily', number> = { hourly: 3_600_000, daily: 86_400_000 };
@@ -11,6 +13,16 @@ const PERIOD_MS: Record<'hourly' | 'daily', number> = { hourly: 3_600_000, daily
 const QUEUE_LIMIT = 500;
 /** The digest quotes this many passages, the rest is counted. */
 const DIGEST_ITEMS = 10;
+
+/** The first three answers of a passage message («• Вопрос: ответ» lines) — what Telegram quotes; contacts never are in it. */
+export function telegramAnswers(body: string): string {
+  return body
+    .split('\n')
+    .filter((l) => l.startsWith('• '))
+    .slice(0, 3)
+    .map((l) => clip(l, 200))
+    .join('\n');
+}
 
 const clip = (text: string, n: number): string => (text.length > n ? `${text.slice(0, n - 1)}…` : text);
 
@@ -27,6 +39,8 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
     @Inject(DB) private readonly db: Db,
     private readonly notices: NotificationsService,
     @Optional() private readonly entitlements?: EntitlementsService,
+    @Optional() private readonly telegram?: TelegramService,
+    @Optional() @Inject(API_CONFIG) private readonly config?: ApiConfig,
   ) {}
 
   onModuleInit(): void {
@@ -55,6 +69,7 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
     if (input.mode === 'off') return;
     if (input.mode === 'instant') {
       await this.notices.notify({ userId: input.ownerId, kind: 'passage', title: input.title, body: input.body, projectId: input.projectId, mail: false });
+      await this.telegramAbout(input.ownerId, input.projectId, input.title, telegramAnswers(input.body));
       return;
     }
     const [queued] = await this.db
@@ -63,6 +78,13 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
       .where(and(eq(schema.passageDigestQueue.userId, input.ownerId), eq(schema.passageDigestQueue.projectId, input.projectId)));
     if ((queued?.n ?? 0) >= QUEUE_LIMIT) return;
     await this.db.insert(schema.passageDigestQueue).values({ userId: input.ownerId, projectId: input.projectId, body: input.body });
+  }
+
+  /** D-07 · the same message in the creator's Telegram (if linked, and the plan has it): the title, the first answers and the way to the cabinet. */
+  private async telegramAbout(userId: string, projectId: string, title: string, answers: string): Promise<void> {
+    if (!this.telegram) return;
+    const link = `${this.config?.webUrl ?? ''}/cabinet/projects/${projectId}?tab=responses`;
+    await this.telegram.sendToUser(userId, [title, ...(answers ? [answers] : []), `Все ответы: ${link}`].join('\n\n'));
   }
 
   /** Send the digests that are due; returns how many messages went out. `now` is a parameter so tests choose the time. */
@@ -100,6 +122,7 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
       // The rows go first: a failed letter must not send the same digest again a minute later (the cabinet message is the record).
       await this.db.delete(schema.passageDigestQueue).where(inArray(schema.passageDigestQueue.id, rows.map((r) => r.id)));
       await this.notices.notify({ userId: g.userId, kind: 'passage', title, body, projectId: g.projectId, mail: false });
+      await this.telegramAbout(g.userId, g.projectId, title, '');
       sent += 1;
     }
     return sent;

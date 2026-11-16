@@ -47,6 +47,7 @@ import { ProjectsModule } from './projects/projects.module.js';
 import { FontsModule } from './fonts/fonts.module.js';
 import { LibraryModule } from './library/library.module.js';
 import { EditorModule } from './editor/editor.module.js';
+import { TelegramModule } from './telegram/telegram.module.js';
 
 export interface AppDeps {
   logger: Logger;
@@ -67,6 +68,8 @@ export interface AppDeps {
   paymentProvider?: PaymentProvider | null;
   /** P9.1 (TS-05): reputation of links; `null` — not checked. Default: Yandex Safe Browsing when the key is set. */
   linkReputation?: LinkReputation | null;
+  /** D-07: replaces the call to api.telegram.org (tests). */
+  telegramFetch?: (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<{ ok: boolean; status: number }>;
 }
 
 @Module({})
@@ -78,7 +81,7 @@ export class AppModule {
     const emailSender: EmailSender | null = deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender();
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes, linkReputation: deps.linkReputation !== undefined ? deps.linkReputation : config.safeBrowsingKey ? new YandexSafeBrowsing(config.safeBrowsingKey) : null }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl, config.requireAgeRating === true, config.mediaDir), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), PaymentsModule.register(config, deps.paymentProvider), LibraryModule.register(config), EditorModule],
+      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes, linkReputation: deps.linkReputation !== undefined ? deps.linkReputation : config.safeBrowsingKey ? new YandexSafeBrowsing(config.safeBrowsingKey) : null }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl, config.requireAgeRating === true, config.mediaDir), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), PaymentsModule.register(config, deps.paymentProvider), LibraryModule.register(config), EditorModule, TelegramModule.register(config, deps.telegramFetch)],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),

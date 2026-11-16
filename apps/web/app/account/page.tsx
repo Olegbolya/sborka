@@ -2,6 +2,7 @@
 import { clearClipboard } from '../../lib/editor/clipboard';
 import { useCallback, useEffect, useState } from 'react';
 import { api, apiRaw, errorText, isApiError } from '../../lib/api-browser';
+import { TelegramSettings } from '../../components/account/TelegramSettings';
 
 const s = {
   main: { minHeight: '100dvh', padding: '48px 16px', maxWidth: 640, margin: '0 auto' },
@@ -251,6 +252,13 @@ export default function AccountPage() {
             </button>
           )}
         </div>
+      </section>
+
+      <div style={s.divider} />
+
+      <section style={s.section}>
+        <p style={s.sectionTitle}>Уведомления в Телеграме</p>
+        <TelegramSettings />
       </section>
 
       <div style={s.divider} />
