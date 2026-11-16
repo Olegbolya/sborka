@@ -24,3 +24,6 @@ apps/web/public/vendor/
 
 # Дамп локального Redis (появляется при pnpm services)
 dump.rdb
+
+# Страница «Собрать такую же» (TPL-05) лежит в папке с именем build — это не результат сборки
+!apps/web/app/t/*/build/
