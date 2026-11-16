@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { LEGAL_LINKS } from '../../lib/landing/content';
+import { AccountLink } from './AccountLink';
 import { CookieSettingsButton } from './CookieSettingsButton';
 import './landing.css';
 
@@ -15,9 +16,7 @@ export function SiteHeader() {
         <a href="/tariffs">Тарифы</a>
         <a href="/help">Помощь</a>
       </nav>
-      <a href="/login" className="lp-btn lp-btn-small">
-        Войти
-      </a>
+      <AccountLink className="lp-btn lp-btn-small" />
     </header>
   );
 }
@@ -41,7 +40,7 @@ export function SiteFooter() {
           <a href="/examples">Примеры</a>
           <a href="/tariffs">Тарифы</a>
           <a href="/help">Помощь</a>
-          <a href="/login">Войти</a>
+          <AccountLink />
         </nav>
         <nav aria-label="Правовые документы" className="lp-footer-col">
           <strong>Документы</strong>
