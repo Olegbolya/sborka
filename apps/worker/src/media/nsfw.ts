@@ -6,15 +6,14 @@ import sharp from 'sharp';
 /**
  * TS-22 · NSFW image classifier based on an open ONNX model.
  *
- * Model format: Falconsai/nsfw_image_detection (ViT-based 5-class classifier)
- *   input  — pixel_values: float32[1, 3, 224, 224], ImageNet normalisation
- *             mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]
- *   output — logits: float32[1, 5]
- *             classes: drawings, hentai, neutral, porn, sexy
+ * Default format (`NSFW_MODEL_FORMAT=falconsai`): Falconsai/nsfw_image_detection, Apache-2.0 (checked 16.11.2026 on the model card;
+ * ViT, config.json: id2label {0: normal, 1: nsfw}, preprocessor_config.json: 224×224, mean = std = 0.5 for all channels).
+ *   input  — pixel_values: float32[1, 3, 224, 224]
+ *   output — logits: float32[1, 2]  (normal, nsfw)
+ * The original repository holds PyTorch/safetensors weights, not an ONNX file: the ONNX file is made once with
+ * `optimum-cli export onnx --model Falconsai/nsfw_image_detection <dir>` and put at NSFW_MODEL_PATH (see docs/DECISIONS.md, ADR-103).
  *
- * Model download (add to server-setup.sh):
- *   wget -q -O ~/blokum/models/nsfw.onnx \
- *     https://huggingface.co/Falconsai/nsfw_image_detection/resolve/main/model.onnx
+ * Other format (`NSFW_MODEL_FORMAT=five-class`): a 5-class model drawings / hentai / neutral / porn / sexy, ImageNet normalisation.
  *
  * Threshold rules (TS-22):
  *   score ≥ HIGH_THRESHOLD  → BLOCK  + flag category A/B for manual review
@@ -28,17 +27,20 @@ export const NSFW_HIGH_THRESHOLD = 0.85;
 export const NSFW_MID_THRESHOLD = 0.5;
 
 const INPUT_SIZE = 224;
-const IMAGENET_MEAN = [0.485, 0.456, 0.406];
-const IMAGENET_STD = [0.229, 0.224, 0.225];
-const NSFW_CLASSES = ['drawings', 'hentai', 'neutral', 'porn', 'sexy'] as const;
-type NsfwClass = (typeof NSFW_CLASSES)[number];
+
+export type NsfwFormat = 'falconsai' | 'five-class';
+const FORMATS = {
+  falconsai: { mean: [0.5, 0.5, 0.5], std: [0.5, 0.5, 0.5], classes: ['normal', 'nsfw'], sexual: ['nsfw'] },
+  'five-class': { mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225], classes: ['drawings', 'hentai', 'neutral', 'porn', 'sexy'], sexual: ['hentai', 'porn', 'sexy'] },
+} as const;
+const format = (): NsfwFormat => (process.env.NSFW_MODEL_FORMAT === 'five-class' ? 'five-class' : 'falconsai');
 
 export interface NsfwResult {
   score: number;
-  topClass: NsfwClass;
+  topClass: string;
   /** TS-22 classification: 'block' | 'flag' | 'pass' */
   verdict: 'block' | 'flag' | 'pass';
-  scores: Record<NsfwClass, number>;
+  scores: Record<string, number>;
 }
 
 let modelLoaded: Promise<InferenceSession> | null = null;
@@ -59,7 +61,7 @@ async function getModel(): Promise<InferenceSession> {
  * Preprocess image: resize to 224×224 and apply ImageNet normalisation.
  * Returns a Float32Array of shape [1, 3, 224, 224] in CHW order.
  */
-async function preprocessImage(imagePath: string): Promise<Float32Array> {
+async function preprocessImage(imagePath: string, fmt: (typeof FORMATS)[NsfwFormat]): Promise<Float32Array> {
   const { data, info } = await sharp(imagePath, { failOn: 'none' })
     .resize(INPUT_SIZE, INPUT_SIZE, { fit: 'fill', kernel: 'lanczos3' })
     .removeAlpha()
@@ -72,7 +74,7 @@ async function preprocessImage(imagePath: string): Promise<Float32Array> {
   for (let i = 0; i < pixels; i++) {
     for (let c = 0; c < 3; c++) {
       const raw = (data[i * 3 + c] ?? 0) / 255;
-      tensor[c * pixels + i] = (raw - (IMAGENET_MEAN[c] ?? 0)) / (IMAGENET_STD[c] ?? 1);
+      tensor[c * pixels + i] = (raw - (fmt.mean[c] ?? 0)) / (fmt.std[c] ?? 1);
     }
   }
   return tensor;
@@ -85,34 +87,38 @@ function softmax(logits: Float32Array): Float32Array {
   return new Float32Array(exp.map((v) => v / sum));
 }
 
-/** TS-22: classify an image. Returns null when the model is unavailable. */
-export async function classifyNsfw(imagePath: string): Promise<NsfwResult | null> {
-  if (!isNsfwModelAvailable()) return null;
-
-  const session = await getModel();
-  const tensor = await preprocessImage(imagePath);
-
-  const ort = await import('onnxruntime-node');
-  const feed = { pixel_values: new ort.Tensor('float32', tensor, [1, 3, INPUT_SIZE, INPUT_SIZE]) };
-  const output = await session.run(feed);
-
-  const logits = output['logits']?.data as Float32Array;
-  if (!logits || logits.length !== NSFW_CLASSES.length) return null;
-
-  const probs = softmax(logits);
-  const scores = Object.fromEntries(NSFW_CLASSES.map((cls, i) => [cls, probs[i]])) as Record<NsfwClass, number>;
-
-  // The nsfw score is the sum of the explicitly sexual classes.
-  const nsfwScore = scores.hentai + scores.porn + scores.sexy;
-  let topClass: NsfwClass = 'neutral';
+/**
+ * TS-22: from the model's logits to a verdict. The score is the probability of the sexual classes; a model whose output does not match
+ * the chosen format gives null (the check is then skipped, see processor.ts).
+ */
+export function interpretLogits(logits: ArrayLike<number>, fmtName: NsfwFormat = 'falconsai'): NsfwResult | null {
+  const fmt = FORMATS[fmtName];
+  if (logits.length !== fmt.classes.length) return null;
+  const probs = softmax(Float32Array.from(logits));
+  const scores: Record<string, number> = Object.fromEntries(fmt.classes.map((cls, i) => [cls, probs[i] ?? 0]));
+  const nsfwScore = fmt.sexual.reduce((sum, cls) => sum + (scores[cls] ?? 0), 0);
+  let topClass: string = fmt.classes[0];
   let topP = -1;
   for (const [cls, p] of Object.entries(scores)) {
-    if (p > topP) { topP = p; topClass = cls as NsfwClass; }
+    if (p > topP) {
+      topP = p;
+      topClass = cls;
+    }
   }
-
   let verdict: NsfwResult['verdict'] = 'pass';
   if (nsfwScore >= NSFW_HIGH_THRESHOLD) verdict = 'block';
   else if (nsfwScore >= NSFW_MID_THRESHOLD) verdict = 'flag';
-
   return { score: nsfwScore, topClass, verdict, scores };
+}
+
+/** TS-22: classify an image. Returns null when the model is unavailable. */
+export async function classifyNsfw(imagePath: string): Promise<NsfwResult | null> {
+  if (!isNsfwModelAvailable()) return null;
+  const fmtName = format();
+  const session = await getModel();
+  const tensor = await preprocessImage(imagePath, FORMATS[fmtName]);
+  const ort = await import('onnxruntime-node');
+  const output = await session.run({ pixel_values: new ort.Tensor('float32', tensor, [1, 3, INPUT_SIZE, INPUT_SIZE]) });
+  const logits = output['logits']?.data as Float32Array | undefined;
+  return logits ? interpretLogits(logits, fmtName) : null;
 }

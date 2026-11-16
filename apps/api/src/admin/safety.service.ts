@@ -169,7 +169,13 @@ export class SafetyService {
     const mediaIds = usedMediaIds(doc);
     const sizes = new Map<string, number>();
     if (mediaIds.length > 0) {
-      for (const m of await this.db.select({ id: schema.media.id, bytes: schema.media.bytes }).from(schema.media).where(inArray(schema.media.id, mediaIds))) sizes.set(m.id, Number(m.bytes));
+      for (const m of await this.db.select({ id: schema.media.id, bytes: schema.media.bytes, status: schema.media.status }).from(schema.media).where(inArray(schema.media.id, mediaIds))) {
+        sizes.set(m.id, Number(m.bytes));
+        // SR-01: файл, который проверка отклонила или модератор заблокировал, в опубликованной сборке показывать нельзя.
+        if (m.status === 'REJECTED' || m.status === 'BLOCKED') {
+          errors.push({ code: 'MEDIA_FORBIDDEN', severity: 'error', path: ['media', m.id], term: m.id, category: 'B1', message: 'В сборке есть файл, который не прошёл проверку или заблокирован модератором. Замените его другим файлом — тогда сборку можно будет опубликовать.' });
+        }
+      }
     }
     // SR-01: warnings do not stop the publication.
     const warnings = [...(!young ? brandOnly.map((i) => i.message) : []), ...publishWarnings(doc).map((w) => w.message), ...heavyMediaWarnings(doc, sizes).map((w) => w.message)];

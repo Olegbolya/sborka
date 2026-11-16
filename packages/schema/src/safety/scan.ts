@@ -26,7 +26,7 @@ export interface SafetyDictionary {
 /** From this weight a stop word stops the publication until a person looks (TS-04). */
 export const STOP_WORD_BLOCK_WEIGHT = 80;
 
-export type SafetyCode = 'PHISHING_FIELD' | 'PHISHING_LINK' | 'BRAND' | 'STOP_WORD' | 'STOP_WORD_BLOCK' | 'LINK_SHORTENER' | 'LINK_IP' | 'LINK_BLOCKED' | 'LINK_INVALID'
+export type SafetyCode = 'MEDIA_FORBIDDEN' | 'PHISHING_FIELD' | 'PHISHING_LINK' | 'BRAND' | 'STOP_WORD' | 'STOP_WORD_BLOCK' | 'LINK_SHORTENER' | 'LINK_IP' | 'LINK_BLOCKED' | 'LINK_INVALID'
   // P9.2 · TS-06: what a new account, or an account without a confirmed phone, may not do.
   | 'NEW_ACCOUNT_LINK' | 'PHONE_LINK' | 'NEW_ACCOUNT_LIMIT' | 'NEW_ACCOUNT_VIDEO';
 

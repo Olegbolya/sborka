@@ -222,4 +222,21 @@ describe('P9.1 · SR-01, TS-02…TS-05 · словари и проверка п�
     expect(warnings.some((w) => w.includes('пустой'))).toBe(true);
     expect((await projectRow(id)).status).toBe('PUBLISHED');
   });
+
+  it('SR-01 · файл, отклонённый проверкой или заблокированный модератором, не даёт опубликовать сборку; обычный файл не мешает', async () => {
+    const user = await login('USER', 3);
+    const media = async (status: 'READY' | 'REJECTED' | 'BLOCKED') => {
+      const [m] = await db.db.insert(schema.media).values({ ownerId: user.id, kind: 'IMAGE', status, mime: 'image/png', bytes: 1000, sha256: `h${Math.random()}` }).returning({ id: schema.media.id });
+      const shape = createBlock('shape');
+      shape.style.fills = [{ kind: 'media', media: { source: 'media', id: m!.id }, fit: 'cover', focal: { x: 0.5, y: 0.5 }, scale: 1 }];
+      return shape;
+    };
+    for (const status of ['REJECTED', 'BLOCKED'] as const) {
+      const { id, res } = await tryPublish(user.cookie, [await media(status)]);
+      expect(res.status).toBe(422);
+      expect(issueCodes(res)).toContain('MEDIA_FORBIDDEN');
+      expect((await projectRow(id)).status).not.toBe('PUBLISHED');
+    }
+    expect((await tryPublish(user.cookie, [await media('READY')])).res.status).toBe(200);
+  });
 });

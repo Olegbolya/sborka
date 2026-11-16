@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 import { computePhash, phashDistance, PHASH_MAX_DISTANCE } from '../src/media/phash.js';
-import { isNsfwModelAvailable, classifyNsfw, NSFW_HIGH_THRESHOLD, NSFW_MID_THRESHOLD } from '../src/media/nsfw.js';
+import { isNsfwModelAvailable, classifyNsfw, interpretLogits, NSFW_HIGH_THRESHOLD, NSFW_MID_THRESHOLD } from '../src/media/nsfw.js';
 
 let tmpDir = '';
 
@@ -104,5 +104,21 @@ describe('TS-22 · NSFW classifier', () => {
     expect(NSFW_HIGH_THRESHOLD).toBeGreaterThan(NSFW_MID_THRESHOLD);
     expect(NSFW_MID_THRESHOLD).toBeGreaterThan(0);
     expect(NSFW_HIGH_THRESHOLD).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('TS-22 · разбор ответа модели NSFW', () => {
+  it('TS-22 · модель Falconsai (два класса normal/nsfw): уверенный nsfw блокирует, середина — на ручную проверку, обычное фото проходит', () => {
+    expect(interpretLogits([-4, 4])).toMatchObject({ verdict: 'block', topClass: 'nsfw' });
+    expect(interpretLogits([0.1, 0.4])).toMatchObject({ verdict: 'flag' });
+    expect(interpretLogits([5, -5])).toMatchObject({ verdict: 'pass', topClass: 'normal' });
+    expect(interpretLogits([1, 2, 3])).toBeNull();
+  });
+
+  it('TS-22 · пятиклассовая модель: порно + хентай + «сексуальное» складываются в оценку', () => {
+    // drawings, hentai, neutral, porn, sexy
+    expect(interpretLogits([0, 3, 0, 3, 3], 'five-class')).toMatchObject({ verdict: 'block' });
+    expect(interpretLogits([5, 0, 5, 0, 0], 'five-class')).toMatchObject({ verdict: 'pass' });
+    expect(interpretLogits([1, 2], 'five-class')).toBeNull();
   });
 });
