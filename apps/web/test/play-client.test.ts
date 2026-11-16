@@ -137,6 +137,6 @@ describe('PL-12 · очередь отправки прохождения', () =
     await settle();
     expect(c.pending).toBe(1);
     tm.pending.at(-1)!.fn();
-    expect(await done).toEqual({ totals: { score: 3, max: 5, correct: 1, keyed: 2 }, result: { key: 'Итог', screenId: 'ekran_itog' } });
+    expect(await done).toEqual({ totals: { score: 3, max: 5, correct: 1, keyed: 2 }, result: { key: 'Итог', screenId: 'ekran_itog' }, board: null });
   });
 });

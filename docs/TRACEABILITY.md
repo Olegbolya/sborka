@@ -607,4 +607,13 @@
 | PL-25 | P12.2 | `apps/api/src/play/play.controller.ts`; `packages/renderer/src/components/BlockView.tsx`; `apps/web/components/play/Player.tsx` | `e2e/choice-limits.spec.ts`; `apps/api/test/choice-limits.test.ts` |
 | PL-26 | P12.2 | `apps/api/src/projects/choice-limits.service.ts`; `packages/db/src/schema/play.ts#choiceReleases` | `apps/api/test/choice-limits.test.ts`; `e2e/choice-limits.spec.ts` |
 | D-12 | P12.2 | `apps/api/src/projects/choice-limits.controller.ts`; `apps/web/components/cabinet/ChoiceLimitsPanel.tsx` | `apps/api/test/choice-limits.test.ts`; `e2e/choice-limits.spec.ts` |
+| D-13 | P12.3 | `packages/db/src/schema/play.ts#boards`; `apps/api/src/board/board.controller.ts`; `apps/web/components/cabinet/BoardTab.tsx` | `apps/api/test/board.test.ts`; `e2e/board.spec.ts` |
+| D-14 | P12.3 | `apps/api/src/board/board.service.ts#standing` | `apps/api/test/board.test.ts` |
+| D-15 | P12.3 | `apps/web/components/board/BoardScreen.tsx`; `apps/web/app/b/[code]/page.tsx` | `e2e/board.spec.ts`; `apps/api/test/board.test.ts` |
+| D-16 | P12.3 | `apps/api/src/board/board.service.ts#publicBoard` | `apps/api/test/board.test.ts`; `e2e/board.spec.ts` |
+| D-17 | P12.3 | `packages/engine/src/flow/substitute.ts`; `apps/api/src/board/board.service.ts#placeOf`; `apps/web/components/play/Player.tsx` | `apps/api/test/board.test.ts`; `e2e/board.spec.ts` |
+| D-18 | P12.3 | `apps/api/src/board/board.service.ts#freeze`; `apps/web/components/cabinet/BoardTab.tsx` | `apps/api/test/board.test.ts`; `e2e/board.spec.ts` |
+| D-19 | P12.3 | `apps/web/components/board/BoardScreen.tsx`; `apps/web/components/play/PlayFooter.tsx#ReportDialog` | `e2e/board.spec.ts` |
+| D-20 | P12.3 | `apps/api/src/board/board.service.ts` (кэш 3 с); `infra/load/board.js` | `apps/api/test/board.test.ts` |
+| D-21 | P12.3 | `apps/api/src/entitlements/entitlements.service.ts#scoreboardAllowed` | `apps/api/test/board.test.ts` |
 | D-07 | P6.7 (Телеграм) | `apps/api/src/telegram/telegram.service.ts#TelegramService`; `apps/api/src/telegram/telegram.controller.ts`; `apps/api/src/play/passage-notices.service.ts#telegramAbout`; `apps/web/components/account/TelegramSettings.tsx#TelegramSettings` | `apps/api/test/telegram.test.ts`; `e2e/telegram-settings.spec.ts` |

@@ -48,7 +48,7 @@ export interface PassageHooks {
   /** The place or the variables changed. */
   state?: (state: { screenId: string | null; history: string[]; variables: Record<string, unknown> }) => void;
   /** The end: resolves with what the server worked out (PL-15). */
-  complete?: () => Promise<{ totals: ScoreTotals; result: { key: string; screenId: string | null } | null }>;
+  complete?: () => Promise<{ totals: ScoreTotals; result: { key: string; screenId: string | null } | null; board?: { place: number | null; total: number } | null }>;
   /** AC-14 · «записать в ответы»: a labelled value, and (VR-04) at the end the variables kept in the answers. */
   values?: (values: Array<{ variableId?: string; label?: string; value: unknown }>) => void;
   /** RN-01 · randomness that affects the result: the sector a server drew for a wheel, and the stream for the rest. */
@@ -99,6 +99,8 @@ export class PassageSession {
   /** The document the flow rules read: in the player the result rules are the server's, so result screens are marked here as targets no step leads to. */
   private readonly flowDoc: ProjectDocument;
   private totals: ScoreTotals | null = null;
+  /** D-18 · the place on the board, as the server said it at the end of the passage. */
+  private board: { place: number | null; total: number } | null = null;
   private completedOnServer = false;
   private completing = false;
   private entryOverlay: MediaOverlay | null = null;
@@ -304,8 +306,9 @@ export class PassageSession {
     this.completing = true;
     this.publish();
     void this.hooks.complete().then(
-      ({ totals, result }) => {
+      ({ totals, result, board }) => {
         this.totals = totals;
+        this.board = board ?? null;
         this.completing = false;
         this.flow = { ...this.flow, result: result ? { ruleId: null, key: result.key, screenId: result.screenId } : null };
         const screenId = stayOn ?? result?.screenId;
@@ -358,7 +361,7 @@ export class PassageSession {
   }
 
   /** L-04, L-05 · what a variable, an answer or «баллы», «результат»… in a text stands for now. */
-  textValue = (run: Parameters<typeof runText>[0]): string | null => runText(run, { doc: this.doc, state: this.synced(), now: this.now(), ...(this.totals ? { totals: this.totals } : {}) });
+  textValue = (run: Parameters<typeof runText>[0]): string | null => runText(run, { doc: this.doc, state: this.synced(), now: this.now(), ...(this.totals ? { totals: this.totals } : {}), ...(this.board ? { board: this.board } : {}) });
 
   /** PL-24 · the server did not give the place: the answer is taken back (it does not count and «дальше» waits for another one) and the person is told. */
   takeBack(blockId: string, message: string): void {

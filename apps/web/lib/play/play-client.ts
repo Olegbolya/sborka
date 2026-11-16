@@ -11,6 +11,8 @@ type Op =
 export interface CompleteResult {
   totals: ScoreTotals;
   result: { key: string; screenId: string | null } | null;
+  /** D-18 · the place on the board of the project and the number of passages it counts; null — the project has no board. */
+  board?: { place: number | null; total: number } | null;
 }
 
 export interface QueueStorage {
@@ -191,8 +193,8 @@ export class PlayClient {
     } else if (op.kind === 'values') {
       await this.o.transport.call('POST', `${base}/values`, op.body);
     } else {
-      const res = await this.o.transport.call<{ score: number; max: number; correct: number; keyed: number; result: { key: string; screenId: string | null } | null }>('POST', `${base}/complete`);
-      this.waiting.get(op.id)?.resolve({ totals: { score: res.score, max: res.max, correct: res.correct, keyed: res.keyed }, result: res.result });
+      const res = await this.o.transport.call<{ score: number; max: number; correct: number; keyed: number; result: { key: string; screenId: string | null } | null; board?: { place: number | null; total: number } | null }>('POST', `${base}/complete`);
+      this.waiting.get(op.id)?.resolve({ totals: { score: res.score, max: res.max, correct: res.correct, keyed: res.keyed }, result: res.result, board: res.board ?? null });
       this.waiting.delete(op.id);
     }
   }

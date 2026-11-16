@@ -9,7 +9,7 @@ import { type PassageResume, PassageSession } from '../../lib/play/passage-sessi
 import { ServerDraws } from '../../lib/play/draws';
 import { directHref, outHref } from '../../lib/play/out';
 import { PlayClient, type PlayTransport } from '../../lib/play/play-client';
-import { AdBanner, PlayFooter, buildSimilarHref } from './PlayFooter';
+import { AdBanner, PlayFooter, boardHref, buildSimilarHref } from './PlayFooter';
 import './player.css';
 
 const REFUSALS: Record<string, string> = { ALREADY_PLAYED: 'Вы уже проходили', TEMPORARILY_UNAVAILABLE: 'Временно недоступно', CLOSED: 'Сборка закрыта', NOT_OPEN: 'Пока закрыто', TOO_MANY_REQUESTS: 'Слишком часто' };
@@ -258,6 +258,11 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
               Пройти заново
             </button>
           )}
+          {!passage.completing && boot.view.board && (
+            <a className="pl-again" href={boardHref(boot.view.board.code)} target="_blank" rel="noopener" data-testid="play-end-board">
+              Открыть табло
+            </a>
+          )}
           {!passage.completing && boot.view.buildSimilar && (
             <a className="pl-again" href={buildSimilarHref(boot.view.buildSimilar.slug)} data-testid="play-end-build-similar">
               Собрать такую же
@@ -275,7 +280,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
           ← Назад
         </button>
       )}
-      <PlayFooter slug={boot.view.slug} watermark={boot.view.watermark} ageRating={boot.view.ageRating ?? null} buildSimilar={boot.view.buildSimilar ?? null} />
+      <PlayFooter slug={boot.view.slug} watermark={boot.view.watermark} ageRating={boot.view.ageRating ?? null} buildSimilar={boot.view.buildSimilar ?? null} board={!passage.completing && (!passage.screen || passage.screen.kind === 'result') ? (boot.view.board ?? null) : null} />
     </Artboard>
   );
 }

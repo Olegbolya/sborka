@@ -185,6 +185,14 @@ export class EntitlementsService {
     return passPlan.sort > owner.sort ? { plan: passPlan, pass } : { plan: owner, pass };
   }
 
+  /**
+   * D-21 · табло (`/b/{код}`) — на платных тарифах и на пропуске «Праздник»; на «Старте» его нет (решение о границе — за владельцем,
+   * `04-TARIFFS.md`). Сборка берёт тариф владельца, поднятый пропуском.
+   */
+  async scoreboardAllowed(ownerId: string, projectId: string, now: Date = new Date()): Promise<boolean> {
+    return (await this.limitsOfProject(ownerId, projectId, now)).plan.code !== FREE_CODE;
+  }
+
   /** Включена ли возможность у человека. */
   async has(userId: string, feature: BooleanFeature, now: Date = new Date()): Promise<boolean> {
     return (await this.limitsOf(userId, now))[feature];

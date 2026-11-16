@@ -1,6 +1,7 @@
 import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { NotificationsService } from '../admin/notifications.service.js';
+import { BoardService } from '../board/board.service.js';
 import { hashIp } from '../auth/ip-hash.js';
 import { and, count, eq, gt, gte, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
@@ -52,6 +53,8 @@ export interface PlayOpen {
   showBack: boolean;
   /** TPL-05.4 · this project is the example of a system template: the player offers «Собрать такую же» (the address of the template page). */
   buildSimilar: { slug: string } | null;
+  /** D-18 · the address of the board when the creator switched it on and wants the button on the last screen. */
+  board: { code: string } | null;
   /** PL-18 · an advertising project says so: who advertises and the erid. */
   ad: { advertiser: string; inn?: string; erid: string } | null;
   /** Given after the right password: the browser keeps it for the tab and sends it with later calls (PL-08). */
@@ -148,6 +151,7 @@ export class PlayService {
     private readonly entitlements: EntitlementsService,
     @Optional() private readonly flags?: FeatureFlagsService,
     @Optional() private readonly notifications?: NotificationsService,
+    @Optional() private readonly board?: BoardService,
   ) {}
 
   private async published(by: { slug: string } | { projectId: string }) {
@@ -231,6 +235,7 @@ export class PlayService {
       fonts: fontsMap,
       ...marks(row, limits.watermark),
       buildSimilar: await this.buildSimilarOf(projectId),
+      board: (await this.board?.finishLink(projectId).catch(() => null)) ?? null,
     };
   }
 
@@ -276,6 +281,7 @@ export class PlayService {
       fonts: fontsMap,
       ...marks(p, limits.watermark),
       buildSimilar: await this.buildSimilarOf(p.id),
+      board: (await this.board?.finishLink(p.id).catch(() => null)) ?? null,
     };
   }
 

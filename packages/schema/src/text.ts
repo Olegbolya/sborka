@@ -20,6 +20,9 @@ export const TEXT_PLACEHOLDERS = [
   'время_на_экране',
   'номер_экрана',
   'имя_участника',
+  // D-18 · the place on the board of the project and how many passages it counts; the server says them when the passage ends.
+  'место',
+  'всего_участников',
 ] as const;
 export type TextPlaceholder = (typeof TEXT_PLACEHOLDERS)[number];
 

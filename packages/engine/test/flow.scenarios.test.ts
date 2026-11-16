@@ -369,6 +369,18 @@ scenarios.push(
     },
   },
 
+  {
+    name: 'D-17: «место» и «всего_участников» берутся из табло, без табло — пусто',
+    build: quiz,
+    steps: [next],
+    check: (r, d) => {
+      const t = text([{ t: 'Место ' }, { sys: 'место' }, { t: ' из ' }, { sys: 'всего_участников' }]);
+      const join = (x: ReturnType<typeof substituteText>) => x.paragraphs[0]!.runs.map((y) => ('t' in y ? y.t : '')).join('');
+      expect(join(substituteText(t, { doc: d, state: r.state, now: 0, board: { place: 2, total: 7 } }))).toBe('Место 2 из 7');
+      expect(join(substituteText(t, { doc: d, state: r.state, now: 0 }))).toBe('Место  из ');
+    },
+  },
+
   // ── L-05 подстановки ────────────────────────────────────────────────────────
   {
     name: 'L-05: в текст подставляются переменные и ответы',

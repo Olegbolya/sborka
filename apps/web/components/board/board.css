@@ -1,0 +1,19 @@
+.bd-root { min-height: 100dvh; box-sizing: border-box; padding: clamp(16px, 3vw, 48px); display: flex; flex-direction: column; gap: clamp(12px, 2vw, 28px); background: var(--bd-bg); color: var(--bd-text); }
+.bd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.bd-title { margin: 0; font-size: clamp(28px, 4.2vw, 72px); line-height: 1.05; letter-spacing: -0.02em; }
+.bd-sub { margin: 6px 0 0; font-size: clamp(14px, 1.6vw, 28px); color: var(--bd-muted); }
+.bd-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.bd-btn { padding: 10px 16px; font-size: 14px; border-radius: 10px; border: 1px solid var(--bd-line); background: var(--bd-surface); color: var(--bd-text); cursor: pointer; }
+.bd-btn[aria-pressed='true'] { background: var(--bd-accent); color: var(--bd-on-accent); border-color: var(--bd-accent); }
+.bd-frozen { display: inline-block; margin-left: 12px; padding: 4px 14px; border-radius: 999px; background: var(--bd-accent); color: var(--bd-on-accent); font-size: clamp(14px, 1.5vw, 24px); font-weight: 600; vertical-align: middle; }
+.bd-list { position: relative; width: 100%; }
+.bd-row { position: absolute; left: 0; right: 0; top: 0; display: grid; grid-template-columns: 1.6em 1fr auto; align-items: center; gap: 0.6em; padding: 0 0.8em; box-sizing: border-box; border-radius: 14px; background: var(--bd-surface); transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1), background 300ms; }
+.bd-row[data-top='true'] { background: var(--bd-accent); color: var(--bd-on-accent); }
+.bd-rank { font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.bd-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.bd-count { font-weight: 400; opacity: 0.7; font-size: 0.62em; margin-left: 0.6em; }
+.bd-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.bd-empty { margin: 24px 0; font-size: clamp(18px, 2.2vw, 36px); color: var(--bd-muted); }
+.bd-foot { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: space-between; font-size: 13px; color: var(--bd-muted); }
+.bd-link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+@media (prefers-reduced-motion: reduce) { .bd-row { transition: none; } }

@@ -13,6 +13,8 @@ export interface TextContext {
    * public projection (no scores) and receives the totals from the server (PL-15).
    */
   totals?: ScoreTotals;
+  /** D-18 · the place on the board and the number of passages it counts; the server says them when the passage ends (empty — no board). */
+  board?: { place: number | null; total: number };
 }
 
 const numberFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
@@ -96,6 +98,10 @@ export function placeholderValue(name: TextPlaceholder, ctx: TextContext): strin
       return String(doc.screens.findIndex((s) => s.id === state.screenId) + 1 || state.history.length + 1);
     case 'имя_участника':
       return participantName(doc, state.answers);
+    case 'место':
+      return typeof ctx.board?.place === 'number' ? String(ctx.board.place) : '';
+    case 'всего_участников':
+      return ctx.board ? String(ctx.board.total) : '';
   }
 }
 

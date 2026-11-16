@@ -26,6 +26,7 @@ import { RETENTION, type Block, type ProjectDocument, limitedOptions, plainText,
 import { type OptionPlaces, fullOptionsFor, lockOptions, placesFor } from './choice-limits.js';
 import { type ApiConfig } from '../config.js';
 import { PassageNoticesService } from './passage-notices.service.js';
+import { BoardService } from '../board/board.service.js';
 import { API_CONFIG, DB } from '../tokens.js';
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
@@ -56,6 +57,7 @@ export class PlaySessionsService {
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     @Optional() private readonly flags?: FeatureFlagsService,
     @Optional() private readonly passageNotices?: PassageNoticesService,
+    @Optional() private readonly board?: BoardService,
   ) {}
 
   /** The session id is the participant's capability: unguessable, kept by the browser. */
@@ -215,7 +217,7 @@ export class PlaySessionsService {
    * PL-15 · the end: the points, the right answers and the result are worked out here by the same engine, from the answers the
    * server holds. Repeating the call returns the same result and counts the completion once.
    */
-  async complete(sessionId: string): Promise<{ score: number; max: number; correct: number; keyed: number; result: { key: string; screenId: string | null } | null; feedback: Array<{ blockId: string; correct: boolean | null; correctOptionIds: string[]; score: number }> }> {
+  async complete(sessionId: string): Promise<{ score: number; max: number; correct: number; keyed: number; result: { key: string; screenId: string | null } | null; feedback: Array<{ blockId: string; correct: boolean | null; correctOptionIds: string[]; score: number }>; board: { place: number | null; total: number } | null }> {
     this.throttle(sessionId);
     const { session, doc, ownerId } = await this.load(sessionId);
     const answers = await this.answersOf(sessionId);
@@ -260,7 +262,9 @@ export class PlaySessionsService {
     }
     // D-07: the creator hears about a finished passage in the cabinet. It is an extra: its failure never fails the participant's end.
     if (firstCompletion) await this.notifyOwner(session, doc, ownerId, answers, variables, result?.key ?? null).catch(() => undefined);
-    return { score: totals.score, max: totals.max, correct: totals.correct, keyed: totals.keyed, result: result ? { key: result.key, screenId: result.screenId } : null, feedback };
+    // D-18: the place on the board of the project (for «{{место}}»); the board is an extra, its failure does not fail the end.
+    const board = this.board ? await this.board.placeOf(session.projectId, sessionId).catch(() => null) : null;
+    return { score: totals.score, max: totals.max, correct: totals.correct, keyed: totals.keyed, result: result ? { key: result.key, screenId: result.screenId } : null, feedback, board };
   }
 
   /**

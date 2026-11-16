@@ -15,7 +15,7 @@ export function AdBanner({ ad }: { ad: NonNullable<PlayOpen['ad']> }) {
 }
 
 /** TS-11 · the complaint form: what is wrong, a few words, a contact for the answer if wanted. */
-function ReportDialog({ slug, onClose }: { slug: string; onClose: () => void }) {
+export function ReportDialog({ slug, onClose }: { slug: string; onClose: () => void }) {
   const [category, setCategory] = useState('');
   const [text, setText] = useState('');
   const [contact, setContact] = useState('');
@@ -113,7 +113,10 @@ function ReportDialog({ slug, onClose }: { slug: string; onClose: () => void }) 
 export const buildSimilarHref = (templateSlug: string): string => `/t/${encodeURIComponent(templateSlug)}/build?src=player`;
 
 /** PL-16 · on every screen: «Создано пользователем · Пожаловаться» (on no tariff it goes away) and, on «Старт», the mark of the service. */
-export function PlayFooter({ slug, watermark, ageRating = null, buildSimilar = null }: { slug: string; watermark: boolean; ageRating?: number | null; buildSimilar?: { slug: string } | null }) {
+/** D-18 · «Открыть табло»: the public board of the project. */
+export const boardHref = (code: string): string => `/b/${encodeURIComponent(code)}`;
+
+export function PlayFooter({ slug, watermark, ageRating = null, buildSimilar = null, board = null }: { slug: string; watermark: boolean; ageRating?: number | null; buildSimilar?: { slug: string } | null; board?: { code: string } | null }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -132,7 +135,12 @@ export function PlayFooter({ slug, watermark, ageRating = null, buildSimilar = n
             Пожаловаться
           </button>
         </span>
- {buildSimilar && (
+        {board && (
+          <a className="pl-link" href={boardHref(board.code)} target="_blank" rel="noopener" data-testid="play-board">
+            Открыть табло
+          </a>
+        )}
+        {buildSimilar && (
           <a className="pl-link" href={buildSimilarHref(buildSimilar.slug)} data-testid="play-build-similar">
             Собрать такую же
           </a>

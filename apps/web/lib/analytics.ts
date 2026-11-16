@@ -1,6 +1,6 @@
 /**
  * P10.7 · 05-LEGAL.md §2.2 · Yandex Metrika is on the landing and in the cabinet only, and only after the visitor agreed in the
- * cookie banner. It is never on the pages of the player (`/s/…`, `/q/…`, the page of a link out) or of the admin: there the
+ * cookie banner. It is never on the pages of the player (`/s/…`, `/q/…`, the board `/b/…`, the page of a link out) or of the admin: there the
  * policy of the page does not even allow a request to the counter's host.
  */
 export const CONSENT_KEY = 'bk:cookie-consent';
@@ -17,7 +17,7 @@ export function metrikaId(value: string | undefined): string | null {
 
 /** Where analytics may run: not in the player of an assembly, not on the page of an outgoing link, not in the admin. */
 export function analyticsAllowed(pathname: string): boolean {
-  return !/^\/(s|q|out|admin|dev)(\/|$)/.test(pathname);
+  return !/^\/(s|q|b|out|admin|dev)(\/|$)/.test(pathname);
 }
 
 export function readConsent(storage: Pick<Storage, 'getItem'> | null): Consent | null {

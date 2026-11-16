@@ -10,7 +10,7 @@ describe('P10.7 · 05-LEGAL §2.2 · D8 · Метрика и cookie-соглас
   });
 
   it('P10.7 · на страницах плеера, ссылки наружу, админки и служебных галерей аналитики нет', () => {
-    for (const p of ['/s/abc', '/s/abc/x', '/q/abc', '/out', '/admin', '/admin/reports', '/dev/behaviors']) expect(analyticsAllowed(p), p).toBe(false);
+    for (const p of ['/s/abc', '/s/abc/x', '/q/abc', '/b/abc', '/out', '/admin', '/admin/reports', '/dev/behaviors']) expect(analyticsAllowed(p), p).toBe(false);
     for (const p of ['/', '/tariffs', '/help', '/examples', '/cabinet', '/app/projects/1/edit', '/legal/cookies']) expect(analyticsAllowed(p), p).toBe(true);
   });
 

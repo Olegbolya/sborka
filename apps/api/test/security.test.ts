@@ -33,6 +33,7 @@ const OWN_SESSION = new Set([
 
 /** Not public, no role, and the route names an object by an id: another signed-in user must get neither it nor a change of it (IDOR). */
 const BY_ID = new Set([
+  'GET /projects/:projectId/board', 'PUT /projects/:projectId/board', 'GET /projects/:projectId/board/rows', 'GET /projects/:projectId/board/qr.svg', 'GET /projects/:projectId/board/qr.png', 'POST /projects/:projectId/board/freeze', 'POST /projects/:projectId/board/reset', 'POST /projects/:projectId/board/hide',
   'GET /projects/:projectId/choice-limits', 'POST /projects/:projectId/choice-limits/release',
   'DELETE /auth/sessions/:id',
   'POST /notifications/:id/read',
@@ -147,7 +148,7 @@ describe('P9.4 · N-04 · роли и доступ к чужим объекта�
 
   it('N-04 · все маршруты админки закрыты ролью, а маршруты кабинета и аккаунта — сеансом; открыты только перечисленные', () => {
     const open = routes.filter((r) => r.isPublic).map((r) => r.key).sort();
-    const prefixes = ['/health', '/auth/otp/', '/auth/oauth/', '/auth/admin/login', '/legal/', '/auth/account/email/verify', '/dev/oauth/', '/flags/public', '/templates/by-slug/', '/telegram/webhook', '/play/', '/reports', '/plans', '/payments/yookassa/notify', '/payments/robokassa/result'];
+    const prefixes = ['/health', '/auth/otp/', '/auth/oauth/', '/auth/admin/login', '/legal/', '/auth/account/email/verify', '/dev/oauth/', '/flags/public', '/templates/by-slug/', '/board/', '/telegram/webhook', '/play/', '/reports', '/plans', '/payments/yookassa/notify', '/payments/robokassa/result'];
     expect(open.filter((k) => !prefixes.some((p) => k.split(' ')[1]!.startsWith(p)))).toEqual([]);
     for (const r of routes.filter((x) => x.path.startsWith('/admin'))) expect(r.roles.length, r.key).toBeGreaterThan(0);
     for (const r of routes.filter((x) => x.path.startsWith('/projects') || x.path.startsWith('/themes') || x.path.startsWith('/media'))) expect(r.isPublic, r.key).toBe(false);

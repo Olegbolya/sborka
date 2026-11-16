@@ -136,3 +136,49 @@ export const limitCounters = pgTable(
   },
   (t) => [primaryKey({ columns: [t.projectId, t.kind] })],
 );
+
+/**
+ * D-13…D-21 · the board («табло») of a project: a public page `/b/{code}` with the standings of finished passages.
+ * One board per project. `resetAt` starts a new round: only passages finished after it count.
+ */
+export const boards = pgTable(
+  'boards',
+  {
+    projectId: text('project_id')
+      .primaryKey()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    /** The address of the public page: not guessable, not linked to the address of the passage. */
+    code: text('code').notNull(),
+    enabled: boolean('enabled').notNull().default(false),
+    /** 'teams' — by the answer to a choice question; 'participants' — by a nick from a text question. */
+    groupBy: text('group_by').notNull().default('participants'),
+    /** 'score' — the points of the passage (L-03); 'variable' — the value of a number variable saved into the answers (VR-04). */
+    metric: text('metric').notNull().default('score'),
+    metricVariableId: text('metric_variable_id'),
+    /** For teams: the sum or the average of the team. */
+    aggregate: text('aggregate').notNull().default('sum'),
+    teamBlockId: text('team_block_id'),
+    nickBlockId: text('nick_block_id'),
+    /** The consent «Показывать моё имя на табло»: a nick is shown only when this answer is «да». */
+    consentBlockId: text('consent_block_id'),
+    /** The button «Открыть табло» on the last screen of the passage. */
+    showOnFinish: boolean('show_on_finish').notNull().default(true),
+    frozenAt: ts('frozen_at'),
+    resetAt: ts('reset_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('boards_code_uq').on(t.code)],
+);
+
+/** D-19 · a row the creator hid from the board: a session id (participants) or the name of a team. */
+export const boardHidden = pgTable(
+  'board_hidden',
+  {
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    rowKey: text('row_key').notNull(),
+    hiddenAt: ts('hidden_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.rowKey] })],
+);
