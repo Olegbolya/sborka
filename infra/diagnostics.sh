@@ -18,6 +18,13 @@ else
   echo "Блоккер ещё не развёрнут"
 fi
 [ -f "$ENV_FILE" ] && echo ".env.prod: есть ($(stat -c %a "$ENV_FILE"))" || echo ".env.prod: НЕТ — нужен server-setup.sh"
+echo "== Ресурсы сервера (для выбора VPS) =="
+echo "  процессор: $(nproc) ядер, $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//')"
+echo "  память: $(free -m | awk '/^Mem:/{print "всего "$2" МБ, занято "$3" МБ, доступно "$7" МБ"}')"
+echo "  нагрузка (1/5/15 мин): $(cut -d' ' -f1-3 /proc/loadavg)"
+echo "  память процессов (МБ): $(ps -eo rss,args --sort=-rss | awk 'NR>1 && /blokum|bst|postgres|redis|clamd|nginx/ {n=$2; for(i=2;i<=NF;i++) if ($i ~ /blokum-|bst-|main.js|next-server|clamd|postgres:|redis-server|nginx/) {n=$i; break}; m[n]+=$1} END {for (k in m) printf "%s=%d ", substr(k,1,30), m[k]/1024}')"
+echo "  диск: $(df -h /srv /home 2>/dev/null | awk 'NR>1{print $6": занято "$3" из "$2}' | sort -u | tr '\n' ';')"
+echo "  медиа Блоккера: $(du -sh /srv/blokum/media 2>/dev/null | cut -f1), база blokum_db: $(sudo -n -u postgres psql -At -c "select pg_size_pretty(pg_database_size('blokum_db'))" 2>/dev/null || psql "$(grep '^DATABASE_URL=' "$ENV_FILE" | cut -d= -f2-)" -At -c "select pg_size_pretty(pg_database_size(current_database()))" 2>/dev/null)"
 echo "== Вход на сервер по SSH (для владельца) =="
 echo "  адреса сервера в домашней сети: $(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01]))\.' | tr '\n' ' ')"
 echo "  sshd: $(systemctl is-active ssh 2>/dev/null || systemctl is-active sshd 2>/dev/null), порт $(ss -ltnH 2>/dev/null | awk '{print $4}' | grep -oE ':(22|[0-9]+)$' | grep -m1 -E ':22$' || echo 'не 22')"
