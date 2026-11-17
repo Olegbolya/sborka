@@ -18,6 +18,10 @@ else
   echo "Блоккер ещё не развёрнут"
 fi
 [ -f "$ENV_FILE" ] && echo ".env.prod: есть ($(stat -c %a "$ENV_FILE"))" || echo ".env.prod: НЕТ — нужен server-setup.sh"
+echo "== Вход на сервер по SSH (для владельца) =="
+echo "  адреса сервера в домашней сети: $(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01]))\.' | tr '\n' ' ')"
+echo "  sshd: $(systemctl is-active ssh 2>/dev/null || systemctl is-active sshd 2>/dev/null), порт $(ss -ltnH 2>/dev/null | awk '{print $4}' | grep -oE ':(22|[0-9]+)$' | grep -m1 -E ':22$' || echo 'не 22')"
+echo "  fail2ban: $(systemctl is-active fail2ban 2>/dev/null || echo 'нет')"
 echo "== Неудачные ответы API за сутки (страница аккаунта и ВК; без IP) =="
 grep -E '"[A-Z]+ /api/v1/(auth/account|account/vk|vk/callback)[^"]*" [45][0-9]{2} ' /var/log/nginx/blokum-access.log 2>/dev/null | tail -n 12 | cut -c1-220
 echo "== ВКонтакте (уведомления D-07, ADR-110) =="
