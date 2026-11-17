@@ -77,6 +77,10 @@ inject_secret YOOKASSA_SECRET_KEY "${YOOKASSA_SECRET_KEY:-}"
 # AD-01: первый администратор по логину и паролю — создаётся один раз при запуске API; пароль потом меняется в админке.
 inject_secret ADMIN_LOGIN "${ADMIN_LOGIN:-}"
 inject_secret ADMIN_PASSWORD "${ADMIN_PASSWORD:-}"
+# D-07, ADR-110: сообщество ВКонтакте, которое пишет создателям о прохождениях.
+for k in VK_GROUP_TOKEN VK_GROUP_ID VK_GROUP_SCREEN_NAME VK_CALLBACK_SECRET VK_CALLBACK_CONFIRMATION; do
+  inject_secret "$k" "${!k:-}"
+done
 
 # Режим «до запуска» в .env.prod следует за infra/server.env: когда владелец снимает пароль с сайта, служебные галереи /dev
 # закрываются тем же деплоем, а не остаются открытыми всем.

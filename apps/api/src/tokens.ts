@@ -11,4 +11,4 @@ export const EMAIL_SENDER = Symbol('EMAIL_SENDER');
 export const MEDIA_QUEUE = Symbol('MEDIA_QUEUE');
 export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER');
 export const LINK_REPUTATION = Symbol('LINK_REPUTATION');
-export const TELEGRAM_FETCH = Symbol('TELEGRAM_FETCH');
+export const VK_FETCH = Symbol('VK_FETCH');

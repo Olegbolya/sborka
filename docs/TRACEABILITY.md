@@ -616,4 +616,4 @@
 | D-19 | P12.3 | `apps/web/components/board/BoardScreen.tsx`; `apps/web/components/play/PlayFooter.tsx#ReportDialog` | `e2e/board.spec.ts` |
 | D-20 | P12.3 | `apps/api/src/board/board.service.ts#publicBoard`; `infra/load/board.js` | `apps/api/test/board.test.ts` |
 | D-21 | P12.3 | `apps/api/src/entitlements/entitlements.service.ts#scoreboardAllowed` | `apps/api/test/board.test.ts` |
-| D-07 | P6.7 (Телеграм) | `apps/api/src/telegram/telegram.service.ts#TelegramService`; `apps/api/src/telegram/telegram.controller.ts`; `apps/api/src/play/passage-notices.service.ts#telegramAbout`; `apps/web/components/account/TelegramSettings.tsx#TelegramSettings` | `apps/api/test/telegram.test.ts`; `e2e/telegram-settings.spec.ts` |
+| D-07 | P6.7 (ВКонтакте) | `apps/api/src/vk/vk.service.ts#VkService`; `apps/api/src/vk/vk.controller.ts`; `apps/api/src/play/passage-notices.service.ts#messengerText`; `apps/web/components/account/VkSettings.tsx` | `apps/api/test/vk.test.ts`; `e2e/vk-settings.spec.ts` |

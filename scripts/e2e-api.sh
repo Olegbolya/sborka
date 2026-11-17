@@ -66,6 +66,13 @@ export REQUIRE_AGE_RATING="${REQUIRE_AGE_RATING:-0}"
 export ADMIN_ACCOUNTS="${ADMIN_ACCOUNTS:-vk:700000000001,vk:700000000003,yandex:700000000002,yandex:700000000004,vk:700000000011,vk:700000000012,vk:700000000013,vk:700000000021,vk:700000000022,vk:700000000023,vk:700000000031,vk:700000000032,vk:700000000033,vk:700000000034,vk:700000000035,vk:700000000036,vk:700000000037,vk:700000000038,vk:700000000039,vk:700000000040,vk:700000000041,vk:700000000042,vk:700000000043,vk:700000000044}"
 # Настройку второго фактора тест проходит с нуля: администраторы прошлого запуска стираются (сборки и данные уходят вместе с ними).
 # Вход администратора по логину и паролю (AD-01): тестовый администратор создаётся при запуске API; его прошлый запуск стирается тем же способом.
+# D-07: проверочное сообщество ВКонтакте (ненастоящий ключ): e2e проходит привязку диалога целиком; отправка в настоящий ВК
+# с этим ключом отклоняется, и это не мешает — уведомления во ВКонтакте необязательные (ADR-110).
+export VK_GROUP_TOKEN="${VK_GROUP_TOKEN:-e2e-ненастоящий-ключ}"
+export VK_GROUP_ID="${VK_GROUP_ID:-230000001}"
+export VK_GROUP_SCREEN_NAME="${VK_GROUP_SCREEN_NAME:-blokker_e2e}"
+export VK_CALLBACK_SECRET="${VK_CALLBACK_SECRET:-e2e-callback-secret}"
+export VK_CALLBACK_CONFIRMATION="${VK_CALLBACK_CONFIRMATION:-e2e00001}"
 export ADMIN_LOGIN="${ADMIN_LOGIN:-e2e-admin}"
 export ADMIN_PASSWORD="${ADMIN_PASSWORD:-Проверочный-пароль-2026}"
 if command -v psql >/dev/null 2>&1; then

@@ -52,11 +52,16 @@ jobs:
           YOOKASSA_SECRET_KEY: ${{ secrets.YOOKASSA_SECRET_KEY }}
           ADMIN_LOGIN: ${{ secrets.ADMIN_LOGIN }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          VK_GROUP_TOKEN: ${{ secrets.VK_GROUP_TOKEN }}
+          VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+          VK_GROUP_SCREEN_NAME: ${{ secrets.VK_GROUP_SCREEN_NAME }}
+          VK_CALLBACK_SECRET: ${{ secrets.VK_CALLBACK_SECRET }}
+          VK_CALLBACK_CONFIRMATION: ${{ secrets.VK_CALLBACK_CONFIRMATION }}
         run: |
           # Переменные передаются через stdin, чтобы токен не попадал в список процессов на сервере.
           set +e
           {
-            printf 'export GH_TOKEN=%q REPO=%q DEPLOY_SHA=%q SIMULATE_BROKEN_API=%q YOOKASSA_SECRET_KEY=%q ADMIN_LOGIN=%q ADMIN_PASSWORD=%q\n' "$GH_TOKEN" "$GITHUB_REPOSITORY" "$DEPLOY_SHA" "$SIMULATE" "$YOOKASSA_SECRET_KEY" "$ADMIN_LOGIN" "$ADMIN_PASSWORD"
+            printf 'export GH_TOKEN=%q REPO=%q DEPLOY_SHA=%q SIMULATE_BROKEN_API=%q YOOKASSA_SECRET_KEY=%q ADMIN_LOGIN=%q ADMIN_PASSWORD=%q VK_GROUP_TOKEN=%q VK_GROUP_ID=%q VK_GROUP_SCREEN_NAME=%q VK_CALLBACK_SECRET=%q VK_CALLBACK_CONFIRMATION=%q\n' "$GH_TOKEN" "$GITHUB_REPOSITORY" "$DEPLOY_SHA" "$SIMULATE" "$YOOKASSA_SECRET_KEY" "$ADMIN_LOGIN" "$ADMIN_PASSWORD" "$VK_GROUP_TOKEN" "$VK_GROUP_ID" "$VK_GROUP_SCREEN_NAME" "$VK_CALLBACK_SECRET" "$VK_CALLBACK_CONFIRMATION"
             cat infra/deploy.sh
           } | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$SERVER" 'bash -s' 2>&1 | tee deploy.log
           status=${PIPESTATUS[1]}

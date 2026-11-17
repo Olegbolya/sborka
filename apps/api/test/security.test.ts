@@ -19,7 +19,7 @@ type Method = (typeof METHODS)[number];
 
 /** Not public, no role: any signed-in user, and what they get depends only on their own session — nothing to take from another person by an id. */
 const OWN_SESSION = new Set([
-  'GET /account/telegram', 'POST /account/telegram/link', 'DELETE /account/telegram',
+  'GET /account/vk', 'POST /account/vk/link', 'DELETE /account/vk',
   'POST /auth/onboarding/consent', 'GET /auth/onboarding', 'GET /auth/account', 'PATCH /auth/account', 'POST /auth/account/email', 'GET /auth/account/sessions',
   'GET /auth/account/consents', 'DELETE /auth/account/consents/marketing', 'POST /auth/account/export', 'DELETE /auth/account', 'POST /auth/account/restore',
   'POST /auth/account/totp/setup', 'POST /auth/account/totp/confirm', 'DELETE /auth/account/totp',
@@ -148,7 +148,7 @@ describe('P9.4 · N-04 · роли и доступ к чужим объекта�
 
   it('N-04 · все маршруты админки закрыты ролью, а маршруты кабинета и аккаунта — сеансом; открыты только перечисленные', () => {
     const open = routes.filter((r) => r.isPublic).map((r) => r.key).sort();
-    const prefixes = ['/health', '/auth/otp/', '/auth/oauth/', '/auth/admin/login', '/legal/', '/auth/account/email/verify', '/dev/oauth/', '/flags/public', '/templates/by-slug/', '/board/', '/telegram/webhook', '/play/', '/reports', '/plans', '/payments/yookassa/notify', '/payments/robokassa/result'];
+    const prefixes = ['/health', '/auth/otp/', '/auth/oauth/', '/auth/admin/login', '/legal/', '/auth/account/email/verify', '/dev/oauth/', '/flags/public', '/templates/by-slug/', '/board/', '/vk/callback', '/play/', '/reports', '/plans', '/payments/yookassa/notify', '/payments/robokassa/result'];
     expect(open.filter((k) => !prefixes.some((p) => k.split(' ')[1]!.startsWith(p)))).toEqual([]);
     for (const r of routes.filter((x) => x.path.startsWith('/admin'))) expect(r.roles.length, r.key).toBeGreaterThan(0);
     for (const r of routes.filter((x) => x.path.startsWith('/projects') || x.path.startsWith('/themes') || x.path.startsWith('/media'))) expect(r.isPublic, r.key).toBe(false);

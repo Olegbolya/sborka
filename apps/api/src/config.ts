@@ -19,8 +19,11 @@ export interface ApiConfig {
   oauthBaseUrl: string;
   /** Frontend URL for post-login redirect. */
   webUrl: string;
-  /** D-07 · the Telegram bot of the owner; absent — the bot is off. `webhookSecret` is checked on every call of Telegram. */
-  telegram?: { token: string; botUsername: string; webhookSecret: string };
+  /**
+   * D-07 · the VK community of the owner that writes to creators (ADR-110); absent — off. `token` is the community key with
+   * access to messages; `screenName` makes the link `vk.me/<screenName>`; `secret` and `confirmation` are from «Callback API».
+   */
+  vk?: { token: string; groupId: number; screenName: string; secret: string; confirmation: string };
   /**
    * A-01: login by phone code. Off unless PHONE_LOGIN=1 — the owner declined SMS for cost (ADR-033); the code is
    * kept for a cheaper provider later. In production it also needs a real `OtpSender`, which is not connected.
@@ -95,8 +98,8 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     yandexClientId: env.YANDEX_CLIENT_ID ?? (production ? '' : 'dev-yandex'),
     oauthBaseUrl: env.OAUTH_BASE_URL ?? (publicUrl ? `${publicUrl}/api/v1` : `${selfBaseUrl}/api/v1`),
     webUrl: env.WEB_URL ?? (publicUrl || 'http://localhost:3110'),
-    // D-07: the bot of the owner (BotFather). Without the three values the bot is simply off: the cabinet says so, nothing is sent.
-    ...(env.TELEGRAM_BOT_TOKEN?.trim() && env.TELEGRAM_BOT_USERNAME?.trim() && env.TELEGRAM_WEBHOOK_SECRET?.trim() ? { telegram: { token: env.TELEGRAM_BOT_TOKEN.trim(), botUsername: env.TELEGRAM_BOT_USERNAME.trim().replace(/^@/, ''), webhookSecret: env.TELEGRAM_WEBHOOK_SECRET.trim() } } : {}),
+    // D-07: the community of the owner in VK. Without all five values it is simply off: the settings say so, nothing is sent.
+    ...vkConfig(env),
     phoneLogin: env.PHONE_LOGIN === '1',
     adminPhone: env.ADMIN_PHONE ?? '',
     adminAccounts: (env.ADMIN_ACCOUNTS ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean),
@@ -123,4 +126,15 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     mediaDir: env.MEDIA_DIR ?? (production ? '/srv/blokum/media' : `${env.DATA_ROOT ?? '/tmp'}/blokum-media`),
     mediaBaseUrl: env.MEDIA_BASE_URL ?? `http://${env.API_HOST ?? '127.0.0.1'}:${parsed}/api/v1/media`,
   };
+}
+
+/** D-07 · the five values of the VK community (ADR-110); any one missing or the id not a number — off. */
+function vkConfig(env: NodeJS.ProcessEnv): { vk?: NonNullable<ApiConfig['vk']> } {
+  const token = env.VK_GROUP_TOKEN?.trim();
+  const groupId = Number(env.VK_GROUP_ID?.trim());
+  const screenName = env.VK_GROUP_SCREEN_NAME?.trim().replace(/^@/, '').replace(/^https?:\/\/(vk\.com|vk\.me)\//, '');
+  const secret = env.VK_CALLBACK_SECRET?.trim();
+  const confirmation = env.VK_CALLBACK_CONFIRMATION?.trim();
+  if (!token || !Number.isInteger(groupId) || groupId <= 0 || !screenName || !secret || !confirmation) return {};
+  return { vk: { token, groupId, screenName, secret, confirmation } };
 }

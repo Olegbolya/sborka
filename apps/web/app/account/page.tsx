@@ -2,7 +2,7 @@
 import { clearClipboard } from '../../lib/editor/clipboard';
 import { useCallback, useEffect, useState } from 'react';
 import { api, apiRaw, errorText, isApiError } from '../../lib/api-browser';
-import { TelegramSettings } from '../../components/account/TelegramSettings';
+import { VkSettings } from '../../components/account/VkSettings';
 
 const s = {
   main: { minHeight: '100dvh', padding: '48px 16px', maxWidth: 640, margin: '0 auto' },
@@ -259,8 +259,8 @@ export default function AccountPage() {
       <div style={s.divider} />
 
       <section style={s.section}>
-        <p style={s.sectionTitle}>Уведомления в Телеграме</p>
-        <TelegramSettings />
+        <p style={s.sectionTitle}>Уведомления во ВКонтакте</p>
+        <VkSettings />
       </section>
 
       <div style={s.divider} />

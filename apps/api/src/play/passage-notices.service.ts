@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { NotificationsService } from '../admin/notifications.service.js';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
-import { TelegramService } from '../telegram/telegram.service.js';
+import { VkService } from '../vk/vk.service.js';
 import { type ApiConfig } from '../config.js';
 import { API_CONFIG, DB } from '../tokens.js';
 import { type PassageMode, allowedPassageModes, effectivePassageMode } from './passage-mode.js';
@@ -15,10 +15,10 @@ const QUEUE_LIMIT = 500;
 const DIGEST_ITEMS = 10;
 
 /**
- * D-07 · the text of the Telegram message (ADR-109): the name of the project, how many came, the total and the way to the cabinet —
- * no answers, names or contacts of participants: Telegram's servers are abroad, and personal data do not leave Russia this way.
+ * D-07 · the text of the message in VK (ADR-109, ADR-110): the name of the project, how many came, the total and the way to the
+ * cabinet — no answers, names or contacts of participants: the cabinet is where they are seen.
  */
-export function telegramText(input: { projectTitle: string; span: string | null; count: number; total: number; link: string }): string {
+export function messengerText(input: { projectTitle: string; span: string | null; count: number; total: number; link: string }): string {
   const name = `«${clip(input.projectTitle, 80)}»`;
   const lead = input.span === null ? `Новое прохождение сборки ${name}.` : `Новые прохождения сборки ${name}: ${input.count} ${input.span}.`;
   return `${lead}\nВсего прохождений: ${input.total}.\n\nОткрыть в кабинете: ${input.link}`;
@@ -39,7 +39,7 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
     @Inject(DB) private readonly db: Db,
     private readonly notices: NotificationsService,
     @Optional() private readonly entitlements?: EntitlementsService,
-    @Optional() private readonly telegram?: TelegramService,
+    @Optional() private readonly vk?: VkService,
     @Optional() @Inject(API_CONFIG) private readonly config?: ApiConfig,
   ) {}
 
@@ -69,7 +69,7 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
     if (input.mode === 'off') return;
     if (input.mode === 'instant') {
       await this.notices.notify({ userId: input.ownerId, kind: 'passage', title: input.title, body: input.body, projectId: input.projectId, mail: false });
-      await this.telegramAbout(input.ownerId, input.projectId, null, 1);
+      await this.messengerAbout(input.ownerId, input.projectId, null, 1);
       return;
     }
     const [queued] = await this.db
@@ -80,16 +80,16 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
     await this.db.insert(schema.passageDigestQueue).values({ userId: input.ownerId, projectId: input.projectId, body: input.body });
   }
 
-  /** D-07 · a short message in the creator's Telegram (if linked, and the plan has it): only the project, the counts and the link. */
-  private async telegramAbout(userId: string, projectId: string, span: string | null, count: number): Promise<void> {
-    if (!this.telegram) return;
+  /** D-07 · a short message in the creator's VK dialog (if linked, and the plan has it): only the project, the counts and the link. */
+  private async messengerAbout(userId: string, projectId: string, span: string | null, count: number): Promise<void> {
+    if (!this.vk) return;
     const [project] = await this.db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, projectId));
     const [done] = await this.db
       .select({ n: sql<number>`count(*)::int` })
       .from(schema.participantSessions)
       .where(and(eq(schema.participantSessions.projectId, projectId), eq(schema.participantSessions.status, 'COMPLETED')));
     const link = `${this.config?.webUrl ?? ''}/cabinet/projects/${projectId}?tab=responses`;
-    await this.telegram.sendToUser(userId, telegramText({ projectTitle: project?.title ?? 'Сборка', span, count, total: done?.n ?? 0, link }));
+    await this.vk.sendToUser(userId, messengerText({ projectTitle: project?.title ?? 'Сборка', span, count, total: done?.n ?? 0, link }));
   }
 
   /** Send the digests that are due; returns how many messages went out. `now` is a parameter so tests choose the time. */
@@ -127,7 +127,7 @@ export class PassageNoticesService implements OnModuleInit, OnModuleDestroy {
       // The rows go first: a failed letter must not send the same digest again a minute later (the cabinet message is the record).
       await this.db.delete(schema.passageDigestQueue).where(inArray(schema.passageDigestQueue.id, rows.map((r) => r.id)));
       await this.notices.notify({ userId: g.userId, kind: 'passage', title, body, projectId: g.projectId, mail: false });
-      await this.telegramAbout(g.userId, g.projectId, span, rows.length);
+      await this.messengerAbout(g.userId, g.projectId, span, rows.length);
       sent += 1;
     }
     return sent;

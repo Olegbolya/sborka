@@ -18,15 +18,11 @@ else
   echo "Блоккер ещё не развёрнут"
 fi
 [ -f "$ENV_FILE" ] && echo ".env.prod: есть ($(stat -c %a "$ENV_FILE"))" || echo ".env.prod: НЕТ — нужен server-setup.sh"
-echo "== Телеграм (уведомления D-07, ADR-109) =="
-# Без токена: только доступность api.telegram.org с сервера (код ответа и время). Секреты не печатаются.
-for i in 1 2 3; do
-  echo "  попытка $i: $(curl -s -o /dev/null -m 15 -w 'код %{http_code}, соединение %{time_connect} с, всего %{time_total} с' https://api.telegram.org/ 2>&1 || echo 'нет соединения')"
-done
-echo "  токен бота в .env.prod: $(grep -q '^TELEGRAM_BOT_TOKEN=.\+' "$ENV_FILE" 2>/dev/null && echo 'задан' || echo 'не задан')"
-echo "== ВКонтакте (уведомления D-07) =="
-for i in 1 2 3; do
-  echo "  попытка $i: $(curl -s -o /dev/null -m 15 -w 'код %{http_code}, соединение %{time_connect} с, всего %{time_total} с' 'https://api.vk.com/method/utils.getServerTime?v=5.199' 2>&1 || echo 'нет соединения')"
+echo "== ВКонтакте (уведомления D-07, ADR-110) =="
+echo "  api.vk.com: $(curl -s -o /dev/null -m 15 -w 'код %{http_code}, всего %{time_total} с' 'https://api.vk.com/method/utils.getServerTime?v=5.199' 2>&1 || echo 'нет соединения')"
+# Только «задано / не задано»: сами значения не печатаются.
+for k in VK_GROUP_TOKEN VK_GROUP_ID VK_GROUP_SCREEN_NAME VK_CALLBACK_SECRET VK_CALLBACK_CONFIRMATION; do
+  echo "  $k: $(grep -q "^$k=." "$ENV_FILE" 2>/dev/null && echo 'задано' || echo 'не задано')"
 done
 
 echo "── Процессы PM2 (только blokum-*)"
