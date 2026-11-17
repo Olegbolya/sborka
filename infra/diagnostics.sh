@@ -18,6 +18,8 @@ else
   echo "Блоккер ещё не развёрнут"
 fi
 [ -f "$ENV_FILE" ] && echo ".env.prod: есть ($(stat -c %a "$ENV_FILE"))" || echo ".env.prod: НЕТ — нужен server-setup.sh"
+echo "== Неудачные ответы API за сутки (страница аккаунта и ВК; без IP) =="
+grep -E '"[A-Z]+ /api/v1/(auth/account|account/vk|vk/callback)[^"]*" [45][0-9]{2} ' /var/log/nginx/blokum-access.log 2>/dev/null | tail -n 12 | cut -c1-220
 echo "== ВКонтакте (уведомления D-07, ADR-110) =="
 echo "  api.vk.com: $(curl -s -o /dev/null -m 15 -w 'код %{http_code}, всего %{time_total} с' 'https://api.vk.com/method/utils.getServerTime?v=5.199' 2>&1 || echo 'нет соединения')"
 # Только «задано / не задано»: сами значения не печатаются.
