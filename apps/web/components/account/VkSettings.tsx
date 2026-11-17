@@ -18,7 +18,7 @@ const dateOf = (iso: string): string => {
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
 };
 
-/** D-07 · «Уведомления во ВКонтакте»: привязка диалога с сообществом Блоккера (тариф «Про», ADR-110). */
+/** D-07 · «Уведомления во ВКонтакте»: привязка диалога с сообществом Блоккера (платные тарифы, ADR-110). */
 export function VkSettings() {
   const [status, setStatus] = useState<Status | null>(null);
   const [link, setLink] = useState<{ url: string; code: string } | null>(null);
@@ -77,7 +77,7 @@ export function VkSettings() {
         </p>
       ) : !status.allowed ? (
         <p style={notice} data-testid="vk-plan">
-          Сообщения о новых прохождениях во ВКонтакте есть на тарифе «Про». <a href="/tariffs">Посмотреть тарифы</a>
+          Сообщения о новых прохождениях во ВКонтакте есть на платных тарифах. <a href="/tariffs">Посмотреть тарифы</a>
         </p>
       ) : status.linked ? (
         <>

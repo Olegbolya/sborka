@@ -22,7 +22,7 @@ const GONE_ERRORS = new Set([900, 901, 902]);
 export interface VkStatus {
   /** The community of the owner is connected (all five values are set). */
   configured: boolean;
-  /** The plan of the creator allows messages in VK (04-TARIFFS: «Про» and above). */
+  /** The plan of the creator allows messages in VK (04-TARIFFS: every paid plan — owner's decision 17.11). */
   allowed: boolean;
   linked: boolean;
   linkedAt: string | null;
@@ -73,7 +73,10 @@ export class VkService {
 
   async allowedFor(userId: string): Promise<boolean> {
     if (!this.entitlements) return true;
-    return (await this.entitlements.limitsOf(userId)).notifications === 'instant_plus';
+    // Every paid plan has instant messages; «Старт» has only the daily digest in the cabinet.
+    if ((await this.entitlements.limitsOf(userId)).notifications !== 'daily') return true;
+    // «Праздник» is a pass for one project, not a plan of the person: it counts too while it is valid.
+    return this.entitlements.hasPass(userId);
   }
 
   async status(userId: string): Promise<VkStatus> {
@@ -85,7 +88,7 @@ export class VkService {
   async startLink(userId: string): Promise<{ url: string; code: string; expiresAt: string }> {
     const vk = this.config.vk;
     if (!vk) throw fail(503, 'VK_OFF', 'Сообщения во ВКонтакте ещё не подключены.');
-    if (!(await this.allowedFor(userId))) throw fail(402, 'PLAN_REQUIRED', 'Сообщения во ВКонтакте есть на тарифе «Про».');
+    if (!(await this.allowedFor(userId))) throw fail(402, 'PLAN_REQUIRED', 'Сообщения во ВКонтакте есть на платных тарифах.');
     const code = randomBytes(12).toString('hex');
     const expiresAt = new Date(Date.now() + CODE_TTL_MS);
     await this.db.delete(schema.vkLinkCodes).where(lt(schema.vkLinkCodes.expiresAt, new Date()));

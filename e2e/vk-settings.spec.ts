@@ -12,19 +12,19 @@ const SECRET = process.env.VK_CALLBACK_SECRET ?? 'e2e-callback-secret';
 const GROUP_ID = Number(process.env.VK_GROUP_ID ?? 230000001);
 
 test.describe('D-07 · ВКонтакте в настройках', () => {
-  test('D-07 · «Старт»: сказано, что нужен «Про», кнопки привязки нет', async ({ page }) => {
+  test('D-07 · «Старт»: сказано, что нужен платный тариф, кнопки привязки нет', async ({ page }) => {
     await loginAndOnboard(page, freshUser('Автор'));
     await page.goto('/account');
     await expect(page.getByText('Уведомления во ВКонтакте')).toBeVisible();
-    await expect(page.getByTestId('vk-plan')).toContainText('на тарифе «Про»');
+    await expect(page.getByTestId('vk-plan')).toContainText('на платных тарифах');
     await expect(page.getByTestId('vk-connect')).toHaveCount(0);
   });
 
-  test('D-07 · «Про»: «Подключить» → ссылка vk.me и код → сообщение сообществу → «ВКонтакте подключён» → «Отключить»', async ({ page }, info) => {
+  test('D-07 · «Автор» (самый простой платный): «Подключить» → ссылка vk.me и код → сообщение сообществу → «ВКонтакте подключён» → «Отключить»', async ({ page }, info) => {
     await loginAndOnboard(page, freshUser('Автор'));
     const origin = new URL(page.url()).origin;
     const created = await page.request.post('/api/v1/projects', { data: { title: 'Для тарифа' }, headers: { origin } });
-    await subscribeOwner(((await created.json()) as { id: string }).id, 'PRO');
+    await subscribeOwner(((await created.json()) as { id: string }).id, 'AUTHOR');
 
     await page.goto('/account');
     await page.getByTestId('vk-connect').click();

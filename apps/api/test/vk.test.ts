@@ -84,10 +84,22 @@ describe('D-07 · сообщество ВКонтакте: привязка ди
     expect(await callback({ type: 'confirmation', group_id: 999 })).toBe('ok');
   });
 
-  it('D-07 · на тарифе «Старт» привязать нельзя: нужен «Про»', async () => {
+  it('D-07 · на «Старте» привязать нельзя; на любом платном тарифе — можно («Автор», «Плюс», «Про»)', async () => {
     const u = await login(t);
     expect((await api(t, u.cookie, 'get', '/account/vk').expect(200)).body).toMatchObject({ configured: true, allowed: false });
-    await api(t, u.cookie, 'post', '/account/vk/link').expect(402);
+    const refused = await api(t, u.cookie, 'post', '/account/vk/link').expect(402);
+    expect(refused.body.error.message).toBe('Сообщения во ВКонтакте есть на платных тарифах.');
+    for (const plan of ['AUTHOR', 'PLUS', 'PRO']) {
+      const p = await login(t);
+      await subscribe(p.id, plan);
+      expect((await api(t, p.cookie, 'get', '/account/vk').expect(200)).body, plan).toMatchObject({ allowed: true });
+      await api(t, p.cookie, 'post', '/account/vk/link').expect(200);
+    }
+    // «Праздник»: a pass for one project of the person — counts while it is valid.
+    const pass = await login(t);
+    const project = (await api(t, pass.cookie, 'post', '/projects').send({ title: 'Открытка' }).expect(200)).body as { id: string };
+    await db.db.insert(schema.entitlements).values({ userId: pass.id, projectId: project.id, feature: 'PASS', validFrom: new Date(Date.now() - 1000), validTo: new Date(Date.now() + 30 * 86_400_000) });
+    expect((await api(t, pass.cookie, 'get', '/account/vk').expect(200)).body).toMatchObject({ allowed: true });
   });
 
   it('D-07 · «Про»: ссылка vk.me с одноразовым словом привязывает диалог; без секрета, чужое слово и беседа не привязывают; «стоп» отвязывает', async () => {
