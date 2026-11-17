@@ -24,6 +24,13 @@ echo "  api.vk.com: $(curl -s -o /dev/null -m 15 -w 'код %{http_code}, все
 for k in VK_GROUP_TOKEN VK_GROUP_ID VK_GROUP_SCREEN_NAME VK_CALLBACK_SECRET VK_CALLBACK_CONFIRMATION; do
   echo "  $k: $(grep -q "^$k=." "$ENV_FILE" 2>/dev/null && echo 'задано' || echo 'не задано')"
 done
+# Отвечает ли API на подтверждение адреса так, как ждёт ВКонтакте (строка не печатается — только совпадение).
+vk_gid="$(grep '^VK_GROUP_ID=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)"
+vk_conf="$(grep '^VK_CALLBACK_CONFIRMATION=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)"
+if [ -n "$vk_gid" ] && [ -n "$vk_conf" ]; then
+  vk_ans="$(curl -s -m 10 -X POST -H 'content-type: application/json' -d "{\"type\":\"confirmation\",\"group_id\":$vk_gid}" http://127.0.0.1:3100/api/v1/vk/callback 2>&1)"
+  [ "$vk_ans" = "$vk_conf" ] && echo "  подтверждение адреса: API отвечает верной строкой" || echo "  подтверждение адреса: НЕ совпадает (ответ ${#vk_ans} знаков)"
+fi
 
 echo "── Процессы PM2 (только blokum-*)"
 # shellcheck disable=SC2016 # JavaScript template literals, not shell expansions
