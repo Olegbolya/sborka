@@ -82,7 +82,9 @@ test.describe('BH-01…BH-08: поведения пальцем и мышью', 
     await page.locator(scene('flee')).scrollIntoViewIfNeeded();
     for (let i = 0; i < 5; i++) {
       const before = await center(page, '[data-block-id="knopka-net"]');
-      await pointAt(page, isMobile, { x: before.x + 2, y: before.y + 2 });
+      // На телефоне — обычное касание прямо по кнопке (так делает человек), на компьютере — курсор подходит к ней.
+      if (isMobile) await press(page, true, { x: before.x + 2, y: before.y + 2 });
+      else await pointAt(page, false, { x: before.x + 2, y: before.y + 2 });
       await page.waitForTimeout(350);
       const after = await center(page, '[data-block-id="knopka-net"]');
       expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(10);

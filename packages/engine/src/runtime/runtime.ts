@@ -286,6 +286,8 @@ export class Runtime {
   private readonly paused: Job[] = [];
   private stopped = new Set<string>();
   private tweens: Tween[] = [];
+  /** BH-02: where the finger or cursor was last seen (absolute units) — a tapped fleeing block runs away from it. */
+  private lastPointer: { x: number; y: number } | null = null;
   private scheduled: Scheduled[] = [];
   private seq = 0;
   private copySeq = 0;
@@ -511,9 +513,19 @@ export class Runtime {
       case 'tap':
       case 'doubleTap':
         this.gesture(event.blockId, (inst) => {
-          // BH-02: касание, при котором кнопка убегает, — не нажатие. Браузер всё равно доставляет клик на то место,
-          // где палец опустился, пока кнопка ещё летит; пальцем быстрее, чем кнопка успевает уйти, не нажать.
-          if (event.type === 'tap' && behaviorOf(inst.block, 'flee') && this.tweens.some((t) => t.inst === inst && (t.prop === 'x' || t.prop === 'y'))) return;
+          // BH-02: пока у блока остались побеги, нажатие на него — не нажатие, а ещё один побег. На телефоне нет курсора:
+          // палец опускается прямо на блок, часто мимо его середины, и браузер сам доводит неточное касание до ближайшей
+          // кнопки — блок не успевает убежать по расстоянию, а нажатие доходит (ADR-111).
+          if (event.type === 'tap') {
+            const flee = behaviorOf(inst.block, 'flee');
+            if (flee && this.isFleeing(inst)) return;
+            if (flee && inst.fled < flee.times) {
+              const box = this.absBox(inst);
+              const at = this.lastPointer ?? { x: box.x + box.w / 2, y: box.y + box.h / 2 };
+              this.fleeFrom(inst, flee, at.x, at.y);
+              return;
+            }
+          }
           if (event.type === 'tap') {
             const wheel = behaviorOf(inst.block, 'wheel');
             if (wheel) this.spin(inst, wheel);
@@ -561,6 +573,8 @@ export class Runtime {
         this.swipe(event.direction, event.blockId);
         break;
       case 'answer': {
+        // BH-02: a fleeing option that still has escapes left is not chosen — the tap that follows makes it run away.
+        if (this.choosesFleeing(event.questionBlockId, event.answer)) break;
         this.setAnswer(event.questionBlockId, event.answer, 0, true);
         // B-11 «перейти сразу после выбора»: the participant's choice moves on by the screen's branches.
         const q = this.live(event.questionBlockId);
@@ -1471,6 +1485,7 @@ export class Runtime {
 
   /** BH-02 and BH-08: the finger or cursor moved. */
   private pointer(x: number, y: number): void {
+    this.lastPointer = { x, y };
     for (const inst of [...this.instances.values()]) {
       if (inst.destroyed || !this.isShown(inst) || inst.dragging) continue;
       const parent = inst.parentId ? this.absBox(this.instances.get(inst.parentId)!) : { x: 0, y: 0 };
@@ -1482,16 +1497,45 @@ export class Runtime {
         inst.followTo = { x: ax - parent.x, y: ay - parent.y };
       }
       const flee = behaviorOf(inst.block, 'flee');
-      if (!flee || inst.fled >= flee.times || this.tweens.some((t) => t.inst === inst && (t.prop === 'x' || t.prop === 'y'))) continue;
+      if (!flee || inst.fled >= flee.times || this.isFleeing(inst)) continue;
       const box = this.absBox(inst);
       if (Math.hypot(box.x + box.w / 2 - x, box.y + box.h / 2 - y) >= flee.distance) continue;
-      const area = flee.area ?? { x: 0, y: 0, w: ARTBOARD_WIDTH, h: this.screen?.height ?? 844 };
-      const to = fleeTarget(box, { x, y }, flee.distance, area, this.rng);
-      inst.fled += 1;
-      const ms = Math.round(260 / flee.speed);
-      this.tween(inst, 'x', to.x - parent.x, ms, { kind: 'preset', name: 'easeOut' });
-      this.tween(inst, 'y', to.y - parent.y, ms, { kind: 'preset', name: 'easeOut' });
+      this.fleeFrom(inst, flee, x, y);
     }
+  }
+
+  /** BH-02: the block is running right now. */
+  private isFleeing(inst: Instance): boolean {
+    return this.tweens.some((t) => t.inst === inst && (t.prop === 'x' || t.prop === 'y'));
+  }
+
+  /** BH-02: one escape away from the point (absolute units), inside the area. */
+  private fleeFrom(inst: Instance, flee: BehaviorOf<'flee'>, x: number, y: number): void {
+    const parent = inst.parentId ? this.absBox(this.instances.get(inst.parentId)!) : { x: 0, y: 0 };
+    const area = flee.area ?? { x: 0, y: 0, w: ARTBOARD_WIDTH, h: this.screen?.height ?? 844 };
+    const to = fleeTarget(this.absBox(inst), { x, y }, flee.distance, area, this.rng);
+    inst.fled += 1;
+    const ms = Math.round(260 / flee.speed);
+    this.tween(inst, 'x', to.x - parent.x, ms, { kind: 'preset', name: 'easeOut' });
+    this.tween(inst, 'y', to.y - parent.y, ms, { kind: 'preset', name: 'easeOut' });
+  }
+
+  /** BH-02: the new answer adds an option whose block still runs away (or is running). */
+  private choosesFleeing(questionId: string, answer: AnswerValue | null): boolean {
+    if (answer?.kind !== 'choice') return false;
+    const q = this.live(questionId);
+    if (!q || (q.block.type !== 'singleChoice' && q.block.type !== 'multiChoice')) return false;
+    const options = q.block.props.options;
+    const before = this.currentAnswers[questionId];
+    const had = before?.kind === 'choice' ? before.optionIds : [];
+    return answer.optionIds
+      .filter((id: string) => !had.includes(id))
+      .some((id: string) => {
+        const blockId = options.find((o) => o.id === id)?.blockId;
+        const inst = blockId ? this.live(blockId) : undefined;
+        const flee = inst ? behaviorOf(inst.block, 'flee') : undefined;
+        return Boolean(inst && flee && (this.isFleeing(inst) || inst.fled < flee.times));
+      });
   }
 
   private advanceFollow(dtMs: number): void {

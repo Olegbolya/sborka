@@ -1,7 +1,8 @@
 import { type BlockInput, type RuleInput } from '@blokum/schema';
 import { describe, expect, it } from 'vitest';
 import { applyEdge, constrainDrag, createRng, fleeTarget, followShare, pathTrack, pointAt, spinWheel } from '../src/index.js';
-import { type Step, b, ev, play, rule, tick } from './runtime-helpers.js';
+import { type Runtime } from '../src/index.js';
+import { type Step, b, ev, play, question, rule, tick } from './runtime-helpers.js';
 
 const pointer = (x: number, y: number) => ({ type: 'pointer' as const, x, y });
 const withB = (type: BlockInput['type'], id: string, behaviors: unknown[], extra: Partial<BlockInput> = {}) => b(type, id, { behaviors: behaviors as BlockInput['behaviors'], ...extra });
@@ -89,6 +90,41 @@ describe('BH-02: убегает от пальца', () => {
     // Убегать больше нельзя (times: 1 уже потрачено) — и следующее нажатие проходит.
     const later = play({ blocks: [runner({ times: 1 })], rules: [press] }, [pointer(190, 415), ev.tap('knopka_net'), tick(400), ev.tap('knopka_net')]);
     expect(later.of('effect')).toHaveLength(1);
+  });
+
+  it('BH-02: на телефоне палец ложится мимо середины маленького варианта, браузер всё равно засчитывает нажатие — вариант убегает, ответ не выбирается, правило «нажали» не срабатывает (ADR-111)', () => {
+    // As in the owner's build 17.11: «Вариант 2» 33×28 inside a single-choice question, runs 18 units, 10 times; tap → another screen.
+    const q = question();
+    const small = { ...q.children![1]!, frame: { x: 271, y: 63, w: 33, h: 28 }, behaviors: [{ kind: 'flee', distance: 18, times: 2, speed: 1, area: { x: 0, y: 0, w: 390, h: 400 } }] } as BlockInput;
+    const quiz = { ...q, frame: { x: 0, y: 0, w: 390, h: 400 }, children: [q.children![0]!, small] } as BlockInput;
+    const press: RuleInput = rule({ kind: 'tap', source: { kind: 'block', blockId: 'vopros_variant2' } }, [{ kind: 'effect', effect: 'confetti', intensity: 1 }]);
+    const at = (rt: Runtime) => rt.view('vopros_variant2')!;
+    const places: Array<{ x: number; y: number }> = [];
+    // The finger lands 20 units from the middle (farther than 18): no escape by distance — but the click comes to the option.
+    const fingerTap: Step = (rt) => {
+      const v = at(rt);
+      places.push({ x: v.x, y: v.y });
+      rt.dispatch(pointer(v.x + 16.5 + 16, v.y + 14 + 12));
+      rt.dispatch(ev.answer(2));
+      rt.dispatch(ev.tap('vopros_variant2'));
+      rt.tick(400);
+    };
+    const o = play({ blocks: [quiz], rules: [press] }, [fingerTap, fingerTap]);
+    expect(o.of('effect')).toHaveLength(0);
+    expect(o.rt.currentAnswers.vopros).toBeUndefined();
+    const end = at(o.rt);
+    expect(new Set([...places, { x: end.x, y: end.y }].map((p) => `${p.x},${p.y}`)).size).toBe(3);
+    // The escapes are spent («сколько раз» = 2): now the tap chooses the option and is a press.
+    const after = play({ blocks: [quiz], rules: [press] }, [fingerTap, fingerTap, ev.answer(2), ev.tap('vopros_variant2')]);
+    expect(after.of('effect')).toHaveLength(1);
+    expect(after.rt.currentAnswers.vopros).toEqual({ kind: 'choice', optionIds: ['vopros_otvet2'] });
+  });
+
+  it('BH-02: нажатие без касания рядом (клавиатура, первое касание) — тоже побег, а не нажатие', () => {
+    const press: RuleInput = rule({ kind: 'tap', source: { kind: 'block', blockId: 'knopka_net' } }, [{ kind: 'effect', effect: 'confetti', intensity: 1 }]);
+    const o = play({ blocks: [runner({ times: 1 })], rules: [press] }, [ev.tap('knopka_net'), tick(400)]);
+    expect(o.of('effect')).toHaveLength(0);
+    expect(o.view('knopka_net')).not.toMatchObject({ x: 175, y: 400 });
   });
 
   it('BH-02: убегает только внутри своей области', () => {
