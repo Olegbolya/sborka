@@ -24,6 +24,10 @@ for i in 1 2 3; do
   echo "  попытка $i: $(curl -s -o /dev/null -m 15 -w 'код %{http_code}, соединение %{time_connect} с, всего %{time_total} с' https://api.telegram.org/ 2>&1 || echo 'нет соединения')"
 done
 echo "  токен бота в .env.prod: $(grep -q '^TELEGRAM_BOT_TOKEN=.\+' "$ENV_FILE" 2>/dev/null && echo 'задан' || echo 'не задан')"
+echo "== ВКонтакте (уведомления D-07) =="
+for i in 1 2 3; do
+  echo "  попытка $i: $(curl -s -o /dev/null -m 15 -w 'код %{http_code}, соединение %{time_connect} с, всего %{time_total} с' 'https://api.vk.com/method/utils.getServerTime?v=5.199' 2>&1 || echo 'нет соединения')"
+done
 
 echo "── Процессы PM2 (только blokum-*)"
 # shellcheck disable=SC2016 # JavaScript template literals, not shell expansions
