@@ -139,8 +139,42 @@ server {
         proxy_pass http://blokum_api;
     }
 
-    location /api/v1/auth/ {
+    # Строгий лимит (10 в минуту) — только там, где подбирают коды и пароли или шлют письма: вход по коду, вход через
+    # VK ID / Яндекс ID и второй фактор, вход администратора, включение второго фактора, письмо подтверждения почты.
+    # Остальное под /auth/ (профиль, сеансы, согласия на странице «Мой аккаунт», проверка входа на каждой странице) —
+    # обычный лимит: иначе несколько переходов по сайту давали «слишком много запросов» (17.11).
+    location /api/v1/auth/otp/ {
         limit_req zone=blokum_auth burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://blokum_api;
+    }
+
+    location /api/v1/auth/oauth/ {
+        limit_req zone=blokum_auth burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://blokum_api;
+    }
+
+    location /api/v1/auth/admin/ {
+        limit_req zone=blokum_auth burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://blokum_api;
+    }
+
+    location /api/v1/auth/account/totp/ {
+        limit_req zone=blokum_auth burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://blokum_api;
+    }
+
+    location = /api/v1/auth/account/email {
+        limit_req zone=blokum_auth burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://blokum_api;
+    }
+
+    location /api/v1/auth/ {
+        limit_req zone=blokum_general burst=60 nodelay;
         limit_req_status 429;
         proxy_pass http://blokum_api;
     }
