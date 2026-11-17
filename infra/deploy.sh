@@ -67,8 +67,12 @@ ensure_secret() {
 ensure_secret TOTP_SECRET_KEY
 
 # Inject externally-provided secrets from CI (GitHub Actions secrets); value is never printed.
+SECRETS_CHANGED=0
 inject_secret() {
   [ -z "${2:-}" ] && return 0
+  # The same value — nothing to do; a new one means the running processes must be restarted to read it.
+  [ "$(grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2-)" = "$2" ] && return 0
+  SECRETS_CHANGED=1
   sed -i "/^$1=/d" "$ENV_FILE"
   printf '%s=%s\n' "$1" "$2" >> "$ENV_FILE"
   echo "→ в .env.prod обновлён секрет $1 (значение не выводится)"
@@ -238,7 +242,8 @@ rollback() {
 command -v redis-cli >/dev/null 2>&1 || fail "redis-cli не найден (нужен для проверки воркера)" 3
 RELOAD_STARTED=0
 for app in "${APPS[@]}"; do
-  if [ "$REDEPLOY_ONLY" = 1 ] && pm2 describe "$app" >/dev/null 2>&1 && check_app "$app"; then
+  # The same commit and the same secrets: a running process is left alone. New secrets (GitHub → .env.prod) need a restart.
+  if [ "$REDEPLOY_ONLY" = 1 ] && [ "$SECRETS_CHANGED" = 0 ] && pm2 describe "$app" >/dev/null 2>&1 && check_app "$app"; then
     ok "$app уже работает"
     continue
   fi

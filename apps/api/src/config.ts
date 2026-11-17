@@ -131,10 +131,27 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
 /** D-07 · the five values of the VK community (ADR-110); any one missing or the id not a number — off. */
 function vkConfig(env: NodeJS.ProcessEnv): { vk?: NonNullable<ApiConfig['vk']> } {
   const token = env.VK_GROUP_TOKEN?.trim();
-  const groupId = Number(env.VK_GROUP_ID?.trim());
-  const screenName = env.VK_GROUP_SCREEN_NAME?.trim().replace(/^@/, '').replace(/^https?:\/\/(vk\.com|vk\.me)\//, '');
+  // «230000001», «club230000001», «public230000001», «-230000001» — as VK shows the id in different places.
+  const groupId = Number(env.VK_GROUP_ID?.trim().replace(/^(club|public|-)/i, ''));
+  const screenName = vkScreenName(env.VK_GROUP_SCREEN_NAME);
   const secret = env.VK_CALLBACK_SECRET?.trim();
   const confirmation = env.VK_CALLBACK_CONFIRMATION?.trim();
   if (!token || !Number.isInteger(groupId) || groupId <= 0 || !screenName || !secret || !confirmation) return {};
   return { vk: { token, groupId, screenName, secret, confirmation } };
+}
+
+/**
+ * The short address of the community however it was copied: «blokker_ru», «@blokker_ru», «vk.com/blokker_ru»,
+ * «https://vk.ru/blokker_ru/», «https://m.vk.com/blokker_ru?from=…». Anything that is not an address — empty (off).
+ */
+export function vkScreenName(raw: string | undefined): string {
+  const name = (raw ?? '')
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/^(www\.|m\.)/i, '')
+    .replace(/^(vk\.com|vk\.ru|vk\.me|vkontakte\.ru)\//i, '')
+    .replace(/^@/, '')
+    .split(/[/?#]/)[0]!
+    .trim();
+  return /^[A-Za-z0-9_.]+$/.test(name) ? name : '';
 }
