@@ -27,6 +27,12 @@ done
 # Отвечает ли API на подтверждение адреса так, как ждёт ВКонтакте (строка не печатается — только совпадение).
 vk_gid="$(grep '^VK_GROUP_ID=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)"
 vk_conf="$(grep '^VK_CALLBACK_CONFIRMATION=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)"
+# Вид значений без самих значений: номер — только цифры, короткий адрес — латиница/цифры/«_»/«.», длины.
+echo "  VK_GROUP_ID только цифры: $(printf '%s' "$vk_gid" | grep -qE '^[0-9]+$' && echo да || echo "нет (длина ${#vk_gid}, первый знак «$(printf '%s' "$vk_gid" | cut -c1 | tr -d '0-9')»)")"
+vk_sn="$(grep '^VK_GROUP_SCREEN_NAME=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)"
+echo "  VK_GROUP_SCREEN_NAME вид: $(printf '%s' "$vk_sn" | grep -qE '^[A-Za-z0-9_.]+$' && echo 'адрес' || echo "другое (длина ${#vk_sn})")"
+echo "  длины: строка подтверждения ${#vk_conf}, секрет $(grep '^VK_CALLBACK_SECRET=' "$ENV_FILE" | cut -d= -f2- | tr -d '\n' | wc -c), ключ $(grep '^VK_GROUP_TOKEN=' "$ENV_FILE" | cut -d= -f2- | tr -d '\n' | wc -c)"
+echo "  API перезапущен после записи .env.prod: $([ "$(stat -c %Y "$ENV_FILE")" -lt "$(date -d "$(ps -o lstart= -p "$(pm2 pid blokum-api 2>/dev/null | head -1)" 2>/dev/null)" +%s 2>/dev/null || echo 0)" ] && echo да || echo нет)"
 if [ -n "$vk_gid" ] && [ -n "$vk_conf" ]; then
   vk_ans="$(curl -s -m 10 -X POST -H 'content-type: application/json' -d "{\"type\":\"confirmation\",\"group_id\":$vk_gid}" http://127.0.0.1:3100/api/v1/vk/callback 2>&1)"
   [ "$vk_ans" = "$vk_conf" ] && echo "  подтверждение адреса: API отвечает верной строкой" || echo "  подтверждение адреса: НЕ совпадает (ответ ${#vk_ans} знаков)"
