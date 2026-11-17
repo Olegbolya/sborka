@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
-import { PassageNoticesService, telegramAnswers } from '../src/play/passage-notices.service.js';
+import { PassageNoticesService, telegramText } from '../src/play/passage-notices.service.js';
 import { createTestDb, pgSkipGuard, startTestApp, type TestApp, type TestDb } from './helpers.js';
 
 const SECRET = 'webhook-secret-for-tests';
@@ -122,7 +122,7 @@ describe('D-07 · Telegram-бот: привязка чата, вебхук, со
     expect(await linkOf(u.id)).toBeUndefined();
   });
 
-  it('D-07 · новое прохождение приходит в Telegram: название, до трёх ответов и ссылка в кабинет; «Старт» и отвязанный чат — тишина; 403 отвязывает', async () => {
+  it('D-07 · новое прохождение приходит в Телеграм коротко: название сборки, сколько всего и ссылка в кабинет — без ответов участников; «Старт» и отвязанный чат — тишина; 403 отвязывает', async () => {
     const u = await login(t);
     await subscribe(u.id, 'PRO');
     const project = (await api(t, u.cookie, 'post', '/projects').send({ title: 'Письмо Деду Морозу' }).expect(200)).body as { id: string };
@@ -136,11 +136,9 @@ describe('D-07 · Telegram-бот: привязка чата, вебхук, со
     expect(calls).toHaveLength(1);
     const text = String(calls[0]!.body.text);
     expect(calls[0]!.body.chat_id).toBe('4242');
-    expect(text).toContain('Новое прохождение: «Письмо Деду Морозу»');
-    expect(text).toContain('• Имя: Мишаня');
-    expect(text).toContain('• Цвет: синий');
-    expect(text).not.toContain('четвёртый');
-    expect(text).toContain(`/cabinet/projects/${project.id}?tab=responses`);
+    expect(text).toBe(`Новое прохождение сборки «Письмо Деду Морозу».\nВсего прохождений: 0.\n\nОткрыть в кабинете: http://localhost:3110/cabinet/projects/${project.id}?tab=responses`);
+    // ADR-109: nothing of the participant leaves for Telegram — no answers, no names, no path.
+    for (const secret of ['Мишаня', 'синий', 'ДА', 'Путь', '•']) expect(text).not.toContain(secret);
     // The cabinet still gets it.
     expect(((await api(t, u.cookie, 'get', '/notifications').expect(200)).body as Array<{ kind: string }>).some((n) => n.kind === 'passage')).toBe(true);
 
@@ -165,8 +163,10 @@ describe('D-07 · Telegram-бот: привязка чата, вебхук, со
     await api(t, u.cookie, 'delete', '/account/telegram').expect(204);
   });
 
-  it('D-07 · в Telegram уходят только первые три ответа, без контактов и значений', () => {
-    expect(telegramAnswers('Ответы:\n• А: 1\n• Б: 2\n• В: 3\n• Г: 4\n\nСохранённые значения:\n• очки: 5')).toBe('• А: 1\n• Б: 2\n• В: 3');
-    expect(telegramAnswers('Ответов на вопросы не было.')).toBe('');
+  it('D-07 · текст для Телеграма: одно прохождение и сводка за период, длинное название обрезается', () => {
+    const link = 'https://blokker.ru/cabinet/projects/p1?tab=responses';
+    expect(telegramText({ projectTitle: 'Квиз', span: null, count: 1, total: 12, link })).toBe(`Новое прохождение сборки «Квиз».\nВсего прохождений: 12.\n\nОткрыть в кабинете: ${link}`);
+    expect(telegramText({ projectTitle: 'Квиз', span: 'за час', count: 3, total: 15, link })).toBe(`Новые прохождения сборки «Квиз»: 3 за час.\nВсего прохождений: 15.\n\nОткрыть в кабинете: ${link}`);
+    expect(telegramText({ projectTitle: 'я'.repeat(200), span: null, count: 1, total: 1, link })).toContain(`«${'я'.repeat(79)}…»`);
   });
 });
