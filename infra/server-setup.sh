@@ -192,7 +192,25 @@ fi
 
 # ── 8. Сертификат Let's Encrypt (только если домен уже указывает на сервер) ──
 step "Сертификат для ${DOMAIN}, www.${DOMAIN}, ${MEDIA_DOMAIN}"
-resolves_here() { getent ahostsv4 "$1" | awk '{print $1}' | grep -qx "$SERVER_IP"; }
+# A name counts as «here» only when this very machine answers for it: nginx is already serving /.well-known/acme-challenge/
+# from /var/www/certbot, so a random file put there must come back by that name. Comparing DNS with SERVER_IP alone is not
+# enough: on a new server (ADR-115) server.env still holds the old address, and certbot would knock on the old machine.
+PROBE_NAME="blokum-probe-$(openssl rand -hex 8)"
+resolves_here() {
+  getent ahostsv4 "$1" | awk '{print $1}' | grep -qx "$SERVER_IP" || return 1
+  [ -f "$NGINX_SITE" ] || return 1
+  install -d -m 755 /var/www/certbot/.well-known/acme-challenge
+  printf '%s' "$PROBE_NAME" > "/var/www/certbot/.well-known/acme-challenge/$PROBE_NAME"
+  local got code
+  got="$(mktemp)"
+  code="$(curl -s -o "$got" -w '%{http_code}' --max-time 10 "http://$1/.well-known/acme-challenge/$PROBE_NAME" 2>/dev/null || true)"
+  rm -f "/var/www/certbot/.well-known/acme-challenge/$PROBE_NAME"
+  # No answer at all (some routers do not let a machine reach itself by its public address): DNS alone decides, as before.
+  if [ "$code" = 000 ] || [ -z "$code" ]; then rm -f "$got"; return 0; fi
+  [ "$(cat "$got")" = "$PROBE_NAME" ] && { rm -f "$got"; return 0; }
+  rm -f "$got"
+  return 1
+}
 HAVE_TLS=0
 if [ "$DRY_RUN" = 1 ]; then
   run certbot certonly --webroot -w /var/www/certbot --cert-name "$CERT_NAME" -d "$DOMAIN" -d "www.$DOMAIN"
@@ -202,7 +220,7 @@ elif [ -f "/etc/letsencrypt/live/${CERT_NAME}/fullchain.pem" ] && { [ "$MEDIA_CE
 elif resolves_here "$DOMAIN" && resolves_here "www.$DOMAIN" && resolves_here "$MEDIA_DOMAIN"; then
   HAVE_TLS=2
 else
-  echo "  ! ${DOMAIN}, www.${DOMAIN} или ${MEDIA_DOMAIN} ещё не указывают на ${SERVER_IP}."
+  echo "  ! ${DOMAIN}, www.${DOMAIN} или ${MEDIA_DOMAIN} ещё не указывают на этот сервер (${SERVER_IP} в server.env)."
   echo "    Добавьте A-записи у регистратора и запустите скрипт снова — сайт пока будет только на порту 80 (для проверки домена)."
 fi
 

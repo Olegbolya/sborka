@@ -220,7 +220,11 @@ if [ "$REDEPLOY_ONLY" = 0 ]; then
   echo "$SHA" > "$REL/REVISION"
   cd "$REL"
   info "Зависимости…"
-  env -u NODE_ENV "${PNPM[@]}" install --frozen-lockfile --prefer-offline --reporter=silent
+  # The output is kept in a file and shown only on failure: a silent failure on a new server (ADR-115) told nothing.
+  if ! env -u NODE_ENV "${PNPM[@]}" install --frozen-lockfile --prefer-offline --reporter=append-only >"$APP_ROOT/install.log" 2>&1; then
+    tail -n 40 "$APP_ROOT/install.log" >&2
+    fail "Зависимости не установились (полный журнал: $APP_ROOT/install.log) — запущенная версия не тронута"
+  fi
   info "Сборка…"
   env -u NODE_ENV NEXT_TELEMETRY_DISABLED=1 TURBO_TELEMETRY_DISABLED=1 APP_VERSION="$SHORT" "${PNPM[@]}" -s build --output-logs=errors-only
   for f in apps/api/dist/main.js apps/worker/dist/main.js packages/db/dist/cli/migrate.js apps/web/.next/BUILD_ID; do
