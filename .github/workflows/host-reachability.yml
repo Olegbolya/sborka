@@ -1,0 +1,34 @@
+name: Связь с сервером
+
+# Ручной запуск перед переездом на новый сервер: Actions → «Связь с сервером» → Run workflow → адрес.
+# Проверяет из GitHub (оттуда идёт деплой), открываются ли SSH (22), HTTP (80) и HTTPS (443). Ключи и секреты не нужны.
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: IP-адрес или имя сервера
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Порты 22, 80, 443
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Проверка
+        env:
+          HOST: ${{ inputs.host }}
+        run: |
+          printf '%s' "$HOST" | grep -Eq '^[A-Za-z0-9.:-]+$' || { echo "::error::Неверный адрес"; exit 1; }
+          OUT=""
+          for p in 22 80 443; do
+            if timeout 10 bash -c "</dev/tcp/$HOST/$p" 2>/dev/null; then r="открыт"; else r="нет ответа"; fi
+            OUT="$OUT порт $p: $r;"
+          done
+          banner="$(timeout 10 ssh-keyscan -T 8 -p 22 "$HOST" 2>&1 | grep -m1 -E '^#|ssh-' || true)"
+          OUT="$OUT SSH: ${banner:-нет ответа}"
+          echo "$OUT"
+          echo "::notice title=Связь с $HOST::$OUT"
