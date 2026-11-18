@@ -85,6 +85,10 @@ inject_secret ADMIN_PASSWORD "${ADMIN_PASSWORD:-}"
 for k in VK_GROUP_TOKEN VK_GROUP_ID VK_GROUP_SCREEN_NAME VK_CALLBACK_SECRET VK_CALLBACK_CONFIRMATION; do
   inject_secret "$k" "${!k:-}"
 done
+# ADR-113: пароли Robokassa — секреты GitHub; логин, алгоритм подписи и выбор провайдера — в infra/server.env (ниже).
+for k in ROBOKASSA_PASSWORD1 ROBOKASSA_PASSWORD2 ROBOKASSA_PASSWORD3; do
+  inject_secret "$k" "${!k:-}"
+done
 
 # Режим «до запуска» в .env.prod следует за infra/server.env: когда владелец снимает пароль с сайта, служебные галереи /dev
 # закрываются тем же деплоем, а не остаются открытыми всем.
@@ -124,6 +128,18 @@ if [ -f "$SERVER_ENV" ]; then
     sed -i '/^YOOKASSA_SHOP_ID=/d' "$ENV_FILE"; printf 'YOOKASSA_SHOP_ID=%s\n' "$want_shop" >> "$ENV_FILE"
     echo "→ в .env.prod номер магазина ЮKassa приведён к $want_shop"
   fi
+  # ADR-113: через кого идут новые оплаты и несекретные настройки Robokassa. Строка есть в server.env — значение переносится
+  # (пустое удаляет его из .env.prod); строки нет — .env.prod не трогается. Изменение перезапускает процессы.
+  for k in PAYMENT_PROVIDER ROBOKASSA_LOGIN ROBOKASSA_HASH ROBOKASSA_TEST; do
+    grep -q "^$k=" "$SERVER_ENV" || continue
+    want="$(sed -n "s/^$k=//p" "$SERVER_ENV" | head -1)"
+    [ "$(grep -E "^$k=" "$ENV_FILE" | tail -1 | cut -d= -f2-)" = "$want" ] && grep -q "^$k=" "$ENV_FILE" && continue
+    [ -z "$want" ] && ! grep -q "^$k=" "$ENV_FILE" && continue
+    sed -i "/^$k=/d" "$ENV_FILE"
+    [ -n "$want" ] && printf '%s=%s\n' "$k" "$want" >> "$ENV_FILE"
+    SECRETS_CHANGED=1
+    echo "→ в .env.prod обновлена настройка оплаты $k${want:+=$want}"
+  done
   want_ya="$(sed -n 's/^YANDEX_CLIENT_ID=//p' "$SERVER_ENV" | head -1)"
   if [ -n "$want_ya" ] && ! grep -qx "YANDEX_CLIENT_ID=$want_ya" "$ENV_FILE"; then
     sed -i '/^YANDEX_CLIENT_ID=/d' "$ENV_FILE"; printf 'YANDEX_CLIENT_ID=%s\n' "$want_ya" >> "$ENV_FILE"

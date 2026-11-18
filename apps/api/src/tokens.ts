@@ -10,5 +10,7 @@ export const OAUTH_STATE_STORE = Symbol('OAUTH_STATE_STORE');
 export const EMAIL_SENDER = Symbol('EMAIL_SENDER');
 export const MEDIA_QUEUE = Symbol('MEDIA_QUEUE');
 export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER');
+/** ADR-113 · every connected payment provider: refunds and notifications go to the one that took the payment. */
+export const PAYMENT_PROVIDERS = Symbol('PAYMENT_PROVIDERS');
 export const LINK_REPUTATION = Symbol('LINK_REPUTATION');
 export const VK_FETCH = Symbol('VK_FETCH');

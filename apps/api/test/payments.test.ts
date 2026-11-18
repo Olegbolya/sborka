@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { schema } from '@blokum/db';
 import { API_PREFIX } from '../src/app.js';
@@ -9,35 +9,8 @@ import { EntitlementsService } from '../src/entitlements/entitlements.service.js
 import { YooKassaProvider } from '../src/payments/yookassa.provider.js';
 import { addPeriod } from '../src/payments/payments.service.js';
 import { RenewalRemindersService } from '../src/payments/renewal-reminders.service.js';
+import { fakeYooKassa } from './fake-payments.js';
 import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
-
-/** Поддельный сервер ЮKassa: платежи в памяти, ответы того же вида, что у API v3. */
-function fakeYooKassa() {
-  const payments = new Map<string, { id: string; status: string; amount: { value: string; currency: string }; metadata: Record<string, unknown> }>();
-  const calls: Array<{ method: string; url: string; headers: Record<string, string>; body: unknown }> = [];
-  let seq = 0;
-  const impl = vi.fn((url: string | URL, init?: RequestInit) => {
-    const u = typeof url === 'string' ? url : url.href;
-    const headers = (init?.headers ?? {}) as Record<string, string>;
-    const body = typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : undefined;
-    calls.push({ method: init?.method ?? 'GET', url: u, headers, body });
-    const json = (status: number, data: unknown) => Promise.resolve(new Response(JSON.stringify(data), { status }));
-    if (u.endsWith('/payments') && init?.method === 'POST') {
-      const id = `2f${String(++seq).padStart(10, '0')}-000f-5000-9000-1b2c3d4e5f60`;
-      const b = body as { amount: { value: string; currency: string }; metadata: Record<string, unknown> };
-      payments.set(id, { id, status: 'pending', amount: b.amount, metadata: b.metadata });
-      return json(200, { ...payments.get(id), confirmation: { type: 'redirect', confirmation_url: `https://yoomoney.example/checkout/${id}` } });
-    }
-    const m = /\/payments\/([^/]+)$/.exec(u);
-    if (m && (init?.method ?? 'GET') === 'GET') {
-      const p = payments.get(m[1]!);
-      return p ? json(200, p) : json(404, { type: 'error', code: 'not_found' });
-    }
-    if (u.endsWith('/refunds')) return json(200, { id: `rf-${++seq}`, status: 'succeeded' });
-    return json(500, {});
-  });
-  return { impl: impl as unknown as typeof fetch, payments, calls };
-}
 
 describe('P7.3 · оплата: заказ, уведомления ЮKassa, права', () => {
   let db: TestDb;

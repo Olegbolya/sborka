@@ -44,8 +44,14 @@ export interface ApiConfig {
   backupDir?: string;
   /** P7.3 · ЮKassa: ShopID и секретный ключ (ключ приходит только из окружения сервера, в репозитории его нет). `undefined` — оплата не подключена. */
   yookassa?: { shopId: string; secretKey: string };
-  /** P7.3 · Robokassa — запасной провайдер того же интерфейса; берётся, только если не подключена ЮKassa. Пароли приходят из окружения сервера. */
+  /** P7.3 · Robokassa — второй провайдер того же интерфейса. Пароли приходят из окружения сервера. */
   robokassa?: { login: string; password1: string; password2: string; password3: string; hash: 'md5' | 'sha256' | 'sha384' | 'sha512'; test: boolean };
+  /**
+   * ADR-113 · через кого идут новые оплаты (`PAYMENT_PROVIDER`). Возвраты и уведомления по уже созданным заказам идут через
+   * того провайдера, который принял оплату, поэтому ключи прежнего провайдера после переключения остаются на сервере.
+   * Без значения: ЮKassa, если есть её ключи, иначе Robokassa.
+   */
+  paymentProvider?: 'yookassa' | 'robokassa';
   /** TS-05 · key of Yandex Safe Browsing; without it links are checked only against the own rules and the stop-list of domains. */
   safeBrowsingKey?: string;
   /** P8.7: a project is not published without an age category. On in production; the test runs publish hundreds of projects and leave it off. */
@@ -120,12 +126,26 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
           },
         }
       : {}),
+    ...paymentProviderChoice(env),
     ...(env.NEW_ACCOUNT_HOURS !== undefined && Number.isFinite(Number(env.NEW_ACCOUNT_HOURS)) && Number(env.NEW_ACCOUNT_HOURS) >= 0 ? { newAccountHours: Number(env.NEW_ACCOUNT_HOURS) } : {}),
     requireAgeRating: env.REQUIRE_AGE_RATING !== undefined ? env.REQUIRE_AGE_RATING !== '0' : production,
     ...(env.YANDEX_SAFEBROWSING_KEY?.trim() ? { safeBrowsingKey: env.YANDEX_SAFEBROWSING_KEY.trim() } : {}),
     mediaDir: env.MEDIA_DIR ?? (production ? '/srv/blokum/media' : `${env.DATA_ROOT ?? '/tmp'}/blokum-media`),
     mediaBaseUrl: env.MEDIA_BASE_URL ?? `http://${env.API_HOST ?? '127.0.0.1'}:${parsed}/api/v1/media`,
   };
+}
+
+/**
+ * ADR-113 · `PAYMENT_PROVIDER=yookassa|robokassa`. An unknown name or a provider whose keys are absent stops the start: a typo on
+ * the server must not quietly send the payments to the other provider (the deploy then rolls back to the running version).
+ */
+export function paymentProviderChoice(env: NodeJS.ProcessEnv): { paymentProvider?: 'yookassa' | 'robokassa' } {
+  const raw = env.PAYMENT_PROVIDER?.trim().toLowerCase();
+  if (!raw) return {};
+  if (raw !== 'yookassa' && raw !== 'robokassa') throw new Error(`Неизвестный платёжный провайдер в PAYMENT_PROVIDER: «${raw}». Допустимо: yookassa или robokassa`);
+  const keys = raw === 'yookassa' ? Boolean(env.YOOKASSA_SHOP_ID?.trim() && env.YOOKASSA_SECRET_KEY?.trim()) : Boolean(env.ROBOKASSA_LOGIN?.trim() && env.ROBOKASSA_PASSWORD1 && env.ROBOKASSA_PASSWORD2 && env.ROBOKASSA_PASSWORD3);
+  if (!keys) throw new Error(`PAYMENT_PROVIDER=${raw}, но ключи этого провайдера не заданы`);
+  return { paymentProvider: raw };
 }
 
 /** D-07 · the five values of the VK community (ADR-110); any one missing or the id not a number — off. */

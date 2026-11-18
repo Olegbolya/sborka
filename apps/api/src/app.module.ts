@@ -66,8 +66,8 @@ export interface AppDeps {
   /** Extra controllers (used by tests to exercise error handling). */
   extraControllers?: DynamicModule['controllers'];
   extraProviders?: Provider[];
-  /** P7.3: override of the payment provider (tests); `null` — payments are off. */
-  paymentProvider?: PaymentProvider | null;
+  /** P7.3: override of the payment provider (tests); a list — several connected, the first takes new payments (ADR-113); `null` — payments are off. */
+  paymentProvider?: PaymentProvider | PaymentProvider[] | null;
   /** P9.1 (TS-05): reputation of links; `null` — not checked. Default: Yandex Safe Browsing when the key is set. */
   linkReputation?: LinkReputation | null;
   /** D-07: replaces the call to api.vk.com (tests). */

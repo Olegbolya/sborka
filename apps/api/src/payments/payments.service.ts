@@ -2,10 +2,13 @@ import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, gt, inArray, isNull, or } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import type { ApiConfig } from '../config.js';
-import { API_CONFIG, DB, PAYMENT_PROVIDER } from '../tokens.js';
+import { API_CONFIG, DB, PAYMENT_PROVIDER, PAYMENT_PROVIDERS } from '../tokens.js';
 import { type PaymentProvider, PaymentProviderError } from './payment-provider.js';
 import { NpdIncomeService } from './npd-income.service.js';
 import { type OrderKindName, PromoService } from './promo.service.js';
+
+/** How the providers are named to the owner in the admin messages. */
+const PROVIDER_TITLES: Record<string, string> = { yookassa: 'ЮКассу', robokassa: 'Робокассу' };
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
 
@@ -49,6 +52,7 @@ export class PaymentsService {
     @Inject(DB) private readonly db: Db,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider | null,
+    @Inject(PAYMENT_PROVIDERS) private readonly providers: PaymentProvider[],
     private readonly promos: PromoService,
     private readonly npd: NpdIncomeService,
   ) {}
@@ -56,6 +60,11 @@ export class PaymentsService {
   private requireProvider(): PaymentProvider {
     if (!this.provider) throw fail(503, 'PAYMENTS_UNAVAILABLE', 'Оплата пока не подключена. Попробуйте позже.');
     return this.provider;
+  }
+
+  /** ADR-113 · the provider by name, whether or not it takes new payments now; `null` — its keys are not on the server. */
+  private providerNamed(name: string): PaymentProvider | null {
+    return this.providers.find((p) => p.name === name) ?? null;
   }
 
   /** What the order costs and what it is, before any discount and without writing anything. */
@@ -210,8 +219,9 @@ export class PaymentsService {
    * решает. Подделка (платежа нет у провайдера) — 400; сбой связи — 502, чтобы провайдер повторил позже.
    */
   async handleNotification(body: unknown): Promise<{ ok: true; duplicate?: boolean }> {
-    const provider = this.requireProvider();
-    if (provider.name !== 'yookassa') throw fail(404, 'NOT_FOUND', 'Такого адреса нет.');
+    // ADR-113: after a switch to another provider the payments already made through ЮKassa still get their notices (refunds too).
+    const provider = this.providerNamed('yookassa');
+    if (!provider) throw fail(404, 'NOT_FOUND', 'Такого адреса нет.');
     const event = (body as { event?: unknown } | null)?.event;
     const object = (body as { object?: { id?: unknown; payment_id?: unknown } } | null)?.object;
     const isRefund = event === 'refund.succeeded';
@@ -222,8 +232,9 @@ export class PaymentsService {
 
   /** Robokassa · ResultURL: подпись проверяет провайдер, дальше — та же перепроверка платежа, что и у ЮKassa. Ответ — `OK{InvId}`. */
   async handleResultNotification(params: Record<string, unknown>): Promise<string> {
-    const provider = this.requireProvider();
-    const parsed = provider.name === 'robokassa' ? provider.parseResultNotification?.(params) : undefined;
+    const provider = this.providerNamed('robokassa');
+    if (!provider) throw fail(404, 'NOT_FOUND', 'Такого адреса нет.');
+    const parsed = provider.parseResultNotification?.(params);
     if (!parsed) throw fail(400, 'BAD_NOTIFICATION', 'Непонятное уведомление.');
     await this.settle(provider, parsed.paymentId, false);
     return parsed.reply;
@@ -380,11 +391,15 @@ export class PaymentsService {
     });
   }
 
-  /** Возврат полной суммы заказа (кнопка в админке — P7.7): статус меняется, когда провайдер подтвердит возврат уведомлением. */
+  /**
+   * Возврат полной суммы заказа (кнопка в админке — P7.7): статус меняется, когда провайдер подтвердит возврат уведомлением.
+   * ADR-113: возврат идёт через того провайдера, который принял оплату, а не через того, кто принимает новые оплаты.
+   */
   async refund(orderId: string): Promise<{ refundId: string; status: string }> {
-    const provider = this.requireProvider();
     const [order] = await this.db.select().from(schema.orders).where(eq(schema.orders.id, orderId));
     if (!order || order.status !== 'PAID' || !order.providerPaymentId) throw fail(409, 'REFUND_IMPOSSIBLE', 'Вернуть можно только оплаченный заказ.');
+    const provider = this.providerNamed(order.provider);
+    if (!provider) throw fail(503, 'PAYMENTS_UNAVAILABLE', `Заказ оплачен через ${PROVIDER_TITLES[order.provider] ?? 'другой платёжный сервис'}, а ключи этого сервиса на сервере не подключены. Верните их в настройки сервера, чтобы сделать возврат.`);
     try {
       return await provider.refund({ providerPaymentId: order.providerPaymentId, amountKop: order.amountKop, idempotenceKey: `refund-${order.id}` });
     } catch (e) {

@@ -1,44 +1,14 @@
-import { createHash, createHmac } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { schema } from '@blokum/db';
 import { API_PREFIX } from '../src/app.js';
 import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import { RobokassaProvider } from '../src/payments/robokassa.provider.js';
+import { OPTS, fakeRobokassa, md5 } from './fake-payments.js';
 import { createTestDb, startTestApp, type TestApp, type TestDb } from './helpers.js';
-
-const OPTS = { login: 'blokker-test', password1: 'pass-one', password2: 'pass-two', password3: 'pass-three' };
-const md5 = (s: string) => createHash('md5').update(s).digest('hex');
-
-/** Поддельный сервер Robokassa: состояние операций в памяти, ответы того же вида, что у OpStateExt и API возвратов. */
-function fakeRobokassa() {
-  const ops = new Map<string, { code: number; outSum: string; order: string }>();
-  const refunds: Array<{ opKey: string; sum: number; auth: string }> = [];
-  const impl = vi.fn((url: string | URL, init?: RequestInit) => {
-    const u = new URL(typeof url === 'string' ? url : url.href);
-    const xml = (body: string) => Promise.resolve(new Response(`<?xml version="1.0" encoding="utf-8"?><OperationStateResponse>${body}</OperationStateResponse>`, { status: 200 }));
-    if (u.pathname.endsWith('/OpStateExt')) {
-      const inv = u.searchParams.get('InvoiceID')!;
-      if (u.searchParams.get('Signature') !== md5(`${OPTS.login}:${inv}:${OPTS.password2}`)) return xml('<Result><Code>2</Code></Result>');
-      const op = ops.get(inv);
-      if (!op) return xml('<Result><Code>3</Code></Result>');
-      return xml(
-        `<Result><Code>0</Code></Result><State><Code>${op.code}</Code></State><Info><OpKey>key-${inv}</OpKey><OutSum>${op.outSum}</OutSum></Info><UserField><Field><Name>shp_order</Name><Value>${op.order}</Value></Field></UserField>`,
-      );
-    }
-    if (u.pathname.endsWith('/Refund/Create')) {
-      const [h, b, s] = (init?.body as string).split('.');
-      const ok = s === createHmac('sha256', OPTS.password3).update(`${h}.${b}`).digest('base64url');
-      const p = JSON.parse(Buffer.from(b!, 'base64url').toString()) as { OpKey: string; RefundSum: number };
-      refunds.push({ opKey: p.OpKey, sum: p.RefundSum, auth: ok ? 'ok' : 'bad' });
-      return Promise.resolve(new Response(JSON.stringify(ok ? { success: true, requestId: 'rq-1' } : { success: false, message: 'bad jwt' }), { status: 200 }));
-    }
-    return Promise.resolve(new Response('', { status: 500 }));
-  });
-  return { impl: impl as unknown as typeof fetch, ops, refunds };
-}
 
 describe('P7.3 · Robokassa: запасной провайдер платежей', () => {
   let db: TestDb;
