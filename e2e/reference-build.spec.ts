@@ -77,6 +77,8 @@ test.describe('P3.12 · игры собираются через интерфе�
     const net_ = g.blk(await selectedId(g, 'Нет'));
     let moves = 0;
     for (let i = 0; i < 12; i++) {
+      // The button may run to the very bottom of the screen, below what the preview window shows: a person scrolls to it.
+      await net_.scrollIntoViewIfNeeded();
       const before = (await net_.boundingBox())!;
       const b = (await net_.boundingBox())!;
       await page.mouse.move(b.x + b.width / 2 - 2, b.y + b.height / 2);
