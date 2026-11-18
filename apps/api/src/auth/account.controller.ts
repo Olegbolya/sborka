@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Param,
   Patch,
   Post,
   Query,
@@ -18,6 +19,15 @@ import type { RequestUser } from './session.service.js';
 import { AccountService, type ExportData } from './account.service.js';
 import { parseSessionCookie } from './session.service.js';
 import { SessionService } from './session.service.js';
+import { BadRequestException } from '@nestjs/common';
+import { OAuthService, type OAuthProvider } from './oauth.service.js';
+import { AccountMergeService } from './account-merge.service.js';
+
+const providerOf = (p: string): OAuthProvider => {
+  if (p !== 'vk' && p !== 'yandex') throw new BadRequestException({ error: { code: 'UNKNOWN_PROVIDER', message: 'Такого способа входа нет' } });
+  return p;
+};
+const ipOf = (req: Request): string | undefined => (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.socket?.remoteAddress;
 
 class UpdateProfileDto {
   displayName?: string;
@@ -33,7 +43,45 @@ export class AccountController {
   constructor(
     private readonly account: AccountService,
     private readonly sessions: SessionService,
+    private readonly oauth: OAuthService,
+    private readonly merges: AccountMergeService,
   ) {}
+
+  /** A-06 · through what this account can be entered. */
+  @Get('identities')
+  async identities(@CurrentUser() user: RequestUser) {
+    return { identities: await this.oauth.identities(user.id), available: { vk: this.oauth.isEnabled('vk'), yandex: this.oauth.isEnabled('yandex') } };
+  }
+
+  /** A-06 · starts binding one more way in: the page goes to the provider, the provider returns to the account page. POST, so another site cannot start it. */
+  @Post('identities/:provider/link')
+  @HttpCode(200)
+  async link(@Param('provider') provider: string, @CurrentUser() user: RequestUser): Promise<{ url: string }> {
+    const p = providerOf(provider);
+    if (!this.oauth.isEnabled(p)) throw new BadRequestException({ error: { code: 'OAUTH_PROVIDER_DISABLED', message: 'Вход через этот сервис пока не подключён' } });
+    return { url: await this.oauth.initFlow(p, user.id) };
+  }
+
+  /** A-06 · unbinds a way in (not the last one). */
+  @Delete('identities/:provider')
+  @HttpCode(200)
+  async unlink(@Param('provider') provider: string, @CurrentUser() user: RequestUser): Promise<{ ok: true }> {
+    await this.oauth.unlinkIdentity(user.id, providerOf(provider));
+    return { ok: true };
+  }
+
+  /** A-06 · what joining the other account would bring: its name, assemblies, themes and plan. */
+  @Get('merge/:token')
+  async mergePreview(@Param('token') token: string, @CurrentUser() user: RequestUser) {
+    return this.merges.preview(token, user.id);
+  }
+
+  /** A-06 · joins the other account into this one (after the person confirmed it). */
+  @Post('merge')
+  @HttpCode(200)
+  async merge(@Body() body: { token?: unknown }, @CurrentUser() user: RequestUser, @Req() req: Request) {
+    return this.merges.merge(body?.token, user.id, ipOf(req));
+  }
 
   /** D-10: get current user profile. */
   @Get()

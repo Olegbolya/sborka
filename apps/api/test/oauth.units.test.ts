@@ -188,7 +188,7 @@ describe('A-01: OAuthService — findOrCreateUser', () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ response: [{ id: 42, first_name: 'Иван', last_name: '' }] }) });
 
     const result = await svc.processCallback('vk', 'code', 'st', '1.2.3.4', 'ua');
-    expect(result.user.id).toBe('u1');
+    expect(('user' in result ? result.user : null)!.id).toBe('u1');
     expect(sessions.create).toHaveBeenCalledWith('u1', expect.any(Object));
   });
 
@@ -207,30 +207,14 @@ describe('A-01: OAuthService — findOrCreateUser', () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ id: '99', display_name: 'Новый Пользователь', login: 'novyi' }) });
 
     const result = await svc.processCallback('yandex', 'code', 'st2', '1.2.3.4', 'ua');
-    expect(result.user.displayName).toBe('Новый Пользователь');
+    expect(('user' in result ? result.user : null)!.displayName).toBe('Новый Пользователь');
     expect((db as unknown as { insert: ReturnType<typeof vi.fn> }).insert).toHaveBeenCalledWith(schema.users);
     expect((db as unknown as { insert: ReturnType<typeof vi.fn> }).insert).toHaveBeenCalledWith(schema.authIdentities);
   });
 });
 
-// A-01: linkIdentity / unlinkIdentity
-describe('A-01: linkIdentity and unlinkIdentity', () => {
-  it('linkIdentity does nothing if identity already exists', async () => {
-    const { db, selectChain } = makeDb();
-    selectChain.limit.mockResolvedValueOnce([{ id: 'id1', userId: 'u1', provider: 'VK', providerUserId: '42' }]);
-    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
-    await svc.linkIdentity('u1', 'vk', '42');
-    expect((db as unknown as { insert: ReturnType<typeof vi.fn> }).insert).not.toHaveBeenCalled();
-  });
-
-  it('linkIdentity inserts when no identity exists', async () => {
-    const { db, selectChain } = makeDb();
-    selectChain.limit.mockResolvedValueOnce([]);
-    const svc = new OAuthService(db, baseConfig, new InMemoryOAuthStateStore(), makeSessions(), makeMfa(), makeAudit());
-    await svc.linkIdentity('u1', 'vk', '99');
-    expect((db as unknown as { insert: ReturnType<typeof vi.fn> }).insert).toHaveBeenCalledWith(schema.authIdentities);
-  });
-
+// A-06: unlinkIdentity (binding is checked against a real database in account-merge.test.ts)
+describe('A-06: unlinkIdentity', () => {
   it('05-LEGAL §2.5: unlinkIdentity rejects when only one identity remains', async () => {
     const { db } = makeDb();
     const selectMock = { from: vi.fn(), where: vi.fn() };
@@ -452,7 +436,7 @@ describe('A-01: вход через настоящие VK ID и Яндекс ID 
     global.fetch = fetchMock;
 
     const result = await svc.processCallback('yandex', 'code', 's1', '1.2.3.4', 'ua');
-    expect(result.user.displayName).toBe('Олег');
+    expect(('user' in result ? result.user : null)!.displayName).toBe('Олег');
     const [tokenUrl, tokenInit] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(tokenUrl).toBe('https://oauth.yandex.ru/token');
     const body = new URLSearchParams(tokenInit.body as string);
@@ -478,7 +462,7 @@ describe('A-01: вход через настоящие VK ID и Яндекс ID 
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ user: { user_id: '7', first_name: 'Олег', last_name: 'И.' } }) });
     global.fetch = fetchMock;
     const result = await svc.processCallback('vk', 'code', 's3', 'ip', 'ua', 'dev-1');
-    expect(result.user.displayName).toBe('Олег И.');
+    expect(('user' in result ? result.user : null)!.displayName).toBe('Олег И.');
     const [tokenUrl, tokenInit] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(tokenUrl).toBe('https://id.vk.ru/oauth2/auth');
     const body = new URLSearchParams(tokenInit.body as string);

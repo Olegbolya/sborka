@@ -1,12 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { BadRequestException, Inject, Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, HttpException, Inject, Injectable, Optional } from '@nestjs/common';
 import { BlockedIdentitiesService } from '../admin/blocked-identities.service.js';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { and, eq } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import type { ApiConfig } from '../config.js';
 import { API_CONFIG, DB, OAUTH_STATE_STORE } from '../tokens.js';
-import type { OAuthStateStore } from './oauth-state.js';
+import type { OAuthStateData, OAuthStateStore } from './oauth-state.js';
 import type { RequestUser } from './session.service.js';
 import { SessionService } from './session.service.js';
 import { AdminMfaService } from './admin-mfa.service.js';
@@ -55,6 +55,12 @@ function generateState(): string {
   return randomBytes(24).toString('hex');
 }
 
+/** A-06 · what binding one more way in ended with; the cabinet shows it on the account page. */
+export type LinkOutcome = { linked: OAuthProvider } | { merge: string } | { error: 'taken' | 'blocked' | 'oauth' };
+
+const PROVIDER_ENUM: Record<OAuthProvider, 'VK' | 'YANDEX'> = { vk: 'VK', yandex: 'YANDEX' };
+const MERGE_KEY = (token: string): string => `merge:${token}`;
+
 @Injectable()
 export class OAuthService {
   constructor(
@@ -68,15 +74,15 @@ export class OAuthService {
     @Optional() private readonly blocked?: BlockedIdentitiesService,
   ) {}
 
-  /** A-01: builds the authorization URL and stores state+PKCE for the callback. */
-  async initFlow(provider: OAuthProvider): Promise<string> {
+  /** A-01: builds the authorization URL and stores state+PKCE for the callback. With `linkUserId` (A-06) the flow binds, not signs in. */
+  async initFlow(provider: OAuthProvider, linkUserId?: string): Promise<string> {
     const cfg = this.providerConfig(provider);
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = computeCodeChallenge(codeVerifier);
     const redirectUri = this.callbackUri(provider);
 
-    await this.stateStore.save(state, { provider, codeVerifier, redirectUri });
+    await this.stateStore.save(state, { provider, codeVerifier, redirectUri, ...(linkUserId ? { linkUserId } : {}) });
 
     const params = new URLSearchParams({
       client_id: cfg.clientId,
@@ -91,13 +97,36 @@ export class OAuthService {
   }
 
   /** A-01: exchanges code for token, fetches profile, finds or creates user, returns session token. */
-  async processCallback(provider: OAuthProvider, code: string, state: string, ip: string, ua: string, deviceId?: string): Promise<{ token: string; user: RequestUser } | { mfa: string; user: RequestUser }> {
+  async processCallback(provider: OAuthProvider, code: string, state: string, ip: string, ua: string, deviceId?: string): Promise<{ token: string; user: RequestUser } | { mfa: string; user: RequestUser } | { link: LinkOutcome }> {
     const stateData = await this.stateStore.get(state);
-    if (!stateData || stateData.provider !== provider) {
+    if (!stateData || stateData.provider !== provider || stateData.mergeFromUserId) {
       throw new BadRequestException({ error: { code: 'INVALID_OAUTH_STATE', message: 'Неверный или устаревший ответ сервиса входа. Попробуйте войти ещё раз' } });
     }
     await this.stateStore.delete(state);
+    if (stateData.linkUserId) {
+      // A-06: binding goes back to the account page with a result, never to the login page and never with a new session.
+      try {
+        const id = await this.fetchIdentity(provider, code, state, stateData, deviceId);
+        return { link: await this.bind(stateData.linkUserId, provider, id.providerUserId, ip) };
+      } catch (e) {
+        if (e instanceof HttpException && e.getStatus() === 403) return { link: { error: 'blocked' } };
+        if (e instanceof BadRequestException) return { link: { error: 'oauth' } };
+        throw e;
+      }
+    }
+    const { providerUserId, displayName } = await this.fetchIdentity(provider, code, state, stateData, deviceId);
 
+    // TS-31, TS-32: a VK / Яндекс account of a blocked person neither logs in nor registers a new account.
+    await this.blocked?.assertFree(provider === 'vk' ? 'VK' : 'YANDEX', providerUserId, 'LOGIN', ip);
+    const user = await this.findOrCreateUser(provider, providerUserId, displayName);
+    // AD-01: an administrator or a moderator needs the second factor; no session before it.
+    if (user.status === 'ACTIVE' && this.mfa.required(user)) return { mfa: this.mfa.begin(user.id), user };
+    const token = await this.sessions.create(user.id, { ip, ua });
+    return { token, user };
+  }
+
+  /** The code is exchanged for a token and the profile is read: who this person is at the provider. */
+  private async fetchIdentity(provider: OAuthProvider, code: string, state: string, stateData: OAuthStateData, deviceId?: string): Promise<{ providerUserId: string; displayName: string }> {
     const cfg = this.providerConfig(provider);
     const live = this.config.oauthLive;
 
@@ -149,44 +178,72 @@ export class OAuthService {
     if (!providerUserId) {
       throw new BadRequestException({ error: { code: 'OAUTH_PROFILE_FAILED', message: 'Провайдер не вернул идентификатор пользователя' } });
     }
-
-    // TS-31, TS-32: a VK / Яндекс account of a blocked person neither logs in nor registers a new account.
-    await this.blocked?.assertFree(provider === 'vk' ? 'VK' : 'YANDEX', providerUserId, 'LOGIN', ip);
-    const user = await this.findOrCreateUser(provider, providerUserId, displayName);
-    // AD-01: an administrator or a moderator needs the second factor; no session before it.
-    if (user.status === 'ACTIVE' && this.mfa.required(user)) return { mfa: this.mfa.begin(user.id), user };
-    const token = await this.sessions.create(user.id, { ip, ua });
-    return { token, user };
+    return { providerUserId, displayName };
   }
 
-  /** A-01: §2.5 links a provider identity to an existing user (account binding). */
-  async linkIdentity(userId: string, provider: OAuthProvider, providerUserId: string): Promise<void> {
+  /**
+   * A-06 · binds a VK / Яндекс account to the signed-in one. Free — it is added; already here — nothing to do; another account of this
+   * provider is already bound — «taken» (unbind it first); it signs in to another account of the site — an offer to join that account.
+   */
+  private async bind(userId: string, provider: OAuthProvider, providerUserId: string, ip: string): Promise<LinkOutcome> {
     // TS-32: binding the identifier of a blocked account to another account is the same return, by a side door.
-    await this.blocked?.assertFree(provider === 'vk' ? 'VK' : 'YANDEX', providerUserId, 'LINK');
-    const existing = await this.db
-      .select()
+    await this.blocked?.assertFree(PROVIDER_ENUM[provider], providerUserId, 'LINK', ip);
+    const [owner] = await this.db
+      .select({ userId: schema.authIdentities.userId })
+      .from(schema.authIdentities)
+      .where(and(eq(schema.authIdentities.provider, PROVIDER_ENUM[provider]), eq(schema.authIdentities.providerUserId, providerUserId)));
+    if (owner?.userId === userId) return { linked: provider };
+    if (owner) {
+      const token = randomBytes(24).toString('hex');
+      await this.stateStore.save(MERGE_KEY(token), { provider, codeVerifier: '', redirectUri: '', linkUserId: userId, mergeFromUserId: owner.userId });
+      return { merge: token };
+    }
+    const [same] = await this.db
+      .select({ id: schema.authIdentities.id })
+      .from(schema.authIdentities)
+      .where(and(eq(schema.authIdentities.userId, userId), eq(schema.authIdentities.provider, PROVIDER_ENUM[provider])));
+    if (same) return { error: 'taken' };
+    await this.db.insert(schema.authIdentities).values({ id: generateId(), userId, provider: PROVIDER_ENUM[provider], providerUserId });
+    await this.audit.log({ actorId: userId, action: 'IDENTITY_LINKED', targetType: 'user', targetId: userId, meta: { provider } });
+    return { linked: provider };
+  }
+
+  /** A-06 · the offer made by `bind`: whose account joins this one. `null` — no such offer for this person (or it is older than 10 minutes). */
+  async mergeOffer(token: string, userId: string): Promise<{ fromUserId: string; provider: OAuthProvider } | null> {
+    if (!/^[0-9a-f]{48}$/.test(token)) return null;
+    const data = await this.stateStore.get(MERGE_KEY(token));
+    if (!data?.mergeFromUserId || data.linkUserId !== userId) return null;
+    return { fromUserId: data.mergeFromUserId, provider: data.provider as OAuthProvider };
+  }
+
+  /** A-06 · an offer is used once. */
+  async dropMergeOffer(token: string): Promise<void> {
+    await this.stateStore.delete(MERGE_KEY(token));
+  }
+
+  /** A-06 · the ways in of this account, oldest first. */
+  async identities(userId: string): Promise<Array<{ provider: 'vk' | 'yandex' | 'phone'; createdAt: Date }>> {
+    const rows = await this.db
+      .select({ provider: schema.authIdentities.provider, createdAt: schema.authIdentities.createdAt })
       .from(schema.authIdentities)
       .where(eq(schema.authIdentities.userId, userId))
-      .limit(1);
-    if (existing[0]) return; // already linked
-    await this.db.insert(schema.authIdentities).values({
-      id: generateId(),
-      userId,
-      provider: provider.toUpperCase() as 'VK' | 'YANDEX',
-      providerUserId,
-    });
+      .orderBy(schema.authIdentities.createdAt);
+    return rows.map((r) => ({ provider: r.provider.toLowerCase() as 'vk' | 'yandex' | 'phone', createdAt: r.createdAt }));
   }
 
-  /** A-01: §2.5 unlinks a provider identity; requires at least one other identity to remain. */
+  /** A-06: unlinks a provider identity; requires at least one other identity to remain. */
   async unlinkIdentity(userId: string, provider: OAuthProvider): Promise<void> {
     const all = await this.db.select().from(schema.authIdentities).where(eq(schema.authIdentities.userId, userId));
+    if (!all.some((i) => i.provider === PROVIDER_ENUM[provider])) {
+      throw new BadRequestException({ error: { code: 'NOT_LINKED', message: 'Этот способ входа не привязан' } });
+    }
     if (all.length <= 1) {
       throw new BadRequestException({ error: { code: 'CANNOT_UNLINK_LAST_IDENTITY', message: 'Нельзя отвязать последний способ входа' } });
     }
-    const providerEnum = provider.toUpperCase() as 'VK' | 'YANDEX';
     await this.db
       .delete(schema.authIdentities)
-      .where(and(eq(schema.authIdentities.userId, userId), eq(schema.authIdentities.provider, providerEnum)));
+      .where(and(eq(schema.authIdentities.userId, userId), eq(schema.authIdentities.provider, PROVIDER_ENUM[provider])));
+    await this.audit.log({ actorId: userId, action: 'IDENTITY_UNLINKED', targetType: 'user', targetId: userId, meta: { provider } });
   }
 
   private callbackUri(provider: OAuthProvider): string {

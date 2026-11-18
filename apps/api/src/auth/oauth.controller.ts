@@ -72,6 +72,13 @@ export class OAuthController {
       }
       throw e;
     }
+    if ('link' in result) {
+      // A-06: binding returns to the account page; the session cookie is not touched.
+      const r = result.link;
+      const q = 'linked' in r ? `linked=${r.linked}` : 'merge' in r ? `merge=${r.merge}` : `link_error=${r.error}`;
+      res.redirect(302, `${this.config.webUrl}/account?${q}`);
+      return;
+    }
     const secure = this.config.databaseUrl.includes('ssl') || process.env.NODE_ENV === 'production';
     if ('mfa' in result) {
       // AD-01: no session yet — the second factor comes first.

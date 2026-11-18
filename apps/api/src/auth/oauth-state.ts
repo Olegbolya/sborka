@@ -4,6 +4,10 @@ export interface OAuthStateData {
   provider: string;
   codeVerifier: string;
   redirectUri: string;
+  /** A-06 · the flow binds one more way in to this signed-in account instead of signing in. */
+  linkUserId?: string;
+  /** A-06 · an offer to join this other account into `linkUserId` (kept under the key `merge:<token>`). */
+  mergeFromUserId?: string;
 }
 
 export interface OAuthStateStore {

@@ -23,6 +23,7 @@ import { ConsentService } from './auth/consent.service.js';
 import { ConsentController, LegalController } from './auth/consent.controller.js';
 import { AccountService } from './auth/account.service.js';
 import { AccountController } from './auth/account.controller.js';
+import { AccountMergeService } from './auth/account-merge.service.js';
 import { TotpService } from './auth/totp.service.js';
 import { AdminLoginController } from './auth/admin-login.controller.js';
 import { AdminMfaService } from './auth/admin-mfa.service.js';
@@ -104,6 +105,7 @@ export class AppModule {
         LegalDocumentService,
         ConsentService,
         AccountService,
+        AccountMergeService,
         TotpService,
         AuditLogService,
         { provide: API_CONFIG, useValue: config },

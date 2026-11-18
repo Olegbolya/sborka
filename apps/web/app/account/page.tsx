@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, apiRaw, errorText, isApiError } from '../../lib/api-browser';
 import { VkSettings } from '../../components/account/VkSettings';
 import { PlanStatus } from '../../components/account/PlanStatus';
+import { LoginMethods } from '../../components/account/LoginMethods';
 import { CabinetHeader } from '../../components/cabinet/CabinetHeader';
 
 const s = {
@@ -74,6 +75,7 @@ export default function AccountPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [planKey, setPlanKey] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -157,7 +159,16 @@ export default function AccountPage() {
       <h1 style={s.heading}>Мой аккаунт</h1>
       {error && <p role="alert" style={s.error}>{error}</p>}
       {notice && <p role="status" style={s.ok}>{notice}</p>}
-      {!deleted && <PlanStatus titleStyle={s.sectionTitle} textStyle={s.notice} />}
+      {!deleted && <PlanStatus key={planKey} titleStyle={s.sectionTitle} textStyle={s.notice} />}
+      {!deleted && (
+        <LoginMethods
+          s={s}
+          onMerged={() => {
+            setPlanKey((k) => k + 1);
+            void load();
+          }}
+        />
+      )}
 
       {deleted && (
         <section style={s.section}>
