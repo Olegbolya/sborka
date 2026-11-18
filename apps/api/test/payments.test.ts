@@ -587,7 +587,7 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
       await adm('get', '/orders', admin.cookie).expect(200);
     });
 
-    it('AD-12 · доход с 1 января: физлица и юрлица/ИП отдельно, налог 4 % и 6 %; смена плательщика требует ИНН; возврат уменьшает доход', async () => {
+    it('AD-12 · доход с 1 января: физлица и юрлица/ИП отдельно, налог 4 % и 6 %; смена плательщика требует ИНН; возврат уменьшает доход; AD-05 · видно, что возврат запрошен, и название тарифа', async () => {
       const admin = await adminLogin();
       const before = await income(admin.cookie);
       const payer = await login(t, db);
@@ -604,14 +604,21 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
       expect(asBusiness.personKop).toBe(before.personKop);
       expect(asBusiness.totalKop).toBe(afterPay.totalKop);
       expect(asBusiness.taxKop - afterPay.taxKop).toBe(Math.round(o.amountKop * 0.06) - Math.round(o.amountKop * 0.04));
-      // возврат: провайдеру уходит запрос, доход уменьшается только когда провайдер подтвердил
+      // в списке заказов — название тарифа, а не код; возврат ещё не запрашивали
+      const listed = async () => ((await adm('get', `/orders?q=${o.id}`, admin.cookie).expect(200)).body as { orders: Array<{ id: string; status: string; planTitle: string | null; refundRequestedAt: string | null; refundedAt: string | null }> }).orders.find((x) => x.id === o.id)!;
+      expect(await listed()).toMatchObject({ status: 'PAID', planTitle: 'Автор', refundRequestedAt: null });
+      // возврат (ADR-116): ЮKassa ответила «succeeded» на наш запрос — заказ закрыт сразу, доход уменьшился; уведомление потом ничего не меняет
       await adm('post', `/orders/${o.id}/refund`, admin.cookie, { reason: '' }).expect(400);
       const refund = await adm('post', `/orders/${o.id}/refund`, admin.cookie, { reason: 'Просьба покупателя' }).expect(201);
       expect((refund.body as { status: string }).status).toBe('succeeded');
-      expect((await income(admin.cookie)).totalKop).toBe(asBusiness.totalKop);
-      await notify(t, { event: 'refund.succeeded', object: { id: 'rf-x', payment_id: o.providerPaymentId, status: 'succeeded' } }).expect(200);
       const afterRefund = await income(admin.cookie);
       expect(afterRefund.totalKop).toBe(before.totalKop);
+      const returned = await listed();
+      expect(returned.status).toBe('REFUNDED');
+      expect(returned.refundRequestedAt).not.toBeNull();
+      expect(returned.refundedAt).not.toBeNull();
+      await notify(t, { event: 'refund.succeeded', object: { id: 'rf-x', payment_id: o.providerPaymentId, status: 'succeeded' } }).expect(200);
+      expect((await income(admin.cookie)).totalKop).toBe(before.totalKop);
       await adm('post', `/orders/${o.id}/refund`, admin.cookie, { reason: 'Ещё раз' }).expect(409);
       const log = await db.db.select({ action: schema.auditLog.action }).from(schema.auditLog).where(eq(schema.auditLog.targetId, o.id));
       expect(log.map((l) => l.action).sort()).toEqual(['ORDER_PAYER_CHANGED', 'ORDER_REFUND_REQUESTED']);

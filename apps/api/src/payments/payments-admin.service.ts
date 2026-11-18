@@ -19,6 +19,10 @@ export interface AdminOrderView {
   createdAt: Date;
   paidAt: Date | null;
   refundedAt: Date | null;
+  /** AD-05 · возврат уже запрошен у платёжного сервиса (последний запрос), а подтверждения ещё может не быть; `null` — не запрашивали. */
+  refundRequestedAt: Date | null;
+  /** Название тарифа для людей («Автор»), а не код (`AUTHOR`); `null` — заказ не на тариф. */
+  planTitle: string | null;
   /** Чек самозанятого в «Мой налог» выдан вручную (ADR-093): когда отмечено; `null` — не отмечено. */
   receiptIssuedAt: Date | null;
   /** Платёж принят деньгами, а чек ещё не отмечен выданным. */
@@ -79,6 +83,17 @@ export class PaymentsAdminService {
       .limit(50)
       .offset(page * 50);
     const [total] = await this.db.select({ n: sql<number>`count(*)::int` }).from(schema.orders).leftJoin(schema.users, eq(schema.users.id, schema.orders.userId)).where(where);
+    const ids = rows.map((r) => r.order.id);
+    const requested = new Map<string, Date>();
+    if (ids.length > 0) {
+      const log = await this.db
+        .select({ targetId: schema.auditLog.targetId, at: sql<Date>`max(${schema.auditLog.createdAt})` })
+        .from(schema.auditLog)
+        .where(and(eq(schema.auditLog.action, 'ORDER_REFUND_REQUESTED'), eq(schema.auditLog.targetType, 'ORDER'), inArray(schema.auditLog.targetId, ids)))
+        .groupBy(schema.auditLog.targetId);
+      for (const l of log) requested.set(l.targetId, new Date(l.at));
+    }
+    const titles = new Map((await this.db.select({ code: schema.plans.code, title: schema.plans.title }).from(schema.plans)).map((p) => [p.code, p.title]));
     return {
       total: total?.n ?? 0,
       orders: rows.map(({ order: o, userName }) => ({
@@ -92,6 +107,8 @@ export class PaymentsAdminService {
         createdAt: o.createdAt,
         paidAt: o.paidAt,
         refundedAt: o.refundedAt,
+        refundRequestedAt: requested.get(o.id) ?? null,
+        planTitle: typeof o.item.planCode === 'string' ? (titles.get(o.item.planCode) ?? null) : null,
         receiptIssuedAt: issuedAt(o.receipt),
         needsReceipt: receiptDue(o) && o.receipt === null,
         item: o.item,

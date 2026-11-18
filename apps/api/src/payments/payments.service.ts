@@ -400,11 +400,16 @@ export class PaymentsService {
     if (!order || order.status !== 'PAID' || !order.providerPaymentId) throw fail(409, 'REFUND_IMPOSSIBLE', 'Вернуть можно только оплаченный заказ.');
     const provider = this.providerNamed(order.provider);
     if (!provider) throw fail(503, 'PAYMENTS_UNAVAILABLE', `Заказ оплачен через ${PROVIDER_TITLES[order.provider] ?? 'другой платёжный сервис'}, а ключи этого сервиса на сервере не подключены. Верните их в настройки сервера, чтобы сделать возврат.`);
+    let result: { refundId: string; status: string };
     try {
-      return await provider.refund({ providerPaymentId: order.providerPaymentId, amountKop: order.amountKop, idempotenceKey: `refund-${order.id}` });
+      result = await provider.refund({ providerPaymentId: order.providerPaymentId, amountKop: order.amountKop, idempotenceKey: `refund-${order.id}` });
     } catch (e) {
       if (e instanceof PaymentProviderError) throw fail(502, 'PAYMENTS_FAILED', 'Платёжный сервис отказал в возврате.');
       throw e;
     }
+    // ADR-116: the provider answered our own request with the key of the shop that the refund is done — the order is closed at once;
+    // the later notice finds it already returned and changes nothing. «processing» (Robokassa) waits for the notice as before.
+    if (result.status === 'succeeded') await this.markRefunded(order.id);
+    return result;
   }
 }

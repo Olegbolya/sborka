@@ -99,6 +99,8 @@ describe('P7.3 · переключение платёжного провайде
     expect(yooRefund.url).toBe('https://api.yookassa.test/v3/refunds');
     expect(yooRefund.body).toMatchObject({ payment_id: old.providerPaymentId, amount: { value: '199.00' } });
     expect(rk.refunds.length).toBe(refundsBefore);
+    // ADR-116: ЮKassa ответила «succeeded» — заказ возвращён сразу, не дожидаясь уведомления.
+    expect((await db.db.select().from(schema.orders).where(eq(schema.orders.id, old.id)))[0]!.status).toBe('REFUNDED');
 
     const res = await request(t.http()).post(`/${API_PREFIX}/orders`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ kind: 'SUBSCRIPTION', planCode: 'AUTHOR', period: 'MONTH' }).expect(201);
     const [fresh] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, res.body.orderId as string));
@@ -110,6 +112,8 @@ describe('P7.3 · переключение платёжного провайде
     await payments.refund(fresh!.id);
     expect(rk.refunds.at(-1)).toEqual({ opKey: `key-${fresh!.providerPaymentId!}`, sum: fresh!.amountKop / 100, auth: 'ok' });
     expect(yoo.calls.length).toBe(yooCalls);
+    // Robokassa отвечает «processing»: заказ остаётся оплаченным до её уведомления.
+    expect((await db.db.select().from(schema.orders).where(eq(schema.orders.id, fresh!.id)))[0]!.status).toBe('PAID');
   });
 
   it('P7.3 · ADR-113: возврат заказа провайдера, чьих ключей нет на сервере, отклоняется понятным сообщением', async () => {

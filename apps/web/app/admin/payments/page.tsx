@@ -26,6 +26,8 @@ interface AdminOrder {
   createdAt: string;
   paidAt: string | null;
   refundedAt: string | null;
+  refundRequestedAt: string | null;
+  planTitle: string | null;
   receiptIssuedAt: string | null;
   needsReceipt: boolean;
   item: Record<string, unknown>;
@@ -95,7 +97,7 @@ function OrderRow({ o, onDone }: { o: AdminOrder; onDone: () => void }) {
       <tr data-testid={`order-${o.id}`}>
         <td style={css.td}>{dateTime(o.paidAt ?? o.createdAt)}</td>
         <td style={css.td}>{o.user?.displayName ?? '—'}</td>
-        <td style={css.td}>{KIND[o.kind] ?? o.kind}{typeof o.item.planCode === 'string' ? ` · ${o.item.planCode}` : ''}</td>
+        <td style={css.td}>{KIND[o.kind] ?? o.kind}{o.planTitle && o.kind === 'SUBSCRIPTION' ? ` «${o.planTitle}»` : ''}{o.item.period === 'YEAR' ? ' на год' : o.item.period === 'MONTH' ? ' на месяц' : ''}</td>
         <td style={css.td}>{rubles(o.amountKop)}</td>
         <td style={css.td}><Badge color={st.color}>{st.label}</Badge></td>
         <td style={css.td}>{o.provider === 'manual' ? 'вручную' : o.provider === 'promo' ? 'по промокоду' : o.payerType === 'BUSINESS' ? `юрлицо/ИП${o.payerInn ? `, ИНН ${o.payerInn}` : ''}` : 'физлицо'}</td>
@@ -112,13 +114,24 @@ function OrderRow({ o, onDone }: { o: AdminOrder; onDone: () => void }) {
             </div>
           ) : null}
         </td>
-        <td style={css.td}>
+        <td style={css.td} data-testid={`order-actions-${o.id}`}>
           {o.provider !== 'manual' && o.provider !== 'promo' && o.status === 'PAID' ? (
             <div style={css.row}>
               <button type="button" style={css.btnLight} onClick={() => setOpen(open === 'payer' ? '' : 'payer')}>Плательщик</button>
-              <button type="button" style={css.btnDanger} onClick={() => setOpen(open === 'refund' ? '' : 'refund')}>Вернуть деньги</button>
+              {o.refundRequestedAt ? null : <button type="button" style={css.btnDanger} onClick={() => setOpen(open === 'refund' ? '' : 'refund')}>Вернуть деньги</button>}
             </div>
           ) : null}
+          {/* AD-05 · после «Подтвердить возврат» видно, что возврат уже запрошен, — второй раз деньги не просят. */}
+          {o.status === 'PAID' && o.refundRequestedAt ? (
+            <div data-testid={`refund-pending-${o.id}`} style={{ marginTop: 8 }}>
+              <Badge color="#d97706">Возврат запрошен {dateTime(o.refundRequestedAt)}</Badge>
+              <p style={{ ...css.muted, margin: '4px 0 0' }}>Ждём подтверждения платёжного сервиса — обычно несколько минут.</p>
+            </div>
+          ) : null}
+          {o.status === 'REFUNDED' && o.refundedAt ? (
+            <span style={css.muted} data-testid={`refund-done-${o.id}`}>Деньги возвращены {dateTime(o.refundedAt)}</span>
+          ) : null}
+          {!open && ok ? <Notice ok={ok} /> : null}
         </td>
       </tr>
       {open ? (
@@ -130,7 +143,7 @@ function OrderRow({ o, onDone }: { o: AdminOrder; onDone: () => void }) {
                 <Field label={`Причина возврата ${rubles(o.amountKop)} (от 3 знаков)`}>
                   <input style={{ ...css.input, minWidth: 280 }} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} />
                 </Field>
-                <button type="button" style={css.btnDanger} disabled={busy || reason.trim().length < 3} onClick={() => void run(() => api(`/admin/payments/orders/${o.id}/refund`, { method: 'POST', body: { reason } }), 'Запрос на возврат отправлен: заказ станет «Возвращён», когда платёжный сервис подтвердит')}>
+                <button type="button" style={css.btnDanger} disabled={busy || reason.trim().length < 3} onClick={() => void run(() => api(`/admin/payments/orders/${o.id}/refund`, { method: 'POST', body: { reason } }), 'Возврат отправлен в платёжный сервис. Если он подтвердит сразу, заказ уже «Возвращён»; иначе станет таким после подтверждения.')}>
                   Подтвердить возврат
                 </button>
               </div>
