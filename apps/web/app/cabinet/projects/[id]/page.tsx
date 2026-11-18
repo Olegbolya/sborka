@@ -7,6 +7,7 @@ import { ModerationNotice } from '../../../../components/admin/ModerationNotice'
 import { PassOffer } from '../../../../components/billing/PassOffer';
 import { AnalyticsTab } from '../../../../components/cabinet/AnalyticsTab';
 import { BoardTab } from '../../../../components/cabinet/BoardTab';
+import { CabinetHeader } from '../../../../components/cabinet/CabinetHeader';
 import { AgeRatingPicker } from '../../../../components/shared/AgeRatingPicker';
 
 type Tab = 'responses' | 'analytics' | 'board' | 'access' | 'settings' | 'export' | 'operator';
@@ -1169,10 +1170,10 @@ export default function ProjectDetailPage() {
   ];
 
   return (
+    <>
+    <CabinetHeader current="projects" />
     <main style={s.wrap}>
       <nav style={s.nav}>
-        <Link href="/account" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Аккаунт</Link>
-        <span>/</span>
         <Link href="/cabinet/projects" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Мои сборки</Link>
         <span>/</span>
         <span style={{ color: 'var(--fg)' }}>{project.title}</span>
@@ -1206,5 +1207,6 @@ export default function ProjectDetailPage() {
       {tab === 'operator' && <OperatorTab projectId={projectId} setError={setError} />}
       {tab === 'export' && <ExportTab projectId={projectId} />}
     </main>
+    </>
   );
 }

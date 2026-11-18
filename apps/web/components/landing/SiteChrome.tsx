@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { LEGAL_LINKS } from '../../lib/landing/content';
+import { CabinetHeader, type CabinetSection } from '../cabinet/CabinetHeader';
 import { AccountLink } from './AccountLink';
 import { CookieSettingsButton } from './CookieSettingsButton';
 import './landing.css';
@@ -56,13 +57,14 @@ export function SiteFooter() {
   );
 }
 
-export function SitePage({ children }: { children: ReactNode }) {
+/** `cabinet` — a page of the cabinet (D-01): the same chrome, but the header shows the sections of the cabinet. */
+export function SitePage({ children, cabinet }: { children: ReactNode; cabinet?: CabinetSection }) {
   return (
     <>
       <a href="#content" className="lp-skip">
         К содержимому
       </a>
-      <SiteHeader />
+      {cabinet ? <CabinetHeader current={cabinet} /> : <SiteHeader />}
       <main id="content">{children}</main>
       <SiteFooter />
     </>

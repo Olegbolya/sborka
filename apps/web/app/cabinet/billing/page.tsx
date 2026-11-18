@@ -13,7 +13,7 @@ export default async function BillingPage() {
   const h = await headers();
   const plans = await loadPlans(h.get('x-request-id'));
   return (
-    <SitePage>
+    <SitePage cabinet="billing">
       <section className="lp-section">
         <div className="lp-wrap">
           <h1 className="lp-page-title">Тариф и оплата</h1>

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Notifications } from '../../../components/admin/Notifications';
+import { CabinetHeader } from '../../../components/cabinet/CabinetHeader';
 
 type ProjectStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'BLOCKED';
 
@@ -46,7 +47,6 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 const s = {
   wrap: { minHeight: '100dvh', padding: '48px 16px', maxWidth: 900, margin: '0 auto' },
-  nav: { fontSize: 14, marginBottom: 32, display: 'flex', gap: 12, alignItems: 'center', color: 'var(--muted)' },
   heading: { fontSize: 'clamp(22px, 4vw, 30px)', lineHeight: 1.2, margin: '0 0 24px', letterSpacing: '-0.02em' },
   toolbar: { display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' as const, alignItems: 'center' },
   input: { flex: '1 1 200px', padding: '8px 12px', fontSize: 14, borderRadius: 8, border: '1px solid var(--border, #ddd)', background: 'transparent', color: 'inherit' },
@@ -157,15 +157,9 @@ export default function ProjectsPage() {
   }
 
   return (
+    <>
+    <CabinetHeader current="projects" />
     <main style={s.wrap}>
-      <nav style={s.nav}>
-        <Link href="/cabinet/billing" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Тариф и оплата</Link>
-        <Link href="/account" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Аккаунт</Link>
-        <span>/</span>
-        <span style={{ color: 'var(--fg)' }}>Мои сборки</span>
-        <span>/</span>
-        <Link href="/app/themes" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Мои темы</Link>
-      </nav>
       <h1 style={s.heading}>Мои сборки</h1>
       <Notifications />
 
@@ -299,5 +293,6 @@ export default function ProjectsPage() {
         </div>
       ))}
     </main>
+    </>
   );
 }

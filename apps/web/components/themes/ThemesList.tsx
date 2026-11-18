@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { errorText } from '../../lib/api-browser';
 import { createTheme, deleteTheme, duplicateTheme, listThemes, setDefaultTheme, themeFromFile, type ThemeSummary } from '../../lib/themes/api';
 import '../editor/editor.css';
+import { CabinetHeader } from '../cabinet/CabinetHeader';
 
 const SWATCHES = ['background', 'surface', 'primary', 'accent', 'text'];
 
@@ -56,10 +57,9 @@ export function ThemesList() {
   };
 
   return (
+    <>
+    <CabinetHeader current="themes" />
     <main style={{ maxWidth: 900, margin: '0 auto', padding: '32px 16px' }} data-testid="themes-page">
-      <nav style={{ marginBottom: 16 }}>
-        <Link href="/cabinet/projects">← Мои сборки</Link>
-      </nav>
       <h1 style={{ fontSize: 28, margin: '0 0 8px' }}>Мои темы</h1>
       <p className="ed-hint">Тема — это цвета, шрифты, фон и стиль блоков. Применяйте её к сборкам и меняйте в одном месте.</p>
       {error && (
@@ -144,5 +144,6 @@ export function ThemesList() {
         </ul>
       )}
     </main>
+    </>
   );
 }

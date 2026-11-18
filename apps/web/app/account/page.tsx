@@ -3,9 +3,11 @@ import { clearClipboard } from '../../lib/editor/clipboard';
 import { useCallback, useEffect, useState } from 'react';
 import { api, apiRaw, errorText, isApiError } from '../../lib/api-browser';
 import { VkSettings } from '../../components/account/VkSettings';
+import { PlanStatus } from '../../components/account/PlanStatus';
+import { CabinetHeader } from '../../components/cabinet/CabinetHeader';
 
 const s = {
-  main: { minHeight: '100dvh', padding: '48px 16px', maxWidth: 640, margin: '0 auto' },
+  main: { minHeight: '100dvh', padding: '24px 16px 48px', maxWidth: 640, margin: '0 auto' },
   heading: { fontSize: 'clamp(22px, 4vw, 30px)', lineHeight: 1.2, margin: '0 0 32px', letterSpacing: '-0.02em' },
   section: { marginBottom: 32 },
   sectionTitle: { fontSize: 14, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 12 },
@@ -135,11 +137,13 @@ export default function AccountPage() {
 
   if (!profile) {
     return (
+      <>
+      <CabinetHeader current="account" />
       <main style={s.main}>
-        <nav style={{ fontSize: 14, marginBottom: 24 }}><a href="/cabinet/projects" data-testid="account-back" style={{ color: 'var(--muted)', textDecoration: 'none' }}>← К моим сборкам</a></nav>
         <h1 style={s.heading}>Мой аккаунт</h1>
         {error ? <p role="alert" style={s.error}>{error}</p> : <p style={s.notice}>Загружаем…</p>}
       </main>
+      </>
     );
   }
 
@@ -147,11 +151,13 @@ export default function AccountPage() {
   const activeMarketing = consents.some((c) => c.kind === 'marketing_consent' && !c.withdrawnAt);
 
   return (
+    <>
+    <CabinetHeader current="account" />
     <main style={s.main}>
-      <nav style={{ fontSize: 14, marginBottom: 24 }}><a href="/cabinet/projects" data-testid="account-back" style={{ color: 'var(--muted)', textDecoration: 'none' }}>← К моим сборкам</a></nav>
-        <h1 style={s.heading}>Мой аккаунт</h1>
+      <h1 style={s.heading}>Мой аккаунт</h1>
       {error && <p role="alert" style={s.error}>{error}</p>}
       {notice && <p role="status" style={s.ok}>{notice}</p>}
+      {!deleted && <PlanStatus titleStyle={s.sectionTitle} textStyle={s.notice} />}
 
       {deleted && (
         <section style={s.section}>
@@ -333,5 +339,6 @@ export default function AccountPage() {
         </>
       )}
     </main>
+    </>
   );
 }
