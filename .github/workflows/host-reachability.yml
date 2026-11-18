@@ -28,7 +28,8 @@ jobs:
             if timeout 10 bash -c "</dev/tcp/$HOST/$p" 2>/dev/null; then r="открыт"; else r="нет ответа"; fi
             OUT="$OUT порт $p: $r;"
           done
-          banner="$(timeout 10 ssh-keyscan -T 8 -p 22 "$HOST" 2>&1 | grep -m1 -E '^#|ssh-' || true)"
-          OUT="$OUT SSH: ${banner:-нет ответа}"
+          # The greeting of the SSH server is read straight from the port: a filter may let the connection through and then hold the data.
+          banner="$(timeout 25 bash -c "exec 3<>/dev/tcp/$HOST/22; head -c 64 <&3" 2>/dev/null | tr -d '\r\n' || true)"
+          OUT="$OUT приветствие SSH: ${banner:-не пришло за 25 с}"
           echo "$OUT"
           echo "::notice title=Связь с $HOST::$OUT"
