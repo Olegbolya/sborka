@@ -13,6 +13,10 @@ on:
         description: 'Проверка отката: новая сборка API намеренно не запустится'
         type: boolean
         default: false
+      server:
+        description: 'Адрес другого сервера (переезд, ADR-115); пусто — основной сервер'
+        type: string
+        default: ''
 
 concurrency:
   group: production-deploy
@@ -28,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      SERVER: deploy@95.105.7.135
+      SERVER: deploy@${{ inputs.server || '95.105.7.135' }}
     steps:
       - uses: actions/checkout@v4
         with:
