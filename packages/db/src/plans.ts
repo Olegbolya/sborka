@@ -199,7 +199,6 @@ export const PLANS: readonly PlanSeed[] = [
       directExternalLinks: false,
       invoicePayment: false,
       supportHours: 48,
-      trialDays: 3,
     },
   },
   {

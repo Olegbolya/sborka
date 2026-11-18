@@ -39,7 +39,13 @@ describe('миграции', () => {
     await runMigrations(t.db);
     await runMigrations(t.db);
     const applied = await t.db.execute<{ n: string }>(sql`select count(*)::text as n from drizzle.__drizzle_migrations`);
-    expect(Number(applied.rows[0]?.n)).toBe(29);
+    expect(Number(applied.rows[0]?.n)).toBe(30);
+  });
+
+  it('P7.4 · ADR-114: после миграций пробный период без карты есть только у «Автора» (3 дня), у «Плюса» его нет', async () => {
+    const rows = await t.db.execute<{ code: string; trial: string | null }>(sql`select code, limits->>'trialDays' as trial from plans order by code`);
+    const byCode = Object.fromEntries(rows.rows.map((r) => [r.code, r.trial]));
+    expect(byCode).toMatchObject({ AUTHOR: '3', PLUS: null, PRO: null, FREE: null, PASS: null });
   });
 
   it('checkDatabase отвечает true для живой базы и false для недоступной', async () => {
