@@ -57,10 +57,25 @@ jobs:
       - name: pnpm verify (включая типы e2e)
         run: pnpm verify
 
+  # ADR-121 (разрешение владельца 19.11.2026): один поток шёл 26–29 мин и упирался в предел 30 мин; теперь два потока
+  # одновременно — телефон и компьютер. Тесты те же; замеры скорости (perf-390) — во втором потоке, отдельным шагом
+  # после всех тестов компьютера, чтобы процессор ни с чем не делить (как и раньше, ADR-028).
   e2e:
-    name: E2E (Playwright)
+    name: E2E (Playwright) · ${{ matrix.part }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: телефон 390
+            key: mobile
+            projects: --project=mobile-390
+            perf: false
+          - part: компьютер 1440 и замеры скорости
+            key: desktop
+            projects: --project=desktop-1440
+            perf: true
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -75,15 +90,22 @@ jobs:
       - name: Сборка
         run: pnpm build
       - name: E2E
-        run: pnpm e2e
+        run: pnpm e2e ${{ matrix.projects }}
+      - name: Замеры скорости (после всех тестов, одни)
+        if: matrix.perf
+        run: pnpm e2e --project=perf-390 --no-deps --output=test-results-perf
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report-perf
       - name: Отчёт и скриншоты
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-report-${{ github.sha }}
+          name: e2e-report-${{ matrix.key }}-${{ github.sha }}
           path: |
             playwright-report/
+            playwright-report-perf/
             test-results/
+            test-results-perf/
             e2e/__screenshots__/
           retention-days: 14
           if-no-files-found: ignore
