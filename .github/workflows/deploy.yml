@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      SERVER: deploy@${{ inputs.server || '95.105.7.135' }}
+      SERVER: deploy@${{ inputs.server || '195.209.215.79' }}
     steps:
       - uses: actions/checkout@v4
         with:

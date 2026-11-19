@@ -1,0 +1,103 @@
+name: Переезд на другой сервер
+
+# ADR-115 · Перенос Блоккера со старого сервера на новый: база, медиа, .env.prod и базы антивируса идут потоком
+# со старого сервера через раннер GitHub прямо на новый, ничего не сохраняется у GitHub и не печатается.
+#   check — только проверить оба сервера (ничего не останавливает);
+#   move  — остановить Блоккер на старом сервере, перенести и запустить на новом. Нужно ввести слово ПЕРЕЕЗД.
+# После move: A-записи домена — на новый адрес, затем на новом сервере `sudo bash ~/blokum/setup/infra/server-setup.sh`
+# (сертификат и базы антивируса). Процессы BST на старом сервере не трогаются.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check — проверка, move — перенос'
+        type: choice
+        options: [check, move]
+        default: check
+      from:
+        description: Адрес старого сервера
+        type: string
+        default: 95.105.7.135
+      to:
+        description: Адрес нового сервера
+        type: string
+        required: true
+      confirm:
+        description: 'Для переноса напишите ПЕРЕЕЗД'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: ${{ inputs.mode == 'move' && 'Перенос' || 'Проверка' }} ${{ inputs.from }} → ${{ inputs.to }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Проверка ввода
+        env:
+          MODE: ${{ inputs.mode }}
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          for a in "$FROM" "$TO"; do printf '%s' "$a" | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' || { echo "::error::Неверный адрес: $a"; exit 1; }; done
+          [ "$FROM" != "$TO" ] || { echo "::error::Старый и новый адрес совпадают"; exit 1; }
+          if [ "$MODE" = move ] && [ "$CONFIRM" != "ПЕРЕЕЗД" ]; then echo "::error::Для переноса в поле подтверждения нужно слово ПЕРЕЕЗД"; exit 1; fi
+      - name: Ключ доступа к серверам
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::Нет секрета DEPLOY_SSH_KEY"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+      - name: Скрипты на оба сервера
+        env:
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          $SSH "deploy@$FROM" 'cat > /tmp/blokum-send.sh' < infra/migrate/send.sh
+          $SSH "deploy@$TO" 'cat > /tmp/blokum-receive.sh' < infra/migrate/receive.sh
+      - name: Проверка обоих серверов
+        env:
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          echo "── старый сервер $FROM"; $SSH "deploy@$FROM" 'bash /tmp/blokum-send.sh check'
+          echo "── новый сервер $TO"; $SSH "deploy@$TO" 'bash /tmp/blokum-receive.sh check'
+      - name: Перенос
+        if: inputs.mode == 'move'
+        env:
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+        run: |
+          set -o pipefail
+          SSH="ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 -o ServerAliveInterval=15"
+          $SSH "deploy@$FROM" 'bash /tmp/blokum-send.sh send' | $SSH "deploy@$TO" 'bash /tmp/blokum-receive.sh receive'
+          echo "::notice title=Перенос завершён::Блоккер работает на $TO. Дальше: A-записи домена на $TO, затем на новом сервере sudo bash ~/blokum/setup/infra/server-setup.sh"
+      - name: Перенос сорвался — Блоккер снова работает на старом сервере
+        if: failure() && inputs.mode == 'move'
+        env:
+          FROM: ${{ inputs.from }}
+        run: |
+          ssh -i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "deploy@$FROM" 'pm2 start blokum-api blokum-worker >/dev/null && pm2 save >/dev/null && echo "✓ blokum-api и blokum-worker снова запущены"'
+          echo "::error title=Перенос не завершён::Старый сервер снова принимает данные, домен не менять. Причина — в шаге «Перенос»."
+      - name: Убрать скрипты
+        if: always()
+        env:
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          $SSH "deploy@$FROM" 'rm -f /tmp/blokum-send.sh' || true
+          $SSH "deploy@$TO" 'rm -f /tmp/blokum-receive.sh' || true

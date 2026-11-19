@@ -108,6 +108,18 @@ if [ "${#need_pkgs[@]}" -gt 0 ]; then
   run env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${need_pkgs[@]}"
   done_ "установлено: ${need_pkgs[*]}"
 fi
+# ADR-115: databases brought from the old server (ClamAV does not let them be downloaded from Russia) are put in place here,
+# where root is: infra/migrate/receive.sh leaves them in shared/clamav-import. A newer one already in place is kept.
+IMPORT="${SHARED}/clamav-import"
+if [ -d "$IMPORT" ] && [ -n "$(find "$IMPORT" -maxdepth 1 -name '*.c?d' 2>/dev/null)" ]; then
+  for f in "$IMPORT"/*.c?d; do
+    base="$(basename "$f")"
+    if [ "$DRY_RUN" = 0 ] && [ -f "/var/lib/clamav/$base" ] && [ "/var/lib/clamav/$base" -nt "$f" ]; then skip "база антивируса $base"; continue; fi
+    run install -o clamav -g clamav -m 644 "$f" "/var/lib/clamav/$base"
+    done_ "база антивируса $base"
+  done
+  run systemctl restart clamav-daemon
+fi
 run systemctl enable --now clamav-freshclam
 run systemctl enable --now clamav-daemon
 done_ "антивирус ClamAV запущен (базы обновляются freshclam)"
