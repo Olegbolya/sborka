@@ -112,11 +112,14 @@ export function ReportDialog({ slug, onClose }: { slug: string; onClose: () => v
 /** TPL-05.4 · «Собрать такую же»: the build page of the template on our own domain; the label tells the administrator it came from the player. */
 export const buildSimilarHref = (templateSlug: string): string => `/t/${encodeURIComponent(templateSlug)}/build?src=player`;
 
+/** ADR-120 · «Скопировать себе»: the copy page signs the person in if needed and opens the copy in the editor. */
+export const copyHref = (slug: string): string => `/copy/${encodeURIComponent(slug)}`;
+
 /** PL-16 · on every screen: «Создано пользователем · Пожаловаться» (on no tariff it goes away) and, on «Старт», the mark of the service. */
 /** D-18 · «Открыть табло»: the public board of the project. */
 export const boardHref = (code: string): string => `/b/${encodeURIComponent(code)}`;
 
-export function PlayFooter({ slug, watermark, ageRating = null, buildSimilar = null, board = null }: { slug: string; watermark: boolean; ageRating?: number | null; buildSimilar?: { slug: string } | null; board?: { code: string } | null }) {
+export function PlayFooter({ slug, watermark, ageRating = null, buildSimilar = null, board = null, copyable = false }: { slug: string; watermark: boolean; ageRating?: number | null; buildSimilar?: { slug: string } | null; board?: { code: string } | null; copyable?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -151,6 +154,12 @@ export function PlayFooter({ slug, watermark, ageRating = null, buildSimilar = n
           </a>
         )}
       </footer>
+      {/* ADR-120: a button you see in a video — not a small link in the footer (the footer is drawn in «difference» and would repaint it). */}
+      {copyable && (
+        <a className="pl-copy" href={copyHref(slug)} target="_blank" rel="noopener" data-testid="play-copy">
+          Скопировать себе
+        </a>
+      )}
       {open && <ReportDialog slug={slug} onClose={() => setOpen(false)} />}
     </>
   );

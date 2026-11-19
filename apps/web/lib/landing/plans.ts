@@ -30,6 +30,7 @@ export interface PlanView {
     versionHistoryDays: number;
     ownBranding: boolean;
     allowIndexing: boolean;
+    allowCopy?: boolean;
     invoicePayment: boolean;
     supportHours: number | null;
     passDays?: number;
@@ -95,6 +96,7 @@ export function describePlan(p: PlanView): string[] {
   if (l.exportFormats.length) out.push(`Выгрузка ответов: ${l.exportFormats.map((f) => f.toUpperCase()).join(' и ')}`);
   if (l.versionHistoryDays) out.push(`История версий: ${formatDays(l.versionHistoryDays)}`);
   if (l.ownBranding) out.push('Свой логотип и картинка для ссылки');
+  if (l.allowCopy) out.push('Можно разрешить копировать сборку');
   if (l.allowIndexing) out.push('Можно разрешить поиск по сборке');
   if (l.invoicePayment) out.push('Оплата по счёту для юрлиц');
   out.push(l.supportHours === null ? 'Поддержка: справка' : `Поддержка: ответ в течение ${l.supportHours}\u00a0${plural(l.supportHours, 'часа', 'часов', 'часов')}`);

@@ -20,7 +20,7 @@ import { RESERVED_SLUGS } from './slug-rules.js';
 import { type PassageMode, allowedPassageModes, effectivePassageMode, isPassageMode } from '../play/passage-mode.js';
 
 /** The settings of access the cabinet may write (PL-06…PL-10); the password goes separately and is stored as a hash. */
-const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'ageRating', 'singleAttempt', 'restartOnReload', 'showBack', 'closedText', 'answersRetentionDays', 'allowIndexing'] as const;
+const ACCESS_SETTING_KEYS = ['maxStarts', 'maxCompletions', 'scheduledOpenAt', 'scheduledCloseAt', 'age18', 'ageRating', 'singleAttempt', 'restartOnReload', 'showBack', 'closedText', 'answersRetentionDays', 'allowIndexing', 'allowCopy'] as const;
 
 export interface ProjectSettings {
   /** PL-06 · at most so many started and/or completed passages. */
@@ -48,6 +48,8 @@ export interface ProjectSettings {
   closedText?: string;
   /** PL-05 · the creator lets search engines index the build (the plan must have it; `noindex` otherwise). */
   allowIndexing?: boolean;
+  /** ADR-120 · anybody may copy the published project («Скопировать себе»); «Автор» and up. */
+  allowCopy?: boolean;
   /** D-07 · how often the creator hears about passages: at once, once an hour, once a day, never. */
   notifications?: { passage?: PassageMode };
 }
@@ -144,6 +146,12 @@ export class ProjectsService {
       if (tokens.success) doc.theme = { themeId: theme.id, tokens: tokens.data };
     }
     return this.insertProject(userId, projectId, slug, title, doc, sourceLabelOf(source), fromTemplate && (await this.isSystemTemplate(templateId!)) ? templateId! : null);
+  }
+
+  /** ADR-120 · a new draft of `userId` from a ready document (a copy of somebody's published project). */
+  async createFromDocument(userId: string, title: string, doc: ProjectDocument, source: string): Promise<ProjectDetail> {
+    const named = ProjectDocument.parse({ ...doc, meta: { ...doc.meta, title } });
+    return this.insertProject(userId, createId(), createSlug(), title, named, sourceLabelOf(source), null);
   }
 
   /**
@@ -789,9 +797,9 @@ export class ProjectsService {
   }
 
   /** The settings of the owner and whether publishing needs an age category here (the editor asks for it on «Опубликовать»). */
-  async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings & { ageRatingRequired: boolean; noticeModes: NoticeModes; indexingAllowed: boolean }> {
+  async getAccessSettings(userId: string, projectId: string): Promise<ProjectSettings & { ageRatingRequired: boolean; noticeModes: NoticeModes; indexingAllowed: boolean; copyAllowed: boolean }> {
     const row = await this.assertOwner(userId, projectId);
-    return { ...this.forOwner((row.settings ?? {})), ageRatingRequired: this.ageRatingRequired === true, noticeModes: await this.noticeModes(row.ownerId, projectId, row.settings ?? {}), indexingAllowed: (await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits.allowIndexing };
+    return { ...this.forOwner((row.settings ?? {})), ageRatingRequired: this.ageRatingRequired === true, noticeModes: await this.noticeModes(row.ownerId, projectId, row.settings ?? {}), indexingAllowed: (await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits.allowIndexing, copyAllowed: (await this.entitlements.planOf(row.ownerId)).limits.allowCopy === true };
   }
 
   /** P7.1 · what the editor shows of the plan of the build: its name and the limits of screens and rules. */
@@ -859,6 +867,12 @@ export class ProjectsService {
       if (typeof incoming.allowIndexing !== 'boolean') throw bad();
       if (incoming.allowIndexing && !(await this.entitlements.limitsOfProject(row.ownerId, projectId)).plan.limits.allowIndexing) {
         throw new HttpException({ error: { code: 'PLAN_LIMIT', message: 'Разрешить поиск по сборке можно на тарифе «Про».' } }, 402);
+      }
+    }
+    if (incoming.allowCopy !== undefined && incoming.allowCopy !== null) {
+      if (typeof incoming.allowCopy !== 'boolean') throw bad();
+      if (incoming.allowCopy && !(await this.entitlements.planOf(row.ownerId)).limits.allowCopy) {
+        throw new HttpException({ error: { code: 'PLAN_LIMIT', message: 'Разрешать копирование сборки можно на тарифе «Автор» и выше.' } }, 402);
       }
     }
     if (settings.notifications !== undefined) {

@@ -39,6 +39,8 @@ export interface PlanLimits {
   versionHistoryDays: number;
   ownBranding: boolean;
   allowIndexing: boolean;
+  /** ADR-120 · the creator may let anybody copy a published project («Автор» and up; not the pass). */
+  allowCopy?: boolean;
   directExternalLinks: boolean;
   invoicePayment: boolean;
   supportHours: number | null;

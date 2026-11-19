@@ -289,7 +289,7 @@ describe('D-03 · Доступ', () => {
       .get(`/${API_PREFIX}/projects/${c.body.id as string}/access-settings`)
       .set('Cookie', cookie)
       .expect(200);
-    expect(initial.body).toEqual({ ageRatingRequired: false, noticeModes: { allowed: ['daily', 'off'], effective: 'daily' }, indexingAllowed: false });
+    expect(initial.body).toEqual({ ageRatingRequired: false, noticeModes: { allowed: ['daily', 'off'], effective: 'daily' }, indexingAllowed: false, copyAllowed: false });
     await request(t.http())
       .patch(`/${API_PREFIX}/projects/${c.body.id as string}/access-settings`)
       .set('Cookie', cookie)

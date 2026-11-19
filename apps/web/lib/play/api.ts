@@ -28,6 +28,8 @@ export interface PlayOpen {
   showBack?: boolean;
   /** TPL-05.4 · the project is the example of a system template: the button «Собрать такую же» leads to the page of that template. */
   buildSimilar?: { slug: string } | null;
+  /** ADR-120 · the creator lets anybody copy the project: «Скопировать себе». */
+  copyable?: boolean;
   /** D-18 · the board of the project when the creator wants «Открыть табло» on the last screen. */
   board?: { code: string } | null;
   /** PL-18 · «Реклама», the advertiser and the erid. */

@@ -53,6 +53,8 @@ export interface PlayOpen {
   showBack: boolean;
   /** TPL-05.4 · this project is the example of a system template: the player offers «Собрать такую же» (the address of the template page). */
   buildSimilar: { slug: string } | null;
+  /** ADR-120 · the creator lets anybody copy this project: the player offers «Скопировать себе». */
+  copyable: boolean;
   /** D-18 · the address of the board when the creator switched it on and wants the button on the last screen. */
   board: { code: string } | null;
   /** PL-18 · an advertising project says so: who advertises and the erid. */
@@ -235,8 +237,18 @@ export class PlayService {
       fonts: fontsMap,
       ...marks(row, limits.watermark),
       buildSimilar: await this.buildSimilarOf(projectId),
+      copyable: await this.copyableOf(row.ownerId, (row.settings ?? {})),
       board: (await this.board?.finishLink(projectId).catch(() => null)) ?? null,
     };
+  }
+
+  /**
+   * ADR-120 · «Скопировать себе» is offered when the creator switched copying on, the project has no password, and the creator is on
+   * «Автор» or up right now (a creator back on «Старт» stops it; the pass «Праздник» does not give it).
+   */
+  private async copyableOf(ownerId: string | null, settings: ProjectSettings): Promise<boolean> {
+    if (!ownerId || settings.allowCopy !== true || settings.passwordHash) return false;
+    return (await this.entitlements.planOf(ownerId)).limits.allowCopy === true;
   }
 
   /** TPL-05.4 · only the example of a system template with a page gets the button, whatever the tariff of its owner. */
@@ -281,6 +293,7 @@ export class PlayService {
       fonts: fontsMap,
       ...marks(p, limits.watermark),
       buildSimilar: await this.buildSimilarOf(p.id),
+      copyable: await this.copyableOf(p.ownerId, p.settings),
       board: (await this.board?.finishLink(p.id).catch(() => null)) ?? null,
     };
   }

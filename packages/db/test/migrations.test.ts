@@ -39,7 +39,7 @@ describe('миграции', () => {
     await runMigrations(t.db);
     await runMigrations(t.db);
     const applied = await t.db.execute<{ n: string }>(sql`select count(*)::text as n from drizzle.__drizzle_migrations`);
-    expect(Number(applied.rows[0]?.n)).toBe(30);
+    expect(Number(applied.rows[0]?.n)).toBe(31);
   });
 
   it('P7.4 · ADR-114: после миграций пробный период без карты есть только у «Автора» (3 дня), у «Плюса» его нет', async () => {

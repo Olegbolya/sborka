@@ -15,6 +15,7 @@ import { TemplatesController } from './templates.controller.js';
 import { ElementsController } from './elements.controller.js';
 import { ChoiceLimitsService } from './choice-limits.service.js';
 import { ChoiceLimitsController } from './choice-limits.controller.js';
+import { ProjectCopyService } from './project-copy.service.js';
 import { LocalStorageService } from '../media/storage.js';
 import { AGE_RATING_REQUIRED, WEB_URL } from './projects.tokens.js';
 
@@ -34,6 +35,7 @@ export class ProjectsModule {
         DraftsService,
         SystemTemplatesService,
         ChoiceLimitsService,
+        ProjectCopyService,
         { provide: WEB_URL, useValue: webUrl },
         { provide: LocalStorageService, useValue: new LocalStorageService(mediaDir) },
         { provide: AGE_RATING_REQUIRED, useValue: ageRatingRequired },

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -12,11 +13,15 @@ import {
 import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { type OperatorInfo, type ProjectSettings, ProjectsService } from './projects.service.js';
+import { ProjectCopyService } from './project-copy.service.js';
 
 /** P6.1 · D-01: My projects CRUD + settings + status. */
 @Controller('projects')
 export class ProjectsController {
-  constructor(private readonly projects: ProjectsService) {}
+  constructor(
+    private readonly projects: ProjectsService,
+    private readonly copies: ProjectCopyService,
+  ) {}
 
   /** D-01: List projects with optional search and status filter. */
   @Get()
@@ -29,6 +34,16 @@ export class ProjectsController {
   @HttpCode(200)
   create(@Body() body: { title?: unknown; templateId?: unknown; source?: unknown } | null, @CurrentUser() user: RequestUser) {
     return this.projects.createProject(user.id, typeof body?.title === 'string' ? body.title : undefined, typeof body?.templateId === 'string' ? body.templateId : undefined, typeof body?.source === 'string' ? body.source : undefined);
+  }
+
+  /** ADR-120 · «Скопировать себе»: a draft copy of a published project whose creator allowed copying. */
+  @Post('copy')
+  @HttpCode(200)
+  copy(@Body() body: { slug?: unknown } | null, @CurrentUser() user: RequestUser) {
+    if (typeof body?.slug !== 'string' || !/^[A-Za-z0-9_-]{3,60}$/.test(body.slug)) {
+      throw new BadRequestException({ error: { code: 'INVALID_INPUT', message: 'Не указана сборка, которую нужно скопировать.' } });
+    }
+    return this.copies.copyBySlug(user.id, body.slug);
   }
 
   /** D-01: Get a project with its current draft. */

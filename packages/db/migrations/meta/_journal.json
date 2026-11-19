@@ -211,6 +211,13 @@
       "when": 1795008582020,
       "tag": "0029_plus_no_trial",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795086985619,
+      "tag": "0030_allow_copy",
+      "breakpoints": true
     }
   ]
 }

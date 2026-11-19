@@ -651,6 +651,42 @@ function SlugCard({ projectId, setError }: { projectId: string; setError: (e: st
   );
 }
 
+/**
+ * ADR-120 · «Разрешить копировать сборку»: off by default; on «Автор» and up. On, anybody who opens the published project sees
+ * «Скопировать себе» and gets a whole copy in their cabinet (the answers of the participants are not copied).
+ */
+function CopyCard({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
+  const [state, setState] = useState<{ on: boolean; allowed: boolean } | null>(null);
+  useEffect(() => {
+    apiFetch<{ allowCopy?: boolean; copyAllowed: boolean }>(`/projects/${projectId}/access-settings`)
+      .then((r) => setState({ on: r.allowCopy === true, allowed: r.copyAllowed }))
+      .catch((e: Error) => setError(e.message));
+  }, [projectId, setError]);
+  if (!state) return null;
+  async function change(on: boolean) {
+    setState((prev) => (prev ? { ...prev, on } : prev));
+    try {
+      await apiFetch(`/projects/${projectId}/access-settings`, { method: 'PATCH', headers: CSRF, body: JSON.stringify({ allowCopy: on }) });
+    } catch (e) {
+      setState((prev) => (prev ? { ...prev, on: !on } : prev));
+      setError((e as Error).message);
+    }
+  }
+  return (
+    <div data-testid="copy-card" style={{ border: '1px solid var(--border, #e5e2dc)', borderRadius: 12, padding: 16 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: state.allowed ? 'pointer' : 'default', fontSize: 15, fontWeight: 600 }}>
+        <input type="checkbox" checked={state.on && state.allowed} disabled={!state.allowed} onChange={(e) => void change(e.target.checked)} aria-label="Разрешить копировать сборку" />
+        Разрешить копировать сборку {state.allowed ? '' : '🔒'}
+      </label>
+      <p style={s.hint}>
+        {state.allowed
+          ? 'Под опубликованной сборкой появится кнопка «Скопировать себе»: любой человек получит полную копию в свой кабинет — экраны, сценарии, тему, правильные ответы и файлы. Ответы участников и статистика не копируются. Сборку под паролем скопировать нельзя.'
+          : 'Доступно на тарифах «Автор», «Плюс» и «Про».'}
+      </p>
+    </div>
+  );
+}
+
 function IndexingCard({ projectId, setError }: { projectId: string; setError: (e: string) => void }) {
   const [state, setState] = useState<{ on: boolean; allowed: boolean } | null>(null);
   useEffect(() => {
@@ -744,6 +780,8 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
 
   return (
     <div style={s.form}>
+      <CopyCard projectId={projectId} setError={setError} />
+
       <div>
         <label style={s.label} htmlFor="maxStarts">Максимум начатых прохождений</label>
         <input
