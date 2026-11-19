@@ -1,17 +1,26 @@
-name: Скачать базы ClamAV (вручную)
+name: Скачать базы ClamAV
 
-# Раздача баз ClamAV закрыта для российских адресов («Blocked by CDN»), поэтому сервер не может скачать их сам.
-# Этот процесс ТОЛЬКО скачивает базы на серверах GitHub и кладёт их в архив «clamav-db» (Artifacts внизу страницы запуска).
-# Ни на какой сервер он ничего не передаёт. Запуск вручную: Actions → «Скачать базы ClamAV (вручную)» → Run workflow.
+# Раздача баз ClamAV закрыта для российских адресов («Blocked by CDN»), поэтому сервер не может скачать их сам (ADR-043).
+# Это задание скачивает базы на серверах GitHub официальной программой freshclam — вместе с файлами подписи (.sign),
+# без которых ClamAV 1.5 и новее базы не загружает (ADR-122), — и кладёт их на сервер в ~/blokum/shared/clamav-import.
+# В систему их ставит служба blokum-clamav-import (cron root раз в 15 минут, ставит server-setup.sh) и перезапускает
+# антивирус. Запуск: каждый день сам или вручную — Actions → «Скачать базы ClamAV» → Run workflow.
 on:
+  schedule:
+    - cron: '37 1 * * *'
   workflow_dispatch:
+    inputs:
+      server:
+        description: 'Адрес сервера; пусто — основной сервер'
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
 jobs:
   download:
-    name: Скачать main, daily, bytecode
+    name: Скачать main, daily, bytecode и передать на сервер
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -21,16 +30,36 @@ jobs:
           mkdir -p db
           sudo systemctl stop clamav-freshclam 2>/dev/null || true
           freshclam --version
-          # Штатные настройки пакета, как на любом сервере с ClamAV: базы ложатся в /var/lib/clamav, оттуда копируем в архив.
+          # Штатные настройки пакета, как на любом сервере с ClamAV: базы ложатся в /var/lib/clamav, оттуда — в архив.
           sudo sed -i 's/^Example/#Example/' /etc/clamav/freshclam.conf 2>/dev/null || true
           sudo freshclam --foreground --stdout
           cp /var/lib/clamav/main.c?d /var/lib/clamav/daily.c?d /var/lib/clamav/bytecode.c?d db/
+          # ClamAV 1.5+: a detached signature next to every database (<name>-<version>.c?d.sign).
+          find /var/lib/clamav -maxdepth 1 -name '*.sign' -exec cp {} db/ \;
+          ls -l db/
           for f in main daily bytecode; do
-            ls -l db/$f.c?d
             [ "$(head -c 10 db/$f.c?d)" = "ClamAV-VDB" ] || { echo "::error::$f: нет базы"; exit 1; }
           done
+          if [ -z "$(find db -name '*.sign')" ]; then echo "::warning::freshclam не скачал файлы подписи (.sign): ClamAV 1.5+ без них базы не загрузит"; fi
       - uses: actions/upload-artifact@v4
         with:
           name: clamav-db
-          path: db/*.c?d
+          path: |
+            db/*.c?d
+            db/*.sign
           retention-days: 3
+          if-no-files-found: error
+      - name: На сервер
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SERVER_ADDR: ${{ inputs.server || '195.209.215.79' }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::Нет секрета DEPLOY_SSH_KEY"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # A fresh folder each time: the service on the server puts in place what it finds there.
+          tar -cf - -C db . | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "deploy@$SERVER_ADDR" \
+            'set -e; d="$HOME/blokum/shared/clamav-import"; t="$d.new"; rm -rf "$t"; mkdir -p "$t"; tar -xf - -C "$t"; rm -rf "$d"; mv "$t" "$d"; ls "$d" | tr "\n" " "'
+          echo
+          echo "::notice title=Базы ClamAV на сервере::Их поставит служба blokum-clamav-import в течение 15 минут"
