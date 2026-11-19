@@ -240,7 +240,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
   const resolved = useMemo(
     () =>
       defaultChosen
-        ? resolveBlockStyle({ ...block, states: { ...block.states, selected: chosenOptionStyle(resolveBlockStyle(block, ctx.tokens), highlight!) } }, ctx.tokens, 'selected')
+        ? resolveBlockStyle({ ...block, states: { ...block.states, selected: chosenOptionStyle(resolveBlockStyle(block, ctx.tokens), highlight) } }, ctx.tokens, 'selected')
         : resolveBlockStyle(block, ctx.tokens, activeState),
     [block, ctx.tokens, activeState, defaultChosen, highlight],
   );

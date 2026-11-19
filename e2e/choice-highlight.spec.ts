@@ -25,7 +25,7 @@ test.describe('B-11 · несколько вопросов на одном эк�
     await page.getByLabel('Цвет подсветки: источник').selectOption('hex');
     await page.getByLabel('Цвет подсветки: HEX').fill('#2E7D32');
     await expect
-      .poll(async () => JSON.stringify((await serverDraft(page, id)).doc.screens[0]!.blocks.find((b) => b.id === q1.id)!.props))
+      .poll(async () => JSON.stringify(((await serverDraft(page, id)).doc.screens[0]!.blocks as Array<{ id: string; props: unknown }>).find((b) => b.id === q1.id)!.props))
       .toContain('"highlight":{"color":{"hex":"#2E7D32"}}');
     mkdirSync('test-results/screens', { recursive: true });
     await page.screenshot({ path: `test-results/screens/choice-highlight-editor-${info.project.name}.png` });
