@@ -1,7 +1,7 @@
 'use client';
 
 import { behaviorOf } from '@blokum/engine';
-import { type Block, type BLOCK_STATES, type BlockStyle, resolveBlockStyle } from '@blokum/schema';
+import { type Block, type BLOCK_STATES, type BlockStyle, chosenOptionStyle, resolveBlockStyle } from '@blokum/schema';
 import { type CSSProperties, type PointerEvent, type ReactNode, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TINT_STYLE, animatedLayerStyle, useBlockAnimation, usesTint } from '../animation/useBlockAnimation.js';
 import { prefersReducedMotion } from '../particles/ParticleLayer.js';
@@ -229,7 +229,15 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
                 : undefined);
   // Cached by reference: the runtime replaces `overrides` and `anim` only when they change, so a block that only
   // moves keeps its style and CSS (50 moving blocks at ≥ 50 fps on a slow phone, SC-05).
-  const resolved = useMemo(() => resolveBlockStyle(block, ctx.tokens, activeState), [block, ctx.tokens, activeState]);
+  // B-11, B-12: a chosen option without an own «Выбрано» state still lights up — in the theme's main colour.
+  const defaultChosen = activeState === 'selected' && option !== undefined && block.states?.selected === undefined;
+  const resolved = useMemo(
+    () =>
+      defaultChosen
+        ? resolveBlockStyle({ ...block, states: { ...block.states, selected: chosenOptionStyle(resolveBlockStyle(block, ctx.tokens)) } }, ctx.tokens, 'selected')
+        : resolveBlockStyle(block, ctx.tokens, activeState),
+    [block, ctx.tokens, activeState, defaultChosen],
+  );
   const overrides = view?.overrides;
   const anim = view?.anim;
   const style = useMemo(() => applyRuntimeView(resolved, overrides && anim ? { overrides, anim } : undefined), [resolved, overrides, anim]);

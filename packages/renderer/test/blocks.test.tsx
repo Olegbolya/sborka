@@ -327,6 +327,36 @@ describe('B-11 · B-12: варианты — самостоятельные бл
     v.unmount();
   });
 
+  it('B-11: выбранный вариант без своего состояния «Выбрано» загорается основным цветом темы; своё состояние важнее', () => {
+    const q = choice();
+    const [a, b] = q.props.options.map((o) => o.id);
+    const v = live([q], { answers: { [q.id]: { kind: 'choice', optionIds: [a!] } } });
+    const styleOf = (i: number) => {
+      const el = v.host.querySelectorAll('[role="radio"]')[i]!;
+      return [el.getAttribute('style') ?? '', ...[...el.querySelectorAll('[style]')].map((x) => x.getAttribute('style') ?? '')].join(';');
+    };
+    // The tint and the frame are the theme's main colour (rgb of «Основной»); the option nobody picked has neither.
+    const tint = /rgba\((\d+), (\d+), (\d+), 0\.18\)/.exec(styleOf(0));
+    expect(tint).not.toBeNull();
+    const main = `rgb(${tint![1]}, ${tint![2]}, ${tint![3]})`;
+    expect(styleOf(0)).toContain(main);
+    expect(styleOf(1)).not.toContain('0.18)');
+    expect(styleOf(1)).not.toContain(main);
+    v.rerender({ answers: { [q.id]: { kind: 'choice', optionIds: [b!] } } });
+    expect(styleOf(1)).toMatch(/0\.18\)/);
+    expect(styleOf(0)).not.toMatch(/0\.18\)/);
+    v.unmount();
+
+    // An own «Выбрано» of the option wins over the default light.
+    const own = choice();
+    own.children[0]!.states = { selected: { fills: [{ kind: 'solid', color: { hex: '#123456' } }] } };
+    const w = live([own], { answers: { [own.id]: { kind: 'choice', optionIds: [own.props.options[0]!.id] } } });
+    const first = [...w.host.querySelectorAll('[role="radio"]')[0]!.querySelectorAll('[style]')].map((x) => x.getAttribute('style') ?? '').join(';');
+    expect(first).toContain('rgb(18, 52, 86)');
+    expect(first).not.toMatch(/0\.18\)/);
+    w.unmount();
+  });
+
   it('B-12: флажки добавляют и снимают свой вариант, пустой выбор — нет ответа', () => {
     const q = choice(true);
     const [a, b] = q.props.options.map((o) => o.id);

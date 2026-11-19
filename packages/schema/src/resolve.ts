@@ -49,3 +49,15 @@ export function resetToTheme<B extends Pick<Block, 'style'>>(block: B, groups?: 
   for (const g of groups) delete style[g];
   return { ...block, style };
 }
+
+/**
+ * B-11, B-12 · how a chosen option looks when its block has no own «Выбрано» state (S-15): a frame and a light tint in
+ * the theme's main colour over the option's own fill. Without it a tap counted but nothing changed on the screen, so with
+ * several questions on one screen the participant could not see what they had picked. An own «Выбрано» replaces it.
+ */
+export function chosenOptionStyle(base: BlockStyle): StyleOverride {
+  return {
+    stroke: { width: Math.max(base.stroke.width, 3), style: 'solid', paint: { kind: 'solid', color: { token: 'primary', alpha: 1 } }, align: 'inside' },
+    fills: [...base.fills.slice(0, 3), { kind: 'solid', color: { token: 'primary', alpha: 0.18 } }],
+  };
+}

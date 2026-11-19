@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { openEditor, saveStatus, seedProject, serverDraft, screensList, ensurePanelOf } from './helpers/editor';
+import { PHOTO_PNG } from './helpers/files';
 
 test.beforeEach(async ({ page }) => {
   await loginAndOnboard(page, freshUser('Автор'));
@@ -34,6 +35,25 @@ test.describe('P3.6 · экраны', () => {
     const s = await savedScreen(page, id, 0, (x) => x.name === 'Итог' && x.kind === 'result' && x.height === 1200);
     expect(s).toMatchObject({ name: 'Итог', kind: 'result', height: 1200 });
     await expect(page.getByRole('list', { name: 'Экраны' }).getByText('1. Итог')).toBeVisible();
+  });
+
+  test('E-13 · фото на фон одной кнопкой: слой «Фото, GIF или видео» поверх остальных, картинка видна на холсте', async ({ page }, info) => {
+    const { id } = await seedProject(page);
+    await openEditor(page, id);
+    const bg = await section(page, 'screen-background');
+    await bg.getByRole('button', { name: 'Добавить' }).click();
+    await bg.getByTestId('screen-bg-media').click();
+    const picker = page.getByRole('dialog', { name: 'Выбор файла' });
+    await picker.getByLabel('Загрузить файл').setInputFiles({ name: 'fon.png', mimeType: 'image/png', buffer: PHOTO_PNG });
+    await expect(picker).toBeHidden();
+    const s = await savedScreen(page, id, 0, (x) => x.background?.length === 2 && x.background[1]?.kind === 'media');
+    expect(s.background[0].kind).toBe('solid');
+    expect(s.background[1]).toMatchObject({ kind: 'media', fit: 'cover', media: { source: 'media' } });
+    await expect(bg.getByLabel('Слой', { exact: true }).nth(1)).toHaveValue('media');
+    // Layers are drawn bottom to top: the colour, then the photo over it.
+    await expect(page.locator('.bk-artboard .bk-screen-bg[style*="url("]').first()).toBeVisible();
+    mkdirSync('test-results/screens', { recursive: true });
+    await page.screenshot({ path: `test-results/screens/screen-bg-media-${info.project.name}.png` });
   });
 
   test('E-13 · фон экрана: слой заливки цветом попадает в документ и в миниатюру', async ({ page }) => {

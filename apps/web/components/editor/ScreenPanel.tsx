@@ -1,4 +1,5 @@
 'use client';
+import type { Fill } from '@blokum/schema';
 import { useState } from 'react';
 import { setDescription, setOgImage, setScreenProps } from '../../lib/editor/commands';
 import { SCREEN_SECTIONS } from '../../lib/editor/screen-specs';
@@ -36,6 +37,7 @@ export function ScreenPanel() {
       </div>
       {rest.map((section) => (
         <Section key={section.id} id={`screen-${section.id}`} title={section.title}>
+          {section.id === 'background' && <MediaBackgroundButton screenId={screen.id} layers={screen.background} />}
           <Fields fields={section.fields} level={level} prefix={`screen-${section.id}`} />
         </Section>
       ))}
@@ -87,6 +89,35 @@ function LinkPreview() {
           onPick={(ref) => {
             setPicking(false);
             if (ref.source === 'media') apply(setOgImage({ source: 'media', id: ref.id }), { label: 'Картинка превью' });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * E-13 · фото, GIF или видео на фон одной кнопкой. Тот же слой можно выбрать в списке «Слой», но там он спрятан среди
+ * видов заливки; кнопка добавляет его поверх остальных слоёв (они рисуются снизу вверх) и сразу открывает выбор файла.
+ * Слоёв не больше четырёх: если их уже четыре, файл заменяет верхний.
+ */
+function MediaBackgroundButton({ screenId, layers }: { screenId: string; layers: readonly Fill[] }) {
+  const apply = useEditor((s) => s.apply);
+  const [picking, setPicking] = useState(false);
+  return (
+    <div className="ed-actions" style={{ marginBottom: 8 }}>
+      <button type="button" className="ed-btn" data-testid="screen-bg-media" onClick={() => setPicking(true)}>
+        Фото или видео на фон
+      </button>
+      {picking && (
+        <MediaPicker
+          kinds={['IMAGE', 'GIF', 'VIDEO']}
+          onClose={() => setPicking(false)}
+          onPick={(ref) => {
+            setPicking(false);
+            const layer: Fill = { kind: 'media', media: ref, fit: 'cover', focal: { x: 0.5, y: 0.5 }, scale: 1 };
+            const next = layers.length >= 4 ? [...layers.slice(0, 3), layer] : [...layers, layer];
+            apply(setScreenProps(screenId, (props) => ({ ...props, background: next })), { label: 'Фон экрана: фото или видео' });
           }}
         />
       )}
