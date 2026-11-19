@@ -11,6 +11,15 @@ ENV_FILE="$APP/shared/.env.prod"
 DATA="$(sed -n 's/^DATA_ROOT=//p' "$APP/setup/infra/server.env" 2>/dev/null | head -1)"
 DATA="${DATA:-/srv/blokum}"
 log() { printf '%s\n' "$*" >&2; }
+# node and pm2 come from nvm (Node 22), as in deploy.sh: a non-interactive ssh does not read ~/.bashrc.
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  # shellcheck disable=SC1091 # nvm lives only on the server
+  . "$NVM_DIR/nvm.sh" >/dev/null
+  NODE_BIN="$(nvm which 22 2>/dev/null || true)"
+  if [ -n "$NODE_BIN" ]; then NODE_DIR="$(dirname "$NODE_BIN")"; export PATH="$NODE_DIR:$PATH"; fi
+fi
+command -v pm2 >/dev/null || { printf '%s\n' "✗ не нашёл pm2 (Node 22 через nvm)" >&2; exit 1; }
 
 [ -f "$ENV_FILE" ] || { log "✗ нет $ENV_FILE"; exit 1; }
 DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | tail -1 | cut -d= -f2-)"

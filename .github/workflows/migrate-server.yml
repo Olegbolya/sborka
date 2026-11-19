@@ -90,7 +90,7 @@ jobs:
         env:
           FROM: ${{ inputs.from }}
         run: |
-          ssh -i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "deploy@$FROM" 'pm2 start blokum-api blokum-worker >/dev/null && pm2 save >/dev/null && echo "✓ blokum-api и blokum-worker снова запущены"'
+          ssh -i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "deploy@$FROM" 'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh" >/dev/null; PATH="$(dirname "$(nvm which 22)"):$PATH"; pm2 start blokum-api blokum-worker >/dev/null && pm2 save >/dev/null && echo "✓ blokum-api и blokum-worker снова запущены"'
           echo "::error title=Перенос не завершён::Старый сервер снова принимает данные, домен не менять. Причина — в шаге «Перенос»."
       - name: Убрать скрипты
         if: always()
