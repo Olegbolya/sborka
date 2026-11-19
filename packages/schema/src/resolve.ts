@@ -1,4 +1,5 @@
 import { type Block } from './blocks.js';
+import { type Color } from './primitives.js';
 import { type BLOCK_STATES, type BlockStyle, type StyleOverride } from './style.js';
 import { BLOCK_STYLE_DEFAULTS } from './style-defaults.js';
 import { type ThemeTokens } from './theme.js';
@@ -51,13 +52,15 @@ export function resetToTheme<B extends Pick<Block, 'style'>>(block: B, groups?: 
 }
 
 /**
- * B-11, B-12 · how a chosen option looks when its block has no own «Выбрано» state (S-15): a frame and a light tint in
- * the theme's main colour over the option's own fill. Without it a tap counted but nothing changed on the screen, so with
- * several questions on one screen the participant could not see what they had picked. An own «Выбрано» replaces it.
+ * B-11, B-12 · ADR-119 · how a chosen option looks when its question has «Подсвечивать выбранный ответ» on and the option
+ * has no own «Выбрано» state (S-15): a frame and a light tint in the chosen colour over the option's own fill. An own
+ * «Выбрано» replaces it.
  */
-export function chosenOptionStyle(base: BlockStyle): StyleOverride {
+export function chosenOptionStyle(base: BlockStyle, color: Color): StyleOverride {
+  // The tint is the same colour at 18 % (a hex gets its alpha byte, a theme colour its own transparency × 0.18).
+  const tint: Color = 'hex' in color ? { hex: `${color.hex.slice(0, 7)}2E` } : { token: color.token, alpha: Math.round(color.alpha * 18) / 100 };
   return {
-    stroke: { width: Math.max(base.stroke.width, 3), style: 'solid', paint: { kind: 'solid', color: { token: 'primary', alpha: 1 } }, align: 'inside' },
-    fills: [...base.fills.slice(0, 3), { kind: 'solid', color: { token: 'primary', alpha: 0.18 } }],
+    stroke: { width: Math.max(base.stroke.width, 3), style: 'solid', paint: { kind: 'solid', color }, align: 'inside' },
+    fills: [...base.fills.slice(0, 3), { kind: 'solid', color: tint }],
   };
 }

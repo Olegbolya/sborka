@@ -1,5 +1,5 @@
 import { z } from './locale.js';
-import { Id, MediaRef, int, num } from './primitives.js';
+import { Color, Id, MediaRef, int, num } from './primitives.js';
 import { Behavior, Condition, Rule } from './scenario.js';
 import { BlockAnimation, BlockStates, Frame, StyleOverride } from './style.js';
 import { RichText } from './text.js';
@@ -8,6 +8,12 @@ import { RichText } from './text.js';
 // may hold rules and behaviors (§7) and child blocks; only `props` differ by type.
 
 const media = MediaRef.nullable().default(null);
+
+/**
+ * B-11, B-12 · ADR-119 · подсветка выбранного ответа: включает автор у вопроса (по умолчанию выключена), цвет — свой или
+ * из темы. Свой вид «Выбрано» у варианта (S-15) важнее подсветки.
+ */
+export const ChosenHighlight = z.strictObject({ color: Color.default({ token: 'primary', alpha: 1 }) });
 
 /** Option of a choice question (B-11, B-12): its look is a child block, the meta is here. */
 export const ChoiceOption = z.strictObject({
@@ -54,6 +60,7 @@ export const BLOCK_PROPS = {
     required: z.boolean().default(false),
     shuffle: z.boolean().default(false),
     autoAdvance: z.boolean().default(false),
+    highlight: ChosenHighlight.optional(),
     options: z.array(ChoiceOption).min(2).max(30),
   }), // B-11
   multiChoice: z.strictObject({
@@ -61,6 +68,7 @@ export const BLOCK_PROPS = {
     shuffle: z.boolean().default(false),
     minSelected: int(0, 30).default(0),
     maxSelected: int(1, 30).optional(),
+    highlight: ChosenHighlight.optional(),
     options: z.array(ChoiceOption).min(2).max(30),
   }), // B-12
   textInput: z.strictObject({

@@ -1,7 +1,7 @@
 'use client';
 
 import { behaviorOf } from '@blokum/engine';
-import { type Block, type BLOCK_STATES, type BlockStyle, chosenOptionStyle, resolveBlockStyle } from '@blokum/schema';
+import { type Block, type BLOCK_STATES, type BlockStyle, type Color, chosenOptionStyle, resolveBlockStyle } from '@blokum/schema';
 import { type CSSProperties, type PointerEvent, type ReactNode, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TINT_STYLE, animatedLayerStyle, useBlockAnimation, usesTint } from '../animation/useBlockAnimation.js';
 import { prefersReducedMotion } from '../particles/ParticleLayer.js';
@@ -98,7 +98,7 @@ export interface BlockViewProps {
   /** Visual state (S-15); in the player it follows the runtime («выбран») when not given. */
   state?: (typeof BLOCK_STATES)[number];
   /** The block is an answer option of a choice question (B-11, B-12): a radio button or a checkbox. */
-  option?: { questionId: string; optionId: string; multi: boolean };
+  option?: { questionId: string; optionId: string; multi: boolean; highlight?: Color };
   /** The parent lays its nested blocks out (S-20 «в строку / в столбец / сетка»): the block is in the flow. */
   inFlow?: boolean;
   /** BH-07: the block is a side of a flip card; only the side facing the participant is shown. */
@@ -159,6 +159,11 @@ export const BlockView = memo(function BlockView(props: BlockViewProps): ReactNo
  * Roles for screen readers and the keyboard (PL-21): options are radio buttons or checkboxes inside their
  * question's group, pressable blocks are buttons, a picture-like block with alt text is an image.
  */
+/** B-11, B-12, ADR-119: the colour of «Подсвечивать выбранный ответ» of a choice question, if the creator turned it on. */
+function highlightOf(block: Block): Color | undefined {
+  return block.type === 'singleChoice' || block.type === 'multiChoice' ? block.props.highlight?.color : undefined;
+}
+
 function semantics(block: Block, o: { option: BlockViewProps['option']; chosen: boolean; pressable: boolean; waiting: boolean; player: boolean }): Record<string, string | number | boolean | undefined> {
   const label = block.a11y.label;
   if (o.option) return { role: o.option.multi ? 'checkbox' : 'radio', 'aria-checked': o.chosen, tabIndex: o.player ? 0 : -1, 'aria-label': label };
@@ -229,14 +234,15 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
                 : undefined);
   // Cached by reference: the runtime replaces `overrides` and `anim` only when they change, so a block that only
   // moves keeps its style and CSS (50 moving blocks at ≥ 50 fps on a slow phone, SC-05).
-  // B-11, B-12: a chosen option without an own «Выбрано» state still lights up — in the theme's main colour.
-  const defaultChosen = activeState === 'selected' && option !== undefined && block.states?.selected === undefined;
+  // B-11, B-12, ADR-119: a chosen option lights up when its question asks for it and the option has no own «Выбрано».
+  const highlight = option?.highlight;
+  const defaultChosen = activeState === 'selected' && highlight !== undefined && block.states?.selected === undefined;
   const resolved = useMemo(
     () =>
       defaultChosen
-        ? resolveBlockStyle({ ...block, states: { ...block.states, selected: chosenOptionStyle(resolveBlockStyle(block, ctx.tokens)) } }, ctx.tokens, 'selected')
+        ? resolveBlockStyle({ ...block, states: { ...block.states, selected: chosenOptionStyle(resolveBlockStyle(block, ctx.tokens), highlight!) } }, ctx.tokens, 'selected')
         : resolveBlockStyle(block, ctx.tokens, activeState),
-    [block, ctx.tokens, activeState, defaultChosen],
+    [block, ctx.tokens, activeState, defaultChosen, highlight],
   );
   const overrides = view?.overrides;
   const anim = view?.anim;
@@ -436,7 +442,7 @@ function BlockBody({ block, instanceId, state, option, inFlow, face, appear, lea
               key={child.id}
               block={child}
               instanceId={childInstanceId(instanceId, child)}
-              {...(opt ? { option: { questionId: instanceId, optionId: opt, multi: block.type === 'multiChoice' } } : {})}
+              {...(opt ? { option: { questionId: instanceId, optionId: opt, multi: block.type === 'multiChoice', ...(highlightOf(block) ? { highlight: highlightOf(block)! } : {}) } } : {})}
               {...(style.layout.mode !== 'free' ? { inFlow: true } : {})}
               {...(side ? { face: { side, shown: side === 'back' ? backShown : !backShown } } : {})}
             />

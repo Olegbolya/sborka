@@ -327,33 +327,50 @@ describe('B-11 · B-12: варианты — самостоятельные бл
     v.unmount();
   });
 
-  it('B-11: выбранный вариант без своего состояния «Выбрано» загорается основным цветом темы; своё состояние важнее', () => {
-    const q = choice();
-    const [a, b] = q.props.options.map((o) => o.id);
-    const v = live([q], { answers: { [q.id]: { kind: 'choice', optionIds: [a!] } } });
-    const styleOf = (i: number) => {
-      const el = v.host.querySelectorAll('[role="radio"]')[i]!;
+  it('B-11 · ADR-119: подсветка выбранного ответа — только если её включили у вопроса; цвет из темы или свой; своё «Выбрано» важнее', () => {
+    const styleIn = (host: HTMLElement, i: number) => {
+      const el = host.querySelectorAll('[role="radio"]')[i]!;
       return [el.getAttribute('style') ?? '', ...[...el.querySelectorAll('[style]')].map((x) => x.getAttribute('style') ?? '')].join(';');
     };
-    // The tint and the frame are the theme's main colour (rgb of «Основной»); the option nobody picked has neither.
-    const tint = /rgba\((\d+), (\d+), (\d+), 0\.18\)/.exec(styleOf(0));
+    const chose = (q: ReturnType<typeof choice>, index: number) => ({ answers: { [q.id]: { kind: 'choice' as const, optionIds: [q.props.options[index]!.id] } } });
+
+    // Off by default: the option is chosen (data-state), but its look does not change.
+    const off = choice();
+    expect(off.props.highlight).toBeUndefined();
+    const v0 = live([off], chose(off, 0));
+    expect(v0.host.querySelectorAll('[role="radio"]')[0]!.getAttribute('data-state')).toBe('selected');
+    expect(styleIn(v0.host, 0)).not.toMatch(/0\.18\)/);
+    v0.unmount();
+
+    // On, the theme's main colour: a frame of that colour and a tint of it at 18 %.
+    const on = choice();
+    on.props.highlight = { color: { token: 'primary', alpha: 1 } };
+    const v = live([on], chose(on, 0));
+    const tint = /rgba\((\d+), (\d+), (\d+), 0\.18\)/.exec(styleIn(v.host, 0));
     expect(tint).not.toBeNull();
-    const main = `rgb(${tint![1]}, ${tint![2]}, ${tint![3]})`;
-    expect(styleOf(0)).toContain(main);
-    expect(styleOf(1)).not.toContain('0.18)');
-    expect(styleOf(1)).not.toContain(main);
-    v.rerender({ answers: { [q.id]: { kind: 'choice', optionIds: [b!] } } });
-    expect(styleOf(1)).toMatch(/0\.18\)/);
-    expect(styleOf(0)).not.toMatch(/0\.18\)/);
+    expect(styleIn(v.host, 0)).toContain(`rgb(${tint![1]}, ${tint![2]}, ${tint![3]})`);
+    expect(styleIn(v.host, 1)).not.toMatch(/0\.18\)/);
+    v.rerender(chose(on, 1));
+    expect(styleIn(v.host, 1)).toMatch(/0\.18\)/);
+    expect(styleIn(v.host, 0)).not.toMatch(/0\.18\)/);
     v.unmount();
 
-    // An own «Выбрано» of the option wins over the default light.
+    // On, an own colour: #2E7D32 — the frame in it and the tint is the same colour at 18 % (alpha byte 2E).
+    const green = choice();
+    green.props.highlight = { color: { hex: '#2E7D32' } };
+    const g = live([green], chose(green, 1));
+    expect(styleIn(g.host, 1)).toContain('rgb(46, 125, 50)');
+    expect(styleIn(g.host, 1)).toMatch(/rgba\(46, 125, 50, 0\.18/);
+    expect(styleIn(g.host, 0)).not.toContain('46, 125, 50');
+    g.unmount();
+
+    // An own «Выбрано» of the option wins over the highlight.
     const own = choice();
+    own.props.highlight = { color: { token: 'primary', alpha: 1 } };
     own.children[0]!.states = { selected: { fills: [{ kind: 'solid', color: { hex: '#123456' } }] } };
-    const w = live([own], { answers: { [own.id]: { kind: 'choice', optionIds: [own.props.options[0]!.id] } } });
-    const first = [...w.host.querySelectorAll('[role="radio"]')[0]!.querySelectorAll('[style]')].map((x) => x.getAttribute('style') ?? '').join(';');
-    expect(first).toContain('rgb(18, 52, 86)');
-    expect(first).not.toMatch(/0\.18\)/);
+    const w = live([own], chose(own, 0));
+    expect(styleIn(w.host, 0)).toContain('rgb(18, 52, 86)');
+    expect(styleIn(w.host, 0)).not.toMatch(/0\.18\)/);
     w.unmount();
   });
 

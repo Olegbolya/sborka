@@ -185,6 +185,13 @@ export const PROP_SPECS: Record<BlockType, PropsSpec> = {
   },
   singleChoice: {
     fields: [
+      {
+        t: 'optional',
+        key: 'highlight',
+        label: 'Подсвечивать выбранный ответ',
+        make: () => ({ color: { token: 'primary', alpha: 1 } }),
+        fields: [{ t: 'color', key: 'color', label: 'Цвет подсветки' }],
+      },
       required,
       { t: 'bool', key: 'shuffle', label: 'Перемешивать варианты' },
       { t: 'bool', key: 'autoAdvance', label: 'Дальше сразу после выбора' },
@@ -194,6 +201,13 @@ export const PROP_SPECS: Record<BlockType, PropsSpec> = {
   },
   multiChoice: {
     fields: [
+      {
+        t: 'optional',
+        key: 'highlight',
+        label: 'Подсвечивать выбранный ответ',
+        make: () => ({ color: { token: 'primary', alpha: 1 } }),
+        fields: [{ t: 'color', key: 'color', label: 'Цвет подсветки' }],
+      },
       required,
       { t: 'bool', key: 'shuffle', label: 'Перемешивать варианты' },
       { t: 'num', key: 'minSelected', label: 'Выбрать не меньше', min: 0, max: 30, step: 1 },
