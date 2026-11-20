@@ -148,4 +148,22 @@ describe('P7.3 · Robokassa: запасной провайдер платеже�
     expect(u.searchParams.get('IsTest')).toBe('1');
     expect(u.searchParams.get('SignatureValue')).toBe(createHash('sha256').update(`${OPTS.login}:100.50:${created.providerPaymentId}:${u.searchParams.get('Receipt')!}:${OPTS.password1}:Shp_order=abc`).digest('hex'));
   });
+  it('AD-05 · уведомление потерялось: администратор нажимает «Проверить оплату» — заказ оплачен по ответу Робокассы; не оплачен — понятный отказ', async () => {
+    const { o, userId } = await buy();
+    const admin = await login();
+    await db.db.update(schema.users).set({ role: 'ADMIN' }).where(eq(schema.users.id, admin.userId));
+    const recheck = (cookie: string) => request(t.http()).post(`/${API_PREFIX}/admin/payments/orders/${o.id}/recheck`).set('Cookie', cookie).set('X-Blokum-CSRF', '1');
+    const someone = await login();
+    await recheck(someone.cookie).expect(403);
+    rk.ops.set(o.providerPaymentId!, { code: 5, outSum: (o.amountKop / 100).toFixed(2), order: o.id });
+    expect((await recheck(admin.cookie).expect(409)).body.error.code).toBe('PAYMENT_PENDING');
+    rk.ops.set(o.providerPaymentId!, { code: 100, outSum: (o.amountKop / 100).toFixed(2), order: o.id });
+    expect((await recheck(admin.cookie).expect(200)).body).toEqual({ status: 'PAID' });
+    const [paid] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, o.id));
+    expect(paid!.status).toBe('PAID');
+    expect((await db.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId))).length).toBe(1);
+    expect((await recheck(admin.cookie).expect(409)).body.error.code).toBe('RECHECK_IMPOSSIBLE');
+    const audit = await db.db.select().from(schema.auditLog).where(eq(schema.auditLog.targetId, o.id));
+    expect(audit.some((a) => a.action === 'ORDER_RECHECKED')).toBe(true);
+  });
 });

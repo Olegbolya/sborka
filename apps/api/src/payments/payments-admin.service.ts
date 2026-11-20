@@ -155,6 +155,13 @@ export class PaymentsAdminService {
     return result;
   }
 
+  /** A lost notice (AD-05): the provider is asked about the payment again; the order is settled by its answer. */
+  async recheck(actorId: string, orderId: string, ip?: string): Promise<{ status: string }> {
+    const result = await this.payments.recheck(orderId);
+    await this.audit.log({ actorId, action: 'ORDER_RECHECKED', targetType: 'ORDER', targetId: orderId, ...(ip ? { ip } : {}), meta: { status: result.status } });
+    return result;
+  }
+
   // ── By hand (AD-05) ──────────────────────────────────────────────────────
 
   /**

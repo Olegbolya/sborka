@@ -121,6 +121,18 @@ function OrderRow({ o, onDone }: { o: AdminOrder; onDone: () => void }) {
               {o.refundRequestedAt ? null : <button type="button" style={css.btnDanger} onClick={() => setOpen(open === 'refund' ? '' : 'refund')}>Вернуть деньги</button>}
             </div>
           ) : null}
+          {/* AD-05 · уведомление платёжного сервиса потерялось: деньги списаны, а заказ ждёт — сервер спрашивает о платеже ещё раз. */}
+          {o.status === 'PENDING' && o.provider !== 'manual' && o.provider !== 'promo' ? (
+            <button
+              type="button"
+              style={css.btnLight}
+              disabled={busy}
+              data-testid={`recheck-${o.id}`}
+              onClick={() => void run(() => api(`/admin/payments/orders/${o.id}/recheck`, { method: 'POST' }), 'Платёж подтверждён, заказ оплачен.')}
+            >
+              Проверить оплату
+            </button>
+          ) : null}
           {/* AD-05 · после «Подтвердить возврат» видно, что возврат уже запрошен, — второй раз деньги не просят. */}
           {o.status === 'PAID' && o.refundRequestedAt ? (
             <div data-testid={`refund-pending-${o.id}`} style={{ marginTop: 8 }}>
@@ -131,7 +143,7 @@ function OrderRow({ o, onDone }: { o: AdminOrder; onDone: () => void }) {
           {o.status === 'REFUNDED' && o.refundedAt ? (
             <span style={css.muted} data-testid={`refund-done-${o.id}`}>Деньги возвращены {dateTime(o.refundedAt)}</span>
           ) : null}
-          {!open && ok ? <Notice ok={ok} /> : null}
+          {!open && (ok || error) ? <Notice ok={ok} error={error} /> : null}
         </td>
       </tr>
       {open ? (

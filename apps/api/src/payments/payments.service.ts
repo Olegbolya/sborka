@@ -393,6 +393,22 @@ export class PaymentsService {
   }
 
   /**
+   * AD-05 · уведомление платёжного сервиса не дошло или было отклонено (20.11.2026: деньги списаны, заказ «Ждёт оплаты»):
+   * администратор просит сервер спросить о платеже у того сервиса, что его принимал. Решение — то же, что по уведомлению.
+   */
+  async recheck(orderId: string): Promise<{ status: string }> {
+    const [order] = await this.db.select().from(schema.orders).where(eq(schema.orders.id, orderId));
+    if (!order || order.status !== 'PENDING' || !order.providerPaymentId) throw fail(409, 'RECHECK_IMPOSSIBLE', 'Проверить у платёжного сервиса можно только заказ, который ждёт оплаты.');
+    const provider = this.providerNamed(order.provider);
+    if (!provider) throw fail(503, 'PAYMENTS_UNAVAILABLE', `Заказ оформлен через ${PROVIDER_TITLES[order.provider] ?? 'другой платёжный сервис'}, а ключи этого сервиса на сервере не подключены.`);
+    await this.settle(provider, order.providerPaymentId, false);
+    const [after] = await this.db.select({ status: schema.orders.status }).from(schema.orders).where(eq(schema.orders.id, orderId));
+    if (after!.status === 'CANCELED') throw fail(409, 'PAYMENT_CANCELED', 'Платёжный сервис сообщил, что платёж не прошёл: заказ отменён.');
+    if (after!.status !== 'PAID') throw fail(409, 'PAYMENT_PENDING', 'Платёжный сервис ещё не подтвердил оплату — проверьте позже.');
+    return { status: after!.status };
+  }
+
+  /**
    * Возврат полной суммы заказа (кнопка в админке — P7.7): статус меняется, когда провайдер подтвердит возврат уведомлением.
    * ADR-113: возврат идёт через того провайдера, который принял оплату, а не через того, кто принимает новые оплаты.
    */

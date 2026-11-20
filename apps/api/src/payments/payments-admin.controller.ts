@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Ip, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Ip, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { CurrentUser, Roles } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { PaymentsAdminService } from './payments-admin.service.js';
@@ -37,6 +37,12 @@ export class PaymentsAdminController {
   @Post('orders/:id/refund')
   refund(@Param('id') id: string, @Body() body: Record<string, unknown>, @CurrentUser() user: RequestUser, @Ip() ip: string) {
     return this.admin.refund(user.id, id, body?.reason, ip);
+  }
+
+  @Post('orders/:id/recheck')
+  @HttpCode(200)
+  recheck(@Param('id') id: string, @CurrentUser() user: RequestUser, @Ip() ip: string) {
+    return this.admin.recheck(user.id, id, ip);
   }
 
   @Post('grants')
