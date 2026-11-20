@@ -100,21 +100,31 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
   useSyncExternalStore(session.store.subscribe, session.store.getSnapshot, session.store.getSnapshot);
   // On a phone the window is narrower than the frame of a phone: the whole preview is shrunk to fit (the unit of the artboard is a number, not a transform).
   const wrap = useRef<HTMLDivElement>(null);
-  const [room, setRoom] = useState(10_000);
+  const [room, setRoom] = useState({ w: 10_000, h: 10_000 });
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setRoom(el.clientWidth));
+    // Room for the phone: the width of the preview and the height down to the bottom of the window.
+    // Below the preview the window keeps the «Закрыть» row and the margins of the dialog (about 100 px).
+    const measure = () => setRoom({ w: el.clientWidth, h: window.innerHeight - el.getBoundingClientRect().top - 100 });
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
-    setRoom(el.clientWidth);
-    return () => ro.disconnect();
+    window.addEventListener('resize', measure);
+    measure();
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
   }, []);
   const base = SIZES[frame];
-  // The phone frame must fit in the width of the window; the computer frame keeps its size (the window scrolls), as the column of 480 is the point of it (E-02).
-  const fit = frame === 'phone' ? Math.min(1, Math.max(0.4, (room - 24) / base.w)) : 1;
+  // The phone is shown whole, 390×844 like the most common phones, shrunk evenly to fit the width and the height of the window —
+  // the same proportions as on a real phone (the owner's request of 20.11: the preview looked unlike the work). The computer frame
+  // keeps its size (the window scrolls), as the column of 480 is the point of it (E-02).
+  const fit = frame === 'phone' ? Math.min(1, Math.max(0.4, Math.min((room.w - 24) / (base.w + 20), (room.h - 20) / base.h))) : 1;
   const size = { w: base.w * fit, h: base.h * fit, unit: base.unit * fit };
-  // Рамка по высоте не выше самого экрана: иначе под короткой картинкой остаётся полоса фона, которой в сборке нет (экран выше 640 прокручивается).
-  const frameHeight = Math.min(size.h, 640, view.screen ? view.screen.height * size.unit : size.h);
+  // A phone shows its whole window: a screen lower than it is stretched like on a real phone (PL-16), a taller one scrolls.
+  // On the computer the frame is not higher than the screen itself (no strip of background that the work does not have).
+  const frameHeight = frame === 'phone' ? size.h : Math.min(size.h, 640, view.screen ? view.screen.height * size.unit : size.h);
   const rules = useMemo(() => ruleIndex(doc), [doc]);
   const last = entries[entries.length - 1];
   const highlighted = focusId ?? last?.event.self ?? null;
@@ -152,7 +162,7 @@ export function PreviewDialog({ doc, onClose }: { doc: ProjectDocument; onClose:
             <div style={{ width: size.w, height: frameHeight, overflow: 'auto', position: 'relative' }}>
               {box && <div className="ed-hl" data-testid="debug-highlight" aria-hidden style={{ left: box.x, top: box.y, width: box.w, height: box.h }} />}
               {view.screen ? (
-                <Artboard mode="player" unit={size.unit} tokens={doc.theme.tokens} media={media.resolver} runText={session.textValue}>
+                <Artboard mode="player" unit={size.unit} {...(frame === 'phone' ? { viewportHeight: size.h, coverHeight: view.screen.height } : {})} tokens={doc.theme.tokens} media={media.resolver} runText={session.textValue}>
                   <PlayerStage screenKey={view.screenKey} transition={view.transition} screen={view.screen} store={session.store} {...(view.progress ? { progress: view.progress } : {})} entryOverlay={view.entryOverlay} />
                 </Artboard>
               ) : (

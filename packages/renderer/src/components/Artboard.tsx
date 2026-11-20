@@ -17,6 +17,11 @@ export interface ArtboardProps extends Partial<RenderContextValue> {
    * (vertical only, at most 1.5 times; width and type stay): the sides are never cropped (the rule is in `app/globals.css`).
    */
   coverHeight?: number;
+  /**
+   * The editor's preview of a phone: the height of the phone window in pixels. With `unit` and `coverHeight` the screen is stretched the
+   * same way as on a real phone of that size (PL-16), so the preview and the published work look alike.
+   */
+  viewportHeight?: number;
   children: ReactNode;
 }
 
@@ -44,7 +49,7 @@ function sameContext(a: RenderContextValue, b: RenderContextValue): boolean {
   return ka.length === Object.keys(b).length && ka.every((k) => a[k] === b[k]);
 }
 
-export function Artboard({ unit, coverHeight, children, ...context }: ArtboardProps): ReactNode {
+export function Artboard({ unit, coverHeight, viewportHeight, children, ...context }: ArtboardProps): ReactNode {
   const merged: RenderContextValue = { ...defaultRenderContext, ...context };
   // E-05: while a block is dragged the editor redraws the artboard many times a second; a context that did not change keeps its
   // object, so every block that did not change skips drawing (BlockView is memo). The player passes new views on every change.
@@ -91,6 +96,15 @@ export function Artboard({ unit, coverHeight, children, ...context }: ArtboardPr
     backgroundColor: value.tokens.colors.background ?? '#FFFFFF',
     ...(coverHeight !== undefined && unit === undefined ? { '--bk-cover-h': String(coverHeight) } : {}),
   };
+  // The preview of a phone (unit and window height known): the same stretch as `apply` above computes from the real window.
+  if (unit !== undefined && viewportHeight !== undefined) {
+    stage.minHeight = `${String(viewportHeight)}px`;
+    if (coverHeight !== undefined) {
+      const ky = Math.min(MAX_STRETCH, Math.max(1, viewportHeight / (coverHeight * unit)));
+      stage['--ky'] = String(ky);
+      stage['--uy'] = `calc(var(--u) * ${String(ky)})`;
+    }
+  }
   const focusBoard = { ...board, [FOCUS_VAR]: cssColor({ token: 'primary', alpha: 1 }, value.tokens) } as CSSProperties & Record<string, string>;
   return (
     <RenderContext.Provider value={value}>
