@@ -18,6 +18,19 @@ else
   echo "Блоккер ещё не развёрнут"
 fi
 [ -f "$ENV_FILE" ] && echo ".env.prod: есть ($(stat -c %a "$ENV_FILE"))" || echo ".env.prod: НЕТ — нужен server-setup.sh"
+echo "── Ошибки API (5xx, последние; по коду запроса из сообщения «Внутренняя ошибка сервера»)"
+# shellcheck disable=SC2016 # JavaScript for node, not shell
+grep -ahE '"msg":"необработанная ошибка"' "$LOGS/blokum-api-out.log" "$LOGS/blokum-api-error.log" 2>/dev/null | tail -n 4 | node -e '
+  const lines = require("fs").readFileSync(0, "utf8").split("\n").filter(Boolean);
+  for (const l of lines) {
+    try {
+      const j = JSON.parse(l);
+      const e = j.err ?? {};
+      console.log(`${j.time ?? ""} ${j.requestId ?? j.reqId ?? ""} ${j.req?.method ?? ""} ${j.req?.url ?? ""} → ${e.type ?? ""}: ${String(e.message ?? "").slice(0, 300)}`);
+      console.log("   " + String(e.stack ?? "").split("\n").slice(1, 4).map((x) => x.trim()).join(" | ").slice(0, 400));
+    } catch { console.log(l.slice(0, 300)); }
+  }' 2>&1 | mask
+[ -f "$ENV_FILE" ] && echo "платежи: $(grep -oE '^(PAYMENT_PROVIDER|PAYMENT_PROVIDERS)=[a-z,]+' "$ENV_FILE" | tr '\n' ' ')· заданы: $(grep -oE '^(YOOKASSA|ROBOKASSA)_[A-Z0-9_]+=.' "$ENV_FILE" | cut -d= -f1 | tr '\n' ' ')"
 echo "== Ресурсы сервера (для выбора VPS) =="
 echo "  процессор: $(nproc) ядер, $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//')"
 echo "  память: $(free -m | awk '/^Mem:/{print "всего "$2" МБ, занято "$3" МБ, доступно "$7" МБ"}')"
