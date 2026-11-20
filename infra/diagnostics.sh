@@ -45,6 +45,16 @@ CURL
   echo "ЮKassa /v3/me: ответ $me · $(node -e 'try{const j=JSON.parse(require("fs").readFileSync("/tmp/bk-yoo-me.json","utf8"));console.log([j.account_id&&"магазин "+j.account_id,j.test!==undefined&&(j.test?"ТЕСТОВЫЙ":"боевой"),j.status,j.code,j.description].filter(Boolean).join(" · "))}catch{console.log("нет ответа")}' 2>&1)"
   rm -f /tmp/bk-yoo-me.json
 fi
+# Does the running API see the same key as the file? (node --env-file does not override a variable the process already has.) Only «same / differs».
+api_pid="$(pm2 pid blokum-api 2>/dev/null | head -1)"
+if [ -n "$api_pid" ] && [ "$api_pid" != 0 ] && [ -r "/proc/$api_pid/environ" ] && [ -f "$ENV_FILE" ]; then
+  in_proc="$(tr '\0' '\n' <"/proc/$api_pid/environ" | grep -E '^YOOKASSA_SECRET_KEY=' | sha256sum | cut -c1-12)"
+  in_file="$(grep -E '^YOOKASSA_SECRET_KEY=' "$ENV_FILE" | tail -1 | sha256sum | cut -c1-12)"
+  none="$(printf '' | sha256sum | cut -c1-12)"
+  if [ "$in_proc" = "$none" ]; then echo "ключ ЮKassa в процессе API: не задан окружением (берётся из .env.prod)"
+  elif [ "$in_proc" = "$in_file" ]; then echo "ключ ЮKassa в процессе API: такой же, как в .env.prod"
+  else echo "ключ ЮKassa в процессе API: ДРУГОЙ, чем в .env.prod (процесс держит старое значение)"; fi
+fi
 echo "== Ресурсы сервера (для выбора VPS) =="
 echo "  процессор: $(nproc) ядер, $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//')"
 echo "  память: $(free -m | awk '/^Mem:/{print "всего "$2" МБ, занято "$3" МБ, доступно "$7" МБ"}')"
