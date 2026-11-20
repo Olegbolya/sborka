@@ -55,7 +55,8 @@ test.describe('E-15 · числовые поля: границы не мешаю
 });
 
 test.describe('E-02 · предпросмотр показывает экран без лишнего поля под ним', () => {
-  test('E-02 · рамка предпросмотра не выше экрана: под экраном 580 нет полосы фона, высокий экран прокручивается', async ({ page }) => {
+  // ADR-128: рамка — целый телефон 390×844; низкий экран растянут до окна, как у участника (PL-16, не больше 1,5), высокий прокручивается.
+  test('E-02 · рамка предпросмотра — окно телефона 390×844: экран 580 растянут до низа без полосы фона, высокий экран прокручивается', async ({ page }) => {
     await loginAndOnboard(page, freshUser('Рамка'));
     const { id } = await seedProject(page, (d) => {
       (d.screens[0] as { height?: number }).height = 580;
@@ -67,18 +68,20 @@ test.describe('E-02 · предпросмотр показывает экран 
     await page.getByRole('button', { name: 'Предпросмотр' }).click();
     const frame = page.getByRole('dialog', { name: 'Предпросмотр' }).locator('[data-preview="true"]');
     const scroller = frame.locator('> div').first();
-    const unit = async () => (await frame.locator('.bk-screen').first().boundingBox())!.width / 390;
     await expect(frame.locator('.bk-screen')).toBeVisible();
-    // Экран 580: рамка ровно по нему (внутри рамки 580 единиц).
-    const h1 = (await scroller.boundingBox())!.height;
-    const u1 = await unit();
-    expect(Math.abs(h1 - 580 * u1)).toBeLessThan(1.5);
+    // Окно телефона: ширина 390 единиц, высота 844 — в тех же пропорциях, что у телефона.
+    const box = (await scroller.boundingBox())!;
+    const u = box.width / 390;
+    expect(Math.abs(box.height - 844 * u)).toBeLessThan(1.5);
+    // Экран 580 растянут до низа окна (844 / 580 ≈ 1,46 — меньше предела 1,5): полосы фона под ним нет, прокрутки нет.
+    const screen1 = (await frame.locator('.bk-screen').first().boundingBox())!;
+    expect(Math.abs(screen1.y + screen1.height - (box.y + box.height))).toBeLessThan(1.5);
     expect(await scroller.evaluate((n) => n.scrollHeight - n.clientHeight)).toBeLessThanOrEqual(1);
-    // Экран 1200: рамка не выше 640 и прокручивается до самого низа экрана.
+    // Экран 1200: окно того же размера, экран прокручивается до самого низа.
     await frame.getByRole('button', { name: 'Дальше', exact: true }).click();
     await expect(frame.locator('.bk-screen[aria-label="Высокий"]')).toBeVisible();
     const h2 = (await scroller.boundingBox())!.height;
-    expect(h2).toBeLessThanOrEqual(640 + 1.5);
+    expect(Math.abs(h2 - 844 * u)).toBeLessThan(1.5);
     expect(await scroller.evaluate((n) => n.scrollHeight)).toBeGreaterThan(h2 + 100);
   });
 });

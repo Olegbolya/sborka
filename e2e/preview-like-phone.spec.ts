@@ -2,8 +2,6 @@ import { devices, expect, test } from '@playwright/test';
 import { freshUser, loginAndOnboard } from './helpers/auth';
 import { openEditor, seedProject, textBlock } from './helpers/editor';
 
-test.skip(({ viewport }) => (viewport?.width ?? 0) < 1000, 'предпросмотр в редакторе на компьютере сравнивается с настоящим телефоном');
-
 test('E-02 · PL-16 · предпросмотр «Телефон 390×844» выглядит как сборка на телефоне того же размера: те же пропорции и то же растяжение низкого экрана', async ({ page, browser }, info) => {
   await loginAndOnboard(page, freshUser('Пропорции'));
   const { id } = await seedProject(page, (d) => {
