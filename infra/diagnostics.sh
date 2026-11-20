@@ -36,6 +36,15 @@ if [ -f "$ENV_FILE" ]; then
   yk="$(grep -E '^YOOKASSA_SECRET_KEY=' "$ENV_FILE" | tail -1 | cut -d= -f2-)"
   echo "ЮKassa: магазин $(grep -E '^YOOKASSA_SHOP_ID=' "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -cd '0-9'), ключ вида ${yk:0:5}…, длина ${#yk}$(case "$yk" in *[[:space:]]*|\"*|\'*) echo ', ЕСТЬ пробелы или кавычки';; esac), строк с ключом: $(grep -cE '^YOOKASSA_SECRET_KEY=' "$ENV_FILE")"
 fi
+# The keys are checked by YooKassa itself (GET /v3/me — the shop the key belongs to); only the answer's status and shop are shown.
+if [ -f "$ENV_FILE" ] && grep -qE '^YOOKASSA_SECRET_KEY=.' "$ENV_FILE"; then
+  me="$(curl -sS -m 15 -o /tmp/bk-yoo-me.json -w '%{http_code}' -K - https://api.yookassa.ru/v3/me 2>&1 <<CURL
+user = "$(grep -E '^YOOKASSA_SHOP_ID=' "$ENV_FILE" | tail -1 | cut -d= -f2-):$(grep -E '^YOOKASSA_SECRET_KEY=' "$ENV_FILE" | tail -1 | cut -d= -f2-)"
+CURL
+)"
+  echo "ЮKassa /v3/me: ответ $me · $(node -e 'try{const j=JSON.parse(require("fs").readFileSync("/tmp/bk-yoo-me.json","utf8"));console.log([j.account_id&&"магазин "+j.account_id,j.test!==undefined&&(j.test?"ТЕСТОВЫЙ":"боевой"),j.status,j.code,j.description].filter(Boolean).join(" · "))}catch{console.log("нет ответа")}' 2>&1)"
+  rm -f /tmp/bk-yoo-me.json
+fi
 echo "== Ресурсы сервера (для выбора VPS) =="
 echo "  процессор: $(nproc) ядер, $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//')"
 echo "  память: $(free -m | awk '/^Mem:/{print "всего "$2" МБ, занято "$3" МБ, доступно "$7" МБ"}')"
