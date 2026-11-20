@@ -7,6 +7,7 @@ import type { OtpSender } from '../src/auth/otp-sender.js';
 import type { CaptchaVerifier } from '../src/auth/captcha.js';
 import { EntitlementsService } from '../src/entitlements/entitlements.service.js';
 import { YooKassaProvider } from '../src/payments/yookassa.provider.js';
+import { PaymentProviderError } from '../src/payments/payment-provider.js';
 import { addPeriod } from '../src/payments/payments.service.js';
 import { RenewalRemindersService } from '../src/payments/renewal-reminders.service.js';
 import { fakeYooKassa } from './fake-payments.js';
@@ -732,5 +733,22 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
       const found = (await request(t.http()).get(`/${API_PREFIX}/admin/users?q=${encodeURIComponent(typed)}`).set('Cookie', admin.cookie).expect(200)).body as Array<{ id: string }>;
       expect(found.map((x) => x.id)).toContain(user.userId);
     });
+  });
+});
+
+describe('P7.3 · отказ ЮKassa', () => {
+  it('P7.3 · причина отказа ЮKassa (код, поле, описание) попадает в ошибку — для журнала сервера', async () => {
+    const fetchImpl = (() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ type: 'error', code: 'invalid_credentials', description: 'Authentication by given credentials failed' }), { status: 401 }),
+      )) as typeof fetch;
+    const yoo = new YooKassaProvider('1', 'k', fetchImpl, 'https://api.yookassa.test/v3');
+    const err = await yoo.createPayment({ orderId: 'o1', amountKop: 7900, description: 'Тест', returnUrl: 'https://blokker.ru' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PaymentProviderError);
+    expect((err as PaymentProviderError).message).toBe(
+      'Платёжный сервис отказал в создании платежа (401: invalid_credentials · Authentication by given credentials failed)',
+    );
+    const noBody = new YooKassaProvider('1', 'k', (() => Promise.resolve(new Response('нет', { status: 500 }))), 'https://api.yookassa.test/v3');
+    expect(((await noBody.refund({ providerPaymentId: 'p', amountKop: 100, idempotenceKey: 'o' }).catch((e: unknown) => e)) as Error).message).toBe('Платёжный сервис отказал в возврате (500)');
   });
 });

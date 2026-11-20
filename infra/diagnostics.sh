@@ -20,14 +20,14 @@ fi
 [ -f "$ENV_FILE" ] && echo ".env.prod: есть ($(stat -c %a "$ENV_FILE"))" || echo ".env.prod: НЕТ — нужен server-setup.sh"
 echo "── Ошибки API (5xx, последние; по коду запроса из сообщения «Внутренняя ошибка сервера»)"
 # shellcheck disable=SC2016 # JavaScript for node, not shell
-grep -ahE '"msg":"необработанная ошибка"' "$LOGS/blokum-api-out.log" "$LOGS/blokum-api-error.log" 2>/dev/null | tail -n 4 | node -e '
+grep -ahE '"msg":"(необработанная ошибка|ошибка внешнего сервиса)"' "$LOGS/blokum-api-out.log" "$LOGS/blokum-api-error.log" 2>/dev/null | tail -n 6 | node -e '
   const lines = require("fs").readFileSync(0, "utf8").split("\n").filter(Boolean);
   for (const l of lines) {
     try {
-      const j = JSON.parse(l);
+      const j = JSON.parse(l.slice(l.indexOf("{")));
       const e = j.err ?? {};
-      console.log(`${j.time ?? ""} ${j.requestId ?? j.reqId ?? ""} ${j.req?.method ?? ""} ${j.req?.url ?? ""} → ${e.type ?? ""}: ${String(e.message ?? "").slice(0, 300)}`);
-      console.log("   " + String(e.stack ?? "").split("\n").slice(1, 4).map((x) => x.trim()).join(" | ").slice(0, 400));
+      console.log(`${j.time ?? ""} ${j.requestId ?? ""} ${j.status ?? ""} ${j.code ?? ""} → ${j.cause ?? `${e.type ?? ""}: ${String(e.message ?? "").slice(0, 300)}`}`);
+      if (e.stack) console.log("   " + String(e.stack).split("\n").slice(1, 4).map((x) => x.trim()).join(" | ").slice(0, 400));
     } catch { console.log(l.slice(0, 300)); }
   }' 2>&1 | mask
 [ -f "$ENV_FILE" ] && echo "платежи: $(grep -oE '^(PAYMENT_PROVIDER|PAYMENT_PROVIDERS)=[a-z,]+' "$ENV_FILE" | tr '\n' ' ')· заданы: $(grep -oE '^(YOOKASSA|ROBOKASSA)_[A-Z0-9_]+=.' "$ENV_FILE" | cut -d= -f1 | tr '\n' ' ')"

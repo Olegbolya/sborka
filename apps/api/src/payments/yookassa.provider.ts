@@ -49,6 +49,18 @@ export class YooKassaProvider implements PaymentProvider {
     }
   }
 
+  /** ЮKassa отвечает на отказ JSON `{ code, description, parameter }` — он попадает в журнал сервера, чтобы причина была видна. */
+  private async refusal(res: Response, what: string): Promise<PaymentProviderError> {
+    let reason = '';
+    try {
+      const b = (await res.json()) as { code?: unknown; description?: unknown; parameter?: unknown };
+      reason = [b.code, b.parameter, b.description].filter((x) => typeof x === 'string' && x).join(' · ').slice(0, 300);
+    } catch {
+      // Not JSON: the status alone is the reason.
+    }
+    return new PaymentProviderError(`${what} (${res.status}${reason ? `: ${reason}` : ''})`, res.status);
+  }
+
   async createPayment(input: CreatePaymentInput): Promise<CreatedPayment> {
     const res = await this.call(
       'POST',
@@ -62,7 +74,7 @@ export class YooKassaProvider implements PaymentProvider {
       },
       input.orderId,
     );
-    if (!res.ok) throw new PaymentProviderError(`Платёжный сервис отказал в создании платежа (${res.status})`, res.status);
+    if (!res.ok) throw await this.refusal(res, 'Платёжный сервис отказал в создании платежа');
     const p = (await res.json()) as YooPayment;
     const url = p.confirmation?.confirmation_url;
     if (!p.id || !url) throw new PaymentProviderError('Платёжный сервис не вернул ссылку на оплату');
@@ -73,7 +85,7 @@ export class YooKassaProvider implements PaymentProvider {
     if (!/^[0-9a-zA-Z-]{10,64}$/.test(providerPaymentId)) return null;
     const res = await this.call('GET', `/payments/${providerPaymentId}`);
     if (res.status === 404) return null;
-    if (!res.ok) throw new PaymentProviderError(`Платёжный сервис не отдал платёж (${res.status})`, res.status);
+    if (!res.ok) throw await this.refusal(res, 'Платёжный сервис не отдал платёж');
     const p = (await res.json()) as YooPayment;
     const status = p.status === 'succeeded' || p.status === 'canceled' || p.status === 'pending' ? p.status : 'other';
     const orderId = typeof p.metadata?.orderId === 'string' ? p.metadata.orderId : null;
@@ -82,7 +94,7 @@ export class YooKassaProvider implements PaymentProvider {
 
   async refund(input: RefundInput): Promise<{ refundId: string; status: string }> {
     const res = await this.call('POST', '/refunds', { payment_id: input.providerPaymentId, amount: { value: rubles(input.amountKop), currency: 'RUB' } }, input.idempotenceKey);
-    if (!res.ok) throw new PaymentProviderError(`Платёжный сервис отказал в возврате (${res.status})`, res.status);
+    if (!res.ok) throw await this.refusal(res, 'Платёжный сервис отказал в возврате');
     const r = (await res.json()) as { id: string; status: string };
     return { refundId: r.id, status: r.status };
   }

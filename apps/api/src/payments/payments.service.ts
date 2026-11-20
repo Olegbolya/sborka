@@ -10,7 +10,8 @@ import { type OrderKindName, PromoService } from './promo.service.js';
 /** How the providers are named to the owner in the admin messages. */
 const PROVIDER_TITLES: Record<string, string> = { yookassa: 'ЮКассу', robokassa: 'Робокассу' };
 
-const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
+const fail = (status: number, code: string, message: string, cause?: unknown): HttpException =>
+  new HttpException({ error: { code, message } }, status, cause === undefined ? undefined : { cause });
 
 export type OrderRequest = { kind?: unknown; planCode?: unknown; period?: unknown; projectId?: unknown; addon?: unknown };
 export interface OrderView {
@@ -156,7 +157,7 @@ export class PaymentsService {
     } catch (e) {
       await this.db.update(schema.orders).set({ status: 'CANCELED' }).where(eq(schema.orders.id, order!.id));
       await this.promos.release({ orderId: order!.id });
-      if (e instanceof PaymentProviderError) throw fail(502, 'PAYMENTS_FAILED', 'Платёжный сервис сейчас не отвечает. Попробуйте позже.');
+      if (e instanceof PaymentProviderError) throw fail(502, 'PAYMENTS_FAILED', 'Платёжный сервис сейчас не отвечает. Попробуйте позже.', e);
       throw e;
     }
   }
@@ -245,7 +246,7 @@ export class PaymentsService {
     try {
       payment = await provider.getPayment(paymentId);
     } catch (e) {
-      if (e instanceof PaymentProviderError) throw fail(502, 'PROVIDER_UNREACHABLE', 'Платёж не удалось проверить, повторите позже.');
+      if (e instanceof PaymentProviderError) throw fail(502, 'PROVIDER_UNREACHABLE', 'Платёж не удалось проверить, повторите позже.', e);
       throw e;
     }
     if (!payment) throw fail(400, 'UNKNOWN_PAYMENT', 'Такого платежа нет.');
@@ -404,7 +405,7 @@ export class PaymentsService {
     try {
       result = await provider.refund({ providerPaymentId: order.providerPaymentId, amountKop: order.amountKop, idempotenceKey: `refund-${order.id}` });
     } catch (e) {
-      if (e instanceof PaymentProviderError) throw fail(502, 'PAYMENTS_FAILED', 'Платёжный сервис отказал в возврате.');
+      if (e instanceof PaymentProviderError) throw fail(502, 'PAYMENTS_FAILED', 'Платёжный сервис отказал в возврате.', e);
       throw e;
     }
     // ADR-116: the provider answered our own request with the key of the shop that the refund is done — the order is closed at once;

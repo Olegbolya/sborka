@@ -52,6 +52,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return;
     }
     const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+    // Our own 5xx (an outside service refused: payments, mail) — the person sees its Russian text and the request code,
+    // the log keeps the code and the cause, so the reason can be found by the request code.
+    const own = exception instanceof HttpException ? ownError(exception) : undefined;
+    if (own) {
+      const cause = exception instanceof HttpException ? exception.cause : undefined;
+      const { code, message } = own;
+      this.logger.error({ status, code, cause: cause instanceof Error ? cause.message : typeof cause === 'string' ? cause : undefined }, 'ошибка внешнего сервиса');
+      void this.alerts.hit('http_5xx', HTTP_5XX_RULE, 'Всплеск ошибок сервера (5xx) в API');
+      res.status(status).json({ error: { code, message: `${String(message)} Код запроса: ${requestId ?? 'неизвестен'}` } });
+      return;
+    }
     this.logger.error({ err: exception, status }, 'необработанная ошибка');
     void this.alerts.hit('http_5xx', HTTP_5XX_RULE, 'Всплеск ошибок сервера (5xx) в API');
     res.status(status).json({

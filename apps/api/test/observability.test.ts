@@ -23,6 +23,13 @@ class ErrorsController {
     throw new HttpException({ error: { code: 'SLUG_TAKEN', message: 'Этот адрес уже занят' } }, 409);
   }
 
+  @Get('provider')
+  provider(): never {
+    throw new HttpException({ error: { code: 'PAYMENTS_FAILED', message: 'Платёжный сервис сейчас не отвечает. Попробуйте позже.' } }, 502, {
+      cause: new Error('Платёжный сервис отказал в создании платежа (401: invalid_credentials)'),
+    });
+  }
+
   @Get('slow')
   async slow(): Promise<{ ok: true }> {
     await new Promise((r) => setTimeout(r, 10));
@@ -74,6 +81,15 @@ describe('id запроса, журнал и ошибки API', () => {
     const logged = t.logs.find((l) => l.requestId === 'boom-req-01' && l.msg === 'необработанная ошибка');
     expect(logged).toBeDefined();
     expect(JSON.stringify(logged)).not.toContain('9991234');
+  });
+
+  it('502 от внешнего сервиса: человек видит понятный текст с кодом запроса, в журнале — причина', async () => {
+    const res = await request(t.http()).get(`/${API_PREFIX}/test-errors/provider`).set('x-request-id', 'pay-req-01').expect(502);
+    expect(res.body).toEqual({
+      error: { code: 'PAYMENTS_FAILED', message: 'Платёжный сервис сейчас не отвечает. Попробуйте позже. Код запроса: pay-req-01' },
+    });
+    const logged = t.logs.find((l) => l.requestId === 'pay-req-01' && l.msg === 'ошибка внешнего сервиса');
+    expect(logged).toMatchObject({ status: 502, code: 'PAYMENTS_FAILED', cause: 'Платёжный сервис отказал в создании платежа (401: invalid_credentials)' });
   });
 
   it('20 ошибок 5xx за минуту — одна тревога администратору', async () => {
