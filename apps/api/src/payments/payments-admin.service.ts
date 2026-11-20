@@ -4,7 +4,8 @@ import { type Db, schema } from '@blokum/db';
 import { AuditLogService } from '../auth/audit-log.service.js';
 import { DB } from '../tokens.js';
 import { type IncomeView, NpdIncomeService } from './npd-income.service.js';
-import { addMonths, PaymentsService } from './payments.service.js';
+import { PaymentsService } from './payments.service.js';
+import { addSubscription } from './subscription-queue.js';
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
 
@@ -197,15 +198,14 @@ export class PaymentsAdminService {
         const [plan] = await tx.select({ code: schema.plans.code, priceOnceRub: schema.plans.priceOnceRub }).from(schema.plans).where(eq(schema.plans.code, planCode));
         if (!plan || plan.priceOnceRub !== null || plan.code === 'FREE') throw fail(400, 'INVALID_INPUT', 'Такого тарифа нет.');
         const [order] = await tx.insert(schema.orders).values({ userId, kind: 'SUBSCRIPTION', item: { kind: 'SUBSCRIPTION', planCode, period: 'MONTH', manual: true, months, reason, byAdmin: actorId }, amountKop: 0, status: 'PAID', provider: 'manual', paidAt: now }).returning({ id: schema.orders.id });
-        // «Продлить»: if the same tariff is still running, the new months start when it ends; otherwise they start now.
-        const [running] = await tx
-          .select({ end: schema.subscriptions.currentPeriodEnd })
+        // ADR-126: the months join the queue like a paid period — the same tariff gets longer, an older one starts now, a younger one waits.
+        await addSubscription(tx, userId, planCode, months, 'MONTH', now);
+        const [mine] = await tx
+          .select({ from: schema.subscriptions.currentPeriodStart })
           .from(schema.subscriptions)
-          .where(and(eq(schema.subscriptions.userId, userId), eq(schema.subscriptions.planCode, planCode), inArray(schema.subscriptions.status, ['ACTIVE', 'TRIAL']), gt(schema.subscriptions.currentPeriodEnd, now)))
-          .orderBy(desc(schema.subscriptions.currentPeriodEnd))
+          .where(and(eq(schema.subscriptions.userId, userId), eq(schema.subscriptions.planCode, planCode), eq(schema.subscriptions.status, 'ACTIVE'), gt(schema.subscriptions.currentPeriodEnd, now)))
           .limit(1);
-        const from = running?.end ?? now;
-        await tx.insert(schema.subscriptions).values({ userId, planCode, period: 'MONTH', status: 'ACTIVE', currentPeriodStart: from, currentPeriodEnd: addMonths(from, months) });
+        const from = mine?.from ?? now;
         await this.audit.log({ actorId, action: 'MANUAL_GRANT', targetType: 'USER', targetId: userId, ...(ip ? { ip } : {}), meta: { kind, planCode, months, reason, orderId: order!.id, from: from.toISOString() } });
         return { orderId: order!.id };
       }

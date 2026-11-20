@@ -2,8 +2,10 @@ import { api } from './api-browser';
 
 /** P7.6 · состояние тарифа человека, как его отдаёт сервер (`GET /billing/me`). */
 export interface BillingState {
-  plan: { code: string; title: string };
+  plan: { code: string; title: string; sort: number };
   subscription: { planCode: string; status: string; trial: boolean; currentPeriodEnd: string; renewMode: 'AUTO' | 'LINK' } | null;
+  /** ADR-126 · купленные тарифы, которые ждут очереди: начнутся, когда закончится тот, что работает сейчас. */
+  queued: Array<{ planCode: string; title: string; start: string; end: string }>;
   trialUsed: boolean;
   usage: { completions: number; completionsLimit: number; storageBytes: number; storageLimit: number };
   passes: Array<{ projectId: string; title: string; validTo: string }>;
@@ -17,6 +19,8 @@ export interface OrderRow {
   item: { planCode?: string; period?: 'MONTH' | 'YEAR'; addon?: string; promo?: string };
   createdAt: string;
   paidAt: string | null;
+  /** Название тарифа подписки; у других покупок — null. */
+  planTitle: string | null;
 }
 
 export const loadBilling = (): Promise<BillingState> => api<BillingState>('/billing/me');

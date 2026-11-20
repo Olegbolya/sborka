@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { errorText, isApiError } from '../../lib/api-browser';
-import { type BillingState, createOrder, loadBilling, startTrial } from '../../lib/billing';
+import { type BillingState, createOrder, dateRu, loadBilling, startTrial } from '../../lib/billing';
 import { type PlanView } from '../../lib/landing/plans';
 
 /**
@@ -66,10 +66,27 @@ export function PlanActions({ plan }: { plan: PlanView }) {
     });
   const rubles = (n: number) => `${new Intl.NumberFormat('ru-RU').format(n).replace(/\u202f/g, '\u00a0')}\u00a0₽`;
   const current = state.plan.code === plan.code;
+  // ADR-126 · what a payment does when another paid tariff runs: an older one starts now, a younger one waits its turn.
+  const running = state.subscription && state.plan.code !== 'FREE' && !state.subscription.trial && new Date(state.subscription.currentPeriodEnd) > new Date() ? state.subscription : null;
+  const waiting = state.queued.find((q) => q.planCode === plan.code);
+  const queueNote = current
+    ? null
+    : waiting
+      ? `Уже оплачен: начнётся ${dateRu(waiting.start)} Новая оплата продлит его.`
+      : running && plan.sort > state.plan.sort
+        ? `Начнётся сразу после оплаты, а оставшиеся дни «${state.plan.title}» перенесутся на время после него.`
+        : running && plan.sort < state.plan.sort
+          ? `Начнётся, когда закончится «${state.plan.title}» (${dateRu(running.currentPeriodEnd)}) — оплаченные дни не пропадут.`
+          : null;
 
   return (
     <div className="lp-plan-actions">
       {current && <p className="lp-note">Это ваш текущий тариф.</p>}
+      {queueNote && (
+        <p className="lp-note" data-testid={`plan-queue-note-${plan.code}`}>
+          {queueNote}
+        </p>
+      )}
       {plan.limits.trialDays && !state.trialUsed && state.plan.code === 'FREE' && (
         <button type="button" className="lp-btn" disabled={busy} onClick={() => void trial()}>
           Попробовать {plan.limits.trialDays}&nbsp;дня бесплатно

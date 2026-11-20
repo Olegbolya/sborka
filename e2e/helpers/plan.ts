@@ -29,3 +29,22 @@ export async function subscribeOwner(projectId: string, planCode = 'PLUS'): Prom
     await client.end();
   }
 }
+
+/** ADR-126 · подписки человека напрямую в базе e2e: `[тариф, начало, конец]` в днях от сейчас (очередь — начало в будущем). */
+export async function setSubscriptions(userId: string, rows: Array<[string, number, number]>): Promise<void> {
+  const requireFromDb = createRequire(path.resolve(process.cwd(), 'packages/db/package.json'));
+  const { Client } = requireFromDb('pg') as { Client: new (config: { connectionString: string }) => PgClient };
+  const client = new Client({ connectionString: process.env.DATABASE_URL ?? 'postgresql://blokum:blokum@127.0.0.1:5432/blokum_test' });
+  await client.connect();
+  try {
+    for (const [planCode, from, to] of rows) {
+      await client.query(
+        `INSERT INTO subscriptions (id, user_id, plan_code, period, status, current_period_start, current_period_end)
+         VALUES (gen_random_uuid()::text, $1, $2, 'MONTH', 'ACTIVE', now() + make_interval(days => $3::int), now() + make_interval(days => $4::int))`,
+        [userId, planCode, from, to],
+      );
+    }
+  } finally {
+    await client.end();
+  }
+}

@@ -1,14 +1,17 @@
-import { HttpException, Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, gt, gte, isNull, sql, sum } from 'drizzle-orm';
+import { HttpException, Inject, Injectable, type OnApplicationBootstrap } from '@nestjs/common';
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, sql, sum } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { DB } from '../tokens.js';
+import { layoutAllOverlapping } from './subscription-queue.js';
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
 
 export interface BillingState {
-  plan: { code: string; title: string };
+  plan: { code: string; title: string; sort: number };
   subscription: { planCode: string; status: string; trial: boolean; currentPeriodEnd: Date; renewMode: 'AUTO' | 'LINK' } | null;
+  /** ADR-126 · купленные тарифы, которые ждут очереди: начнутся, когда закончится тот, что работает сейчас. */
+  queued: Array<{ planCode: string; title: string; start: Date; end: Date }>;
   /** Пробный период уже использован: он один на человека. */
   trialUsed: boolean;
   /** D-09 · расход лимитов тарифа: прохождения с начала месяца (по всем сборкам) и место под файлы. */
@@ -19,24 +22,41 @@ export interface BillingState {
 
 /** P7.4 · состояние подписки человека и пробный период без карты (ADR-048). */
 @Injectable()
-export class BillingService {
+export class BillingService implements OnApplicationBootstrap {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly entitlements: EntitlementsService,
   ) {}
 
+  /** ADR-126 · подписки, купленные до очереди и идущие одновременно, выстраиваются один раз при запуске; второй раз ничего не меняет. */
+  async onApplicationBootstrap(): Promise<void> {
+    await layoutAllOverlapping(this.db).catch(() => undefined);
+  }
+
   async state(userId: string, now: Date = new Date()): Promise<BillingState> {
     const plan = await this.entitlements.planOf(userId, now);
-    const [latest] = await this.db
+    // The subscription shown is the one that runs now (its own end), not the one that ends last: that one may wait in the queue.
+    const [running] = await this.db
       .select()
       .from(schema.subscriptions)
-      .where(eq(schema.subscriptions.userId, userId))
+      .where(and(eq(schema.subscriptions.userId, userId), eq(schema.subscriptions.planCode, plan.code), lte(schema.subscriptions.currentPeriodStart, now), gt(schema.subscriptions.currentPeriodEnd, now), inArray(schema.subscriptions.status, ['ACTIVE', 'TRIAL'])))
       .orderBy(desc(schema.subscriptions.currentPeriodEnd))
       .limit(1);
+    const [lastEnded] = running
+      ? []
+      : await this.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId)).orderBy(desc(schema.subscriptions.currentPeriodEnd)).limit(1);
+    const latest = running ?? lastEnded;
+    const queued = await this.db
+      .select({ planCode: schema.subscriptions.planCode, title: schema.plans.title, start: schema.subscriptions.currentPeriodStart, end: schema.subscriptions.currentPeriodEnd })
+      .from(schema.subscriptions)
+      .innerJoin(schema.plans, eq(schema.plans.code, schema.subscriptions.planCode))
+      .where(and(eq(schema.subscriptions.userId, userId), eq(schema.subscriptions.status, 'ACTIVE'), gt(schema.subscriptions.currentPeriodStart, now)))
+      .orderBy(asc(schema.subscriptions.currentPeriodStart));
     const [trial] = await this.db.select({ id: schema.subscriptions.id }).from(schema.subscriptions).where(and(eq(schema.subscriptions.userId, userId), eq(schema.subscriptions.trial, true))).limit(1);
     return {
-      plan: { code: plan.code, title: plan.title },
+      plan: { code: plan.code, title: plan.title, sort: plan.sort },
       subscription: latest ? { planCode: latest.planCode, status: latest.status, trial: latest.trial, currentPeriodEnd: latest.currentPeriodEnd, renewMode: latest.renewMode } : null,
+      queued,
       trialUsed: Boolean(trial),
       usage: await this.usage(userId, plan.limits, now),
       passes: await this.db

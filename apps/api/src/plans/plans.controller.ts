@@ -8,6 +8,8 @@ import { DB } from '../tokens.js';
 export interface PlanDto {
   code: string;
   title: string;
+  /** Старшинство тарифа (ADR-126): старший из купленных работает сейчас, младшие ждут очереди. */
+  sort: number;
   priceMonthRub: number | null;
   priceYearRub: number | null;
   priceOnceRub: number | null;
@@ -24,7 +26,7 @@ export class PlansController {
   async list(): Promise<{ plans: PlanDto[] }> {
     const rows = await this.db.select().from(schema.plans).where(eq(schema.plans.public, true)).orderBy(asc(schema.plans.sort));
     return {
-      plans: rows.map((p) => ({ code: p.code, title: p.title, priceMonthRub: p.priceMonthRub, priceYearRub: p.priceYearRub, priceOnceRub: p.priceOnceRub, limits: p.limits })),
+      plans: rows.map((p) => ({ code: p.code, title: p.title, sort: p.sort, priceMonthRub: p.priceMonthRub, priceYearRub: p.priceYearRub, priceOnceRub: p.priceOnceRub, limits: p.limits })),
     };
   }
 }

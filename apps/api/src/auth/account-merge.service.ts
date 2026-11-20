@@ -4,6 +4,7 @@ import { type Db, schema } from '@blokum/db';
 import { DB } from '../tokens.js';
 import { AuditLogService } from './audit-log.service.js';
 import { OAuthService, type OAuthProvider } from './oauth.service.js';
+import { layoutSubscriptions } from '../payments/subscription-queue.js';
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
 
@@ -83,6 +84,8 @@ export class AccountMergeService {
       for (const table of ['orders', 'subscriptions', 'entitlements', 'notifications', 'appeals', 'passage_digest_queue']) {
         await tx.execute(sql`update ${sql.identifier(table)} set user_id = ${a} where user_id = ${b}`);
       }
+      // ADR-126: the paid subscriptions of both accounts line up in one queue — the same tariff adds up, the older one runs first.
+      await layoutSubscriptions(tx, a);
       // Consents stay as given: the record says who agreed and when, now under the account that remains.
       await tx.execute(sql`update consent_records set subject_id = ${a} where subject_type = 'USER' and subject_id = ${b}`);
       // A promo code used by both stays used once (one person); the other use is dropped.

@@ -1,11 +1,12 @@
 import { HttpException, Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, gt, inArray, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import type { ApiConfig } from '../config.js';
 import { API_CONFIG, DB, PAYMENT_PROVIDER, PAYMENT_PROVIDERS } from '../tokens.js';
 import { type PaymentProvider, PaymentProviderError } from './payment-provider.js';
 import { NpdIncomeService } from './npd-income.service.js';
 import { type OrderKindName, PromoService } from './promo.service.js';
+import { addMonths, addSubscription, takeBackSubscription } from './subscription-queue.js';
 
 /** How the providers are named to the owner in the admin messages. */
 const PROVIDER_TITLES: Record<string, string> = { yookassa: 'ЮКассу', robokassa: 'Робокассу' };
@@ -22,21 +23,14 @@ export interface OrderView {
   item: Record<string, unknown>;
   createdAt: Date;
   paidAt: Date | null;
+  /** Название тарифа подписки («Автор», «Плюс»…); у других покупок — null. */
+  planTitle: string | null;
 }
 
 /** The size of extra storage is kept in megabytes: the column is a 32-bit integer. */
 const MB = 1024 * 1024;
 
-/** Прибавляет к дате целое число месяцев (по UTC; 31 января + месяц = последний день февраля). */
-export function addMonths(from: Date, months: number): Date {
-  const d = new Date(from.getTime());
-  const day = d.getUTCDate();
-  d.setUTCDate(1);
-  d.setUTCMonth(d.getUTCMonth() + months);
-  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
-  d.setUTCDate(Math.min(day, last));
-  return d;
-}
+export { addMonths } from './subscription-queue.js';
 
 /** Прибавляет к дате месяц или год. */
 export function addPeriod(from: Date, period: 'MONTH' | 'YEAR'): Date {
@@ -208,8 +202,9 @@ export class PaymentsService {
 
   async myOrders(userId: string): Promise<OrderView[]> {
     return this.db
-      .select({ id: schema.orders.id, kind: schema.orders.kind, status: schema.orders.status, amountKop: schema.orders.amountKop, item: schema.orders.item, createdAt: schema.orders.createdAt, paidAt: schema.orders.paidAt })
+      .select({ id: schema.orders.id, kind: schema.orders.kind, status: schema.orders.status, amountKop: schema.orders.amountKop, item: schema.orders.item, createdAt: schema.orders.createdAt, paidAt: schema.orders.paidAt, planTitle: schema.plans.title })
       .from(schema.orders)
+      .leftJoin(schema.plans, sql`${schema.plans.code} = ${schema.orders.item}->>'planCode'`)
       .where(eq(schema.orders.userId, userId))
       .orderBy(desc(schema.orders.createdAt))
       .limit(100);
@@ -292,22 +287,8 @@ export class PaymentsService {
       if (!order.userId) return { ok: true as const };
       const item = order.item as { kind?: string; planCode?: string; period?: 'MONTH' | 'YEAR'; projectId?: string };
       if (order.kind === 'SUBSCRIPTION' && item.planCode && item.period) {
-        const [current] = await tx
-          .select()
-          .from(schema.subscriptions)
-          .where(and(eq(schema.subscriptions.userId, order.userId), eq(schema.subscriptions.planCode, item.planCode), eq(schema.subscriptions.status, 'ACTIVE'), gt(schema.subscriptions.currentPeriodEnd, now)))
-          .orderBy(desc(schema.subscriptions.currentPeriodEnd))
-          .limit(1);
-        // Пробный период заканчивается оплатой; продление идёт от конца уже оплаченного срока, а не от сегодняшнего дня.
-        await tx
-          .update(schema.subscriptions)
-          .set({ status: 'EXPIRED' })
-          .where(and(eq(schema.subscriptions.userId, order.userId), eq(schema.subscriptions.status, 'TRIAL')));
-        if (current) {
-          await tx.update(schema.subscriptions).set({ currentPeriodEnd: addPeriod(current.currentPeriodEnd, item.period) }).where(eq(schema.subscriptions.id, current.id));
-        } else {
-          await tx.insert(schema.subscriptions).values({ userId: order.userId, planCode: item.planCode, period: item.period, status: 'ACTIVE', currentPeriodStart: now, currentPeriodEnd: addPeriod(now, item.period) });
-        }
+        // ADR-126: the paid period joins the queue — the same tariff gets longer, an older one starts now, a younger one waits.
+        await addSubscription(tx, order.userId, item.planCode, item.period === 'YEAR' ? 12 : 1, item.period, now);
       } else if (order.kind === 'PASS' && item.projectId) {
         const [plan] = await tx.select({ limits: schema.plans.limits }).from(schema.plans).where(eq(schema.plans.code, 'PASS'));
         const days = plan?.limits.passDays ?? 30;
@@ -389,10 +370,8 @@ export class PaymentsService {
       await tx.update(schema.entitlements).set({ validTo: now }).where(eq(schema.entitlements.sourceOrderId, order.id));
       const item = order.item as { planCode?: string; period?: 'MONTH' | 'YEAR' };
       if (order.kind === 'SUBSCRIPTION' && order.userId && item.planCode) {
-        await tx
-          .update(schema.subscriptions)
-          .set({ status: 'CANCELED', canceledAt: now, currentPeriodEnd: now })
-          .where(and(eq(schema.subscriptions.userId, order.userId), eq(schema.subscriptions.planCode, item.planCode), eq(schema.subscriptions.status, 'ACTIVE')));
+        // ADR-126: the refunded period is taken back from the tariff (other paid periods of it stay); the queue moves up.
+        await takeBackSubscription(tx, order.userId, item.planCode, item.period === 'YEAR' ? 12 : 1, now);
       }
       return { ok: true as const };
     });

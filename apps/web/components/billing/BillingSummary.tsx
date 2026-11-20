@@ -5,7 +5,7 @@ import { errorText, isApiError } from '../../lib/api-browser';
 import { type AddonRow, type BillingState, type OrderRow, ORDER_STATUS_LABEL, dateRu, loadAddons, loadBilling, loadOrders, rub } from '../../lib/billing';
 
 const planName = (o: OrderRow, addons: AddonRow[]): string =>
-  o.kind === 'PASS' ? 'Пропуск «Праздник»' : o.kind === 'ADDON' ? (addons.find((a) => a.code === o.item.addon)?.title ?? 'Дополнительная покупка') : `Подписка ${o.item.period === 'YEAR' ? 'на год' : 'на месяц'}`;
+  o.kind === 'PASS' ? 'Пропуск «Праздник»' : o.kind === 'ADDON' ? (addons.find((a) => a.code === o.item.addon)?.title ?? 'Дополнительная покупка') : `${o.planTitle ? `Тариф «${o.planTitle}»` : 'Подписка'} ${o.item.period === 'YEAR' ? 'на год' : 'на месяц'}`;
 
 const mb = (bytes: number): string => `${Math.ceil(bytes / 1024 / 1024)} МБ`;
 
@@ -82,12 +82,22 @@ export function BillingSummary() {
           <>
             {' '}
             до {dateRu(sub.currentPeriodEnd)}
-            {sub.trial ? ' (пробный период, ничего не списывается)' : ''}.
+            {sub.trial ? ' (пробный период, ничего не списывается).' : ''}
           </>
         ) : (
           '.'
         )}
       </p>
+      {state.queued.length > 0 && (
+        <p data-testid="billing-queued">
+          {state.queued.map((q, i) => (
+            <span key={`${q.planCode}-${q.start}`}>
+              {i === 0 ? 'Затем' : ', затем'} тариф <strong>«{q.title}»</strong> с {dateRu(q.start)} до {dateRu(q.end)}
+            </span>
+          ))}
+          {' '}Купленные тарифы идут друг за другом, ни один оплаченный день не пропадает.
+        </p>
+      )}
       {active && sub && !sub.trial && <p className="lp-note">Продление — вручную: когда срок подойдёт к концу, мы напомним, а вы нажмёте «Оплатить» на карточке тарифа. Автоматических списаний нет.</p>}
       <h2 className="lp-h2">Расход лимитов</h2>
       <ul className="lp-plan-list" data-testid="billing-usage">

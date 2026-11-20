@@ -1,5 +1,5 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { and, eq, gt, inArray, lte } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, lte } from 'drizzle-orm';
 import { PLANS, schema, type Db } from '@blokum/db';
 import { NotificationsService } from '../admin/notifications.service.js';
 import { DB } from '../tokens.js';
@@ -41,6 +41,13 @@ export class RenewalRemindersService implements OnModuleInit, OnModuleDestroy {
     let sent = 0;
     for (const sub of due) {
       if (sub.canceledAt) continue;
+      // ADR-126: another paid tariff starts when this one ends — nothing is ending for the person, no reminder.
+      const [next] = await this.db
+        .select({ id: schema.subscriptions.id })
+        .from(schema.subscriptions)
+        .where(and(eq(schema.subscriptions.userId, sub.userId), eq(schema.subscriptions.status, 'ACTIVE'), gte(schema.subscriptions.currentPeriodStart, sub.currentPeriodEnd)))
+        .limit(1);
+      if (next) continue;
       const left = sub.currentPeriodEnd.getTime() - now.getTime();
       const step = left <= DAY ? 1 : 3;
       const kind = `renewal:${sub.id}:${sub.currentPeriodEnd.toISOString()}:${step}`;

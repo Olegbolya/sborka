@@ -54,6 +54,11 @@ export function PlanStatus({ titleStyle, textStyle }: { titleStyle: CSSPropertie
           )}
         </p>
       )}
+      {state && state.queued.length > 0 && (
+        <p style={textStyle} data-testid="account-plan-queued">
+          Дальше: {state.queued.map((q) => `«${q.title}» с ${dateRu(q.start)} до ${dateRu(q.end)}`).join(', затем ')}
+        </p>
+      )}
       {state && state.passes.length > 0 && (
         <p style={textStyle}>
           Пропуск «Праздник»:{' '}

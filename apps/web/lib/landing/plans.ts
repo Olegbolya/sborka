@@ -4,6 +4,8 @@ import { apiFetch } from '../api-client';
 export interface PlanView {
   code: string;
   title: string;
+  /** Старшинство тарифа (ADR-126). */
+  sort: number;
   priceMonthRub: number | null;
   priceYearRub: number | null;
   priceOnceRub: number | null;

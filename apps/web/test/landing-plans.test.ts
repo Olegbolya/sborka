@@ -4,7 +4,7 @@ import { describePlan, formatBytes, formatDays, plural, priceLine, type PlanView
 
 const view = (code: string): PlanView => {
   const p = PLANS.find((x) => x.code === code)!;
-  return { code: p.code, title: p.title, priceMonthRub: p.priceMonthRub, priceYearRub: p.priceYearRub, priceOnceRub: p.priceOnceRub, limits: p.limits };
+  return { code: p.code, title: p.title, sort: p.sort, priceMonthRub: p.priceMonthRub, priceYearRub: p.priceYearRub, priceOnceRub: p.priceOnceRub, limits: p.limits };
 };
 
 describe('P10.1 · тарифы на сайте читаются из лимитов', () => {

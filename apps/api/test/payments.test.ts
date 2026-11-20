@@ -728,8 +728,11 @@ describe('P7.3 · оплата: заказ, уведомления ЮKassa, пр
       await adm('post', '/grants', admin.cookie, { userId: `+${digits}`, kind: 'SUBSCRIPTION', planCode: 'PRO', months: 2, reason: 'Продление' }).expect(201);
       expect((await ent.planOf(user.userId)).code).toBe('PRO');
       const subs = await db.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, user.userId)).orderBy(schema.subscriptions.currentPeriodStart);
-      expect(subs).toHaveLength(2);
-      expect(subs[1]!.currentPeriodStart.getTime()).toBe(subs[0]!.currentPeriodEnd.getTime());
+      // ADR-126: повторное начисление того же тарифа продлевает ту же подписку — одна строка на 1 + 2 месяца.
+      expect(subs).toHaveLength(1);
+      const days = (subs[0]!.currentPeriodEnd.getTime() - subs[0]!.currentPeriodStart.getTime()) / 86_400_000;
+      expect(days).toBeGreaterThanOrEqual(89);
+      expect(days).toBeLessThanOrEqual(93);
       const found = (await request(t.http()).get(`/${API_PREFIX}/admin/users?q=${encodeURIComponent(typed)}`).set('Cookie', admin.cookie).expect(200)).body as Array<{ id: string }>;
       expect(found.map((x) => x.id)).toContain(user.userId);
     });
