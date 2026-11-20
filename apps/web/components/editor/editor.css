@@ -65,6 +65,10 @@
   color: #fff;
   font-weight: 600;
 }
+/* Наведение на главную кнопку не делает её светлой: иначе белая надпись пропадает (после нажатия курсор остаётся на ней). */
+.ed-btn.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 85%, #000);
+}
 .ed-btn.small {
   padding: 3px 8px;
   font-size: 12px;
@@ -945,9 +949,10 @@
 }
 .ed-chip {
   padding: 4px 10px;
-  border: 1px solid var(--border, #d6d2ca);
+  border: 1px solid var(--line, #d6d2ca);
   border-radius: 999px;
-  background: #fff;
+  background: var(--bg);
+  color: var(--fg);
   font: inherit;
   font-size: 13px;
   cursor: pointer;

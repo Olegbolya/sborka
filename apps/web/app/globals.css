@@ -3,16 +3,26 @@
   --fg: #1d1b18;
   --muted: #6b665d;
   --accent: #e4572e;
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
+/* Оформление: по умолчанию как в системе; выбор в «Аккаунте» (cookie `bk_theme`) ставит `data-theme` на <html> и побеждает систему. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #141311;
     --fg: #f3efe7;
     --muted: #a49d90;
-    --accent: #ff7a50;
+    --accent: #e4572e;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #141311;
+  --fg: #f3efe7;
+  --muted: #a49d90;
+  --accent: #e4572e;
+  color-scheme: dark;
 }
 
 * {

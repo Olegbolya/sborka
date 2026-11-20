@@ -13,9 +13,10 @@ const chip = (on: boolean) =>
   ({
     padding: '8px 14px',
     borderRadius: 10,
-    border: `1px solid ${on ? 'var(--accent, #e4572e)' : '#d6d2ca'}`,
-    background: on ? 'var(--accent, #e4572e)' : '#fff',
-    color: on ? '#fff' : 'inherit',
+    border: `1px solid ${on ? 'var(--accent, #e4572e)' : 'var(--muted, #d6d2ca)'}`,
+    // Не выбранная — прозрачная на фоне страницы: белая подложка с наследуемым светлым текстом в тёмной теме не читалась.
+    background: on ? 'var(--accent, #e4572e)' : 'transparent',
+    color: on ? '#fff' : 'var(--fg, #1d1b18)',
     fontSize: 15,
     fontWeight: 600,
     cursor: 'pointer',

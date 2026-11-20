@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import { cookies } from 'next/headers';
 import { connection } from 'next/server';
 import { CookieBanner } from '../components/landing/CookieBanner';
 import { metrikaId } from '../lib/analytics';
+import { THEME_COOKIE, themeOf } from '../lib/theme';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -20,8 +22,10 @@ export const viewport: Viewport = {
 /** Every page is made per request: the nonce of the policy (proxy.ts) is different each time, so a page made in advance could not carry it. */
 export default async function RootLayout({ children }: { children: ReactNode }) {
   await connection();
+  // The chosen look comes with the page itself (no flash of the other colours): `data-theme` beats the system setting.
+  const theme = themeOf((await cookies()).get(THEME_COOKIE)?.value);
   return (
-    <html lang="ru">
+    <html lang="ru" {...(theme === 'system' ? {} : { 'data-theme': theme })}>
       <body>
         {children}
         <CookieBanner metrikaId={metrikaId(process.env.YANDEX_METRIKA_ID)} />

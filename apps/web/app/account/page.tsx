@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, apiRaw, errorText, isApiError } from '../../lib/api-browser';
 import { VkSettings } from '../../components/account/VkSettings';
 import { PlanStatus } from '../../components/account/PlanStatus';
+import { ThemeSetting } from '../../components/account/ThemeSetting';
 import { LoginMethods } from '../../components/account/LoginMethods';
 import { CabinetHeader } from '../../components/cabinet/CabinetHeader';
 
@@ -160,6 +161,7 @@ export default function AccountPage() {
       {error && <p role="alert" style={s.error}>{error}</p>}
       {notice && <p role="status" style={s.ok}>{notice}</p>}
       {!deleted && <PlanStatus key={planKey} titleStyle={s.sectionTitle} textStyle={s.notice} />}
+      {!deleted && <ThemeSetting titleStyle={s.sectionTitle} textStyle={s.notice} />}
       {!deleted && (
         <LoginMethods
           s={s}

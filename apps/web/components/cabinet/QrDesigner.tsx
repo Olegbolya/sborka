@@ -49,7 +49,7 @@ const hexOf = (v: unknown): string | null => (typeof v === 'string' && /^#[0-9a-
 const box = { padding: 14, border: '1px solid var(--border, #e5e2dc)', borderRadius: 10, marginTop: 12, display: 'grid', gap: 14 } as const;
 const row = { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' } as const;
 const lab = { fontSize: 13, fontWeight: 600 } as const;
-const chip = (on: boolean) => ({ padding: '6px 12px', borderRadius: 8, border: `1px solid ${on ? 'var(--accent, #e4572e)' : '#d6d2ca'}`, background: on ? 'var(--accent, #e4572e)' : '#fff', color: on ? '#fff' : 'inherit', fontSize: 13, cursor: 'pointer' }) as const;
+const chip = (on: boolean) => ({ padding: '6px 12px', borderRadius: 8, border: `1px solid ${on ? 'var(--accent, #e4572e)' : 'var(--muted, #d6d2ca)'}`, background: on ? 'var(--accent, #e4572e)' : 'transparent', color: on ? '#fff' : 'var(--fg, #1d1b18)', fontSize: 13, cursor: 'pointer' }) as const;
 
 export function QrDesigner({ projectId, pointId }: { projectId: string; pointId: string }) {
   const base = `/projects/${projectId}/access-points/${pointId}`;

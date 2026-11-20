@@ -124,7 +124,7 @@ function AgeRatingCard({ projectId, rating, onSaved, setError }: { projectId: st
     }
   };
   return (
-    <section data-testid="age-rating-card" style={{ border: `1px solid ${missing ? 'var(--accent, #e4572e)' : '#e5e2dc'}`, borderRadius: 12, padding: 14, margin: '0 0 16px', background: missing ? '#fff7f3' : '#fff' }}>
+    <section data-testid="age-rating-card" style={{ border: `1px solid ${missing ? 'var(--accent, #e4572e)' : 'color-mix(in srgb, var(--fg) 15%, transparent)'}`, borderRadius: 12, padding: 14, margin: '0 0 16px', background: missing ? 'color-mix(in srgb, var(--accent, #e4572e) 8%, var(--bg))' : 'transparent', color: 'var(--fg)' }}>
       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Возрастная категория{missing ? ' — не выбрана, без неё сборку не опубликовать' : ''}</div>
       <AgeRatingPicker value={rating} disabled={busy} onPick={(r) => void pick(r)} />
     </section>
@@ -470,7 +470,7 @@ function AccessTab({ projectId, setError }: { projectId: string; setError: (e: s
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={s.code}>/q/{ap.code}</span>
                     {ap.label && <span style={{ fontSize: 13 }}>{ap.label}</span>}
-                    <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 999, background: ap.active ? '#dcfce7' : '#f5f5f5', color: ap.active ? '#16a34a' : 'var(--muted)' }}>
+                    <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 999, background: ap.active ? '#dcfce7' : 'color-mix(in srgb, var(--fg) 10%, transparent)', color: ap.active ? '#15803d' : 'var(--muted)' }}>
                       {ap.active ? 'Активна' : 'Отключена'}
                     </span>
                   </div>
