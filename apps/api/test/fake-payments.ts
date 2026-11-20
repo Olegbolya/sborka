@@ -40,7 +40,7 @@ export const md5 = (s: string) => createHash('md5').update(s).digest('hex');
  * до магазина за вычетом комиссии (20.11.2026: оплата 199 ₽, на балансе 191,24 ₽).
  */
 export function fakeRobokassa() {
-  const ops = new Map<string, { code: number; outSum: string; order: string }>();
+  const ops = new Map<string, { code: number; outSum: string; order: string; noFields?: boolean }>();
   const refunds: Array<{ opKey: string; sum: number; auth: string }> = [];
   const impl = vi.fn((url: string | URL, init?: RequestInit) => {
     const u = new URL(typeof url === 'string' ? url : url.href);
@@ -51,7 +51,7 @@ export function fakeRobokassa() {
       const op = ops.get(inv);
       if (!op) return xml('<Result><Code>3</Code></Result>');
       return xml(
-        `<Result><Code>0</Code></Result><State><Code>${op.code}</Code></State><Info><IncCurrLabel>BankCardPSR</IncCurrLabel><IncSum>${op.outSum}</IncSum><PaymentMethod><Code>BankCard</Code><Description>Банковская карта</Description></PaymentMethod><OutCurrLabel>RUB</OutCurrLabel><OutSum>${(Number(op.outSum) * 0.961).toFixed(6)}</OutSum><OpKey>key-${inv}</OpKey></Info><UserField><Field><Name>shp_order</Name><Value>${op.order}</Value></Field></UserField>`,
+        `<Result><Code>0</Code></Result><State><Code>${op.code}</Code></State><Info><IncCurrLabel>BankCardPSR</IncCurrLabel><IncSum>${op.outSum}</IncSum><PaymentMethod><Code>BankCard</Code><Description>Банковская карта</Description></PaymentMethod><OutCurrLabel>RUB</OutCurrLabel><OutSum>${(Number(op.outSum) * 0.961).toFixed(6)}</OutSum><OpKey>key-${inv}</OpKey></Info>${op.noFields ? '' : `<UserField><Field><Name>shp_order</Name><Value>${op.order}</Value></Field></UserField>`}`,
       );
     }
     if (u.pathname.endsWith('/Refund/Create')) {

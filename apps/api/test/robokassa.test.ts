@@ -157,7 +157,8 @@ describe('P7.3 · Robokassa: запасной провайдер платеже�
     await recheck(someone.cookie).expect(403);
     rk.ops.set(o.providerPaymentId!, { code: 5, outSum: (o.amountKop / 100).toFixed(2), order: o.id });
     expect((await recheck(admin.cookie).expect(409)).body.error.code).toBe('PAYMENT_PENDING');
-    rk.ops.set(o.providerPaymentId!, { code: 100, outSum: (o.amountKop / 100).toFixed(2), order: o.id });
+    // Робокасса может не вернуть свои поля (Shp_) в ответе о состоянии: заказ найден по её номеру платежа, сумма совпала — этого достаточно.
+    rk.ops.set(o.providerPaymentId!, { code: 100, outSum: (o.amountKop / 100).toFixed(2), order: o.id, noFields: true });
     expect((await recheck(admin.cookie).expect(200)).body).toEqual({ status: 'PAID' });
     const [paid] = await db.db.select().from(schema.orders).where(eq(schema.orders.id, o.id));
     expect(paid!.status).toBe('PAID');

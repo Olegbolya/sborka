@@ -254,7 +254,13 @@ export class PaymentsService {
       .select()
       .from(schema.orders)
       .where(and(eq(schema.orders.provider, provider.name), eq(schema.orders.providerPaymentId, payment.id)));
-    if (!order || payment.orderId !== order.id || payment.amountKop !== order.amountKop) throw fail(400, 'ORDER_MISMATCH', 'Платёж не совпадает с заказом.');
+    // The order is found by the provider's own payment number, unique for the provider; the order number the provider echoes is
+    // a second check where it is given (Robokassa may leave its user fields out of the state answer).
+    if (!order || (payment.orderId !== null && payment.orderId !== order.id) || payment.amountKop !== order.amountKop) {
+      // What did not match goes to the log (no personal data): the order, its number at the provider, the sums.
+      const why = !order ? 'заказа с таким номером платежа нет' : `номер заказа у сервиса ${payment.orderId === null ? 'не передан' : payment.orderId === order.id ? 'совпадает' : 'другой'}; сумма у сервиса ${String(payment.amountKop)} коп., в заказе ${String(order.amountKop)} коп.`;
+      throw fail(400, 'ORDER_MISMATCH', 'Платёж не совпадает с заказом.', why);
+    }
 
     if (isRefund) return this.markRefunded(order.id);
     if (payment.status === 'succeeded') return this.markPaid(order.id);
