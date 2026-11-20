@@ -20,7 +20,7 @@ import {
   startFlow,
 } from '@blokum/engine';
 import { type FrameScheduler, RuntimeStore, mediaForAnswer } from '@blokum/renderer';
-import { type MediaOverlay, type ProjectDocument, type Screen, walkBlocks } from '@blokum/schema';
+import { type MediaOverlay, type ProjectDocument, type Screen, type Transition, walkBlocks } from '@blokum/schema';
 
 export interface PassageView {
   /** Screen on show; null after the end of the passage. */
@@ -39,6 +39,8 @@ export interface PassageView {
   completing: boolean;
   /** T-20, T-21: the media insert shown on the way to this screen (a meme transition, or a meme for the answer); null — none. */
   entryOverlay: MediaOverlay | null;
+  /** T-30: transition of the branch or the «перейти» action that led to this screen; null — the screen's own «переход при входе». */
+  transition: Transition | null;
 }
 
 /** What the player's side of a server passage does with the events of the session (PL-11…PL-15). */
@@ -104,6 +106,7 @@ export class PassageSession {
   private completedOnServer = false;
   private completing = false;
   private entryOverlay: MediaOverlay | null = null;
+  private transition: Transition | null = null;
 
   constructor(
     readonly doc: ProjectDocument,
@@ -161,6 +164,7 @@ export class PassageSession {
       progress: this.doc.settings.showProgress && index >= 0 ? { index: index + 1, total: this.doc.screens.length } : null,
       completing: this.completing,
       entryOverlay: this.entryOverlay,
+      transition: this.transition,
     };
   }
 
@@ -222,6 +226,7 @@ export class PassageSession {
         return;
       }
       this.entryOverlay = this.overlayOnTheWay(screen, nav.to, nav.transition);
+      this.transition = nav.transition ?? null;
       this.arrive(nav.state, nav.to);
     } catch (e) {
       if (!(e instanceof FlowError)) throw e;
@@ -388,6 +393,7 @@ export class PassageSession {
     try {
       const nav = goBack(this.flowDoc, this.synced(), this.env());
       this.entryOverlay = null;
+      this.transition = null;
       this.arrive(nav.state, nav.to);
     } catch (e) {
       if (!(e instanceof FlowError)) throw e;

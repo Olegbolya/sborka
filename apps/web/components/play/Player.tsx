@@ -1,5 +1,5 @@
 'use client';
-import { Artboard, PlayerScreen } from '@blokum/renderer';
+import { Artboard, PlayerStage } from '@blokum/renderer';
 import { walkBlocks } from '@blokum/schema';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { api, isApiError } from '../../lib/api-browser';
@@ -249,7 +249,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
     <Artboard mode="player" {...(passage.screen ? { coverHeight: passage.screen.height } : {})} tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} linkHref={view.directLinks ? directHref : outHref}>
       {boot.view.ad && <AdBanner ad={boot.view.ad} />}
       {passage.screen ? (
-        <PlayerScreen key={`${passage.screen.id}:${passage.screenKey}`} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} entryOverlay={passage.entryOverlay} places={places} />
+        <PlayerStage screenKey={passage.screenKey} transition={passage.transition} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} entryOverlay={passage.entryOverlay} places={places} />
       ) : (
         <div className="pl-end" data-testid="play-end" role="status">
           <strong>{passage.completing ? 'Считаем результат…' : 'Спасибо! Прохождение завершено.'}</strong>

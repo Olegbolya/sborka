@@ -245,7 +245,7 @@ test.describe('P6.8 · GS-01 «Письмо Деду Морозу»', () => {
     const { ctx, p } = await guest();
     await p.goto(link);
     await expect(p.getByText('Что бы ты хотел получить от Деда Мороза?')).toBeVisible();
-    await expect.poll(() => painted(p.locator('canvas.bk-particles').first()), { timeout: 15_000 }).toBe(true); // снег из своей снежинки
+    await expect.poll(() => painted(p.locator('.bk-player-screen canvas.bk-particles').first()), { timeout: 15_000 }).toBe(true); // снег из своей снежинки
     await p.getByText('Санки', { exact: true }).tap();
     await p.getByText('Дальше', { exact: true }).tap();
     await expect(p.locator('.bk-meme-caption')).toHaveText('ДЕД МОРОЗ УЖЕ ПИШЕТ ОТВЕТ'); // мем-переход
@@ -253,7 +253,7 @@ test.describe('P6.8 · GS-01 «Письмо Деду Морозу»', () => {
     await p.getByRole('textbox').fill('Хочу санки и мандарины');
     await p.getByText('Отправить', { exact: true }).tap();
     await expect(p.getByText('Письмо отправлено! Дед Мороз уже читает.')).toBeVisible();
-    await expect.poll(() => painted(p.locator('canvas.bk-particles').last()), { timeout: 10_000 }).toBe(true); // конфетти финала
+    await expect.poll(() => painted(p.locator('.bk-player-screen canvas.bk-particles').last()), { timeout: 10_000 }).toBe(true); // конфетти финала
     await p.getByText('Закончить', { exact: true }).tap();
     await expect
       .poll(async () => JSON.stringify(((await (await page.request.get(`/api/v1/projects/${id}/responses`)).json()) as { items: unknown[] }).items), { timeout: 15_000 })

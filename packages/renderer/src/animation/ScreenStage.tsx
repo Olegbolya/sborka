@@ -6,7 +6,7 @@ import { MediaOverlayView } from '../components/MediaOverlayView.js';
 import { useRenderContext } from '../context.js';
 import { ParticleLayer, type ParticleLayerHandle, prefersReducedMotion } from '../particles/ParticleLayer.js';
 import { cssColor } from '../theme/color.js';
-import { ARTBOARD_WIDTH, u } from '../units.js';
+import { ARTBOARD_WIDTH, u, uy } from '../units.js';
 import { resolveTransition, transitionPlan } from './plan.js';
 import { ANIMATED_FILTER, ANIMATED_TRANSFORM, runPlan } from './useBlockAnimation.js';
 
@@ -80,7 +80,7 @@ export function ScreenStage({ screen, transition, overlay, children }: ScreenSta
   // The coming screen starts at the first keyframe right in the markup — no flash before Motion starts.
   const initialIn = leaving && kind?.in ? (Object.fromEntries(Object.entries(kind.in.keyframes).map(([k, v]) => [k, v[0]])) as CSSProperties) : {};
   return (
-    <div className="bk-stage-screens" style={{ position: 'relative', width: u(ARTBOARD_WIDTH), height: u(height), overflow: 'hidden', perspective: u(1200) }}>
+    <div className="bk-stage-screens" style={{ position: 'relative', width: u(ARTBOARD_WIDTH), height: uy(height), overflow: 'hidden', perspective: u(1200) }}>
       {leaving && (
         <div key={`out-${leaving.key}`} ref={outRef} className="bk-screen-out" aria-hidden style={layer({ zIndex: kind?.kind === 'page' ? 2 : 0, transformOrigin: kind?.origin ?? '50% 50%', backfaceVisibility: 'hidden' })}>
           {children(leaving.screen)}

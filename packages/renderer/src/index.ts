@@ -14,6 +14,7 @@ export * from './components/BlockView.js';
 export * from './components/RichTextView.js';
 export * from './player/runtime-store.js';
 export * from './player/PlayerScreen.js';
+export * from './player/PlayerStage.js';
 export * from './animation/plan.js';
 export * from './animation/useBlockAnimation.js';
 export * from './animation/ScreenStage.js';

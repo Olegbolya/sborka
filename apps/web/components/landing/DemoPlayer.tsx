@@ -1,5 +1,5 @@
 'use client';
-import { ARTBOARD_WIDTH, Artboard, PlayerScreen } from '@blokum/renderer';
+import { ARTBOARD_WIDTH, Artboard, PlayerStage } from '@blokum/renderer';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { makeDemos } from '../../lib/landing/demos';
 import { PassageSession } from '../../lib/play/passage-session';
@@ -41,7 +41,7 @@ export function DemoPlayer({ demoId }: { demoId: string }) {
       <div ref={frame} className="lp-frame" data-testid={`demo-${demo.id}`} style={{ height: HEIGHT * unit }}>
         {view?.screen && (
           <Artboard mode="player" unit={unit} tokens={demo.doc.theme.tokens} runText={session.textValue}>
-            <PlayerScreen key={`${view.screen.id}:${view.screenKey}`} screen={view.screen} store={session.store} />
+            <PlayerStage screenKey={view.screenKey} transition={view.transition} screen={view.screen} store={session.store} />
           </Artboard>
         )}
       </div>
