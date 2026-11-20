@@ -625,5 +625,5 @@
 | D-20 | P12.3 | `apps/api/src/board/board.service.ts#publicBoard`; `infra/load/board.js` | `apps/api/test/board.test.ts` |
 | D-21 | P12.3 | `apps/api/src/entitlements/entitlements.service.ts#scoreboardAllowed` | `apps/api/test/board.test.ts` |
 | D-07 | P6.7 (ВКонтакте) | `apps/api/src/vk/vk.service.ts#VkService`; `apps/api/src/vk/vk.controller.ts`; `apps/api/src/play/passage-notices.service.ts#messengerText`; `apps/web/components/account/VkSettings.tsx` | `apps/api/test/vk.test.ts`; `e2e/vk-settings.spec.ts` |
-| AD-13 | запрос владельца 20.11 | `apps/api/src/support/support.service.ts`; `apps/api/src/support/support.controller.ts`; `apps/web/components/landing/AskQuestion.tsx`; `apps/web/app/admin/support/page.tsx` | `apps/api/test/support.test.ts`; `e2e/support-questions.spec.ts` |
+| AD-13 | P9.8 | `apps/api/src/support/support.service.ts`; `apps/api/src/support/support.controller.ts`; `apps/web/components/landing/AskQuestion.tsx`; `apps/web/app/admin/support/page.tsx` | `apps/api/test/support.test.ts`; `e2e/support-questions.spec.ts` |
 | AD-05 (очередь тарифов, ADR-126) | запрос владельца 20.11 | `apps/api/src/payments/subscription-queue.ts`; `apps/api/src/payments/billing.service.ts#state`; `apps/web/components/billing/PlanActions.tsx` | `apps/api/test/subscription-queue.test.ts`; `e2e/billing-queue.spec.ts` |
