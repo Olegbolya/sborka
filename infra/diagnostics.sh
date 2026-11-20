@@ -31,6 +31,11 @@ grep -ahE '"msg":"(необработанная ошибка|ошибка вне
     } catch { console.log(l.slice(0, 300)); }
   }' 2>&1 | mask
 [ -f "$ENV_FILE" ] && echo "платежи: $(grep -oE '^(PAYMENT_PROVIDER|PAYMENT_PROVIDERS)=[a-z,]+' "$ENV_FILE" | tr '\n' ' ')· заданы: $(grep -oE '^(YOOKASSA|ROBOKASSA)_[A-Z0-9_]+=.' "$ENV_FILE" | cut -d= -f1 | tr '\n' ' ')"
+# Only the kind of the YooKassa key (live_/test_), its length and stray spaces — never the key itself.
+if [ -f "$ENV_FILE" ]; then
+  yk="$(grep -E '^YOOKASSA_SECRET_KEY=' "$ENV_FILE" | tail -1 | cut -d= -f2-)"
+  echo "ЮKassa: магазин $(grep -E '^YOOKASSA_SHOP_ID=' "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -cd '0-9'), ключ вида ${yk:0:5}…, длина ${#yk}$(case "$yk" in *[[:space:]]*|\"*|\'*) echo ', ЕСТЬ пробелы или кавычки';; esac), строк с ключом: $(grep -cE '^YOOKASSA_SECRET_KEY=' "$ENV_FILE")"
+fi
 echo "== Ресурсы сервера (для выбора VPS) =="
 echo "  процессор: $(nproc) ядер, $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//')"
 echo "  память: $(free -m | awk '/^Mem:/{print "всего "$2" МБ, занято "$3" МБ, доступно "$7" МБ"}')"
