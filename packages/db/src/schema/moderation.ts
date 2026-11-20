@@ -10,6 +10,7 @@ import {
   moderationTarget,
   reportPriority,
   reportStatus,
+  supportQuestionStatus,
 } from './enums.js';
 import { media } from './content.js';
 import { projectVersions, projects } from './projects.js';
@@ -320,4 +321,25 @@ export const vkLinkCodes = pgTable(
     expiresAt: ts('expires_at').notNull(),
   },
   (t) => [index('vk_link_codes_user_idx').on(t.userId)],
+);
+
+/**
+ * AD-13 · вопросы пользователей со страницы «Помощь»: приходят администратору в админку, ответ уходит человеку в кабинет
+ * (уведомление). Пишут только вошедшие: так есть кому ответить, а номер и почта не собираются отдельно.
+ */
+export const supportQuestions = pgTable(
+  'support_questions',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    status: supportQuestionStatus('status').notNull().default('NEW'),
+    answer: text('answer'),
+    answeredById: text('answered_by_id'),
+    createdAt: createdAt(),
+    answeredAt: ts('answered_at'),
+  },
+  (t) => [index('support_questions_status_idx').on(t.status, t.createdAt), index('support_questions_user_idx').on(t.userId, t.createdAt)],
 );

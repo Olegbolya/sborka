@@ -12,6 +12,7 @@ interface Work {
   overdue: number;
   appeals: number;
   legalOverdue: number;
+  questions: number;
 }
 
 /** AD-03, AD-09 · the front page: what waits for people. */
@@ -38,6 +39,13 @@ export default function AdminHome() {
             <p style={{ margin: '8px 0 0', fontSize: 22 }} data-testid="appeals-count">{data.appeals}</p>
             <p style={css.muted}>ждут решения</p>
           </Link>
+          {me.role === 'ADMIN' ? (
+            <Link href="/admin/support" style={{ ...css.card, textDecoration: 'none', color: 'inherit', flex: '1 1 260px' }}>
+              <strong>Вопросы пользователей</strong>
+              <p style={{ margin: '8px 0 0', fontSize: 22 }} data-testid="questions-count">{data.questions}</p>
+              <p style={css.muted}>ждут ответа</p>
+            </Link>
+          ) : null}
           <Link href="/admin/legal" style={{ ...css.card, textDecoration: 'none', color: 'inherit', flex: '1 1 260px' }}>
             <strong>Заявления и требования</strong>
             <p style={{ margin: '8px 0 0', fontSize: 22 }}>{data.legalOverdue}</p>

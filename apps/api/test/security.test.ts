@@ -26,6 +26,9 @@ const OWN_SESSION = new Set([
   // ADR-120: the copy is made in the account of the person signed in; the project copied is a published one whose creator allowed it
   // (project-copy.test.ts checks: not allowed, a draft, a password, a creator back on «Старт» — 404).
   'POST /projects/copy',
+  // AD-13 · вопрос в поддержку и свои вопросы: пишет и читает только сам человек.
+  'POST /support/questions',
+  'GET /support/questions',
   // A-06: ways in of the own account; a merge offer is bound to the person who made it (account-merge.test.ts checks a stranger gets 404).
   'GET /auth/account/identities', 'POST /auth/account/identities/:provider/link', 'DELETE /auth/account/identities/:provider', 'GET /auth/account/merge/:token', 'POST /auth/account/merge',
   'GET /auth/me', 'GET /auth/sessions', 'DELETE /auth/sessions',

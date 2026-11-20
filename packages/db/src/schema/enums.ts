@@ -73,3 +73,5 @@ export const moderationActionKind = pgEnum('moderation_action_kind', [
 export const dataRequestKind = pgEnum('data_request_kind', ['ACCESS', 'DELETE', 'WITHDRAW']);
 export const caseStatus = pgEnum('case_status', ['NEW', 'IN_PROGRESS', 'CLOSED']);
 export const appealStatus = pgEnum('appeal_status', ['NEW', 'GRANTED', 'DENIED']);
+/** AD-13 · вопрос пользователя в поддержку: новый → отвечен (ответ ушёл в кабинет) или закрыт без ответа. */
+export const supportQuestionStatus = pgEnum('support_question_status', ['NEW', 'ANSWERED', 'CLOSED']);

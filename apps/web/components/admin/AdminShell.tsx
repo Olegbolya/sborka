@@ -15,6 +15,7 @@ const LINKS: Array<{ href: string; label: string; admin?: boolean }> = [
   { href: '/admin', label: 'Главная' },
   { href: '/admin/queue', label: 'Очередь жалоб' },
   { href: '/admin/appeals', label: 'Обжалования' },
+  { href: '/admin/support', label: 'Вопросы пользователей', admin: true },
   { href: '/admin/users', label: 'Пользователи' },
   { href: '/admin/legal', label: 'Заявления и требования' },
   { href: '/admin/content', label: 'Шаблоны и темы', admin: true },

@@ -242,7 +242,7 @@ export class LegalLogsService implements OnModuleInit, OnModuleDestroy {
     return rows;
   }
 
-  /** P8.5, 152-ФЗ ст. 14: выгрузка данных человека — профиль, способы входа, согласия, сборки и платежи. Действие пишется в журнал. */
+  /** P8.5, 152-ФЗ ст. 14: выгрузка данных человека — профиль, способы входа, согласия, сборки, платежи и вопросы в поддержку. Действие пишется в журнал. */
   async dataRequestExport(actor: RequestUser, id: string, userId: string, ip?: string, now = new Date()) {
     await this.matchedUser(id, userId);
     const [profile] = await this.db
@@ -258,8 +258,14 @@ export class LegalLogsService implements OnModuleInit, OnModuleDestroy {
       .orderBy(desc(schema.consentRecords.acceptedAt));
     const projects = await this.db.select({ id: schema.projects.id, title: schema.projects.title, status: schema.projects.status, createdAt: schema.projects.createdAt }).from(schema.projects).where(eq(schema.projects.ownerId, userId)).limit(500);
     const orders = await this.db.select({ id: schema.orders.id, kind: schema.orders.kind, amountKop: schema.orders.amountKop, status: schema.orders.status, createdAt: schema.orders.createdAt, paidAt: schema.orders.paidAt }).from(schema.orders).where(eq(schema.orders.userId, userId)).limit(500);
+    // AD-13: the questions a person sent to support and the answers are their data too.
+    const supportQuestions = await this.db
+      .select({ text: schema.supportQuestions.text, status: schema.supportQuestions.status, answer: schema.supportQuestions.answer, createdAt: schema.supportQuestions.createdAt, answeredAt: schema.supportQuestions.answeredAt })
+      .from(schema.supportQuestions)
+      .where(eq(schema.supportQuestions.userId, userId))
+      .limit(500);
     await this.audit.log({ actorId: actor.id, action: 'DATA_REQUEST_EXPORT', targetType: 'DATA_REQUEST', targetId: id, ...(ip ? { ip } : {}), meta: { userId } });
-    return { exportedAt: now.toISOString(), requestId: id, profile, authIdentities: identities, consentHistory: consents, projects, orders };
+    return { exportedAt: now.toISOString(), requestId: id, profile, authIdentities: identities, consentHistory: consents, projects, orders, supportQuestions };
   }
 
   /** P8.5, ст. 21: удаление данных человека одной кнопкой — как удаление аккаунта (сборки снимаются сразу, окончательно данные стираются по срокам хранения). Под юридическим холдом нельзя. */

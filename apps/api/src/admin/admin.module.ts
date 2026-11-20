@@ -20,6 +20,8 @@ import { NotificationsService } from './notifications.service.js';
 import { RetentionService } from './retention.service.js';
 import { SystemContentService } from './system-content.service.js';
 import { SystemService } from './system.service.js';
+import { SupportAdminController, SupportController } from '../support/support.controller.js';
+import { SupportService } from '../support/support.service.js';
 
 /**
  * The admin and the moderation (P9.3). Global: the switches (AD-07) are read by the registration, the uploads, the publishing and
@@ -31,7 +33,7 @@ export class AdminModule {
   static register(deps: { alerts: Alerts; emailSender: EmailSender | null; config: ApiConfig; probes: HealthProbes; linkReputation?: LinkReputation | null }): DynamicModule {
     return {
       module: AdminModule,
-      controllers: [AdminController, CreatorModerationController, SafetyAdminController],
+      controllers: [AdminController, CreatorModerationController, SafetyAdminController, SupportController, SupportAdminController],
       providers: [
         { provide: ALERTS, useValue: deps.alerts },
         { provide: EMAIL_SENDER, useValue: deps.emailSender },
@@ -50,6 +52,7 @@ export class AdminModule {
         SystemService,
         SystemContentService,
         LibraryAdminService,
+        SupportService,
       ],
       exports: [FeatureFlagsService, ModerationService, NotificationsService, AuditLogService, SafetyService, BlockedIdentitiesService],
     };

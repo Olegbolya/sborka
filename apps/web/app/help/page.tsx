@@ -1,6 +1,7 @@
 import { SitePage } from '../../components/landing/SiteChrome';
 import { Faq } from '../../components/landing/Faq';
 import { HELP } from '../../lib/landing/content';
+import { AskQuestion } from '../../components/landing/AskQuestion';
 
 export const metadata = { title: 'Помощь — Блоккер', description: 'Как собрать первую сборку, поделиться ею, оживить блоки и посмотреть ответы.' };
 
@@ -16,6 +17,7 @@ export default function HelpPage() {
                 {t.title}
               </a>
             ))}
+            <a href="#ask">Задать вопрос</a>
           </nav>
           {HELP.map((t) => (
             <article key={t.id} id={t.id} className="lp-help">
@@ -29,8 +31,9 @@ export default function HelpPage() {
           ))}
           <h2>Частые вопросы</h2>
           <Faq />
+          <AskQuestion />
           <p>
-            Не нашли ответ? Контакты — в <a href="/legal/contacts">документе «Контакты и реквизиты»</a>.
+            Другие способы связи — в <a href="/legal/contacts">документе «Контакты и реквизиты»</a>.
           </p>
         </div>
       </section>

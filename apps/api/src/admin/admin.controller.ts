@@ -12,6 +12,7 @@ import { type ActInput, ModerationService } from './moderation.service.js';
 import { RetentionService } from './retention.service.js';
 import { SystemContentService } from './system-content.service.js';
 import { SystemService } from './system.service.js';
+import { SupportService } from '../support/support.service.js';
 
 type Body = Record<string, unknown>;
 
@@ -31,13 +32,14 @@ export class AdminController {
     private readonly content: SystemContentService,
     private readonly libAdmin: LibraryAdminService,
     private readonly retention: RetentionService,
+    private readonly support: SupportService,
   ) {}
 
   // ── Moderation ─────────────────────────────────────────────────────────────
 
   @Get('work')
   async work() {
-    return { ...(await this.moderation.counts()), legalOverdue: await this.legal.overdueCount() };
+    return { ...(await this.moderation.counts()), legalOverdue: await this.legal.overdueCount(), questions: await this.support.openCount() };
   }
 
   @Get('queue')

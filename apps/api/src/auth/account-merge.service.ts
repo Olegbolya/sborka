@@ -81,7 +81,7 @@ export class AccountMergeService {
         await tx.execute(sql`update ${sql.identifier(table)} set owner_id = ${a} where owner_id = ${b}`);
       }
       await tx.execute(sql`update project_versions set created_by_id = ${a} where created_by_id = ${b}`);
-      for (const table of ['orders', 'subscriptions', 'entitlements', 'notifications', 'appeals', 'passage_digest_queue']) {
+      for (const table of ['orders', 'subscriptions', 'entitlements', 'notifications', 'appeals', 'passage_digest_queue', 'support_questions']) {
         await tx.execute(sql`update ${sql.identifier(table)} set user_id = ${a} where user_id = ${b}`);
       }
       // ADR-126: the paid subscriptions of both accounts line up in one queue — the same tariff adds up, the older one runs first.
