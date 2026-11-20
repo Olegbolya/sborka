@@ -55,6 +55,9 @@ if [ -n "$api_pid" ] && [ "$api_pid" != 0 ] && [ -r "/proc/$api_pid/environ" ] &
   elif [ "$in_proc" = "$in_file" ]; then echo "ключ ЮKassa в процессе API: такой же, как в .env.prod"
   else echo "ключ ЮKassa в процессе API: ДРУГОЙ, чем в .env.prod (процесс держит старое значение)"; fi
 fi
+echo "── Уведомления платёжных сервисов (последние; только адрес, ответ и время)"
+grep -aE '"[A-Z]+ /api/v1/payments/[a-z]+/(result|notify|notifications|webhook)[^"]*" [0-9]{3} ' /var/log/nginx/blokum-access.log 2>/dev/null | tail -n 6 | awk '{print $4, $6, $7, $9}' | sed -E 's/\?[^ ]*//' | cut -c1-160
+grep -ahE 'robokassa|Robokassa|уведомлени' "$LOGS/blokum-api-out.log" 2>/dev/null | grep -aE '"level":"(warn|error)"|"level":[45]0' | tail -n 4 | cut -c1-400 | mask
 echo "== Ресурсы сервера (для выбора VPS) =="
 echo "  процессор: $(nproc) ядер, $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//')"
 echo "  память: $(free -m | awk '/^Mem:/{print "всего "$2" МБ, занято "$3" МБ, доступно "$7" МБ"}')"
