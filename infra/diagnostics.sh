@@ -59,7 +59,7 @@ echo "── Уведомления платёжных сервисов (пос�
 grep -aE '"[A-Z]+ /api/v1/payments/[a-z]+/(result|notify|notifications|webhook)[^"]*" [0-9]{3} ' /var/log/nginx/blokum-access.log 2>/dev/null | tail -n 6 | awk '{print $4, $6, $7, $9}' | sed -E 's/\?[^ ]*//' | cut -c1-160
 echo "  в журнале nginx строк с robokassa: $(grep -ac 'robokassa' /var/log/nginx/blokum-access.log 2>/dev/null || echo 'журнал не читается')"
 # shellcheck disable=SC2016 # JavaScript for node, not shell
-grep -ahE 'payments/robokassa' "$LOGS/blokum-api-out.log" 2>/dev/null | tail -n 4 | sed -E 's/^[^{]*//' | node -e 'for (const l of require("fs").readFileSync(0,"utf8").split("\n").filter(Boolean)) { try { const j = JSON.parse(l); console.log(`  ${j.time} ${j.method ?? ""} ${String(j.path ?? "").split("?")[0]} → ${j.status ?? ""} ${j.msg ?? ""}`); } catch { console.log("  " + l.slice(0, 200)); } }' 2>&1 | mask
+grep -ahE 'payments/robokassa' "$LOGS/blokum-api-out.log" 2>/dev/null | tail -n 4 | sed -E 's/^[^{]*//' | node -e 'for (const l of require("fs").readFileSync(0,"utf8").split("\n").filter(Boolean)) { try { const j = JSON.parse(l); console.log(`  ${j.time} ${j.method ?? ""} ${String(j.path ?? "").split("?")[0]} → ${j.status ?? ""} ${j.code ?? ""} ${j.msg ?? ""}`); } catch { console.log("  " + l.slice(0, 200)); } }' 2>&1 | mask
 grep -ahE 'robokassa|Robokassa|уведомлени' "$LOGS/blokum-api-out.log" 2>/dev/null | grep -aE '"level":"(warn|error)"|"level":[45]0' | tail -n 4 | cut -c1-400 | mask
 echo "== Ресурсы сервера (для выбора VPS) =="
 echo "  процессор: $(nproc) ядер, $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//')"

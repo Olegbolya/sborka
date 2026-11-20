@@ -30,6 +30,11 @@ class ErrorsController {
     });
   }
 
+  @Get('payments/robokassa/result')
+  refused(): never {
+    throw new HttpException({ error: { code: 'ORDER_MISMATCH', message: 'Платёж не совпадает с заказом.' } }, 400);
+  }
+
   @Get('slow')
   async slow(): Promise<{ ok: true }> {
     await new Promise((r) => setTimeout(r, 10));
@@ -90,6 +95,11 @@ describe('id запроса, журнал и ошибки API', () => {
     });
     const logged = t.logs.find((l) => l.requestId === 'pay-req-01' && l.msg === 'ошибка внешнего сервиса');
     expect(logged).toMatchObject({ status: 502, code: 'PAYMENTS_FAILED', cause: 'Платёжный сервис отказал в создании платежа (401: invalid_credentials)' });
+  });
+
+  it('P7.3 · отказ в уведомлении платёжного сервиса пишется в журнал с кодом причины', async () => {
+    await request(t.http()).get(`/${API_PREFIX}/test-errors/payments/robokassa/result`).set('x-request-id', 'robo-req-01').expect(400);
+    expect(t.logs.find((l) => l.requestId === 'robo-req-01' && l.msg === 'отказ в платёжном запросе')).toMatchObject({ status: 400, code: 'ORDER_MISMATCH' });
   });
 
   it('20 ошибок 5xx за минуту — одна тревога администратору', async () => {

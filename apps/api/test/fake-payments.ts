@@ -34,7 +34,11 @@ export function fakeYooKassa() {
 export const OPTS = { login: 'blokker-test', password1: 'pass-one', password2: 'pass-two', password3: 'pass-three' };
 export const md5 = (s: string) => createHash('md5').update(s).digest('hex');
 
-/** Поддельный сервер Robokassa: состояние операций в памяти, ответы того же вида, что у OpStateExt и API возвратов. */
+/**
+ * Поддельный сервер Robokassa: состояние операций в памяти, ответы того же вида, что у OpStateExt и API возвратов. Как у настоящей:
+ * IncSum — сколько заплатил покупатель (`outSum` операции — сумма, которую сайт передал в ссылке оплаты), OutSum — сколько дошло
+ * до магазина за вычетом комиссии (20.11.2026: оплата 199 ₽, на балансе 191,24 ₽).
+ */
 export function fakeRobokassa() {
   const ops = new Map<string, { code: number; outSum: string; order: string }>();
   const refunds: Array<{ opKey: string; sum: number; auth: string }> = [];
@@ -47,7 +51,7 @@ export function fakeRobokassa() {
       const op = ops.get(inv);
       if (!op) return xml('<Result><Code>3</Code></Result>');
       return xml(
-        `<Result><Code>0</Code></Result><State><Code>${op.code}</Code></State><Info><OpKey>key-${inv}</OpKey><OutSum>${op.outSum}</OutSum></Info><UserField><Field><Name>shp_order</Name><Value>${op.order}</Value></Field></UserField>`,
+        `<Result><Code>0</Code></Result><State><Code>${op.code}</Code></State><Info><IncCurrLabel>BankCardPSR</IncCurrLabel><IncSum>${op.outSum}</IncSum><PaymentMethod><Code>BankCard</Code><Description>Банковская карта</Description></PaymentMethod><OutCurrLabel>RUB</OutCurrLabel><OutSum>${(Number(op.outSum) * 0.961).toFixed(6)}</OutSum><OpKey>key-${inv}</OpKey></Info><UserField><Field><Name>shp_order</Name><Value>${op.order}</Value></Field></UserField>`,
       );
     }
     if (u.pathname.endsWith('/Refund/Create')) {

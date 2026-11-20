@@ -48,6 +48,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // Our own errors carry `{ error: { code, message } }`; NestJS built-ins carry English text — replaced.
       const custom = ownError(exception);
       const [code, message] = CODES[status] ?? ['ERROR', 'Ошибка запроса'];
+      // A refused notice of a payment service is the one 4xx worth a line in the log: the money is paid, the order is not.
+      const path = host.switchToHttp().getRequest<{ path?: string }>().path ?? '';
+      if (path.includes('/payments/')) this.logger.warn({ status, code: (custom as { code?: unknown } | undefined)?.code ?? code, path }, 'отказ в платёжном запросе');
       res.status(status).json({ error: custom ?? { code, message } });
       return;
     }

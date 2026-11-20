@@ -68,7 +68,10 @@ describe('P7.3 · Robokassa: запасной провайдер платеже�
     const sum = (o.amountKop / 100).toFixed(2);
     expect(url.searchParams.get('OutSum')).toBe(sum);
     expect(url.searchParams.get('InvId')).toBe(o.providerPaymentId);
-    expect(url.searchParams.get('SignatureValue')).toBe(md5(`${OPTS.login}:${sum}:${o.providerPaymentId!}:${OPTS.password1}:Shp_order=${o.id}`));
+    // Состав покупки для чека «Робочеки СМЗ»: одна услуга на всю сумму, без НДС; он входит в подпись.
+    const receipt = url.searchParams.get('Receipt')!;
+    expect(JSON.parse(receipt)).toEqual({ items: [{ name: expect.stringMatching(/\S/), quantity: 1, sum: o.amountKop / 100, payment_method: 'full_payment', payment_object: 'service', tax: 'none' }] });
+    expect(url.searchParams.get('SignatureValue')).toBe(md5(`${OPTS.login}:${sum}:${o.providerPaymentId!}:${receipt}:${OPTS.password1}:Shp_order=${o.id}`));
     expect(url.searchParams.has('IsTest')).toBe(false);
   });
 
@@ -143,6 +146,6 @@ describe('P7.3 · Robokassa: запасной провайдер платеже�
     const created = await p.createPayment({ orderId: 'abc', amountKop: 10050, description: 'Тест', returnUrl: 'https://blokker.ru/x' });
     const u = new URL(created.confirmationUrl);
     expect(u.searchParams.get('IsTest')).toBe('1');
-    expect(u.searchParams.get('SignatureValue')).toBe(createHash('sha256').update(`${OPTS.login}:100.50:${created.providerPaymentId}:${OPTS.password1}:Shp_order=abc`).digest('hex'));
+    expect(u.searchParams.get('SignatureValue')).toBe(createHash('sha256').update(`${OPTS.login}:100.50:${created.providerPaymentId}:${u.searchParams.get('Receipt')!}:${OPTS.password1}:Shp_order=abc`).digest('hex'));
   });
 });

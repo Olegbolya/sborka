@@ -60,7 +60,11 @@ export class RobokassaProvider implements PaymentProvider {
   createPayment(input: CreatePaymentInput): Promise<CreatedPayment> {
     const invId = RobokassaProvider.invId(input.orderId);
     const outSum = rubles(input.amountKop);
-    // Подпись: MerchantLogin:OutSum:InvId:Пароль1:Shp_… (Shp_-параметры — по алфавиту).
+    // Состав покупки для чека «Робочеки СМЗ» (54-ФЗ, 422-ФЗ): одна услуга на всю сумму, без НДС — самозанятый НДС не платит.
+    const receipt = JSON.stringify({
+      items: [{ name: input.description.slice(0, 128), quantity: 1, sum: Number(outSum), payment_method: 'full_payment', payment_object: 'service', tax: 'none' }],
+    });
+    // Подпись: MerchantLogin:OutSum:InvId:Receipt:Пароль1:Shp_… (Receipt — JSON как есть, в ссылке он URL-кодируется; Shp_ — по алфавиту).
     const shp = `Shp_order=${input.orderId}`;
     const params = new URLSearchParams({
       MerchantLogin: this.o.login,
@@ -68,7 +72,8 @@ export class RobokassaProvider implements PaymentProvider {
       InvId: invId,
       Description: input.description.slice(0, 100),
       Shp_order: input.orderId,
-      SignatureValue: this.sign(this.o.login, outSum, invId, this.o.password1, shp),
+      Receipt: receipt,
+      SignatureValue: this.sign(this.o.login, outSum, invId, receipt, this.o.password1, shp),
       Culture: 'ru',
       Encoding: 'utf-8',
       SuccessUrl2: input.returnUrl,
@@ -118,7 +123,8 @@ export class RobokassaProvider implements PaymentProvider {
       if (name === 'order') orderId = tag(f[1]!, 'Value');
     }
     const stateCode = Number(tag(state, 'Code'));
-    return { code, stateCode: Number.isFinite(stateCode) ? stateCode : null, outSum: tag(info, 'OutSum'), opKey: tag(info, 'OpKey'), orderId };
+    // IncSum — what the buyer paid (the sum of the order); OutSum — what reached the shop after the commission (199 ₽ → 191,24 ₽).
+    return { code, stateCode: Number.isFinite(stateCode) ? stateCode : null, outSum: tag(info, 'IncSum') ?? tag(info, 'OutSum'), opKey: tag(info, 'OpKey'), orderId };
   }
 
   async getPayment(providerPaymentId: string): Promise<ProviderPayment | null> {
