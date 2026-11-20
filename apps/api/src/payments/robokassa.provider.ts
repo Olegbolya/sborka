@@ -149,14 +149,15 @@ export class RobokassaProvider implements PaymentProvider {
     try {
       res = await this.fetchImpl(REFUND_CREATE_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/jwt' },
-        body: this.jwt({ OpKey: s.opKey, RefundSum: Number(rubles(input.amountKop)) }),
+        // Тело — JWT как JSON-строка (в кавычках), Content-Type application/json: на `application/jwt` Робокасса отвечает 415 (20.11.2026).
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.jwt({ OpKey: s.opKey, RefundSum: Number(rubles(input.amountKop)) })),
         signal: AbortSignal.timeout(15_000),
       });
     } catch {
       throw new PaymentProviderError('Платёжный сервис не ответил');
     }
-    if (!res.ok) throw new PaymentProviderError(`Платёжный сервис отказал в возврате (${res.status})`, res.status);
+    if (!res.ok) throw new PaymentProviderError(`Платёжный сервис отказал в возврате (${res.status}${await res.text().then((t) => (t ? `: ${t.slice(0, 200)}` : '')).catch(() => '')})`, res.status);
     const r = (await res.json()) as { success?: boolean; message?: string; requestId?: string };
     if (!r.success || !r.requestId) throw new PaymentProviderError(r.message ? `Платёжный сервис отказал в возврате: ${r.message}` : 'Платёжный сервис отказал в возврате');
     return { refundId: r.requestId, status: 'processing' };

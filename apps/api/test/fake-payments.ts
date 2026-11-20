@@ -55,7 +55,9 @@ export function fakeRobokassa() {
       );
     }
     if (u.pathname.endsWith('/Refund/Create')) {
-      const [h, b, s] = (init?.body as string).split('.');
+      // Как настоящая Робокасса: принимает только application/json, тело — JWT строкой в JSON.
+      if (new Headers(init?.headers).get('content-type') !== 'application/json') return Promise.resolve(new Response('', { status: 415 }));
+      const [h, b, s] = (JSON.parse(init?.body as string) as string).split('.');
       const ok = s === createHmac('sha256', OPTS.password3).update(`${h}.${b}`).digest('base64url');
       const p = JSON.parse(Buffer.from(b!, 'base64url').toString()) as { OpKey: string; RefundSum: number };
       refunds.push({ opKey: p.OpKey, sum: p.RefundSum, auth: ok ? 'ok' : 'bad' });
