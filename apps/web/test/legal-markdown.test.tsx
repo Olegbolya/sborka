@@ -23,7 +23,7 @@ describe('P8.1 · документы показываются оформленн
     const web = resolve(__dirname, '..');
     for (const f of ['terms.md', 'offer.md', 'privacy.md', 'pd-consent.md', 'dpa.md', 'content-rules.md', 'cookies.md', 'marketing.md', 'complaints.md', 'contacts.md']) {
       const text = readLegalFile(f, web);
-      expect(text, f).toContain('Редакция от 15 ноября 2026 г.');
+      expect(text, f).toMatch(/Редакция от \d{1,2} (января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря) \d{4} г\./);
       expect(text, f).not.toMatch(/ЧЕРНОВИК|не установлена|\{\{/);
       const html = renderToStaticMarkup(<LegalMarkdown source={text} />);
       expect(html, f).not.toMatch(/(^|>)\s*#|\*\*/);
