@@ -45,6 +45,8 @@ const BY_ID = new Set([
   'GET /projects/:projectId/choice-limits', 'POST /projects/:projectId/choice-limits/release',
   'DELETE /auth/sessions/:id',
   'POST /notifications/:id/read',
+  // AD-13 · переписка по вопросу: только тот, кто спросил (чужой — 404, apps/api/test/support.test.ts).
+  'GET /support/questions/:id', 'POST /support/questions/:id/messages',
   'PUT /media/sessions/:id', 'POST /media/sessions/:id/complete', 'GET /media/:id/file', 'DELETE /media/:id',
   'GET /projects/:id/moderation', 'POST /projects/:id/appeals',
   'GET /projects/:id', 'PATCH /projects/:id', 'DELETE /projects/:id', 'POST /projects/:id/restore', 'POST /projects/:id/duplicate', 'POST /projects/:id/status', 'POST /projects/:id/publish',
@@ -211,6 +213,7 @@ describe('P9.4 · N-04 · роли и доступ к чужим объекта�
     const versionId = (Array.isArray(versions) ? versions : versions.items)[0]!.id;
     const [session] = await db.db.select({ id: schema.sessions.id }).from(schema.sessions).where(eq(schema.sessions.userId, owner.id));
     const uploadId = ((await call(owner.cookie, 'post', '/media/sessions', { totalBytes: 100 })).body as { sessionId: string }).sessionId;
+    const questionId = ((await call(owner.cookie, 'post', '/support/questions', { text: 'Мой вопрос в поддержку' }).expect(201)).body as { id: string }).id;
     const ids: Record<string, string> = { projectId, accessPointId, themeId, versionId };
     const idsFor = (path: string): Record<string, string> => {
       if (path.startsWith('/projects/:projectId/responses/:id')) return { ...ids, id: responseId };
@@ -220,6 +223,7 @@ describe('P9.4 · N-04 · роли и доступ к чужим объекта�
       if (path.startsWith('/media/')) return { ...ids, id: media!.id };
       if (path.startsWith('/notifications/')) return { ...ids, id: note!.id };
       if (path.startsWith('/auth/sessions/')) return { ...ids, id: session!.id };
+      if (path.startsWith('/support/questions/')) return { ...ids, id: questionId };
       return { ...ids, id: projectId };
     };
 

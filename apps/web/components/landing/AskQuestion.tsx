@@ -8,12 +8,13 @@ interface Question {
   id: string;
   text: string;
   status: 'NEW' | 'ANSWERED' | 'CLOSED';
-  answer: string | null;
   createdAt: string;
+  lastMessageAt: string;
+  messages: number;
 }
 
 const MAX = 2000;
-const STATUS: Record<Question['status'], string> = { NEW: 'ждёт ответа', ANSWERED: 'есть ответ', CLOSED: 'закрыт' };
+const STATUS: Record<Question['status'], string> = { NEW: 'ждёт ответа поддержки', ANSWERED: 'поддержка ответила', CLOSED: 'закрыт' };
 
 /**
  * AD-13 · «Задать вопрос» на странице «Помощь»: вопрос уходит администратору в админку, ответ придёт в кабинет (уведомление)
@@ -39,10 +40,11 @@ export function AskQuestion() {
     setError(null);
     setSent(false);
     try {
-      await api('/support/questions', { method: 'POST', body: { text } });
+      const q = await api<Question>('/support/questions', { method: 'POST', body: { text } });
       setText('');
       setSent(true);
-      await load();
+      // The question opens as its own chat: the answers of support come there.
+      window.location.assign(`/help/questions/${encodeURIComponent(q.id)}`);
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -65,7 +67,7 @@ export function AskQuestion() {
         </p>
       ) : (
         <>
-          <p className="lp-note">Опишите, что не получается. Ответ придёт в кабинет (колокольчик уведомлений) и появится здесь, под формой.</p>
+          <p className="lp-note">Опишите, что не получается. У каждого вопроса своя переписка с поддержкой: ответ придёт в кабинет (колокольчик уведомлений) и в переписку.</p>
           <label htmlFor="ask-text" style={{ display: 'block', fontWeight: 600, margin: '12px 0 8px' }}>
             Ваш вопрос
           </label>
@@ -93,16 +95,14 @@ export function AskQuestion() {
               <h3 style={{ margin: '24px 0 8px' }}>Ваши вопросы</h3>
               <ul data-testid="ask-mine" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {mine.map((q) => (
-                  <li key={q.id} style={{ borderTop: '1px solid var(--muted)', padding: '12px 0' }}>
-                    <p className="lp-note" style={{ margin: 0 }}>
-                      {dateRu(q.createdAt)} · {STATUS[q.status]}
-                    </p>
-                    <p style={{ margin: '4px 0', whiteSpace: 'pre-wrap' }}>{q.text}</p>
-                    {q.answer && (
-                      <p style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>
-                        <strong>Ответ:</strong> {q.answer}
-                      </p>
-                    )}
+                  <li key={q.id} style={{ borderTop: '1px solid currentColor', padding: 0 }}>
+                    <a href={`/help/questions/${encodeURIComponent(q.id)}`} data-testid="ask-open" style={{ display: 'block', padding: '12px 0', color: 'inherit', textDecoration: 'none' }}>
+                      <span style={{ display: 'block', fontSize: 14, opacity: 0.8 }}>
+                        {dateRu(q.lastMessageAt)} · {STATUS[q.status]} · сообщений: {q.messages}
+                      </span>
+                      <span style={{ margin: '4px 0', whiteSpace: 'pre-wrap', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{q.text}</span>
+                      <span style={{ textDecoration: 'underline' }}>Открыть переписку →</span>
+                    </a>
                   </li>
                 ))}
               </ul>

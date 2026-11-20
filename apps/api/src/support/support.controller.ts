@@ -3,7 +3,7 @@ import { CurrentUser, Roles } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
 import { SupportService } from './support.service.js';
 
-/** AD-13 · вопрос в поддержку со страницы «Помощь» — только для вошедших; свои вопросы и ответы на них. */
+/** AD-13 · вопрос в поддержку со страницы «Помощь» — только для вошедших; свои вопросы и переписка по каждому. */
 @Controller('support/questions')
 export class SupportController {
   constructor(private readonly support: SupportService) {}
@@ -18,9 +18,20 @@ export class SupportController {
   async mine(@CurrentUser() user: RequestUser) {
     return { questions: await this.support.mine(user.id) };
   }
+
+  @Get(':id')
+  thread(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.support.thread(user.id, id);
+  }
+
+  @Post(':id/messages')
+  @HttpCode(201)
+  reply(@Param('id') id: string, @Body() body: { text?: unknown } | null, @CurrentUser() user: RequestUser) {
+    return this.support.reply(user.id, id, body?.text);
+  }
 }
 
-/** AD-13 · вопросы пользователей в админке: список, ответ (уходит человеку в кабинет), закрыть без ответа. */
+/** AD-13 · вопросы пользователей в админке: список, переписка, ответ (уходит человеку в кабинет), закрыть. */
 @Roles('ADMIN')
 @Controller('admin/support')
 export class SupportAdminController {
@@ -29,6 +40,11 @@ export class SupportAdminController {
   @Get()
   list(@Query('status') status?: string) {
     return this.support.list(status);
+  }
+
+  @Get(':id')
+  thread(@Param('id') id: string) {
+    return this.support.thread(null, id);
   }
 
   @Post(':id/answer')

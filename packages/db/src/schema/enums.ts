@@ -75,3 +75,5 @@ export const caseStatus = pgEnum('case_status', ['NEW', 'IN_PROGRESS', 'CLOSED']
 export const appealStatus = pgEnum('appeal_status', ['NEW', 'GRANTED', 'DENIED']);
 /** AD-13 · вопрос пользователя в поддержку: новый → отвечен (ответ ушёл в кабинет) или закрыт без ответа. */
 export const supportQuestionStatus = pgEnum('support_question_status', ['NEW', 'ANSWERED', 'CLOSED']);
+/** AD-13 · кто написал сообщение в переписке по вопросу: сам пользователь или поддержка (администратор). */
+export const supportAuthor = pgEnum('support_author', ['USER', 'SUPPORT']);

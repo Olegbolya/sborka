@@ -10,6 +10,7 @@ import {
   moderationTarget,
   reportPriority,
   reportStatus,
+  supportAuthor,
   supportQuestionStatus,
 } from './enums.js';
 import { media } from './content.js';
@@ -324,8 +325,8 @@ export const vkLinkCodes = pgTable(
 );
 
 /**
- * AD-13 · вопросы пользователей со страницы «Помощь»: приходят администратору в админку, ответ уходит человеку в кабинет
- * (уведомление). Пишут только вошедшие: так есть кому ответить, а номер и почта не собираются отдельно.
+ * AD-13 · вопросы пользователей со страницы «Помощь» — у каждого своя переписка (чат) с поддержкой: сообщения в
+ * `support_messages`. Приходят администратору в админку, ответ уходит человеку в кабинет (уведомление). Пишут только вошедшие.
  */
 export const supportQuestions = pgTable(
   'support_questions',
@@ -334,12 +335,30 @@ export const supportQuestions = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    /** Первое сообщение — тема переписки в списке. */
     text: text('text').notNull(),
+    /** NEW — последнее слово за пользователем (ждёт ответа), ANSWERED — за поддержкой, CLOSED — переписка закрыта. */
     status: supportQuestionStatus('status').notNull().default('NEW'),
-    answer: text('answer'),
     answeredById: text('answered_by_id'),
     createdAt: createdAt(),
     answeredAt: ts('answered_at'),
+    lastMessageAt: ts('last_message_at').notNull().defaultNow(),
   },
   (t) => [index('support_questions_status_idx').on(t.status, t.createdAt), index('support_questions_user_idx').on(t.userId, t.createdAt)],
+);
+
+/** AD-13 · сообщения переписки по вопросу: первое — сам вопрос, дальше по очереди пользователь и поддержка. */
+export const supportMessages = pgTable(
+  'support_messages',
+  {
+    id: id(),
+    questionId: text('question_id')
+      .notNull()
+      .references(() => supportQuestions.id, { onDelete: 'cascade' }),
+    author: supportAuthor('author').notNull(),
+    authorId: text('author_id'),
+    text: text('text').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('support_messages_question_idx').on(t.questionId, t.createdAt)],
 );

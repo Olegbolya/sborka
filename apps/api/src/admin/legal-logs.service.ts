@@ -260,10 +260,12 @@ export class LegalLogsService implements OnModuleInit, OnModuleDestroy {
     const orders = await this.db.select({ id: schema.orders.id, kind: schema.orders.kind, amountKop: schema.orders.amountKop, status: schema.orders.status, createdAt: schema.orders.createdAt, paidAt: schema.orders.paidAt }).from(schema.orders).where(eq(schema.orders.userId, userId)).limit(500);
     // AD-13: the questions a person sent to support and the answers are their data too.
     const supportQuestions = await this.db
-      .select({ text: schema.supportQuestions.text, status: schema.supportQuestions.status, answer: schema.supportQuestions.answer, createdAt: schema.supportQuestions.createdAt, answeredAt: schema.supportQuestions.answeredAt })
-      .from(schema.supportQuestions)
+      .select({ question: schema.supportQuestions.text, status: schema.supportQuestions.status, author: schema.supportMessages.author, text: schema.supportMessages.text, createdAt: schema.supportMessages.createdAt })
+      .from(schema.supportMessages)
+      .innerJoin(schema.supportQuestions, eq(schema.supportQuestions.id, schema.supportMessages.questionId))
       .where(eq(schema.supportQuestions.userId, userId))
-      .limit(500);
+      .orderBy(asc(schema.supportMessages.createdAt))
+      .limit(2000);
     await this.audit.log({ actorId: actor.id, action: 'DATA_REQUEST_EXPORT', targetType: 'DATA_REQUEST', targetId: id, ...(ip ? { ip } : {}), meta: { userId } });
     return { exportedAt: now.toISOString(), requestId: id, profile, authIdentities: identities, consentHistory: consents, projects, orders, supportQuestions };
   }
