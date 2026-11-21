@@ -12,6 +12,7 @@ import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { LocalStorageService, servedKey } from '../media/storage.js';
 import { type ProjectSettings } from '../projects/projects.service.js';
 import { checkUnlockToken, deviceHash, unlockToken, verifyPassword } from './secrets.js';
+import { type CreatorLimitNotice, creatorLimitNotice } from './creator-limits.js';
 
 /** The first state a participant meets (docs/01-PRODUCT-SPEC.md §10.3). */
 export type PlayView = PlayOpen | PlayBlocked;
@@ -514,6 +515,7 @@ export class PlayService {
     // The tariff is read before the transaction opens: inside it a second connection would be taken from the pool while this one waits.
     const { plan, pass } = await this.entitlements.limitsOfProject(p.ownerId, p.id, now);
     let usage: UsageNotice | null = null;
+    let creator: CreatorLimitNotice | null = null;
     const started = await this.db.transaction(async (tx) => {
       // Locks are always taken in the same order (account, then project), so two projects of one account cannot block each other.
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'owner:' + p.ownerId}))`);
@@ -579,11 +581,15 @@ export class PlayService {
         .insert(schema.limitCounters)
         .values({ projectId: p.id, kind: 'STARTS', value: 1 })
         .onConflictDoUpdate({ target: [schema.limitCounters.projectId, schema.limitCounters.kind], set: { value: sql`${schema.limitCounters.value} + 1` } });
+      // D-07 · PL-06: this start fills the creator's own limit of starts — counted under the lock of the project, so once.
+      creator = creatorLimitNotice('starts', starts + 1, p.settings, p.title);
       return { sessionId, versionId: p.versionId };
     });
     // The message is a courtesy to the creator: its failure must not undo the passage that has begun.
     const notice = usage as UsageNotice | null;
     if (notice && this.notifications) await this.notifications.notify({ userId: p.ownerId, kind: notice.kind, title: notice.title, body: notice.body, projectId: p.id }).catch(() => undefined);
+    const own = creator as CreatorLimitNotice | null;
+    if (own && this.notifications) await this.notifications.notify({ userId: p.ownerId, kind: own.kind, title: own.title, body: own.body, projectId: p.id }).catch(() => undefined);
     return started;
   }
 }

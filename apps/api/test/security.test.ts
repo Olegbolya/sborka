@@ -43,6 +43,8 @@ const OWN_SESSION = new Set([
 const BY_ID = new Set([
   'GET /projects/:projectId/board', 'PUT /projects/:projectId/board', 'GET /projects/:projectId/board/rows', 'GET /projects/:projectId/board/qr.svg', 'GET /projects/:projectId/board/qr.png', 'POST /projects/:projectId/board/freeze', 'POST /projects/:projectId/board/reset', 'POST /projects/:projectId/board/hide',
   'GET /projects/:projectId/choice-limits', 'POST /projects/:projectId/choice-limits/release',
+  // D-07 · вебхук сборки: только владелец (чужой — 404, apps/api/test/webhooks.test.ts).
+  'GET /projects/:id/webhook', 'PUT /projects/:id/webhook', 'DELETE /projects/:id/webhook', 'POST /projects/:id/webhook/secret', 'POST /projects/:id/webhook/test', 'POST /projects/:id/webhook/deliveries/:deliveryId/retry',
   'DELETE /auth/sessions/:id',
   'POST /notifications/:id/read',
   // AD-13 · переписка по вопросу: только тот, кто спросил (чужой — 404, apps/api/test/support.test.ts).

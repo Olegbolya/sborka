@@ -239,6 +239,13 @@
       "when": 1795202145089,
       "tag": "0033_support_chat_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795238566397,
+      "tag": "0034_wet_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }

@@ -27,6 +27,9 @@ import { type OptionPlaces, fullOptionsFor, lockOptions, placesFor } from './cho
 import { type ApiConfig } from '../config.js';
 import { PassageNoticesService } from './passage-notices.service.js';
 import { BoardService } from '../board/board.service.js';
+import { NotificationsService } from '../admin/notifications.service.js';
+import { WebhooksService } from '../webhooks/webhooks.service.js';
+import { creatorLimitNotice } from './creator-limits.js';
 import { API_CONFIG, DB } from '../tokens.js';
 
 const fail = (status: number, code: string, message: string): HttpException => new HttpException({ error: { code, message } }, status);
@@ -58,6 +61,8 @@ export class PlaySessionsService {
     @Optional() private readonly flags?: FeatureFlagsService,
     @Optional() private readonly passageNotices?: PassageNoticesService,
     @Optional() private readonly board?: BoardService,
+    @Optional() private readonly webhooks?: WebhooksService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
   /** The session id is the participant's capability: unguessable, kept by the browser. */
@@ -245,6 +250,7 @@ export class PlaySessionsService {
     const feedback = finalFeedback(doc, state);
     const now = new Date();
     let firstCompletion = false;
+    let completions: number | null = null;
     if (session.status === 'IN_PROGRESS') {
       await this.db.transaction(async (tx) => {
         const done = await tx
@@ -254,17 +260,32 @@ export class PlaySessionsService {
           .returning({ id: schema.participantSessions.id });
         if (done.length === 0) return;
         firstCompletion = true;
-        await tx
+        const [counter] = await tx
           .insert(schema.limitCounters)
           .values({ projectId: session.projectId, kind: 'COMPLETIONS', value: 1 })
-          .onConflictDoUpdate({ target: [schema.limitCounters.projectId, schema.limitCounters.kind], set: { value: sql`${schema.limitCounters.value} + 1` } });
+          .onConflictDoUpdate({ target: [schema.limitCounters.projectId, schema.limitCounters.kind], set: { value: sql`${schema.limitCounters.value} + 1` } })
+          .returning({ value: schema.limitCounters.value });
+        completions = counter?.value ?? null;
       });
     }
+    // D-07 · «о лимитах»: the passage that fills the creator's own limit of completions (PL-06) closes the project — say so once.
+    if (firstCompletion && completions !== null) await this.tellCreatorLimit(session.projectId, ownerId, 'completions', completions).catch(() => undefined);
+    // D-07 · the webhook («Про»): sent in the background, the participant does not wait for the creator's server.
+    if (firstCompletion && this.webhooks) void this.webhooks.passageCompleted(ownerId, session.projectId, sessionId).catch(() => undefined);
     // D-07: the creator hears about a finished passage in the cabinet. It is an extra: its failure never fails the participant's end.
     if (firstCompletion) await this.notifyOwner(session, doc, ownerId, answers, variables, result?.key ?? null).catch(() => undefined);
     // D-18: the place on the board of the project (for «{{место}}»); the board is an extra, its failure does not fail the end.
     const board = this.board ? await this.board.placeOf(session.projectId, sessionId).catch(() => null) : null;
     return { score: totals.score, max: totals.max, correct: totals.correct, keyed: totals.keyed, result: result ? { key: result.key, screenId: result.screenId } : null, feedback, board };
+  }
+
+  /** D-07 · PL-06: the creator's own limit is reached — one message in the cabinet (the counter reaches the limit exactly once). */
+  private async tellCreatorLimit(projectId: string, ownerId: string, kind: 'completions', value: number): Promise<void> {
+    if (!this.notifications) return;
+    const [project] = await this.db.select({ title: schema.projects.title, settings: schema.projects.settings }).from(schema.projects).where(eq(schema.projects.id, projectId));
+    if (!project) return;
+    const notice = creatorLimitNotice(kind, value, project.settings ?? {}, project.title);
+    if (notice) await this.notifications.notify({ userId: ownerId, kind: notice.kind, title: notice.title, body: notice.body, projectId });
   }
 
   /**

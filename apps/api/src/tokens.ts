@@ -14,3 +14,5 @@ export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER');
 export const PAYMENT_PROVIDERS = Symbol('PAYMENT_PROVIDERS');
 export const LINK_REPUTATION = Symbol('LINK_REPUTATION');
 export const VK_FETCH = Symbol('VK_FETCH');
+/** D-07 · replaces the HTTP call of the webhook (tests). */
+export const WEBHOOK_SENDER = Symbol('WEBHOOK_SENDER');

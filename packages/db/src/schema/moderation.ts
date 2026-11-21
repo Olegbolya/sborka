@@ -1,6 +1,6 @@
-import { bigserial, boolean, index, integer, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import { bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from './users.js';
-import { createdAt, id, ts } from './columns.js';
+import { createdAt, id, ts, updatedAt } from './columns.js';
 import {
   appealStatus,
   caseStatus,
@@ -361,4 +361,58 @@ export const supportMessages = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('support_messages_question_idx').on(t.questionId, t.createdAt)],
+);
+
+/**
+ * D-07 · the webhook of a project («Про», ADR-129): where a finished passage is sent as JSON signed with HMAC-SHA256. The secret is
+ * kept encrypted (AES-256-GCM, the key of the server) and shown only to the owner of the project.
+ */
+export const projectWebhooks = pgTable('project_webhooks', {
+  projectId: text('project_id')
+    .primaryKey()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  secretEnc: text('secret_enc').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  /** When the creator was last told that deliveries fail: one message a day at most. */
+  failNoticeAt: ts('fail_notice_at'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/** D-07 · one event for the webhook of a project and its attempts: a delivery is tried again with growing pauses until it succeeds or the attempts end. */
+export const webhookDeliveries = pgTable(
+  'webhook_deliveries',
+  {
+    id: id(),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    event: text('event').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    /** PENDING — waits for an attempt; DELIVERED — the receiver answered 2xx; FAILED — all attempts are spent. */
+    status: text('status').notNull().default('PENDING'),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: ts('next_attempt_at').notNull().defaultNow(),
+    /** The answer of the last attempt for the creator: «HTTP 500», «нет ответа за 10 с»… */
+    lastResult: text('last_result'),
+    lastAttemptAt: ts('last_attempt_at'),
+    deliveredAt: ts('delivered_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('webhook_deliveries_due_idx').on(t.status, t.nextAttemptAt), index('webhook_deliveries_project_idx').on(t.projectId, t.createdAt)],
+);
+
+/** D-07 · a moment of the schedule (opening or closing) the creator has already been told about: the message goes once. */
+export const scheduleNotices = pgTable(
+  'schedule_notices',
+  {
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    at: ts('at').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.kind, t.at] })],
 );

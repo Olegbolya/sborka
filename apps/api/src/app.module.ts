@@ -51,6 +51,8 @@ import { EditorModule } from './editor/editor.module.js';
 import { VkModule } from './vk/vk.module.js';
 import type { VkFetch } from './vk/vk.service.js';
 import { BoardModule } from './board/board.module.js';
+import { WebhooksModule } from './webhooks/webhooks.module.js';
+import type { WebhookSender } from './webhooks/net.js';
 
 export interface AppDeps {
   logger: Logger;
@@ -73,6 +75,8 @@ export interface AppDeps {
   linkReputation?: LinkReputation | null;
   /** D-07: replaces the call to api.vk.com (tests). */
   vkFetch?: VkFetch;
+  /** D-07: replaces the HTTP call of project webhooks (tests). */
+  webhookSender?: WebhookSender;
 }
 
 @Module({})
@@ -84,7 +88,7 @@ export class AppModule {
     const emailSender: EmailSender | null = deps.emailSender !== undefined ? deps.emailSender : production ? null : new DevEmailSender();
     return {
       module: AppModule,
-      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes, linkReputation: deps.linkReputation !== undefined ? deps.linkReputation : config.safeBrowsingKey ? new YandexSafeBrowsing(config.safeBrowsingKey) : null }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl, config.requireAgeRating === true, config.mediaDir), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), PaymentsModule.register(config, deps.paymentProvider), LibraryModule.register(config), EditorModule, VkModule.register(config, deps.vkFetch), BoardModule],
+      imports: [DatabaseModule.forRoot(deps.db), AdminModule.register({ alerts: deps.alerts, emailSender, config, probes: deps.probes, linkReputation: deps.linkReputation !== undefined ? deps.linkReputation : config.safeBrowsingKey ? new YandexSafeBrowsing(config.safeBrowsingKey) : null }), AuthModule, MailModule, MediaModule.register(config, deps.mediaQueue), ProjectsModule.register(config.webUrl, config.requireAgeRating === true, config.mediaDir), ThemesModule.register(config), PlayModule.register(config), ReportsModule.register(config), FontsModule.register(config), PaymentsModule.register(config, deps.paymentProvider), LibraryModule.register(config), EditorModule, VkModule.register(config, deps.vkFetch), WebhooksModule.register(config, deps.webhookSender), BoardModule],
       controllers: [
         HealthController,
         ...(config.phoneLogin ? [OtpController] : []),

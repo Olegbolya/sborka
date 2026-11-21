@@ -18,6 +18,9 @@ export class QuotaError extends Error {
   }
 }
 
+/** N-05 · the kind of a file as a person calls it (the message is shown in the interface). */
+const KIND_NAME: Record<MediaKind, string> = { IMAGE: 'Картинка', GIF: 'GIF-анимация', VIDEO: 'Видео', AUDIO: 'Звук', LOTTIE: 'Анимация Lottie' };
+
 /** Returns the per-file limit for the kind. */
 export function fileLimitBytes(kind: MediaKind, limits: MediaLimits): number {
   switch (kind) {
@@ -35,7 +38,7 @@ export function checkFileSize(kind: MediaKind, sizeBytes: number, limits: MediaL
   if (sizeBytes > limit) {
     throw new QuotaError(
       'FILE_TOO_LARGE',
-      `Файл превышает лимит для типа ${kind}: ${Math.ceil(sizeBytes / 1024 / 1024)} МБ из ${limit / 1024 / 1024} МБ`,
+      `${KIND_NAME[kind]} больше допустимого на вашем тарифе: ${Math.ceil(sizeBytes / 1024 / 1024)} МБ, можно до ${limit / 1024 / 1024} МБ`,
       limit,
     );
   }
@@ -52,4 +55,37 @@ export function checkStorageQuota(usedBytes: number, fileBytes: number, limits: 
       limits.storageBytes,
     );
   }
+}
+
+export interface StorageNotice {
+  kind: 'storage-80' | 'storage-95';
+  title: string;
+  body: string;
+}
+
+const mb = (bytes: number): string => `${Math.ceil(bytes / 1024 / 1024)} МБ`;
+
+/**
+ * D-07 · «о лимитах» (place for files): the message when an upload crosses 80 % or 95 % of the plan's storage; null when it
+ * crosses nothing. A file that does not fit is refused at upload and the creator sees why at once, so there is no message for it.
+ */
+export function storageNotice(before: number, after: number, limit: number): StorageNotice | null {
+  if (limit <= 0) return null;
+  const crossed = (pct: number): boolean => before < limit * pct && after >= limit * pct;
+  const where = `Занято ${mb(after)} из ${mb(limit)}.`;
+  if (crossed(0.95)) {
+    return {
+      kind: 'storage-95',
+      title: 'Место под файлы почти закончилось',
+      body: `${where} Новые файлы скоро перестанут загружаться. Докупить место или перейти на тариф с большим хранилищем можно в разделе «Тариф и оплата».`,
+    };
+  }
+  if (crossed(0.8)) {
+    return {
+      kind: 'storage-80',
+      title: 'Занято 80 % места под файлы',
+      body: `${where} Когда место закончится, новые файлы не загрузятся. Увеличить место можно в разделе «Тариф и оплата».`,
+    };
+  }
+  return null;
 }

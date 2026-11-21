@@ -8,6 +8,7 @@ import { PassOffer } from '../../../../components/billing/PassOffer';
 import { AnalyticsTab } from '../../../../components/cabinet/AnalyticsTab';
 import { BoardTab } from '../../../../components/cabinet/BoardTab';
 import { CabinetHeader } from '../../../../components/cabinet/CabinetHeader';
+import { WebhookCard } from '../../../../components/cabinet/WebhookCard';
 import { AgeRatingPicker } from '../../../../components/shared/AgeRatingPicker';
 
 type Tab = 'responses' | 'analytics' | 'board' | 'access' | 'settings' | 'export' | 'operator';
@@ -949,6 +950,8 @@ function SettingsTab({ projectId, settings: initialSettings, setError }: { proje
       <IndexingCard projectId={projectId} setError={setError} />
 
       <NoticeModeCard projectId={projectId} setError={setError} />
+
+      <WebhookCard projectId={projectId} setError={setError} />
 
       <div>
         <button style={s.btn} onClick={() => void save()} disabled={saving}>

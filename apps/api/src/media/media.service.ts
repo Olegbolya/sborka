@@ -11,7 +11,8 @@ import { DB, MEDIA_QUEUE } from '../tokens.js';
 import { servedKey } from './storage.js';
 import { checkSignature, SignatureError } from './signatures.js';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
-import { checkFileSize, checkStorageQuota, QuotaError } from './entitlements.js';
+import { checkFileSize, checkStorageQuota, QuotaError, storageNotice } from './entitlements.js';
+import { NotificationsService } from '../admin/notifications.service.js';
 import { LocalStorageService } from './storage.js';
 import { MEDIA_PROCESS_JOB, type IMediaQueue } from './media-jobs.js';
 
@@ -45,6 +46,7 @@ export class MediaService {
     private readonly storage: LocalStorageService,
     private readonly entitlements: EntitlementsService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly notices?: NotificationsService,
   ) {}
 
   /** P4.1/B-02…B-07: Direct upload from buffer (multer memoryStorage). */
@@ -60,7 +62,7 @@ export class MediaService {
     try { checkFileSize(kind, buffer.length, limits); } catch (e) {
       if (e instanceof QuotaError) throw makeError(e.code, e.message); throw e;
     }
-    await this.checkQuota(ownerId, buffer.length);
+    const used = await this.checkQuota(ownerId, buffer.length);
 
     const mediaId = createId();
     const key = `${ownerId}/${mediaId}`;
@@ -74,6 +76,7 @@ export class MediaService {
     if (!row) throw new Error('Запись медиафайла не создана');
 
     await this.queue.add(MEDIA_PROCESS_JOB, { mediaId, ownerId, filePath: this.storage.getPath(key), mime, kind, maxVideoHeight: limits.maxVideoHeight, maxVideoSeconds: limits.maxVideoSeconds });
+    await this.tellStorage(ownerId, used, buffer.length, limits.storageBytes);
 
     return rowToDto(row);
   }
@@ -92,7 +95,7 @@ export class MediaService {
     await this.flags?.require('UPLOADS_ENABLED', 'Загрузка файлов временно отключена.');
     // Validate against the maximum FREE-tier file limit (video 30 MB is biggest).
     if (totalBytes > 30 * 1024 * 1024) {
-      throw makeError('FILE_TOO_LARGE', 'Файл превышает максимально допустимый размер для тарифа FREE (30 МБ)');
+      throw makeError('FILE_TOO_LARGE', 'Файл больше 30 МБ — такой файл загрузить нельзя');
     }
     await this.checkQuota(ownerId, totalBytes);
     const sessionId = createId();
@@ -130,7 +133,7 @@ export class MediaService {
     try { checkFileSize(kind, buffer.length, limits); } catch (e) {
       if (e instanceof QuotaError) throw makeError(e.code, e.message); throw e;
     }
-    await this.checkQuota(ownerId, buffer.length);
+    const used = await this.checkQuota(ownerId, buffer.length);
 
     const mediaId = createId();
     const destPath = this.storage.getPath(`${ownerId}/${mediaId}`);
@@ -144,6 +147,7 @@ export class MediaService {
     if (!row) throw new Error('Запись медиафайла не создана');
 
     await this.queue.add(MEDIA_PROCESS_JOB, { mediaId, ownerId, filePath: destPath, mime, kind, maxVideoHeight: limits.maxVideoHeight, maxVideoSeconds: limits.maxVideoSeconds });
+    await this.tellStorage(ownerId, used, buffer.length, limits.storageBytes);
 
     return rowToDto(row);
   }
@@ -239,7 +243,14 @@ export class MediaService {
     return usages;
   }
 
-  private async checkQuota(ownerId: string, fileBytes: number): Promise<void> {
+  /** D-07 · «о лимитах»: the upload that takes the storage past 80 % or 95 % of the plan — one message in the cabinet. */
+  private async tellStorage(ownerId: string, usedBefore: number, fileBytes: number, limitBytes: number): Promise<void> {
+    const notice = storageNotice(usedBefore, usedBefore + fileBytes, limitBytes);
+    if (notice && this.notices) await this.notices.notify({ userId: ownerId, kind: notice.kind, title: notice.title, body: notice.body }).catch(() => undefined);
+  }
+
+  /** The bytes already taken; throws when this file does not fit. */
+  private async checkQuota(ownerId: string, fileBytes: number): Promise<number> {
     const [result] = await this.db
       .select({ total: sum(schema.media.bytes) })
       .from(schema.media)
@@ -251,6 +262,7 @@ export class MediaService {
       if (e instanceof QuotaError) throw makeError(e.code, e.message);
       throw e;
     }
+    return used;
   }
 }
 
