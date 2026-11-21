@@ -317,7 +317,7 @@
 | D-03 | P6.3 | `apps/api/src/projects/projects.service.ts#getAccessSettings`; `apps/api/src/projects/projects.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
 | D-04 | P6.4 | `apps/api/src/projects/responses.service.ts`; `apps/api/src/projects/responses.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
 | D-06 | P6.6 | `apps/api/src/projects/export.service.ts`; `apps/api/src/projects/responses.controller.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `apps/api/test/projects.test.ts` |
-| D-07 | P6.7 (часть) | `apps/api/src/play/play-sessions.service.ts#notifyOwner`; `apps/api/src/play/passage-notices.service.ts#PassageNoticesService`; `apps/api/src/play/passage-mode.ts#effectivePassageMode`; `apps/web/components/admin/Notifications.tsx` | `apps/api/test/play-session.test.ts`, `e2e/notices.spec.ts` |
+| D-07 | P6.7 | `apps/api/src/play/play-sessions.service.ts#notifyOwner`; `apps/api/src/play/passage-notices.service.ts#PassageNoticesService`; `apps/api/src/play/passage-mode.ts#effectivePassageMode`; `apps/web/components/admin/Notifications.tsx` | `apps/api/test/play-session.test.ts`, `e2e/notices.spec.ts` |
 | GS-01 | P6.8 | `apps/web/lib/play/passage-session.ts`; `apps/web/components/editor/MediaByAnswerEditor.tsx`; `apps/web/components/editor/ScreenPanel.tsx`; `apps/api/src/projects/responses.service.ts`; `apps/web/app/cabinet/projects/[id]/page.tsx` | `e2e/golden-ded-moroz.spec.ts` |
 | GS-02 | P6.9 | `packages/engine/src/runtime/runtime.ts`; `apps/web/components/editor/TextEditor.tsx`; `apps/web/components/editor/Canvas.tsx` | `e2e/golden-own-game.spec.ts` |
 | D1 | P8.1 | `legal/terms.md`, `apps/api/src/auth/legal-document.service.ts`, `apps/api/src/auth/consent.controller.ts` (LegalController), `apps/web/app/legal/[type]/page.tsx` | `apps/api/test/legal.test.ts` |
@@ -589,9 +589,10 @@
 | E-19 | P3.2 | `apps/web/components/editor/HistoryDialog.tsx` | `apps/api/test/drafts.test.ts`, `e2e/editor.spec.ts` |
 | E-20 | P3.13 | `apps/web/components/editor/PreviewDialog.tsx` | `apps/web/test/editor-preview.test.ts`, `e2e/preview.spec.ts` |
 | SR-01 | P9.1 | `apps/api/src/admin/safety.service.ts`; `packages/schema/src/safety/` | `packages/schema/test/safety.test.ts`, `apps/api/test/safety.test.ts` |
+| N-02 | P5.7 | `e2e/perf/player-budget.spec.ts` | `e2e/perf/player-budget.spec.ts` |
 | PL-19 | P5.7 | `e2e/perf/player-budget.spec.ts`; `packages/renderer/src/shape/decor.ts#shapeClip;` | `e2e/perf/player-budget.spec.ts`, `e2e/perf/lighthouse.spec.ts` |
 | N-01 | P3.15 | `apps/web/components/editor/Canvas.tsx` | `e2e/perf/editor.spec.ts` |
-| D-09 | P7.6 | `apps/web/components/billing/BillingSummary.tsx`; `apps/web/components/billing/PlanActions.tsx` | `e2e/billing-pass.spec.ts`, `e2e/billing-addons.spec.ts`, `e2e/payments-admin.spec.ts` |
+| D-09 | P7.6 | `apps/web/components/billing/BillingSummary.tsx`; `apps/web/components/billing/PlanActions.tsx`; `apps/api/src/payments/payments.service.ts#receiptText` | `e2e/billing-usage.spec.ts`; `apps/api/test/order-receipt.units.test.ts` |
 | Q-03 | P6.2 | `apps/api/src/projects/qr-render.ts#parseQrStyle`; `apps/api/src/projects/qr-render.ts#colourProblem`; `apps/api/src/projects/qr-render.ts#buildSvg`; `apps/api/src/projects/qr-render.ts#renderPng`; `apps/api/src/projects/access-points.service.ts#setQrStyle`; `apps/web/components/cabinet/QrDesigner.tsx` | `apps/api/test/qr.test.ts`, `e2e/qr-designer.spec.ts` |
 | Q-04 | P6.2 | `apps/api/src/projects/qr-render.ts#renderPdf`; `apps/api/src/projects/access-points.controller.ts#downloadQrPdf` | `apps/api/test/qr.test.ts`, `e2e/qr-designer.spec.ts` |
 | Q-05 | P6.2 | `apps/api/src/projects/qr-render.ts#reads`; `apps/api/src/projects/access-points.service.ts#drawChecked` | `apps/api/test/qr.test.ts` |
@@ -607,7 +608,7 @@
 | S-02 | P3.4 | `apps/web/lib/editor/style-specs.ts#SHAPE_VARIANTS`, `apps/web/components/editor/StylePanels.tsx` | `apps/web/test/inspector-groups.test.ts`, `e2e/inspector.spec.ts` |
 | S-10 | P3.4 | `apps/web/lib/editor/style-specs.ts`, `apps/web/components/editor/TextEditor.tsx`, `apps/web/components/editor/FontPicker.tsx` | `apps/web/test/inspector-groups.test.ts`, `e2e/inspector.spec.ts` |
 | AD-01 | P2.6 | `apps/api/src/auth/admin-password.service.ts`, `apps/api/src/auth/admin-login.controller.ts`, `apps/web/app/login/admin/AdminLoginForm.tsx`, `apps/web/app/admin/security/page.tsx`, `packages/db/src/schema/users.ts` | `apps/api/test/admin-password.test.ts`, `e2e/admin-password.spec.ts` |
-| D-09 | P7.6 | `apps/api/src/payments/billing.service.ts#state,usage`; `apps/web/components/billing/BillingSummary.tsx#UsageLine` | `apps/api/test/payments.test.ts`; `e2e/billing-usage.spec.ts` |
+| D-09 | P7.6 | `apps/api/src/payments/billing.service.ts#state`; `apps/api/src/payments/billing.service.ts#usage`; `apps/web/components/billing/BillingSummary.tsx#UsageLine` | `apps/api/test/payments.test.ts`; `e2e/billing-usage.spec.ts` |
 | B-24 | P12.2 | `packages/schema/src/blocks.ts#ChoiceOption`; `apps/web/components/editor/PropsFields.tsx`; `apps/web/lib/editor/commands.ts#patchOption` | `apps/web/test/editor-props.test.ts`; `apps/api/test/choice-limits.test.ts` |
 | B-25 | P12.2 | `packages/schema/src/choice-limits.ts#choiceLimitWarnings`; `apps/api/src/projects/projects.service.ts` | `apps/api/test/choice-limits.test.ts` |
 | L-09 | P12.2 | `packages/engine/src/flow/conditions.ts`; `apps/web/components/editor/ConditionEditor.tsx` | `packages/engine/test/flow.units.test.ts` |
@@ -624,8 +625,8 @@
 | D-19 | P12.3 | `apps/web/components/board/BoardScreen.tsx`; `apps/web/components/play/PlayFooter.tsx#ReportDialog` | `e2e/board.spec.ts` |
 | D-20 | P12.3 | `apps/api/src/board/board.service.ts#publicBoard`; `infra/load/board.js` | `apps/api/test/board.test.ts` |
 | D-21 | P12.3 | `apps/api/src/entitlements/entitlements.service.ts#scoreboardAllowed` | `apps/api/test/board.test.ts` |
-| D-07 | P6.7 (ВКонтакте) | `apps/api/src/vk/vk.service.ts#VkService`; `apps/api/src/vk/vk.controller.ts`; `apps/api/src/play/passage-notices.service.ts#messengerText`; `apps/web/components/account/VkSettings.tsx` | `apps/api/test/vk.test.ts`; `e2e/vk-settings.spec.ts` |
-| D-07 | P6.7 (вебхук, ADR-129) | `apps/api/src/webhooks/webhooks.service.ts#WebhooksService`; `apps/api/src/webhooks/net.ts#parseWebhookUrl,resolvePublic,createSender`; `apps/api/src/webhooks/webhooks.controller.ts`; `apps/web/components/cabinet/WebhookCard.tsx` | `apps/api/test/webhooks.test.ts`; `e2e/webhook.spec.ts` |
-| D-07 | P6.7 (лимиты и расписание, ADR-129) | `apps/api/src/media/entitlements.ts#storageNotice`; `apps/api/src/play/creator-limits.ts#creatorLimitNotice`; `apps/api/src/play/schedule-notices.service.ts#ScheduleNoticesService` | `apps/api/test/limit-schedule-notices.test.ts` |
+| D-07 | P6.7 | `apps/api/src/vk/vk.service.ts#VkService`; `apps/api/src/vk/vk.controller.ts`; `apps/api/src/play/passage-notices.service.ts#messengerText`; `apps/web/components/account/VkSettings.tsx` | `apps/api/test/vk.test.ts`; `e2e/vk-settings.spec.ts` |
+| D-07 | P6.7 | `apps/api/src/webhooks/webhooks.service.ts#WebhooksService`; `apps/api/src/webhooks/net.ts#parseWebhookUrl`; `apps/api/src/webhooks/net.ts#resolvePublic`; `apps/api/src/webhooks/net.ts#createSender`; `apps/api/src/webhooks/webhooks.controller.ts`; `apps/web/components/cabinet/WebhookCard.tsx` | `apps/api/test/webhooks.test.ts`; `e2e/webhook.spec.ts` |
+| D-07 | P6.7 | `apps/api/src/media/entitlements.ts#storageNotice`; `apps/api/src/play/creator-limits.ts#creatorLimitNotice`; `apps/api/src/play/schedule-notices.service.ts#ScheduleNoticesService` | `apps/api/test/limit-schedule-notices.test.ts` |
 | AD-13 | P9.8 | `apps/api/src/support/support.service.ts`; `apps/api/src/support/support.controller.ts`; `apps/web/components/landing/AskQuestion.tsx`; `apps/web/app/admin/support/page.tsx` | `apps/api/test/support.test.ts`; `e2e/support-questions.spec.ts` |
 | AD-05 (очередь тарифов, ADR-126) | запрос владельца 20.11 | `apps/api/src/payments/subscription-queue.ts`; `apps/api/src/payments/billing.service.ts#state`; `apps/web/components/billing/PlanActions.tsx` | `apps/api/test/subscription-queue.test.ts`; `e2e/billing-queue.spec.ts` |
