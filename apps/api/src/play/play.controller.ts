@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, Ip, Param, Post, Put, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Ip, NotFoundException, Param, Post, Put, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Public } from '../auth/decorators.js';
 import { PlaySessionsService } from './play-sessions.service.js';
@@ -29,6 +29,14 @@ export class PlayController {
   @HttpCode(200)
   enter(@Param('slug') slug: string, @Body() body: { password?: unknown; age18?: unknown }, @Ip() ip: string) {
     return this.play.enter(slug, body ?? {}, ip);
+  }
+
+  /** PL-23 · B-20 · the text of the participant's consent in this project (ADR-131); 404 when the project asks for no personal data. */
+  @Get(':projectId/consent')
+  async consent(@Param('projectId') projectId: string) {
+    const text = await this.play.consentText(projectId);
+    if (!text) throw new NotFoundException({ error: { code: 'NOT_FOUND', message: 'Недоступно' } });
+    return text;
   }
 
   /** PL-11 · the start of a passage (docs/02-ARCHITECTURE.md §6: `POST /play/:projectId/sessions`). */

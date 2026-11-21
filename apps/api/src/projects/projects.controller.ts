@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators.js';
 import type { RequestUser } from '../auth/session.service.js';
-import { type OperatorInfo, type ProjectSettings, ProjectsService } from './projects.service.js';
+import { type ProjectSettings, ProjectsService } from './projects.service.js';
 import { ProjectCopyService } from './project-copy.service.js';
 
 /** P6.1 · D-01: My projects CRUD + settings + status. */
@@ -143,7 +143,7 @@ export class ProjectsController {
 
   /** PL-23: Set operator info (name, email, inn, purpose, retentionPeriod). */
   @Patch(':id/operator-info')
-  setOperatorInfo(@Param('id') id: string, @Body() body: OperatorInfo, @CurrentUser() user: RequestUser) {
+  setOperatorInfo(@Param('id') id: string, @Body() body: unknown, @CurrentUser() user: RequestUser) {
     return this.projects.setOperatorInfo(user.id, id, body);
   }
 

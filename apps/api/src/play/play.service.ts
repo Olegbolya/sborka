@@ -3,9 +3,9 @@ import { FeatureFlagsService } from '../admin/feature-flags.service.js';
 import { NotificationsService } from '../admin/notifications.service.js';
 import { BoardService } from '../board/board.service.js';
 import { hashIp } from '../auth/ip-hash.js';
-import { and, count, eq, gt, gte, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, gte, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { createId, type ProjectDocument, type PublicDocument, type ThemeTokens, toPublicDocument } from '@blokum/schema';
+import { createId, PD_FIELD_TEXT, pdFieldsOf, type ProjectDocument, type PublicDocument, type ThemeTokens, toPublicDocument } from '@blokum/schema';
 import { API_CONFIG, DB } from '../tokens.js';
 import { type ApiConfig } from '../config.js';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
@@ -180,6 +180,47 @@ export class PlayService {
     // 1. Exists, published, not blocked — otherwise «Недоступно» without telling why.
     if (!row || row.status !== 'PUBLISHED' || row.moderationStatus === 'BLOCKED') throw unavailable();
     return { ...row, doc: row.document as unknown as ProjectDocument, settings: (row.settings ?? {}) as ProjectSettings };
+  }
+
+  /**
+   * PL-23 · B-20 · ADR-131 · the text of the consent the participant gives in this project: the template of the service with the
+   * creator's details (operator), the purpose and term they named and the personal data the published project actually asks for.
+   * `null` when the project asks for no personal data or the creator has not filled the details (then it cannot be published either).
+   */
+  async consentText(projectId: string): Promise<{ title: string; version: number; markdown: string } | null> {
+    const p = await this.published({ projectId });
+    const fields = pdFieldsOf(p.doc);
+    if (fields.length === 0) return null;
+    const [row] = await this.db.select({ operatorInfo: schema.projects.operatorInfo }).from(schema.projects).where(eq(schema.projects.id, p.id));
+    const info = (row?.operatorInfo ?? null) as { name?: string; inn?: string; email?: string; purpose?: string; retentionPeriod?: string } | null;
+    if (!info?.name || !info.email || !info.purpose || !info.retentionPeriod) return null;
+    const [template] = await this.db
+      .select({ version: schema.legalDocuments.version, bodyMd: schema.legalDocuments.bodyMd })
+      .from(schema.legalDocuments)
+      .where(eq(schema.legalDocuments.type, 'PARTICIPANT_CONSENT_TEMPLATE'))
+      .orderBy(desc(schema.legalDocuments.version))
+      .limit(1);
+    if (!template) return null;
+    const one = (t: string): string => t.replace(/\s+/g, ' ').trim();
+    const values: Record<string, string> = {
+      СБОРКА_НАЗВАНИЕ: one(p.title),
+      СОЗДАТЕЛЬ_ФИО_ИЛИ_НАЗВАНИЕ: one(info.name),
+      СОЗДАТЕЛЬ_ИНН: one(info.inn ?? ''),
+      СОЗДАТЕЛЬ_EMAIL: one(info.email),
+      СБОРКА_ЦЕЛЬ_ОБРАБОТКИ: one(info.purpose),
+      СБОРКА_ПЕРЕЧЕНЬ_ПД: fields.map((f) => PD_FIELD_TEXT[f]).join(', '),
+      СБОРКА_СРОК_ХРАНЕНИЯ: one(info.retentionPeriod),
+    };
+    const markdown = template.bodyMd
+      // The note for the editors of the template is not part of the text the participant reads.
+      .replace(/^> \*\*Шаблон\*\*.*\n\n?/m, '')
+      // The edition is shown by the page itself.
+      .replace(/^Версия \d+\.\n\n?/m, '')
+      // A private person may have no ИНН to show: the clause goes away instead of «не указан».
+      .replace(info.inn ? /(?!)/ : /, ИНН: \{\{СОЗДАТЕЛЬ_ИНН\}\} \(при наличии\)/, '')
+      .replace(/ \(при наличии\)/, '')
+      .replace(/\{\{([А-ЯЁA-Z_]+)\}\}/g, (all: string, key: string) => values[key] ?? all);
+    return { title: `Согласие на обработку персональных данных — «${one(p.title)}»`, version: template.version, markdown };
   }
 
   private async counters(projectId: string): Promise<{ starts: number; completions: number }> {

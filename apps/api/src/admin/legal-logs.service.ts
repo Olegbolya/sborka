@@ -285,6 +285,73 @@ export class LegalLogsService implements OnModuleInit, OnModuleDestroy {
     await this.audit.log({ actorId: actor.id, action: 'DATA_REQUEST_DELETE', targetType: 'DATA_REQUEST', targetId: id, ...(ip ? { ip } : {}), meta: { userId } });
   }
 
+  /**
+   * 05-LEGAL §4 п. 5 · ADR-131 · a request may come from a participant of somebody's project: their answers are found by the contact
+   * (an e-mail as typed, a phone by its last ten digits) and grouped by project. The creator is the operator of these data.
+   */
+  async dataRequestParticipants(id: string): Promise<Array<{ projectId: string; projectTitle: string; ownerId: string; sessions: number; legalHold: boolean }>> {
+    const r = await this.dataRequestOrFail(id);
+    const contact = r.subjectContact.trim();
+    const email = contact.includes('@') ? contact.toLowerCase() : null;
+    const digits = email ? '' : contact.replace(/\D/g, '').slice(-10);
+    if (!email && digits.length < 10) return [];
+    const like = (email ?? digits).replace(/[\\%_]/g, (c) => `\\${c}`);
+    const rows = await this.db
+      .select({ projectId: schema.projects.id, projectTitle: schema.projects.title, ownerId: schema.projects.ownerId, legalHold: schema.projects.legalHold, sessions: sql<number>`count(distinct ${schema.participantSessions.id})::int` })
+      .from(schema.answers)
+      .innerJoin(schema.participantSessions, eq(schema.participantSessions.id, schema.answers.sessionId))
+      .innerJoin(schema.projects, eq(schema.projects.id, schema.participantSessions.projectId))
+      .where(email ? sql`lower(${schema.answers.value}::text) like ${'%' + like + '%'}` : sql`regexp_replace(${schema.answers.value}::text, '[^0-9]', '', 'g') like ${'%' + like + '%'}`)
+      .groupBy(schema.projects.id, schema.projects.title, schema.projects.ownerId, schema.projects.legalHold)
+      .limit(50);
+    return rows;
+  }
+
+  private async participantSessionIds(id: string, projectId: string): Promise<string[]> {
+    const r = await this.dataRequestOrFail(id);
+    const contact = r.subjectContact.trim();
+    const email = contact.includes('@') ? contact.toLowerCase() : null;
+    const digits = email ? '' : contact.replace(/\D/g, '').slice(-10);
+    if (!email && digits.length < 10) return [];
+    const like = (email ?? digits).replace(/[\\%_]/g, (c) => `\\${c}`);
+    const rows = await this.db
+      .selectDistinct({ id: schema.participantSessions.id })
+      .from(schema.answers)
+      .innerJoin(schema.participantSessions, eq(schema.participantSessions.id, schema.answers.sessionId))
+      .where(and(eq(schema.participantSessions.projectId, projectId), email ? sql`lower(${schema.answers.value}::text) like ${'%' + like + '%'}` : sql`regexp_replace(${schema.answers.value}::text, '[^0-9]', '', 'g') like ${'%' + like + '%'}`));
+    return rows.map((x) => x.id);
+  }
+
+  /** 05-LEGAL §4 п. 5 · the request goes to the creator (the operator) as a message in the cabinet: what is asked and how to answer. */
+  async dataRequestForward(actor: RequestUser, id: string, projectIdRaw: unknown, ip?: string): Promise<void> {
+    const projectId = typeof projectIdRaw === 'string' ? projectIdRaw : '';
+    const found = (await this.dataRequestParticipants(id)).find((m) => m.projectId === projectId);
+    if (!found) throw fail(404, 'NOT_FOUND', 'По контакту этого запроса в сборке ничего не найдено');
+    const r = await this.dataRequestOrFail(id);
+    const what = r.kind === 'ACCESS' ? 'узнать, какие его данные обрабатываются' : r.kind === 'DELETE' ? 'удалить его данные' : 'отозвать согласие на обработку';
+    await this.notices.notify({
+      userId: found.ownerId,
+      kind: 'data-request',
+      projectId,
+      title: `Участник сборки «${found.projectTitle.slice(0, 80)}» просит ${what}`,
+      body: `Участник, оставивший контакт ${r.subjectContact}, обратился в «Блоккер» с запросом: ${what}. Вы — оператор данных участников этой сборки, ответить нужно в течение 10 рабочих дней (ст. 14, 21 152-ФЗ). Найти его ответы можно на вкладке «Ответы»; удалить — там же. Если нужна помощь, ответьте через «Помощь».`,
+    });
+    await this.audit.log({ actorId: actor.id, action: 'DATA_REQUEST_FORWARDED', targetType: 'DATA_REQUEST', targetId: id, ...(ip ? { ip } : {}), meta: { projectId } });
+  }
+
+  /** 05-LEGAL §4 п. 5 · on the creator's instruction or by the law: the answers of this participant in the project are deleted (not under a legal hold). */
+  async dataRequestDeleteParticipant(actor: RequestUser, id: string, projectIdRaw: unknown, ip?: string): Promise<number> {
+    const projectId = typeof projectIdRaw === 'string' ? projectIdRaw : '';
+    const found = (await this.dataRequestParticipants(id)).find((m) => m.projectId === projectId);
+    if (!found) throw fail(404, 'NOT_FOUND', 'По контакту этого запроса в сборке ничего не найдено');
+    if (found.legalHold) throw fail(409, 'LEGAL_HOLD', 'Сборка под юридическим холдом: данные удалять нельзя.');
+    const ids = await this.participantSessionIds(id, projectId);
+    if (ids.length > 0) await this.db.delete(schema.participantSessions).where(inArray(schema.participantSessions.id, ids));
+    await this.db.insert(schema.destructionLog).values({ kind: 'ANSWERS', count: ids.length, basis: 'Запрос субъекта ПД (ст. 21 152-ФЗ)', details: { requestId: id, projectId } });
+    await this.audit.log({ actorId: actor.id, action: 'DATA_REQUEST_PARTICIPANT_DELETED', targetType: 'DATA_REQUEST', targetId: id, ...(ip ? { ip } : {}), meta: { projectId, sessions: ids.length } });
+    return ids.length;
+  }
+
   private async dataRequestOrFail(id: string) {
     const [r] = await this.db.select().from(schema.dataSubjectRequests).where(eq(schema.dataSubjectRequests.id, id));
     if (!r) throw fail(404, 'NOT_FOUND', 'Запрос не найден');

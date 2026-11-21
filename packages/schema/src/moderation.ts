@@ -96,6 +96,10 @@ export const RETENTION = {
   oriContentDays: 183,
   /** The journal of sign-ins (hash of the IP address, device). */
   loginsYears: 1,
+  /** Complaints, claims of right holders and requests of data subjects: a year after they were closed (the Policy, §3). */
+  appealsYears: 1,
+  /** Requests of sign-in codes hold the phone number: kept a day, enough for the limits of frequency (TS-30). */
+  otpDays: 1,
 } as const;
 
 /** The date `years` calendar years before `now`. */

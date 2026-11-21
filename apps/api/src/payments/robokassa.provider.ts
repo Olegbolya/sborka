@@ -1,4 +1,4 @@
-import { createHash, createHmac } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { type CreatedPayment, type CreatePaymentInput, type PaymentProvider, PaymentProviderError, type ProviderPayment, type RefundInput } from './payment-provider.js';
 
 type Fetch = typeof fetch;
@@ -97,7 +97,10 @@ export class RobokassaProvider implements PaymentProvider {
       .sort((a, b) => a.localeCompare(b))
       .map((k) => `${k}=${String(params[k])}`);
     const mine = this.sign(outSum, invId, this.o.password2, ...shp);
-    if (mine.toLowerCase() !== signature.toLowerCase()) return null;
+    // Constant time: the comparison does not tell, by how long it took, how much of a forged signature was right.
+    const a = Buffer.from(mine.toLowerCase());
+    const b = Buffer.from(signature.toLowerCase());
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
     return { paymentId: invId, reply: `OK${invId}` };
   }
 

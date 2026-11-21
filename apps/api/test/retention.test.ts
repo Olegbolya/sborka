@@ -190,6 +190,24 @@ describe('P8.8 · сроки хранения и уничтожение (05-LEGA
     expect((await svc.journal(500)).length).toBe(log.length);
   });
 
+  it('P8.8 · ADR-131 · жалобы и запросы субъектов — год после закрытия, незакрытые не трогаются; запросы кодов с телефоном — сутки', async () => {
+    const report = (resolvedAt: Date | null) => db.db.insert(schema.reports).values({ category: 'OTHER', text: 'жалоба', priority: 'P2', slaDueAt: ago(800), createdAt: ago(800), resolvedAt, ...(resolvedAt ? { status: 'RESOLVED' as never } : {}) }).returning({ id: schema.reports.id });
+    const [oldR] = await report(years(1));
+    const [freshR] = await report(ago(100));
+    const [openR] = await report(null);
+    const [oldQ] = await db.db.insert(schema.dataSubjectRequests).values({ kind: 'ACCESS', subjectContact: 'subj@mail.ru', details: 'запрос', dueAt: ago(800), receivedAt: ago(800), closedAt: years(1), status: 'CLOSED' as never }).returning({ id: schema.dataSubjectRequests.id });
+    const [oldOtp] = await db.db.insert(schema.otpRequests).values({ phoneE164: '+79001112233', codeHash: 'x', expiresAt: ago(2), ipHash: 'h', createdAt: ago(2) }).returning({ id: schema.otpRequests.id });
+    const [freshOtp] = await db.db.insert(schema.otpRequests).values({ phoneE164: '+79001112244', codeHash: 'x', expiresAt: now, ipHash: 'h', createdAt: new Date(now.getTime() - 3_600_000) }).returning({ id: schema.otpRequests.id });
+    const done = await svc.run(now);
+    const ids = async <T extends { id: unknown }>(table: T, list: string[]) => (await db.db.select({ id: (table as unknown as typeof schema.reports).id }).from(table as unknown as typeof schema.reports).where(inArray((table as unknown as typeof schema.reports).id, list))).map((r) => r.id).sort();
+    expect(await ids(schema.reports, [oldR!.id, freshR!.id, openR!.id])).toEqual([freshR!.id, openR!.id].sort());
+    expect(await db.db.select().from(schema.dataSubjectRequests).where(eq(schema.dataSubjectRequests.id, oldQ!.id))).toHaveLength(0);
+    expect(await db.db.select().from(schema.otpRequests).where(eq(schema.otpRequests.id, oldOtp!.id))).toHaveLength(0);
+    expect(await db.db.select().from(schema.otpRequests).where(eq(schema.otpRequests.id, freshOtp!.id))).toHaveLength(1);
+    expect(done.find((d) => d.kind === 'APPEALS')?.count).toBeGreaterThanOrEqual(2);
+    expect(done.find((d) => d.kind === 'OTP')?.count).toBeGreaterThanOrEqual(1);
+  });
+
   it('P8.8 · журнал аудита нельзя стирать и править, кроме записей старше 3 лет', async () => {
     const [row] = await db.db.insert(schema.auditLog).values({ action: 'test', targetType: 'x', targetId: 'fresh' }).returning();
     await expect(db.db.delete(schema.auditLog).where(eq(schema.auditLog.id, row!.id))).rejects.toThrow();

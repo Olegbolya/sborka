@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { schema } from '@blokum/db';
-import { eq, like } from 'drizzle-orm';
+import { and, eq, like } from 'drizzle-orm';
 import { addWorkingDays } from '@blokum/schema';
 import { API_PREFIX } from '../src/app.js';
 import { LegalLogsService } from '../src/admin/legal-logs.service.js';
@@ -202,6 +202,40 @@ describe('P8.4, P8.5 · заявления правообладателей и �
     expect((await call(admin.cookie, 'post', `/admin/data-requests/${byMail}/delete`, { userId: user!.id }).expect(409)).body.error.code).toBe('ALREADY');
     const audit = await db.db.select().from(schema.auditLog).where(eq(schema.auditLog.targetId, byMail));
     expect(audit.map((a) => a.action)).toEqual(expect.arrayContaining(['DATA_REQUEST_EXPORT', 'DATA_REQUEST_DELETE']));
+  });
+
+  it('P8.5 · ADR-131 · запрос участника сборки: ответы находятся по почте или телефону, запрос уходит создателю, ответы удаляются; чужие не трогаются', async () => {
+    const [owner] = await db.db.insert(schema.users).values({ displayName: 'Создатель' }).returning({ id: schema.users.id });
+    const [p] = await db.db.insert(schema.projects).values({ ownerId: owner!.id, title: 'Запись на йогу', slug: `yoga-${Date.now()}` }).returning({ id: schema.projects.id });
+    const [v] = await db.db.insert(schema.projectVersions).values({ projectId: p!.id, number: 1, document: {} as never, schemaVersion: 1, sha256: `y${Date.now()}`, kind: 'PUBLISHED' }).returning({ id: schema.projectVersions.id });
+    const passage = async (value: unknown) => {
+      const [sess] = await db.db.insert(schema.participantSessions).values({ projectId: p!.id, versionId: v!.id }).returning({ id: schema.participantSessions.id });
+      await db.db.insert(schema.answers).values({ sessionId: sess!.id, source: 'QUESTION', blockId: 'kontakty', value } as never);
+      return sess!.id;
+    };
+    const mine = await passage({ kind: 'contacts', values: { name: 'Мария', phone: '+7 (912) 345-67-89', email: 'Maria@Mail.ru' } });
+    const other = await passage({ kind: 'contacts', values: { name: 'Олег', phone: '+7 900 000-00-00' } });
+    const admin = await staff('ADMIN');
+    // The public form has its own test above; here the requests are put straight in (the form is limited per address and hour).
+    const make = async (kind: 'ACCESS' | 'DELETE', contact: string): Promise<string> => (await db.db.insert(schema.dataSubjectRequests).values({ kind, subjectContact: contact, details: 'Удалите мои данные из сборки', dueAt: new Date(Date.now() + 10 * 86_400_000) }).returning({ id: schema.dataSubjectRequests.id }))[0]!.id;
+    const byPhone = await make('DELETE', '89123456789');
+    const found = (await call(admin.cookie, 'get', `/admin/data-requests/${byPhone}/participants`).expect(200)).body as Array<{ projectId: string; projectTitle: string; sessions: number }>;
+    expect(found).toEqual([expect.objectContaining({ projectId: p!.id, projectTitle: 'Запись на йогу', sessions: 1 })]);
+    const byMail = await make('ACCESS', 'maria@mail.ru');
+    expect(((await call(admin.cookie, 'get', `/admin/data-requests/${byMail}/participants`).expect(200)).body as unknown[]).length).toBe(1);
+
+    await call(admin.cookie, 'post', `/admin/data-requests/${byPhone}/forward`, { projectId: p!.id }).expect(204);
+    const [note] = await db.db.select().from(schema.notifications).where(and(eq(schema.notifications.userId, owner!.id), eq(schema.notifications.kind, 'data-request')));
+    expect(note!.title).toBe('Участник сборки «Запись на йогу» просит удалить его данные');
+    expect(note!.body).toContain('89123456789');
+    expect(note!.body).toContain('10 рабочих дней');
+    await call(admin.cookie, 'post', `/admin/data-requests/${byPhone}/forward`, { projectId: 'chuzhaya' }).expect(404);
+
+    expect((await call(admin.cookie, 'post', `/admin/data-requests/${byPhone}/delete-participant`, { projectId: p!.id }).expect(200)).body).toEqual({ deleted: 1 });
+    expect(await db.db.select().from(schema.participantSessions).where(eq(schema.participantSessions.id, mine))).toHaveLength(0);
+    expect(await db.db.select().from(schema.participantSessions).where(eq(schema.participantSessions.id, other))).toHaveLength(1);
+    const audit = await db.db.select().from(schema.auditLog).where(eq(schema.auditLog.targetId, byPhone));
+    expect(audit.map((a) => a.action)).toEqual(expect.arrayContaining(['DATA_REQUEST_FORWARDED', 'DATA_REQUEST_PARTICIPANT_DELETED']));
   });
 
   it('P8.5 · десять рабочих дней пропускают субботы и воскресенья (по московскому времени)', () => {

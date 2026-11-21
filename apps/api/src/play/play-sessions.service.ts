@@ -1,7 +1,7 @@
 import { createHash, randomInt } from 'node:crypto';
-import { HttpException, Inject, Injectable, Optional } from '@nestjs/common';
+import { HttpException, Inject, Injectable, type OnModuleDestroy, type OnModuleInit, Optional } from '@nestjs/common';
 import { FeatureFlagsService } from '../admin/feature-flags.service.js';
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
 import {
   type AnswerValue,
@@ -22,7 +22,7 @@ import {
   scoreTotals,
   startFlow,
 } from '@blokum/engine';
-import { RETENTION, type Block, type ProjectDocument, limitedOptions, plainText, walkBlocks } from '@blokum/schema';
+import { RETENTION, type Block, type ProjectDocument, limitedOptions, pdFieldsOfBlock, plainText, walkBlocks } from '@blokum/schema';
 import { type OptionPlaces, fullOptionsFor, lockOptions, placesFor } from './choice-limits.js';
 import { type ApiConfig } from '../config.js';
 import { PassageNoticesService } from './passage-notices.service.js';
@@ -52,7 +52,7 @@ type Answers = Record<string, AnswerValue>;
 
 /** PL-11…PL-15 · a passage on the server: resume, answers (checked and idempotent), feedback, the end with the result. */
 @Injectable()
-export class PlaySessionsService {
+export class PlaySessionsService implements OnModuleInit, OnModuleDestroy {
   private readonly windows = new Map<string, number[]>();
 
   constructor(
@@ -64,6 +64,8 @@ export class PlaySessionsService {
     @Optional() private readonly webhooks?: WebhooksService,
     @Optional() private readonly notifications?: NotificationsService,
   ) {}
+
+  private purgeTimer: ReturnType<typeof setInterval> | null = null;
 
   /** The session id is the participant's capability: unguessable, kept by the browser. */
   private async load(sessionId: string): Promise<Loaded> {
@@ -162,6 +164,10 @@ export class PlaySessionsService {
         await tx.insert(schema.answers).values({ sessionId, screenId, blockId: block.id, source: 'QUESTION', value: answer, clientEventId: body.clientEventId as string, clientTs, timeOnScreenMs: typeof body.timeOnScreenMs === 'number' ? Math.max(0, Math.round(body.timeOnScreenMs)) : null });
       }
       await tx.update(schema.participantSessions).set({ lastActivityAt: new Date() }).where(eq(schema.participantSessions.id, sessionId));
+      // 152-ФЗ ст. 9 ч. 3 · proof of the consent: when, in which passage, which version of the published text (ADR-131).
+      if (answer.kind === 'consent') {
+        await tx.insert(schema.playEvents).values({ sessionId, type: 'ACTION', payload: { kind: answer.value ? 'PD_CONSENT_GIVEN' : 'PD_CONSENT_WITHDRAWN', blockId: block.id, versionId: session.versionId, textUrl: `/legal/consent/${session.projectId}` } });
+      }
       if (ori) {
         const at = new Date();
         await tx.insert(schema.commsMetaLog).values({
@@ -225,6 +231,8 @@ export class PlaySessionsService {
   async complete(sessionId: string): Promise<{ score: number; max: number; correct: number; keyed: number; result: { key: string; screenId: string | null } | null; feedback: Array<{ blockId: string; correct: boolean | null; correctOptionIds: string[]; score: number }>; board: { place: number | null; total: number } | null }> {
     this.throttle(sessionId);
     const { session, doc, ownerId } = await this.load(sessionId);
+    // 05-LEGAL §2.4, ADR-131: personal data left without the consent checkbox ticked is not kept — whatever the browser did.
+    if (session.status === 'IN_PROGRESS') await this.dropUnconsentedPd(sessionId, doc);
     const answers = await this.answersOf(sessionId);
     if (session.status === 'IN_PROGRESS') {
       // A passage that waited longer than the hold time may have lost its place to someone else (PL-26): it must choose again.
@@ -279,6 +287,51 @@ export class PlaySessionsService {
     return { score: totals.score, max: totals.max, correct: totals.correct, keyed: totals.keyed, result: result ? { key: result.key, screenId: result.screenId } : null, feedback, board };
   }
 
+  /**
+   * 05-LEGAL §2.4 · ADR-131 · the answers with personal data (B-19, B-13 «имя / телефон / почта / город») of a passage whose consent
+   * (B-20) is not ticked are deleted; returns how many. The player does not let the participant leave such a screen without the
+   * consent, but the server does not rely on the browser.
+   */
+  async dropUnconsentedPd(sessionId: string, doc: ProjectDocument): Promise<number> {
+    const pdBlocks = new Set<string>();
+    for (const screen of doc.screens) for (const b of walkBlocks(screen.blocks)) if (pdFieldsOfBlock(b).length > 0) pdBlocks.add(b.id);
+    if (pdBlocks.size === 0) return 0;
+    const rows = await this.db.select({ id: schema.answers.id, blockId: schema.answers.blockId, value: schema.answers.value }).from(schema.answers).where(eq(schema.answers.sessionId, sessionId));
+    const consented = rows.some((r) => (r.value as { kind?: string; value?: unknown } | null)?.kind === 'consent' && (r.value as { value?: unknown }).value === true);
+    if (consented) return 0;
+    const drop = rows.filter((r) => r.blockId !== null && pdBlocks.has(r.blockId)).map((r) => r.id);
+    if (drop.length === 0) return 0;
+    await this.db.delete(schema.answers).where(inArray(schema.answers.id, drop));
+    await this.db.insert(schema.playEvents).values({ sessionId, type: 'ACTION', payload: { kind: 'PD_DROPPED_NO_CONSENT', count: drop.length } });
+    return drop.length;
+  }
+
+  /**
+   * ADR-131 · a passage left unfinished keeps no personal data without consent either: once a day the passages idle for more than a
+   * day are cleaned the same way. Returns how many answers were deleted. `now` is a parameter so tests choose the time.
+   */
+  async purgeUnconsented(now: Date = new Date()): Promise<number> {
+    const stale = await this.db
+      .selectDistinct({ id: schema.participantSessions.id, document: schema.projectVersions.document })
+      .from(schema.participantSessions)
+      .innerJoin(schema.answers, eq(schema.answers.sessionId, schema.participantSessions.id))
+      .innerJoin(schema.projectVersions, eq(schema.projectVersions.id, schema.participantSessions.versionId))
+      .where(and(ne(schema.participantSessions.status, 'COMPLETED'), lt(schema.participantSessions.lastActivityAt, new Date(now.getTime() - 86_400_000))));
+    let dropped = 0;
+    for (const row of stale) dropped += await this.dropUnconsentedPd(row.id, row.document as unknown as ProjectDocument);
+    return dropped;
+  }
+
+  onModuleInit(): void {
+    if (process.env.NODE_ENV !== 'production') return;
+    this.purgeTimer = setInterval(() => void this.purgeUnconsented().catch(() => undefined), 3_600_000);
+    this.purgeTimer.unref();
+  }
+
+  onModuleDestroy(): void {
+    if (this.purgeTimer) clearInterval(this.purgeTimer);
+  }
+
   /** D-07 · PL-06: the creator's own limit is reached — one message in the cabinet (the counter reaches the limit exactly once). */
   private async tellCreatorLimit(projectId: string, ownerId: string, kind: 'completions', value: number): Promise<void> {
     if (!this.notifications) return;
@@ -331,7 +384,9 @@ export class PlaySessionsService {
       let value: string;
       switch (a.kind) {
         case 'choice': value = a.optionIds.map((id) => optionText(b, id)).join(', '); break;
-        case 'text': value = a.value; break;
+        // ADR-131 · a field with personal data («имя / телефон / почта / город») stays in the table of answers only: a message is kept
+        // longer than an answer and is not destroyed with it.
+        case 'text': value = pdFieldsOfBlock(b).length > 0 ? 'персональные данные — в таблице ответов' : a.value; break;
         case 'number': value = String(a.value); break;
         case 'swipe': value = a.value === 'right' ? 'вправо' : 'влево'; break;
         case 'ranking': value = a.order.map((id) => optionText(b, id)).join(' → '); break;

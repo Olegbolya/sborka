@@ -149,6 +149,54 @@ function MatchList({ requestId }: { requestId: string }) {
   );
 }
 
+interface ParticipantMatch {
+  projectId: string;
+  projectTitle: string;
+  sessions: number;
+  legalHold: boolean;
+}
+
+/**
+ * 05-LEGAL §4 п. 5 · ADR-131 · the request may come from a participant of somebody's project: their answers are found by the contact,
+ * the request goes to the creator (the operator), and on the creator's word or by the law the answers are deleted (two clicks).
+ */
+function ParticipantList({ requestId }: { requestId: string }) {
+  const [found, setFound] = useState<ParticipantMatch[] | null>(null);
+  const [confirm, setConfirm] = useState('');
+  const { busy, error, ok, run } = useAction();
+  const load = async () => setFound(await api<ParticipantMatch[]>(`/admin/data-requests/${requestId}/participants`));
+  const find = () => run(load, 'Поиск выполнен');
+  const forward = (projectId: string) => run(async () => { await api(`/admin/data-requests/${requestId}/forward`, { method: 'POST', body: { projectId } }); }, 'Запрос отправлен создателю сборки');
+  const remove = (projectId: string) =>
+    run(async () => {
+      await api(`/admin/data-requests/${requestId}/delete-participant`, { method: 'POST', body: { projectId } });
+      setConfirm('');
+      await load();
+    }, 'Ответы участника удалены');
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button type="button" style={css.btnLight} disabled={busy} onClick={() => void find()}>Найти ответы участника в сборках</button>
+      <Notice error={error} ok={ok} />
+      {found?.length === 0 ? <p style={css.muted}>В ответах сборок этот контакт не встречается.</p> : null}
+      {found?.map((m) => (
+        <div key={m.projectId} style={{ ...css.row, marginTop: 6 }} data-testid="participant-match">
+          <span>
+            <strong>«{m.projectTitle}»</strong> · прохождений: {m.sessions}{m.legalHold ? ' · юридический холд' : ''}
+          </span>
+          <button type="button" style={css.btnLight} disabled={busy} onClick={() => void forward(m.projectId)}>Передать запрос создателю</button>
+          {!m.legalHold ? (
+            confirm === m.projectId ? (
+              <button type="button" style={css.btnDanger} disabled={busy} onClick={() => void remove(m.projectId)}>Да, удалить ответы</button>
+            ) : (
+              <button type="button" style={css.btnDanger} disabled={busy} onClick={() => setConfirm(m.projectId)}>Удалить ответы участника</button>
+            )
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DataRequestCard({ r, onDone }: { r: DataRequest; onDone: () => void }) {
   const [text, setText] = useState('');
   const { busy, error, ok, run } = useAction(onDone);
@@ -167,6 +215,7 @@ function DataRequestCard({ r, onDone }: { r: DataRequest; onDone: () => void }) 
       {r.extendedAt ? <p style={css.muted}>Срок продлён {dateTime(r.extendedAt)}: {r.extensionReason}</p> : null}
       {r.resolution ? <p style={css.muted}>Ответ: {r.resolution}</p> : null}
       {open ? <MatchList requestId={r.id} /> : null}
+      {open ? <ParticipantList requestId={r.id} /> : null}
       {open ? (
         <>
           <Notice error={error} ok={ok} />

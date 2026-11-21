@@ -69,6 +69,14 @@ test.describe('E-02 · предпросмотр показывает экран 
     const frame = page.getByRole('dialog', { name: 'Предпросмотр' }).locator('[data-preview="true"]');
     const scroller = frame.locator('> div').first();
     await expect(frame.locator('.bk-screen')).toBeVisible();
+    // The journal of the debugger gets its lines a moment after the screen shows, and the phone is fitted to the room left: the
+    // sizes are read once the frame holds still.
+    const settled = () => expect.poll(async () => {
+      const a = (await scroller.boundingBox())!.height;
+      await page.waitForTimeout(200);
+      return Math.abs((await scroller.boundingBox())!.height - a);
+    }, { timeout: 5_000 }).toBe(0);
+    await settled();
     // Окно телефона: ширина 390 единиц, высота 844 — в тех же пропорциях, что у телефона.
     const box = (await scroller.boundingBox())!;
     const u = box.width / 390;
@@ -80,8 +88,12 @@ test.describe('E-02 · предпросмотр показывает экран 
     // Экран 1200: окно того же размера, экран прокручивается до самого низа.
     await frame.getByRole('button', { name: 'Дальше', exact: true }).click();
     await expect(frame.locator('.bk-screen[aria-label="Высокий"]')).toBeVisible();
-    const h2 = (await scroller.boundingBox())!.height;
-    expect(Math.abs(h2 - 844 * u)).toBeLessThan(1.5);
+    // The journal of the debugger grows by a line, the window gets lower and the phone is shrunk again — evenly: the proportions
+    // 390×844 hold at the new scale (it is read anew, not taken from the first screen).
+    await settled();
+    const box2 = (await scroller.boundingBox())!;
+    const h2 = box2.height;
+    expect(Math.abs(h2 - 844 * (box2.width / 390))).toBeLessThan(1.5);
     expect(await scroller.evaluate((n) => n.scrollHeight)).toBeGreaterThan(h2 + 100);
   });
 });

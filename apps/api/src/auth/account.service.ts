@@ -60,6 +60,11 @@ export interface ExportData {
   authIdentities: Array<{ provider: string; createdAt: Date }>;
   sessions: SessionSummary[];
   consentHistory: ConsentSummary[];
+  /** P9.8 · D-10 · ADR-131 · everything else the service keeps about the person (as the administrator's export has it). */
+  projects: Array<{ id: string; title: string; status: string; createdAt: Date; publishedAt: Date | null }>;
+  orders: Array<{ id: string; kind: string; status: string; amountKop: number; createdAt: Date; paidAt: Date | null }>;
+  supportQuestions: Array<{ id: string; text: string; createdAt: Date; messages: Array<{ fromSupport: boolean; text: string; createdAt: Date }> }>;
+  vk: { peerId: string; linkedAt: Date } | null;
 }
 
 @Injectable()
@@ -251,6 +256,21 @@ export class AccountService {
       authIdentities: identities,
       sessions: sessions.map((s) => ({ ...s, isCurrent: undefined }) as unknown as SessionSummary),
       consentHistory,
+      projects: await this.db
+        .select({ id: schema.projects.id, title: schema.projects.title, status: schema.projects.status, createdAt: schema.projects.createdAt, publishedAt: schema.projects.publishedAt })
+        .from(schema.projects)
+        .where(eq(schema.projects.ownerId, userId)),
+      orders: await this.db
+        .select({ id: schema.orders.id, kind: schema.orders.kind, status: schema.orders.status, amountKop: schema.orders.amountKop, createdAt: schema.orders.createdAt, paidAt: schema.orders.paidAt })
+        .from(schema.orders)
+        .where(eq(schema.orders.userId, userId)),
+      supportQuestions: await Promise.all(
+        (await this.db.select({ id: schema.supportQuestions.id, text: schema.supportQuestions.text, createdAt: schema.supportQuestions.createdAt }).from(schema.supportQuestions).where(eq(schema.supportQuestions.userId, userId))).map(async (q) => ({
+          ...q,
+          messages: (await this.db.select({ author: schema.supportMessages.author, text: schema.supportMessages.text, createdAt: schema.supportMessages.createdAt }).from(schema.supportMessages).where(eq(schema.supportMessages.questionId, q.id))).map((m) => ({ fromSupport: m.author === 'SUPPORT', text: m.text, createdAt: m.createdAt })),
+        })),
+      ),
+      vk: ((await this.db.select({ peerId: schema.vkLinks.peerId, linkedAt: schema.vkLinks.linkedAt }).from(schema.vkLinks).where(eq(schema.vkLinks.userId, userId)))[0]) ?? null,
     };
   }
 

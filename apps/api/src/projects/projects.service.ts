@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, max } from 'drizzle-orm';
 import { type Db, schema } from '@blokum/db';
-import { AGE_RATINGS, choiceLimitWarnings, createDocument, createId, createSlug, customSlugSchema, ProjectDocument, ThemeTokens, validateDocument, walkBlocks } from '@blokum/schema';
+import { AGE_RATINGS, choiceLimitWarnings, createDocument, createId, createSlug, customSlugSchema, ProjectDocument, ThemeTokens, pdFieldsOf, screensWithoutConsent, validateDocument } from '@blokum/schema';
 import { AGE_RATING_REQUIRED } from './projects.tokens.js';
 import { HttpException, Inject, Optional } from '@nestjs/common';
 import { SafetyService, type PublishVerdict } from '../admin/safety.service.js';
@@ -67,6 +67,23 @@ export interface OperatorInfo {
   inn?: string;
   purpose: string;
   retentionPeriod: string;
+}
+
+/**
+ * PL-23 · 05-LEGAL §4 · the details of the creator as the operator of the participants' data, as they will stand in the consent
+ * text: a name, an address for requests, the purpose and the term; the ИНН is optional for a private person, but when given it is
+ * 10 or 12 digits. Returns the Russian reason of the first problem, or null.
+ */
+export function operatorInfoProblem(raw: unknown): string | null {
+  if (typeof raw !== 'object' || raw === null) return 'Заполните сведения об операторе.';
+  const r = raw as Record<string, unknown>;
+  const text = (k: string): string => (typeof r[k] === 'string' ? r[k].trim() : '');
+  if (text('name').length < 3 || text('name').length > 200) return 'Укажите ФИО или название организации (от 3 до 200 символов).';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text('email')) || text('email').length > 200) return 'Укажите почту для обращений участников, например name@mail.ru.';
+  if (text('inn') !== '' && !/^(\d{10}|\d{12})$/.test(text('inn'))) return 'ИНН — 10 цифр у организации или 12 цифр у ИП и физического лица.';
+  if (text('purpose').length < 3 || text('purpose').length > 500) return 'Опишите цель обработки данных (от 3 до 500 символов).';
+  if (text('retentionPeriod').length < 2 || text('retentionPeriod').length > 200) return 'Укажите срок хранения данных, например «1 год».';
+  return null;
 }
 
 export interface AdMarking {
@@ -614,12 +631,13 @@ export class ProjectsService {
       ? await this.db.select({ document: schema.projectVersions.document }).from(schema.projectVersions).where(eq(schema.projectVersions.id, project.draftVersionId))
       : [];
     if (!draft) throw new BadRequestException({ error: { code: 'NO_DRAFT', message: 'У сборки нет черновика, который можно опубликовать.' } });
-    await this.checkPdRequirements(row.id, row.operatorInfo, row.dpaAcceptedAt, row.operatorAckAt ?? null);
     const parsed = ProjectDocument.safeParse(draft.document);
     if (!parsed.success) {
       throw new BadRequestException({ error: { code: 'INVALID_DOCUMENT', message: `Сборка не прошла проверку: ${parsed.error.issues[0]?.message ?? 'неверная структура'}` } });
     }
     const doc = parsed.data;
+    // PL-23 · the very document being published is checked (not an older snapshot).
+    this.checkPdRequirements(doc, row.operatorInfo, row.dpaAcceptedAt, row.operatorAckAt ?? null);
     // P8.7 · SR-01: no publication without an age category (05-LEGAL.md §2.4).
     const rating = ((row.settings ?? {}) as ProjectSettings).ageRating;
     if (this.ageRatingRequired && (rating === undefined || rating === null)) {
@@ -689,31 +707,16 @@ export class ProjectsService {
     return { review: verdict?.hold ?? false, warnings: [...(verdict?.warnings ?? []), ...places] };
   }
 
-  /** PL-23: check that operator info and DPA are set if document has B-19 contacts blocks. */
-  private async checkPdRequirements(
-    projectId: string,
-    operatorInfo: Record<string, unknown> | null,
-    dpaAcceptedAt: Date | null,
-    operatorAckAt: Date | null,
-  ): Promise<void> {
-    const versions = await this.db
-      .select({ document: schema.projectVersions.document })
-      .from(schema.projectVersions)
-      .where(and(eq(schema.projectVersions.projectId, projectId), eq(schema.projectVersions.kind, 'DRAFT_SNAPSHOT')))
-      .orderBy(desc(schema.projectVersions.number))
-      .limit(1);
-    const doc = versions[0]?.document as ProjectDocument | undefined;
-    if (!doc) return;
-    const hasContactsBlock = doc.screens.some((screen) => {
-      for (const block of walkBlocks(screen.blocks)) {
-        if (block.type === 'contacts') return true;
-      }
-      return false;
-    });
-    if (!hasContactsBlock) return;
-    if (!operatorInfo || !operatorInfo['name'] || !operatorInfo['email'] || !operatorInfo['purpose'] || !operatorInfo['retentionPeriod']) {
+  /**
+   * PL-23 · a project that asks for personal data — the «Контакты» block (B-19) or a text field marked «имя / телефон / почта /
+   * город» (B-13) — is published only with the details of the operator, the accepted instruction (D6), the acknowledgement of the
+   * operator's duties and the consent checkbox (B-20) on every screen where the data is asked for (05-LEGAL §2.4, ADR-131).
+   */
+  private checkPdRequirements(doc: ProjectDocument, operatorInfo: Record<string, unknown> | null, dpaAcceptedAt: Date | null, operatorAckAt: Date | null): void {
+    if (pdFieldsOf(doc).length === 0) return;
+    if (!operatorInfo || operatorInfoProblem(operatorInfo) !== null) {
       throw new BadRequestException({
-        error: { code: 'OPERATOR_INFO_REQUIRED', message: 'Сборка содержит сбор контактных данных. Заполните сведения об операторе ПД перед публикацией.' },
+        error: { code: 'OPERATOR_INFO_REQUIRED', message: 'Сборка собирает персональные данные участников (контакты или поля «имя / телефон / почта / город»). Заполните сведения об операторе ПД на вкладке «Оператор ПД» перед публикацией.' },
       });
     }
     if (!dpaAcceptedAt) {
@@ -726,11 +729,21 @@ export class ProjectsService {
         error: { code: 'OPERATOR_ACK_REQUIRED', message: 'Подтвердите, что вы понимаете: вы становитесь оператором персональных данных участников и должны уведомить Роскомнадзор. Это делается на вкладке «Оператор ПД».' },
       });
     }
+    const bare = screensWithoutConsent(doc);
+    if (bare.length > 0) {
+      throw new BadRequestException({
+        error: { code: 'CONSENT_BLOCK_REQUIRED', message: `На экране ${bare.map((x) => `«${x.name}»`).join(', ')} участник оставляет персональные данные, но нет блока «Согласие на обработку ПД». Добавьте его на этот экран.` },
+      });
+    }
   }
 
   /** PL-23: set operator info for participant PD collection. */
-  async setOperatorInfo(userId: string, projectId: string, info: OperatorInfo): Promise<OperatorInfo> {
+  async setOperatorInfo(userId: string, projectId: string, raw: unknown): Promise<OperatorInfo> {
     await this.assertOwner(userId, projectId);
+    const problem = operatorInfoProblem(raw);
+    if (problem) throw new BadRequestException({ error: { code: 'INVALID_OPERATOR_INFO', message: problem } });
+    const r = raw as Record<string, string>;
+    const info: OperatorInfo = { name: r.name!.trim(), email: r.email!.trim(), purpose: r.purpose!.trim(), retentionPeriod: r.retentionPeriod!.trim(), ...(r.inn?.trim() ? { inn: r.inn.trim() } : {}) };
     await this.db
       .update(schema.projects)
       .set({ operatorInfo: info as unknown as Record<string, unknown> })

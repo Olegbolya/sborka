@@ -172,6 +172,24 @@ export class AdminController {
     await this.legal.dataRequestDelete(user, id, typeof body?.userId === 'string' ? body.userId : '', ip);
   }
 
+  /** 05-LEGAL §4 п. 5 · ADR-131 · the participant of a project: where their answers are, the request to the creator, deletion. */
+  @Get('data-requests/:id/participants')
+  dataRequestParticipants(@Param('id') id: string) {
+    return this.legal.dataRequestParticipants(id);
+  }
+
+  @Post('data-requests/:id/forward')
+  @HttpCode(204)
+  async dataRequestForward(@Param('id') id: string, @Body() body: Body, @CurrentUser() user: RequestUser, @Ip() ip: string) {
+    await this.legal.dataRequestForward(user, id, body?.projectId, ip);
+  }
+
+  @Post('data-requests/:id/delete-participant')
+  @HttpCode(200)
+  async dataRequestDeleteParticipant(@Param('id') id: string, @Body() body: Body, @CurrentUser() user: RequestUser, @Ip() ip: string) {
+    return { deleted: await this.legal.dataRequestDeleteParticipant(user, id, body?.projectId, ip) };
+  }
+
   @Post('data-requests/:id/extend')
   @HttpCode(204)
   async extendDataRequest(@Param('id') id: string, @Body() body: Body, @CurrentUser() user: RequestUser, @Ip() ip: string) {

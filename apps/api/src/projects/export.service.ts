@@ -112,8 +112,19 @@ export class ExportService {
 /** RN-02 · the mark on a column whose values the device of the participant reported. */
 export const DEVICE_NOTE = ' (посчитано на устройстве)';
 
-function csvEscape(val: string): string {
-  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+/**
+ * ASVS V5.3 · CWE-1236 · a cell that starts with = + - @ (or a tab / carriage return) is read by Excel and LibreOffice as a formula: a
+ * participant could type `=HYPERLINK(…)` and it would run on the creator's computer. Such a cell gets a leading apostrophe — the
+ * spreadsheet shows the text as typed. Plain numbers like «-5» stay numbers.
+ */
+export function neutralizeFormula(val: string): string {
+  if (/^-?\d+([.,]\d+)?$/.test(val)) return val;
+  return /^[=+\-@\t\r]/.test(val) ? `'${val}` : val;
+}
+
+function csvEscape(raw: string): string {
+  const val = neutralizeFormula(raw);
+  if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
     return `"${val.replace(/"/g, '""')}"`;
   }
   return val;

@@ -31,3 +31,4 @@ export * from './theme-from-palette.js';
 export * from './report-categories.js';
 export * from './moderation.js';
 export * from './safety/index.js';
+export * from './personal-data.js';

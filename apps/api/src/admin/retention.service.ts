@@ -73,6 +73,8 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
     note('AUDIT', await this.purgeAudit(now), `Журнал аудита: ${RETENTION.auditYears} года`);
     note('LOGINS', await this.purgeLogins(now), `Журнал входов: ${RETENTION.loginsYears} год`);
     note('ORI_META', await this.purgeCommsMeta(now), `Журнал ОРИ: сведения о передаче сообщений — ${RETENTION.oriMetaYears} года`);
+    note('APPEALS', await this.purgeAppeals(now), `Жалобы, заявления правообладателей и запросы субъектов ПД: ${RETENTION.appealsYears} год после закрытия`);
+    note('OTP', await this.purgeOtp(now), `Запросы кодов входа (номер телефона): ${RETENTION.otpDays} день`);
     for (const d of done) await this.db.insert(schema.destructionLog).values({ kind: d.kind, count: d.count, basis: d.basis, details: { at: now.toISOString() } });
     return done;
   }
@@ -109,6 +111,21 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
       total += ids.length;
     }
     return total;
+  }
+
+  /** ADR-131 · complaints, claims of right holders and requests of data subjects closed more than a year ago (the Policy, §3). */
+  private async purgeAppeals(now: Date): Promise<number> {
+    const cutoff = yearsAgo(now, RETENTION.appealsYears);
+    const a = await this.db.delete(schema.reports).where(and(isNotNull(schema.reports.resolvedAt), lt(schema.reports.resolvedAt, cutoff))).returning({ id: schema.reports.id });
+    const b = await this.db.delete(schema.copyrightClaims).where(and(isNotNull(schema.copyrightClaims.resolvedAt), lt(schema.copyrightClaims.resolvedAt, cutoff))).returning({ id: schema.copyrightClaims.id });
+    const c = await this.db.delete(schema.dataSubjectRequests).where(and(isNotNull(schema.dataSubjectRequests.closedAt), lt(schema.dataSubjectRequests.closedAt, cutoff))).returning({ id: schema.dataSubjectRequests.id });
+    return a.length + b.length + c.length;
+  }
+
+  /** ADR-131 · requests of sign-in codes hold the phone number in the clear; a day later nobody needs them. */
+  private async purgeOtp(now: Date): Promise<number> {
+    const rows = await this.db.delete(schema.otpRequests).where(lt(schema.otpRequests.createdAt, new Date(now.getTime() - RETENTION.otpDays * DAY_MS))).returning({ id: schema.otpRequests.id });
+    return rows.length;
   }
 
   /** Deleted projects: after 30 days gone for good (the passages go with them). */

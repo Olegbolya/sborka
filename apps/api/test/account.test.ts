@@ -300,6 +300,21 @@ describe('A-03, A-05, D-10 · Аккаунт', () => {
     expect(Array.isArray(res.body.consentHistory)).toBe(true);
   });
 
+  it('D-10 · P9.8 · выгрузка включает сборки, заказы и переписку с поддержкой (ADR-131)', async () => {
+    if (skip()) return;
+    const cookie = await loginViaOtp('+79991240019');
+    const created = (await request(t.http()).post(`/${API_PREFIX}/projects`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').send({ title: 'Моя сборка' }).expect(200)).body as { id: string };
+    const me = (await request(t.http()).get(`/${API_PREFIX}/auth/account`).set('Cookie', cookie).expect(200)).body as { id: string };
+    const [q] = await db.db.insert(schema.supportQuestions).values({ userId: me.id, text: 'Как опубликовать?' }).returning();
+    await db.db.insert(schema.supportMessages).values([{ questionId: q!.id, author: 'USER', authorId: me.id, text: 'Как опубликовать?' }, { questionId: q!.id, author: 'SUPPORT', text: 'Нажмите «Опубликовать».' }]);
+    await db.db.insert(schema.orders).values({ userId: me.id, kind: 'SUBSCRIPTION', amountKop: 34900, provider: 'robokassa', item: { planCode: 'PLUS', period: 'MONTH' } });
+    const res = (await request(t.http()).post(`/${API_PREFIX}/auth/account/export`).set('Cookie', cookie).set('X-Blokum-CSRF', '1').expect(200)).body as { projects: Array<{ id: string; title: string }>; orders: Array<{ amountKop: number }>; supportQuestions: Array<{ text: string; messages: Array<{ fromSupport: boolean; text: string }> }>; vk: unknown };
+    expect(res.projects).toEqual([expect.objectContaining({ id: created.id, title: 'Моя сборка' })]);
+    expect(res.orders).toEqual([expect.objectContaining({ amountKop: 34900 })]);
+    expect(res.supportQuestions[0]!.messages.map((m) => [m.fromSupport, m.text]).sort()).toEqual([[false, 'Как опубликовать?'], [true, 'Нажмите «Опубликовать».']]);
+    expect(res.vk).toBeNull();
+  });
+
   it('D-10 · экспорт не содержит данных другого пользователя', async () => {
     if (skip()) return;
     const cookie1 = await loginViaOtp('+79991240011');

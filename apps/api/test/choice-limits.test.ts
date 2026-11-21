@@ -76,10 +76,14 @@ describe('B-24, PL-24, PL-25, PL-26, D-12, B-25 · лимит выборов в�
     const name = createBlock('textInput');
     if (name.type !== 'textInput') throw new Error('тип');
     name.props.semantic = 'name';
-    doc.screens[0]!.blocks.push(q, name, createBlock('button'));
+    // The name of a participant is personal data: the consent next to it and the creator's details as the operator (ADR-131).
+    doc.screens[0]!.blocks.push(q, name, createBlock('consent'), createBlock('button'));
     mutate?.(doc);
     await call(t, cookie, 'put', `/projects/${created.id}/draft`, { document: doc }).set('If-Match', String(created.draftVersionNumber)).expect(200);
     if (Object.keys(settings).length > 0) await call(t, cookie, 'patch', `/projects/${created.id}/access-settings`, settings).expect(200);
+    await call(t, cookie, 'patch', `/projects/${created.id}/operator-info`, { name: 'Организатор ужина', email: 'uzhin@mail.ru', purpose: 'Кто что принесёт', retentionPeriod: '1 месяц' }).expect(200);
+    await call(t, cookie, 'post', `/projects/${created.id}/dpa-accept`).expect(200);
+    await call(t, cookie, 'post', `/projects/${created.id}/operator-ack`).expect(200);
     const pub = await call(t, cookie, 'post', `/projects/${created.id}/publish`);
     if (pub.status !== 200) throw new Error(JSON.stringify(pub.body));
     const published = pub.body as { warnings: string[] };

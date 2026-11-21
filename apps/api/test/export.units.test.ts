@@ -81,3 +81,15 @@ describe('D-06: выгрузка ответов', () => {
     expect(buf.subarray(0, 2).toString()).toBe('PK');
   });
 });
+
+describe('ASVS V5.3 · выгрузка CSV не превращает ответ участника в формулу', () => {
+  it('D-06 · ячейки с = + - @ получают апостроф, обычные числа и текст — как есть', async () => {
+    const { neutralizeFormula } = await import('../src/projects/export.service.js');
+    expect(neutralizeFormula('=HYPERLINK("http://x","нажми")')).toBe('\'=HYPERLINK("http://x","нажми")');
+    expect(neutralizeFormula('+79001234567')).toBe("'+79001234567");
+    expect(neutralizeFormula('@SUM(A1)')).toBe("'@SUM(A1)");
+    expect(neutralizeFormula('-5')).toBe('-5');
+    expect(neutralizeFormula('3,5')).toBe('3,5');
+    expect(neutralizeFormula('Казань')).toBe('Казань');
+  });
+});

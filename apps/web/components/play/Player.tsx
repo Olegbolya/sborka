@@ -246,7 +246,7 @@ export function Player({ view, proof, source, onBlocked }: { view: PlayOpen; pro
   };
 
   return (
-    <Artboard mode="player" {...(passage.screen ? { coverHeight: passage.screen.height } : {})} tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} linkHref={view.directLinks ? directHref : outHref}>
+    <Artboard mode="player" {...(passage.screen ? { coverHeight: passage.screen.height } : {})} tokens={boot.view.document.theme.tokens} media={media} runText={boot.session.textValue} consentUrl={`/legal/consent/${view.projectId}`} linkHref={view.directLinks ? directHref : outHref}>
       {boot.view.ad && <AdBanner ad={boot.view.ad} />}
       {passage.screen ? (
         <PlayerStage screenKey={passage.screenKey} transition={passage.transition} screen={passage.screen} store={boot.session.store} {...(passage.progress ? { progress: passage.progress } : {})} entryOverlay={passage.entryOverlay} places={places} />
