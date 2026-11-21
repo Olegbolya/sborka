@@ -21,6 +21,8 @@ export interface OrderRow {
   paidAt: string | null;
   /** Название тарифа подписки; у других покупок — null. */
   planTitle: string | null;
+  /** D-09 · про чек оплаченного заказа; null — чек не нужен. */
+  receipt: string | null;
 }
 
 export const loadBilling = (): Promise<BillingState> => api<BillingState>('/billing/me');

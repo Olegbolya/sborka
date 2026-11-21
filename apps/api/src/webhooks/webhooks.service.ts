@@ -74,8 +74,18 @@ export class WebhooksService implements OnModuleInit, OnModuleDestroy {
     this.timer.unref();
   }
 
-  onModuleDestroy(): void {
+  /** Work started in the background (the delivery after a passage): waited for on shutdown, so it never runs against a closed database. */
+  private readonly inflight = new Set<Promise<unknown>>();
+
+  private track<T>(work: Promise<T>): Promise<T> {
+    this.inflight.add(work);
+    void work.finally(() => this.inflight.delete(work)).catch(() => undefined);
+    return work;
+  }
+
+  async onModuleDestroy(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
+    await Promise.allSettled([...this.inflight]);
   }
 
   // ── The secret is stored encrypted with a key derived from the server key (not the same key as for TOTP). ──
@@ -235,7 +245,11 @@ export class WebhooksService implements OnModuleInit, OnModuleDestroy {
    * A finished passage of a project with a webhook: the record is made now, the first attempt goes at once in the background (the
    * participant does not wait for the creator's server). Nothing happens without a webhook, when it is off, or below «Про».
    */
-  async passageCompleted(ownerId: string, projectId: string, sessionId: string): Promise<string | null> {
+  passageCompleted(ownerId: string, projectId: string, sessionId: string): Promise<string | null> {
+    return this.track(this.queuePassage(ownerId, projectId, sessionId));
+  }
+
+  private async queuePassage(ownerId: string, projectId: string, sessionId: string): Promise<string | null> {
     const [hook] = await this.db.select({ enabled: schema.projectWebhooks.enabled }).from(schema.projectWebhooks).where(eq(schema.projectWebhooks.projectId, projectId));
     if (!hook?.enabled) return null;
     if (!(await this.planAllows(ownerId, projectId)).allowed) return null;
@@ -257,7 +271,7 @@ export class WebhooksService implements OnModuleInit, OnModuleDestroy {
       },
     };
     const id = await this.insert(projectId, 'passage.completed', payload);
-    void this.attempt(id, new Date(), false).catch(() => undefined);
+    void this.track(this.attempt(id, new Date(), false)).catch(() => undefined);
     return id;
   }
 

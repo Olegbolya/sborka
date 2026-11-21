@@ -25,6 +25,19 @@ export interface OrderView {
   paidAt: Date | null;
   /** Название тарифа подписки («Автор», «Плюс»…); у других покупок — null. */
   planTitle: string | null;
+  /** D-09 · what the buyer should know about the receipt of a paid order (422-ФЗ); null — no receipt is due (free, promo, not paid). */
+  receipt: string | null;
+}
+
+/**
+ * D-09 · the receipt of an order as the buyer reads it: Robokassa makes the receipt of the self-employed itself («Робочеки СМЗ»,
+ * ADR-125) and sends it to the address given at payment; for ЮKassa the owner issues it in «Мой налог» and marks it in the admin (ADR-093).
+ */
+export function receiptText(o: { status: string; amountKop: number; provider: string; receipt: Record<string, unknown> | null }): string | null {
+  if ((o.status !== 'PAID' && o.status !== 'REFUNDED') || o.amountKop <= 0 || o.provider === 'manual' || o.provider === 'promo') return null;
+  if (o.provider === 'robokassa') return 'чек самозанятого формирует Робокасса и присылает на почту, указанную при оплате';
+  const issued = typeof o.receipt?.issuedAt === 'string' ? new Date(o.receipt.issuedAt) : null;
+  return issued ? `чек выдан ${issued.toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow' })}` : 'чек готовится';
 }
 
 /** The size of extra storage is kept in megabytes: the column is a 32-bit integer. */
@@ -202,12 +215,13 @@ export class PaymentsService {
 
   async myOrders(userId: string): Promise<OrderView[]> {
     return this.db
-      .select({ id: schema.orders.id, kind: schema.orders.kind, status: schema.orders.status, amountKop: schema.orders.amountKop, item: schema.orders.item, createdAt: schema.orders.createdAt, paidAt: schema.orders.paidAt, planTitle: schema.plans.title })
+      .select({ id: schema.orders.id, kind: schema.orders.kind, status: schema.orders.status, amountKop: schema.orders.amountKop, item: schema.orders.item, createdAt: schema.orders.createdAt, paidAt: schema.orders.paidAt, planTitle: schema.plans.title, provider: schema.orders.provider, receipt: schema.orders.receipt })
       .from(schema.orders)
       .leftJoin(schema.plans, sql`${schema.plans.code} = ${schema.orders.item}->>'planCode'`)
       .where(eq(schema.orders.userId, userId))
       .orderBy(desc(schema.orders.createdAt))
-      .limit(100);
+      .limit(100)
+      .then((rows) => rows.map(({ provider, receipt, ...o }) => ({ ...o, receipt: receiptText({ status: o.status, amountKop: o.amountKop, provider, receipt }) })));
   }
 
   /**

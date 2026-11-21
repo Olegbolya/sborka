@@ -1,0 +1,59 @@
+name: NSFW-модель на сервер
+
+# TS-22, ADR-103, ADR-130: файл ONNX модели Falconsai/nsfw_image_detection (Apache-2.0) готовится один раз на серверах GitHub
+# (optimum-cli export onnx), проверяется (вход 1×3×224×224, выход 1×2 — классы normal/nsfw) и кладётся на сервер в
+# ~/blokum/models/nsfw.onnx. Воркер проверяет наличие файла перед каждым изображением, перезапуск не нужен.
+# Запуск: Actions → «NSFW-модель на сервер» → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      server:
+        description: 'Адрес сервера; пусто — основной сервер'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    name: Подготовить ONNX и передать на сервер
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Выгрузить модель в ONNX
+        run: |
+          python -m pip install --quiet "optimum[exporters]==1.23.3" "onnxruntime==1.20.1" "pillow"
+          optimum-cli export onnx --model Falconsai/nsfw_image_detection --task image-classification out
+          ls -l out
+      - name: Проверить файл (формат входа и выхода)
+        run: |
+          python - <<'PY'
+          import json, numpy as np, onnxruntime as ort
+          s = ort.InferenceSession("out/model.onnx")
+          i = s.get_inputs()[0]; o = s.get_outputs()[0]
+          print("вход", i.name, i.shape, "выход", o.name, o.shape)
+          y = s.run(None, {i.name: np.zeros((1, 3, 224, 224), dtype=np.float32)})[0]
+          assert i.name == "pixel_values" and o.name == "logits", (i.name, o.name)
+          assert y.shape == (1, 2), f"ждали выход 1×2, получили {y.shape}"
+          cfg = json.load(open("out/config.json"))
+          assert cfg["id2label"] in ({"0": "normal", "1": "nsfw"},), cfg["id2label"]
+          print("классы", cfg["id2label"])
+          PY
+          sha256sum out/model.onnx | tee out/model.onnx.sha256
+      - name: На сервер
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SERVER_ADDR: ${{ inputs.server || '195.209.215.79' }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::Нет секрета DEPLOY_SSH_KEY"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Сначала во временный файл, затем переименование: воркер никогда не увидит недописанный файл.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "deploy@$SERVER_ADDR" \
+            'set -e; d="$HOME/blokum/models"; mkdir -p "$d"; cat > "$d/nsfw.onnx.new"; mv "$d/nsfw.onnx.new" "$d/nsfw.onnx"; ls -l "$d/nsfw.onnx"; sha256sum "$d/nsfw.onnx"' < out/model.onnx
+          echo "::notice title=NSFW-модель на сервере::$(cut -c1-16 out/model.onnx.sha256) — проверка изображений включится без перезапуска"

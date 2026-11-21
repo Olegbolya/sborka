@@ -126,7 +126,7 @@ export function BillingSummary() {
           <ul className="lp-plan-list">
             {orders.map((o) => (
               <li key={o.id}>
-                {dateRu(o.createdAt)} — {planName(o, addons)}, {rub(o.amountKop)}: {ORDER_STATUS_LABEL[o.status]}
+                {dateRu(o.createdAt)} — {planName(o, addons)}, {rub(o.amountKop)}: {ORDER_STATUS_LABEL[o.status]}{o.receipt ? `; ${o.receipt}` : ''}
               </li>
             ))}
           </ul>

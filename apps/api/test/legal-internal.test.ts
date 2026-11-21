@@ -26,7 +26,13 @@ describe('P8.6 · внутренние документы оператора и 
     }
     expect(t).toContain('ПОДСТАВИТЬ');
     expect(t).toContain('ПРОВЕРИТЬ');
-    expect(t).toContain('{{ИСПОЛНИТЕЛЬ_ФИО}}');
+    // ADR-130: сведения об операторе взяты из опубликованных «Контактов и реквизитов» и совпадают с ними.
+    const contacts = readFileSync(join(DIR, '..', 'contacts.md'), 'utf8');
+    const fio = /## Владелец сайта и исполнитель услуг\n\n(.+)\n/.exec(contacts)![1]!;
+    const inn = /ИНН: (\d{12})/.exec(contacts)![1]!;
+    expect(t).toContain(`| ФИО | ${fio} |`);
+    expect(t).toContain(`| ИНН | ${inn} |`);
+    expect(t).not.toContain('{{ИСПОЛНИТЕЛЬ_ФИО}}');
   });
 
   it('P8.6 · регламент инцидентов называет сроки 24 и 72 часа, а порядок уничтожения — журнал и приказ № 179', () => {
