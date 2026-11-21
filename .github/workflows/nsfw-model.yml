@@ -26,7 +26,7 @@ jobs:
           python-version: '3.11'
       - name: Выгрузить модель в ONNX
         run: |
-          python -m pip install --quiet "optimum[exporters]==1.23.3" "onnxruntime==1.20.1" "onnxscript" "pillow"
+          python -m pip install --quiet --extra-index-url https://download.pytorch.org/whl/cpu "torch==2.4.1" "transformers==4.44.2" "optimum[exporters]==1.23.3" "onnx==1.17.0" "onnxruntime==1.20.1" "numpy<2" "pillow"
           optimum-cli export onnx --model Falconsai/nsfw_image_detection --task image-classification out
           ls -l out
       - name: Проверить файл (формат входа и выхода)
